@@ -14,7 +14,6 @@
 #include <Windows.h>
 #pragma warning(default: 5039)
 
-#include <d3d9.h>
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
