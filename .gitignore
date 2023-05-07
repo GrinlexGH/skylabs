@@ -23,3 +23,6 @@
 # Executables
 *.out
 *.app
+
+build
+.vs
