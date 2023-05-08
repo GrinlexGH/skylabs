@@ -3,24 +3,31 @@
 //	purpose: existing
 //
 //===================================================================
-#include "stdafx.h"
 #include "CApp.h"
 
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
+LRESULT CALLBACK WindowProc(
+	HWND hWnd,
+	UINT message,
+	WPARAM wParam,
+	LPARAM lParam
+) {
 	switch (message)
 	{
-	case WM_DESTROY:
-	{
-		PostQuitMessage(0);
-		return 0;
-	} break;
+		case WM_DESTROY:
+		{
+			PostQuitMessage(0);
+			return 0;
+		} break;
 	}
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int iCmdShow)
-{
+int WINAPI WinMain(
+	_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPSTR lpCmdLine,
+	_In_ int iCmdShow
+) {
 	HWND hWnd;
 	WNDCLASSEX wc = { 0 };
 
@@ -46,6 +53,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		NULL,
 		hInstance,
 		NULL);
+
 	if (hWnd == nullptr)
 		return -1;
 
