@@ -75,6 +75,7 @@ int WINAPI WinMain(
 	app.Kill();
 
 	return (int)msg.wParam;
+
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	UNREFERENCED_PARAMETER(hPrevInstance);
 }
