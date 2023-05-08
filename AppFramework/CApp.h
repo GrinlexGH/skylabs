@@ -7,7 +7,7 @@ public:
 	~CApp();
 
 	void Init(HWND _handle);
-	void Release();
+	void Kill();
 	void Render();
 
 	IDirect3D9 *D3DObject;
