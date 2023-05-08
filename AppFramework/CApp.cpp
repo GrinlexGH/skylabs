@@ -54,6 +54,7 @@ void CApp::Init(HWND _handle)
 	}
 
 }
+
 void CApp::Release()
 {
 
