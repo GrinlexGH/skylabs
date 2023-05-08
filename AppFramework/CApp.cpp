@@ -1,7 +1,9 @@
-
+//=========== (C) Copyright 2023 NTT All rights reserved. ===========
+//
+//	purpose: application class
+//
+//===================================================================
 #include "CApp.h"
-#include <assert.h>
-
 
 CApp::CApp()
 {
