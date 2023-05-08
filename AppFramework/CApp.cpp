@@ -25,21 +25,21 @@ void CApp::Init(HWND _handle)
 		return;
 	}
 
-	//parameters for dx 
+	// Parameters for D3D. 
 	D3DPRESENT_PARAMETERS d3dparams;
 	ZeroMemory(&d3dparams, sizeof(D3DPRESENT_PARAMETERS));
 
 	RECT rect;
-	UINT width = 800;
-	UINT height = 600;
 	if (GetWindowRect(_handle, &rect))
 	{
-		width = (UINT)(rect.right - rect.left);
-		height = (UINT)(rect.bottom - rect.top);
+		d3dparams.BackBufferWidth = (UINT)(rect.right - rect.left);
+		d3dparams.BackBufferHeight = (UINT)(rect.bottom - rect.top);
+	} else
+	{
+		d3dparams.BackBufferWidth = 800;
+		d3dparams.BackBufferHeight = 600;
 	}
 
-	d3dparams.BackBufferWidth = width;
-	d3dparams.BackBufferHeight = height;
 	d3dparams.hDeviceWindow = _handle;
 	d3dparams.Windowed = true;
 	d3dparams.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
@@ -47,8 +47,7 @@ void CApp::Init(HWND _handle)
 	d3dparams.AutoDepthStencilFormat = D3DFMT_D16;
 	d3dparams.EnableAutoDepthStencil = true;
 
-
-	//Creating Real Device
+	// Creating Real Device
 	if (D3DObject->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, _handle, D3DCREATE_HARDWARE_VERTEXPROCESSING, &d3dparams, &Device) != S_OK)
 	{
 		goto Error;

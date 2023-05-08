@@ -5,10 +5,10 @@
 #define _WIN32_WINNT_WIN10_RS3 0x3FAB
 #define _WIN32_WINNT_WIN10_RS4 0x42EE
 #define _WIN32_WINNT_WIN10_RS5 0x4563
-#pragma warning(disable: 5039)
-#include <Windows.h>
-#pragma warning(default: 5039)
 
 #pragma warning(disable: 4820)
+#pragma warning(disable: 5039)
+#include <Windows.h>
 #include <d3d9.h>
+#pragma warning(default: 5039)
 #pragma warning(default: 4820)
