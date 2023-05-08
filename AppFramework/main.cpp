@@ -72,7 +72,7 @@ int WINAPI WinMain(
 		app.Render();
 	}
 
-	app.Release();
+	app.Kill();
 
 	return (int)msg.wParam;
 	UNREFERENCED_PARAMETER(lpCmdLine);
