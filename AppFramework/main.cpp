@@ -3,15 +3,7 @@
 //	purpose: existing
 //
 //===================================================================
-#define _WIN32_WINNT_WIN10_TH2 0x295A
-#define _WIN32_WINNT_WIN10_RS1 0x3839
-#define _WIN32_WINNT_WIN10_RS2 0x3AD7
-#define _WIN32_WINNT_WIN10_RS3 0x3FAB
-#define _WIN32_WINNT_WIN10_RS4 0x42EE
-#define _WIN32_WINNT_WIN10_RS5 0x4563
-#pragma warning(disable: 5039)
-#include <Windows.h>
-#pragma warning(default: 5039)
+#include "stdafx.h"
 #include "CApp.h"
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -31,8 +23,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 {
 	HWND hWnd;
 	WNDCLASSEX wc = { 0 };
-
-	
 
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_HREDRAW | CS_VREDRAW;
