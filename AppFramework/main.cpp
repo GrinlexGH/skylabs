@@ -3,7 +3,10 @@
 //	purpose: existing
 //
 //===================================================================
-#include "CApp.h"
+#include "stdafx.h"
+#include "CApplication.h"
+#include <stdio.h>
+#include <assert.h>
 
 LRESULT CALLBACK WindowProc(
 	HWND hWnd,
@@ -61,7 +64,7 @@ int WINAPI WinMain(
 
 	MSG msg;
 
-	CApp app;
+	CApplication app;
 	app.Init(hWnd);
 
 	while (GetMessage(&msg, NULL, 0, 0))

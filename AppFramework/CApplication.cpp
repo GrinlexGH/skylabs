@@ -1,28 +1,29 @@
 //=========== (C) Copyright 2023 NTT All rights reserved. ===========
 //
-//	purpose: application class
+// Purpose: application class
 //
 //===================================================================
-#include "CApp.h"
+#include "stdafx.h"
+#include "CApplication.h"
 
-CApp::CApp()
+CApplication::CApplication()
 {
 	D3DObject = nullptr;
 	Device = nullptr;
 }
 
-CApp::~CApp()
+CApplication::~CApplication()
 {
+	
 }
 
-void CApp::Init(HWND _handle)
+void CApplication::Init(HWND _handle)
 {
 	D3DObject = Direct3DCreate9(D3D_SDK_VERSION);
 	if (D3DObject == nullptr)
 	{
-	Error:
-		MessageBox(NULL, L"Unable to initialize D3D Device!!!!", L"Error!", MB_OK | MB_ICONERROR);
-		return;
+		MessageBox(NULL, L"Unable to initialize D3D Device!", L"Error!", MB_OK | MB_ICONERROR);
+		exit(-1);
 	}
 
 	// Parameters for D3D. 
@@ -50,17 +51,17 @@ void CApp::Init(HWND _handle)
 	// Creating Real Device
 	if (D3DObject->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, _handle, D3DCREATE_HARDWARE_VERTEXPROCESSING, &d3dparams, &Device) != S_OK)
 	{
-		goto Error;
+		MessageBox(NULL, L"Unable to create D3D Device!", L"Error!", MB_OK | MB_ICONERROR);
+		exit(-1);
 	}
-
 }
 
-void CApp::Kill()
+void CApplication::Kill()
 {
 
 }
 
-void CApp::Render()
+void CApplication::Render()
 {
 
 }
