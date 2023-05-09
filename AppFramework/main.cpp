@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+CApplication* application;
+
 LRESULT CALLBACK WindowProc(
 	HWND hWnd,
 	UINT message,
@@ -64,18 +66,20 @@ int WINAPI WinMain(
 
 	MSG msg;
 
-	CApplication app;
-	app.Init(hWnd);
+	application = new CApplication();
+	application->Init(hWnd);
 
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 
-		app.Render();
+		application->Render();
 	}
 
-	app.Kill();
+	application->Kill();
+
+	delete application;
 
 	return (int)msg.wParam;
 
