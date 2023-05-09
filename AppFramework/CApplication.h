@@ -3,6 +3,7 @@
 // Purpose: Application class header
 //
 //===================================================================
+#pragma once
 #include "stdafx.h"
 
 class CApplication
