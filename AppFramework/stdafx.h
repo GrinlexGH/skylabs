@@ -1,3 +1,8 @@
+//=========== (C) Copyright 2023 NTT All rights reserved. ===========
+//
+// Purpose: Precompiled header
+//
+//===================================================================
 #pragma once
 #define _WIN32_WINNT_WIN10_TH2 0x295A
 #define _WIN32_WINNT_WIN10_RS1 0x3839
