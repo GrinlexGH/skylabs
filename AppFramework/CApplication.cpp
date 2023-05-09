@@ -1,6 +1,6 @@
 //=========== (C) Copyright 2023 NTT All rights reserved. ===========
 //
-// Purpose: application class
+// Purpose: Application class
 //
 //===================================================================
 #include "stdafx.h"

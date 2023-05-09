@@ -5,6 +5,7 @@
 //===================================================================
 #include "stdafx.h"
 #include "CApplication.h"
+#include "CErrorHandler.h"
 #include <stdio.h>
 #include <assert.h>
 
@@ -68,7 +69,8 @@ int WINAPI WinMain(
 
 	application = new CApplication();
 	application->Init(hWnd);
-
+	CErrorHandler::Assert(false, "ddsdsdds");
+	CErrorHandler::Catch([&](){ CErrorHandler::Throw("PIdor"); });
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
