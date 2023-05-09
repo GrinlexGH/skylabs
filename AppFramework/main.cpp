@@ -7,7 +7,6 @@
 #include "CApplication.h"
 #include "CErrorHandler.h"
 #include <stdio.h>
-#include <assert.h>
 
 CApplication* application;
 
@@ -69,7 +68,7 @@ int WINAPI WinMain(
 
 	application = new CApplication();
 	application->Init(hWnd);
-	CErrorHandler::Assert(false, "ddsdsdds");
+	assert(nullptr, L"’уйню сморозил.");
 	CErrorHandler::Catch([&](){ CErrorHandler::Throw("PIdor"); });
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
