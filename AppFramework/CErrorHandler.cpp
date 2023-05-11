@@ -3,7 +3,6 @@
 // Purpose: Error handler class
 //
 //===================================================================
-#include "stdafx.h"
 #include "CErrorHandler.h"
 
 const wchar_t* assertstringgg = L"Assertion failed!\n\nFile: %s\nLine: %d\n\nExpression: %s\nReason: %s\0";
