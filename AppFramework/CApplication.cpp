@@ -63,6 +63,9 @@ void CApplication::Kill()
 
 void CApplication::Render()
 {
-	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_ARGB(1, 0, 0, 0), 1, 0);
+	//Clear all previus data
+	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, /* there is Black color ->*/ D3DCOLOR_ARGB(1, 0, 0, 0), 1, 0);
+
+	//idk what is this
 	Device->Present(0, 0, 0, 0);
 }
