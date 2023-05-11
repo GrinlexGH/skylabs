@@ -6,7 +6,6 @@
 #include "stdafx.h"
 #include "CApplication.h"
 #include "CErrorHandler.h"
-#include <stdio.h>
 
 CApplication* application;
 
@@ -68,13 +67,11 @@ int WINAPI WinMain(
 
 	application = new CApplication();
 	application->Init(hWnd);
-	assert(nullptr, L"’уйню сморозил.");
-	CErrorHandler::Catch([&](){ CErrorHandler::Throw("PIdor"); });
+	
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-
 		application->Render();
 	}
 

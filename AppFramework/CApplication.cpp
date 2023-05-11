@@ -63,5 +63,6 @@ void CApplication::Kill()
 
 void CApplication::Render()
 {
-
+	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_ARGB(1, 0, 0, 0), 1, 0);
+	Device->Present(0, 0, 0, 0);
 }
