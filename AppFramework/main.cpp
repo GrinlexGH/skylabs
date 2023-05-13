@@ -67,7 +67,7 @@ int WINAPI WinMain(
 
 	application = new CApplication();
 	application->Init(hWnd);
-	
+	//assert(2 + 2 == 5, L"“€ ≈¡À¿Õ?");
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
