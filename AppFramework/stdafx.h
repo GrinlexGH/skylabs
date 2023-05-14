@@ -4,6 +4,7 @@
 //
 //===================================================================
 #pragma once
+
 #define _WIN32_WINNT_WIN10_TH2 0x295A
 #define _WIN32_WINNT_WIN10_RS1 0x3839
 #define _WIN32_WINNT_WIN10_RS2 0x3AD7
