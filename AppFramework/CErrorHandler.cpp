@@ -30,6 +30,17 @@ void CErrorHandler::Assert(const wchar_t* FileName, const int Line, const wchar_
 
 	int Button = MessageBox(NULL, AssertMessage, L"Assertion failed!", MB_ICONERROR | MB_OKCANCEL);
 	switch (Button) {
+		/*
+		// Скорей всего не будет.
+		case IDRETRY:
+		    // https://stackoverflow.com/questions/744055/gcc-inline-assembly-jump-to-label-outside-block?rq=1
+		    // https://stackoverflow.com/questions/6421433/address-of-labels-msvc
+		    // https://gcc.gnu.org/onlinedocs/gcc-3.2/gcc/Labels-as-Values.html
+		    // https://stackoverflow.com/questions/17357199/using-goto-function-across-different-functions
+		    // https://stackoverflow.com/questions/6166437/64bit-applications-and-inline-assembly
+		    // https://xkcd.com/292/
+		    break;
+		*/
 		case IDCANCEL:
 #ifdef _DEBUG
 			__debugbreak();
@@ -58,4 +69,4 @@ void CErrorHandler::Catch(const std::function<void()>& code) {
 		MessageBox(NULL, (LPCWSTR)ex.what(), L"fff", MB_OK || MB_ICONERROR);
 		std::exit(1);
 	}
-}			//сука, если ещё кто-нибудь поставит новую строку в конце файла, я его в жопу выебу
+}
