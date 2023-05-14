@@ -5,8 +5,6 @@
 //===================================================================
 #include "stdafx.h"
 #include "CApplication.h"
-#define USE_EXTENDED_ASSERT
-#include "CErrorHandler.h"
 
 CApplication* application;
 
@@ -68,7 +66,7 @@ int WINAPI WinMain(
 
 	application = new CApplication();
 	application->Init(hWnd);
-	assert(2 + 2 == 5, L"“€ ≈¡À¿Õ?");
+	_AssertMsg(2 + 2 == 5, "‡·Ó·‡");
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);

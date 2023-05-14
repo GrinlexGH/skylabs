@@ -6,19 +6,16 @@
 #include "stdafx.h"
 #include "CApplication.h"
 
-CApplication::CApplication()
-{
+CApplication::CApplication() {
 	D3DObject = nullptr;
 	Device = nullptr;
 }
 
-CApplication::~CApplication()
-{
+CApplication::~CApplication() {
 	
 }
 
-void CApplication::Init(HWND _handle)
-{
+void CApplication::Init(HWND _handle) {
 	D3DObject = Direct3DCreate9(D3D_SDK_VERSION);
 	if (D3DObject == nullptr)
 	{
@@ -56,13 +53,11 @@ void CApplication::Init(HWND _handle)
 	}
 }
 
-void CApplication::Kill()
-{
+void CApplication::Kill() {
 
 }
 
-void CApplication::Render()
-{
+void CApplication::Render() {
 	//Clear all previus data
 	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, /* there is Black color ->*/ D3DCOLOR_ARGB(1, 0, 0, 0), 1, 0);
 

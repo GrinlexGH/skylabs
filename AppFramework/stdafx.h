@@ -19,5 +19,7 @@
 #pragma warning(default: 5039)
 #pragma warning(default: 4820)
 
+#include "dbg.h"
+
 #define INT_TO_CHAR(num, numstr) char numstr [(((sizeof num) * CHAR_BIT) + 2)/3 + 2];	\
 								 sprintf_s(##numstr, "%d", ##num)

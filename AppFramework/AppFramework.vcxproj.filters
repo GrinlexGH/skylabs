@@ -21,7 +21,7 @@
     <ClCompile Include="CApplication.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CErrorHandler.cpp">
+    <ClCompile Include="dbg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -32,7 +32,7 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CErrorHandler.h">
+    <ClInclude Include="dbg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
