@@ -3,10 +3,11 @@
 //	purpose: existing
 //
 //===================================================================
-#include "stdafx.h"
-#include "CApplication.h"
+#include "pizdos.h"
+#include "dbg.h"
+//#include "CApplication.h"
 
-CApplication* application;
+//CApplication* application;
 
 LRESULT CALLBACK WindowProc(
 	HWND hWnd,
@@ -31,6 +32,8 @@ int WINAPI WinMain(
 	_In_ LPSTR lpCmdLine,
 	_In_ int iCmdShow
 ) {
+	g_hInstance = hInstance;
+	g_iCmdShow = iCmdShow;
 	HWND hWnd;
 	WNDCLASSEX wc = { 0 };
 
@@ -64,20 +67,21 @@ int WINAPI WinMain(
 
 	MSG msg;
 
-	application = new CApplication();
-	application->Init(hWnd);
+	//application = new CApplication();
+	//application->Init(hWnd);
+
 	_AssertMsg(2 + 2 == 5, "абоба");
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-		application->Render();
+		//application->Render();
 	}
 
-	application->Kill();
+	//application->Kill();
 
-	delete application;
-
+	//delete application;
+	PostQuitMessage(0);
 	return (int)msg.wParam;
 
 	UNREFERENCED_PARAMETER(lpCmdLine);
