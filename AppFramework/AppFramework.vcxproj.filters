@@ -29,7 +29,7 @@
     <ClInclude Include="CApplication.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="pizdos.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dbg.h">
