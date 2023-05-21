@@ -6,6 +6,9 @@
 #include "stdafx.h"
 #include "CApplication.h"
 
+#include "math/vertex.h"
+#include "render/CameraBase.h"
+
 CApplication::CApplication() {
 	D3DObject = nullptr;
 	Device = nullptr;
@@ -16,6 +19,7 @@ CApplication::~CApplication() {
 }
 
 void CApplication::Init(HWND _handle) {
+
 	D3DObject = Direct3DCreate9(D3D_SDK_VERSION);
 	if (D3DObject == nullptr)
 	{
@@ -51,6 +55,11 @@ void CApplication::Init(HWND _handle) {
 		MessageBox(NULL, L"Unable to create D3D Device!", L"Error!", MB_OK | MB_ICONERROR);
 		exit(-1);
 	}
+
+	Device->SetRenderState(D3DRS_LIGHTING, false);
+	Device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+
+
 }
 
 void CApplication::Kill() {
@@ -61,6 +70,20 @@ void CApplication::Render() {
 	//Clear all previus data
 	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, /* there is Black color ->*/ D3DCOLOR_ARGB(1, 0, 0, 0), 1, 0);
 
-	//idk what is this
+	
+
+	Vertex vertices[] =
+	{
+		{ Vector3(- 1.0f, -1.0f, 0.0f), D3DCOLOR_XRGB(255, 0, 0)},
+		{ Vector3(1.0f, -1.0f, 0.0f), D3DCOLOR_XRGB(0, 255, 0) },
+		{ Vector3(0.0f,  1.0f, 0.0f), D3DCOLOR_XRGB(0, 0, 255) },
+	};
+
+	
+	Device->BeginScene();
+	Device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 1, vertices, sizeof(Vertex));
+	Device->EndScene();
+
+		//idk what is this
 	Device->Present(0, 0, 0, 0);
 }

@@ -6,6 +6,10 @@
 #include "stdafx.h"
 #include "CApplication.h"
 
+#include <libloaderapi.h>
+
+
+
 CApplication* application;
 
 LRESULT CALLBACK WindowProc(
@@ -31,6 +35,7 @@ int WINAPI WinMain(
 	_In_ LPSTR lpCmdLine,
 	_In_ int iCmdShow
 ) {
+
 	HWND hWnd;
 	WNDCLASSEX wc = { 0 };
 

@@ -16,4 +16,7 @@
     <LocalDebuggerCommand>$(SolutionDir)build\$(Configuration)\$(Platform)\$(TargetName)$(TargetExt)</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup>
+    <ShowAllFiles>true</ShowAllFiles>
+  </PropertyGroup>
 </Project>

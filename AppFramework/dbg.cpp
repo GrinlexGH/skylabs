@@ -3,9 +3,11 @@
 // Purpose: Error handler class
 //
 //===================================================================
+#pragma warning(disable:5264)
 #include "stdafx.h"
 #include <string>
 #include "dbg.h"
+#pragma warning(default:5264)
 
 //Короче, std::wstring нужен для манипуляций с текстом, а std::wsting_view нужен только чтобы прочитать строку без изменений
 void CErrorHandler::Assertation(std::wstring_view FileName, const int& Line, std::wstring_view Expression, std::wstring_view Reason, int& Button) {

@@ -19,7 +19,13 @@
 #pragma warning(default: 5039)
 #pragma warning(default: 4820)
 
+#pragma warning(disable:5264)
 #include "dbg.h"
+#pragma warning(default:5264)
+
+#pragma warning(disable:4623)
+#include "math/vector.h"
+#pragma warning(default:4623)
 
 #define INT_TO_CHAR(num, numstr) char numstr [(((sizeof num) * CHAR_BIT) + 2)/3 + 2];	\
 								 sprintf_s(##numstr, "%d", ##num)
