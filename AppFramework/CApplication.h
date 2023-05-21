@@ -3,8 +3,7 @@
 // Purpose: Application class header
 //
 //===================================================================
-#pragma once
-
+/*#pragma once
 #include "stdafx.h"
 
 class CApplication
@@ -19,4 +18,4 @@ public:
 
 	IDirect3D9 *D3DObject;
 	IDirect3DDevice9 *Device;
-};
+};*/

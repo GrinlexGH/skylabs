@@ -3,8 +3,7 @@
 // Purpose: Application class
 //
 //===================================================================
-#include "stdafx.h"
-#include "CApplication.h"
+/*#include "CApplication.h"
 
 CApplication::CApplication() {
 	D3DObject = nullptr;
@@ -59,8 +58,8 @@ void CApplication::Kill() {
 
 void CApplication::Render() {
 	//Clear all previus data
-	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, /* there is Black color ->*/ D3DCOLOR_ARGB(1, 0, 0, 0), 1, 0);
+	Device->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, /* there is Black color -> D3DCOLOR_ARGB(1, 0, 0, 0), 1, 0);
 
 	//idk what is this
 	Device->Present(0, 0, 0, 0);
-}
+}*/
