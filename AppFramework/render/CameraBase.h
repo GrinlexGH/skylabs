@@ -5,34 +5,28 @@
 //===================================================================
 #pragma once
 
-
 #include "math/vector.h"
-
-#include <d3d9.h>
+#include "stdafx.h"
 #pragma warning(disable: 4668)
 #pragma warning(disable: 5264)
 #include <DirectXMath.h>
 #pragma warning(default: 4668)
 #pragma warning(default: 5264)
 
-#pragma warning(disable : 4820)
-//#pragma warning(disable : 4626)
-//#pragma warning(disable : 5027)
-
+#pragma pack(push, 1)
 class Camera
 {
+private:
+	Vector3 position;
+	DirectX::CXMMATRIX viewMatrix;
+	DirectX::CXMMATRIX viewProjectionMatrix;
 public:
-
 	Camera(Vector3 pos, IDirect3DDevice9* Device, float fov, float nearz, float farz);
+	Camera& operator=(const Camera&) = delete;
 
 	Vector3 GetPosition();
 	DirectX::XMVECTOR GetRawPosition();
 	void SetPosition(Vector3 pos);
 	void SetPosition(float x, float y, float z);
-	
-private:
-	DirectX::CXMMATRIX viewMatrix;
-	DirectX::CXMMATRIX viewProjectionMatrix;
-	Vector3 position = Vector3(0,0,0);
 };
-
+#pragma pack(pop)

@@ -4,14 +4,14 @@
 //
 //===================================================================
 #pragma once
-
+#include "stdafx.h"
 #pragma warning(disable:4365)
 #include <assert.h>
 #include <stdexcept>
 #include <functional>
 #pragma warning(default:4365)
 
-#include "stdafx.h"
+
 
 //Эти гениально. Оператор логического ИЛИ не будет проверять,
 //то есть выполнять, правую часть если левая является истиной

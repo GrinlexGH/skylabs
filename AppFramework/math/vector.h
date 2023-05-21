@@ -10,6 +10,6 @@ class Vector3
 public:
 	float x, y, z;
 
-	Vector3(float nx, float ny, float nz) : x(nx), y(ny), z(nz) {}
+	Vector3(float nx, float ny, float nz);
 
 };

@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="math">
+      <UniqueIdentifier>{378f8a89-7aba-4abd-8049-bf2e44db1e32}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -24,6 +27,12 @@
     <ClCompile Include="dbg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="render\CameraBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="math\vector.cpp">
+      <Filter>math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CApplication.h">
@@ -34,6 +43,15 @@
     </ClInclude>
     <ClInclude Include="dbg.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="render\CameraBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vector.h">
+      <Filter>math</Filter>
+    </ClInclude>
+    <ClInclude Include="math\vertex.h">
+      <Filter>math</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

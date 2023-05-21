@@ -59,7 +59,7 @@ void CApplication::Init(HWND _handle) {
 	Device->SetRenderState(D3DRS_LIGHTING, false);
 	Device->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
 
-
+	Camera camera(Vector3(0.0f, 0.0f, 0.0f), Device, 90.0f, 0.001f, 1000.0f);
 }
 
 void CApplication::Kill() {
@@ -74,9 +74,9 @@ void CApplication::Render() {
 
 	Vertex vertices[] =
 	{
-		{ Vector3(- 1.0f, -1.0f, 0.0f), D3DCOLOR_XRGB(255, 0, 0)},
-		{ Vector3(1.0f, -1.0f, 0.0f), D3DCOLOR_XRGB(0, 255, 0) },
-		{ Vector3(0.0f,  1.0f, 0.0f), D3DCOLOR_XRGB(0, 0, 255) },
+		{ Vector3(-1.0f, -1.0f, 0.0f), D3DCOLOR_XRGB(255, 0, 0) },
+		{ Vector3( 1.0f, -1.0f, 0.0f), D3DCOLOR_XRGB(0, 255, 0) },
+		{ Vector3( 0.0f,  1.0f, 0.0f), D3DCOLOR_XRGB(0, 0, 255) },
 	};
 
 	

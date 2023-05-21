@@ -105,8 +105,7 @@
       <SourceDependenciesFile>$(IntDir)</SourceDependenciesFile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderOutputFile>Intermediate\$(Configuration)\$(Platform)\$(TargetName).pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>
       </AdditionalOptions>
     </ClCompile>
@@ -141,6 +140,7 @@
       <PrecompiledHeaderOutputFile>Intermediate\$(Configuration)\$(Platform)\$(TargetName).pch</PrecompiledHeaderOutputFile>
       <AdditionalOptions>
       </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -171,8 +171,7 @@
       <SourceDependenciesFile>$(IntDir)</SourceDependenciesFile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderOutputFile>Intermediate\$(Configuration)\$(Platform)\$(TargetName).pch</PrecompiledHeaderOutputFile>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>
       </AdditionalOptions>
     </ClCompile>
@@ -208,6 +207,7 @@
       <PrecompiledHeaderOutputFile>Intermediate\$(Configuration)\$(Platform)\$(TargetName).pch</PrecompiledHeaderOutputFile>
       <AdditionalOptions>
       </AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -224,10 +224,15 @@
     <ClCompile Include="CApplication.cpp" />
     <ClCompile Include="dbg.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="math\vector.cpp" />
+    <ClCompile Include="render\CameraBase.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CApplication.h" />
     <ClInclude Include="dbg.h" />
+    <ClInclude Include="math\vector.h" />
+    <ClInclude Include="math\vertex.h" />
+    <ClInclude Include="render\CameraBase.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
