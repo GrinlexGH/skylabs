@@ -24,6 +24,4 @@
 *.out
 *.app
 
-build
-AppFramework/Intermediate
-.vs
+build/*
