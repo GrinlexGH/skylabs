@@ -5,15 +5,17 @@
 //===================================
 #pragma once
 /*
-#include <string_view>
 #ifdef _DEBUG
-//Of course, you can call Assert everywhere, but this will not make sense.
+
+#include <string_view>
+
+// Should never be called directly
 void _Assertion(
-	std::wstring_view FileName,
-	const int& Line,
-	std::wstring_view Expression,
-	std::wstring_view Message,
-	int& Button
+    std::wstring_view FileName,
+    const int& Line,
+    std::wstring_view Expression,
+    std::wstring_view Message,
+    int& Button
 );
 
 //These are ingenious. The logical OR operator will not check,
@@ -32,6 +34,8 @@ void _Assertion(
 			}																										\
 		}																											\
 	} while (isRetry)
+#else
+#define _AssertMsg(exp, msg)            ((void)0)
 #endif
 
 */
