@@ -3,12 +3,10 @@
 // Purpose: Implementation of all things for debugging.
 //
 //===================================
-
-#//include <string>
-//#include "dbg.hpp"
+/*
+#include <string>
 
 #ifdef _DEBUG
-
 #include <SDL.h>
 
 //In short, std::wstring is needed for manipulating string,
@@ -23,7 +21,7 @@ void _Assertion(
     constexpr wchar_t TemplateString[] = L"Assertion failed!\n\nProgram: %s\nFile: %s\nLine: %d\n\nExpression: %s\nMessage: %s";
 
     wchar_t ProgramName[256];
-    GetModuleFileNameEx(GetCurrentProcess(), nullptr, ProgramName, MAX_PATH);
+    GetModuleFileNameEx(GetCurrentProcess(), nullptr, ProgramName, 256);
     wchar_t compactPath[MAX_PATH];
     PathCompactPathEx(compactPath, ProgramName, MAX_PATH, 35);
     wcscpy_s(ProgramName, compactPath);
@@ -58,7 +56,7 @@ void _Assertion(
 		L"Assertion failed!",
 		MB_ICONERROR | MB_ABORTRETRYIGNORE
 	);
-	/*switch (Button) {
+	switch (Button) {
 		// Скорей всего не будет.
 		case IDRETRY:
 			// https://stackoverflow.com/questions/744055/gcc-inline-assembly-jump-to-label-outside-block?rq=1
@@ -68,16 +66,8 @@ void _Assertion(
 			// https://stackoverflow.com/questions/6166437/64bit-applications-and-inline-assembly
 			// https://xkcd.com/292/
 			break;
-	}*/
+	}
 }
-//If we compile in Release, _Assertation doesn't do anything
-//#else
-void _Assertion(
-	const std::wstring_view FileName,
-	const int& Line,
-	const std::wstring_view Expression,
-	const std::wstring_view Message,
-	int& Button
-) { }
 #endif
 
+*/
