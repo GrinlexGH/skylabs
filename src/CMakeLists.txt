@@ -1,7 +1,7 @@
 # src
 set(projects
-	tier0
 	launcher
+	coreinitializer
 )
 
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
