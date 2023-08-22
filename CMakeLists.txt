@@ -21,28 +21,35 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(ARCH "x64")
 	message("Architecture: ${ARCH}")
+	
 else()
     message(FATAL_ERROR "Unsupported architecture, only x86 and x64 are supported.")
 endif()
 #######################################
 set(SDL_REQUIRED_VER 2.28.1)
 set(SDL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external/SDL2)
-message(WARNING "!ATTENSION YOU MUST TO PUT YOUR SDL (include, lib, etc. folders) IN THIS PATH: ${SDL2_PATH}")
+message(WARNING "!ATTENSION YOU MUST TO PUT YOUR SDL (include, lib, etc. folders) IN THIS PATH: ${SDL_PATH}")
 set(SDL_LIBRARY ${SDL_PATH}/lib/${ARCH}/SDL2.lib)
 set(SDL_INCLUDE_DIR ${SDL_PATH}/include)
 #######################################
 find_package(SDL ${SDL_REQUIRED_VER})
 
 if(MSVC)
-	add_compile_options("/W4" "/WX" "/std:c17")
+	add_compile_options("/W4" "/WX" "/std:c17" "/std:c++20")
 else()
     add_compile_options("-Wall" "-Wextra" "-Werror")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -municode")
+endif()
+
+if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+    if(!MSVC)
+        add_compile_options(-g)
+    endif()
 endif()
 
 message("Target Architecture: ${ARCH}")
 
 set(PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/public)
-include_directories(${PUBLIC_INCLUDE_DIR})
 
 foreach(SUBDIR src)
     add_subdirectory("${SUBDIR}")
