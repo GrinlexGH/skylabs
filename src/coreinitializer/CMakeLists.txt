@@ -13,5 +13,9 @@ set_target_properties(${CURRENT_TARGET_NAME}
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/.output/${ARCH}/$<CONFIG>/bin/"
 )
 
-target_link_libraries(${CURRENT_TARGET_NAME} SDL::SDL)
+target_link_libraries(${CURRENT_TARGET_NAME}
+	PRIVATE
+    SDL::SDL
+    public
+)
 

@@ -1,13 +1,14 @@
-#include <exception>
-#include <string>
+#pragma once
 
-// Custom exception class
+#include <exception>
+#include "string.hpp"
+
 class Exception : std::exception
 {
 private:
-    std::wstring message;
+    String message;
 public:
-    Exception(const wchar_t* msg) {
+    /*Exception(const wchar_t* msg) {
         message = msg;
     }
 
@@ -16,6 +17,7 @@ public:
     }
 
     const char* what() const {
-
-    }
+        
+    }*/
 };
+

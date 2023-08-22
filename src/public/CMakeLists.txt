@@ -1,2 +1,8 @@
 # public
+set(CURRENT_TARGET_NAME public)
+add_library(${CURRENT_TARGET_NAME} INTERFACE)
+target_include_directories(${CURRENT_TARGET_NAME} INTERFACE
+    $<BUILD_INTERFACE:${PUBLIC_INCLUDE_DIR}>
+    $<INSTALL_INTERFACE:include>
+)
 

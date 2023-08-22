@@ -14,12 +14,14 @@ endif()
 
 add_custom_command(TARGET ${CURRENT_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${SDL2_PATH}/lib/${ARCH}/SDL2.dll
-        $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
+        ${SDL_PATH}/lib/${ARCH}/SDL2.dll
+        $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin/
 )
 
 set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/.output/${ARCH}/$<CONFIG>/"
 )
+
+target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE public)
 
