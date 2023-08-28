@@ -1,23 +1,16 @@
 #pragma once
 
 #include <exception>
-#include "string.hpp"
+#include <string>
 
-class Exception : std::exception
+class Exception : public std::exception
 {
 private:
-    String message;
+    const std::string message;
 public:
-    /*Exception(const wchar_t* msg) {
-        message = msg;
-    }
-
-    Exception(std::wstring msg) {
-        message = msg;
-    }
-
-    const char* what() const {
-        
-    }*/
+    Exception(const std::wstring_view msg) noexcept;
+    Exception(const std::u8string_view msg) noexcept;
+    Exception(const std::string_view msg) noexcept;
+    const char* what() const noexcept;
 };
 

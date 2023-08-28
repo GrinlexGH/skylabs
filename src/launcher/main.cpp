@@ -2,7 +2,8 @@
 
 #include <Windows.h>
 #include <filesystem>
-#include "string.hpp"
+#include "charconverters.hpp"
+#include "baseapplication.hpp"
 #include "exception.hpp"
 
 int WINAPI wWinMain(
@@ -17,34 +18,30 @@ int WINAPI wWinMain(
     UNREFERENCED_PARAMETER(nShowCmd);
 
     try {
-        std::filesystem::path rootDir = std::filesystem::current_path();
-
-        // Get the current PATH environment variable
-        std::wstring currentPathEnv;
-        DWORD currentPathSize = GetEnvironmentVariable(L"PATH", nullptr, 0);
-        if (currentPathSize > 0) {
-            currentPathEnv.resize(currentPathSize);
-            GetEnvironmentVariable(L"PATH", &currentPathEnv[0], currentPathSize);
+        BaseApplication::Init();
+        BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
+        std::string a;
+        size_t envPathLen;
+        std::string envPath;
+        getenv_s(&envPathLen, NULL, 0, "PATH");
+        if (envPathLen > 0) {
+            envPath.reserve(envPathLen);
         }
         else {
-            throw std::runtime_error("Failed to find PATH");
+            throw Exception("Failed to find PATH");
         }
-
-        // Construct the new PATH
-        std::wstring newPathEnv = rootDir.wstring() + L"/bin" + (currentPathEnv.empty() ? L"" : L";" + currentPathEnv);
-
-        // Update the PATH environment variable
-        if (!SetEnvironmentVariable(L"PATH", newPathEnv.c_str())) {
-            throw std::runtime_error("Failed to set PATH environment variable");
-        }
-
-        String s(L"Hello");
-        
-
+        getenv_s(
+            &envPathLen,
+            envPath.data(),
+            envPathLen,
+            "PATH"
+        );
+        //MessageBox(NULL, CharConverters::UTF8ToWideStr(envPath.c_str()).c_str(), L"", MB_OK);
         return 0;
     }
-    catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+    catch (const Exception& e) {
+        MessageBox(NULL, CharConverters::UTF8ToWideStr(e.what()).c_str(), L"", MB_OK);
+        //OutputDebugString(CharConverters::UTF8ToWideStr(e.what()).c_str());
         return 1;
     }
 }
