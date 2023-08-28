@@ -2,7 +2,7 @@
 set(CURRENT_TARGET_NAME coreinitializer)
 
 set(SOURCES
-	coreinitializer.cpp
+    coreinitializer.cpp
 )
 
 set (CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -14,8 +14,8 @@ set_target_properties(${CURRENT_TARGET_NAME}
 )
 
 target_link_libraries(${CURRENT_TARGET_NAME}
-	PRIVATE
-    SDL::SDL
+    PRIVATE
+    external
     public
 )
 
