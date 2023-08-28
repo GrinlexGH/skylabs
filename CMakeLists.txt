@@ -17,29 +17,32 @@ add_compile_definitions(UNICODE _UNICODE)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     set(ARCH "x86")
-	message("Architecture: ${ARCH}")
+    message("Device architecture: ${ARCH}")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(ARCH "x64")
-	message("Architecture: ${ARCH}")
-	
+    message("Device architecture: ${ARCH}")
 else()
     message(FATAL_ERROR "Unsupported architecture, only x86 and x64 are supported.")
 endif()
-#######################################
-set(SDL_REQUIRED_VER 2.28.1)
-set(SDL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external/SDL2)
-message(WARNING "!ATTENSION YOU MUST TO PUT YOUR SDL (include, lib, etc. folders) IN THIS PATH: ${SDL_PATH}")
-set(SDL_LIBRARY ${SDL_PATH}/lib/${ARCH}/SDL2.lib)
-set(SDL_INCLUDE_DIR ${SDL_PATH}/include)
-#######################################
-find_package(SDL ${SDL_REQUIRED_VER})
+
+message("Target architecture: ${CMAKE_GENERATOR_PLATFORM}")
 
 if(MSVC)
-	add_compile_options("/W4" "/WX" "/std:c17" "/std:c++20")
+    # for SKYLABS_BUILD see external CMakeLists.txt
+    if(SKYLABS_BUILD)
+        add_compile_options("/W4" "/WX" "/std:c17" "/std:c++20")
+    else()
+        add_compile_options("/W3" "/std:c17" "/std:c++20")
+    endif()
 else()
-    add_compile_options("-Wall" "-Wextra" "-Werror")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -municode")
+    if(SKYLABS_BUILD)
+        add_compile_options("-Wall" "-Wextra" "-Werror")
+    else()
+        add_compile_options("-Wall" "-Wextra")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -municode")
+    endif()
 endif()
+
 
 if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     if(!MSVC)
@@ -47,11 +50,8 @@ if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     endif()
 endif()
 
-message("Target Architecture: ${ARCH}")
-
 set(PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/public)
 
-foreach(SUBDIR src)
-    add_subdirectory("${SUBDIR}")
-endforeach()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
