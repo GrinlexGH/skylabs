@@ -5,12 +5,22 @@
 
 namespace CharConverters
 {
-    std::string WideStrToUTF8(const std::wstring_view in) {
-        std::string out;
+    template<typename outStringT>
+    outStringT WideStrToUTF8(const std::wstring_view in) {
+        static_assert(
+            std::is_same_v<outStringT, std::string_view>::value
+            ||
+            std::is_same_v<outStringT, std::u8string_view>::value,
+            "WideStrToUTF supports only std::string and std::u8string"
+        );
+
+        if (in.empty()) {
+            return outStringT();
+        }
+        outStringT out;
         out.reserve(in.size() * 4);
         uint32_t codePoint = 0;
-        for (size_t i = 0; i < in.size(); ++i) {
-            wchar_t wchar = in[i];
+        for (wchar_t wchar : in) {
             if (wchar <= 0x7F) {
                 out.push_back(static_cast<char8_t>(wchar));
             }
@@ -54,7 +64,15 @@ namespace CharConverters
         return out;
     }
 
-    std::wstring UTF8ToWideStr(const std::string_view in) {
+    template<typename inStringT>
+    std::wstring UTF8ToWideStr(const inStringT in) {
+        static_assert(
+            std::is_same_v<inStringT, std::string_view>::value
+            ||
+            std::is_same_v<inStringT, std::u8string_view>::value,
+            "WideStrToUTF supports only std::string and std::u8string"
+        );
+
         if (in.empty()) {
             return std::wstring(L"");
         }

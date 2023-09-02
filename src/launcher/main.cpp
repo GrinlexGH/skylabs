@@ -1,10 +1,11 @@
-#ifdef _WIN32
+﻿#ifdef _WIN32
 
 #include <Windows.h>
 #include <filesystem>
+#include <iostream>
 #include "charconverters.hpp"
 #include "baseapplication.hpp"
-#include "exception.hpp"
+#include "exceptions.hpp"
 
 int WINAPI wWinMain(
     _In_ HINSTANCE hInstance,
@@ -20,27 +21,12 @@ int WINAPI wWinMain(
     try {
         BaseApplication::Init();
         BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
-        std::string a;
-        size_t envPathLen;
-        std::string envPath;
-        getenv_s(&envPathLen, NULL, 0, "PATH");
-        if (envPathLen > 0) {
-            envPath.reserve(envPathLen);
-        }
-        else {
-            throw Exception("Failed to find PATH");
-        }
-        getenv_s(
-            &envPathLen,
-            envPath.data(),
-            envPathLen,
-            "PATH"
-        );
-        //MessageBox(NULL, CharConverters::UTF8ToWideStr(envPath.c_str()).c_str(), L"", MB_OK);
-        return 0;
+        throw localized_exception("");
+        //return 0;
     }
-    catch (const Exception& e) {
-        MessageBox(NULL, CharConverters::UTF8ToWideStr(e.what()).c_str(), L"", MB_OK);
+    catch (const localized_exception& e) {
+        std::cout << e.what() << std::endl;
+        //MessageBox(NULL, CharConverters::UTF8ToWideStr(e.what()).c_str(), L"", MB_OK);
         //OutputDebugString(CharConverters::UTF8ToWideStr(e.what()).c_str());
         return 1;
     }

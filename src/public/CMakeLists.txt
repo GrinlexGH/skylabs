@@ -2,12 +2,13 @@
 set(CURRENT_TARGET_NAME public)
 
 set(SOURCES
-	baseapplication.cpp
-	baseapplication.hpp
-	charconverters.cpp
-	charconverters.hpp
-	exception.cpp
-	exception.hpp
+    baseapplication.cpp
+    baseapplication.hpp
+    charconverters.cpp
+    charconverters.hpp
+    exceptions.cpp
+    exceptions.hpp
+    macros.hpp
 )
 
 add_library(${CURRENT_TARGET_NAME} OBJECT ${SOURCES})

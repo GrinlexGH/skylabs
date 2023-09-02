@@ -6,7 +6,12 @@
 
 namespace CharConverters
 {
-    std::string WideStrToUTF8(const std::wstring_view in);
-    std::wstring UTF8ToWideStr(const std::string_view in);
+    /**
+    * @brief ѕринимает как шаблон тип возвращаемого значени€,
+    */
+    template<typename outStringT>
+    outStringT WideStrToUTF8(const std::wstring_view in);
+    template<typename inStringT>
+    std::wstring UTF8ToWideStr(const inStringT in);
 }
 

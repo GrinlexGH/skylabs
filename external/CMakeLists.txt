@@ -1,7 +1,6 @@
 #external
-set(SKYLABS_BUILD ON)
+add_compile_options("/W3" "/std:c17" "/std:c++20")
 add_subdirectory(SDL)
-set(SKYLABS_BUILD OFF)
 
 set(CURRENT_TARGET_NAME external)
 
