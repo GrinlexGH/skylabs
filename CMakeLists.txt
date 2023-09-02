@@ -1,5 +1,3 @@
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 cmake_minimum_required(VERSION 3.27.0)
 
 set(PROJECT_NAME "Skylabs")
@@ -28,19 +26,9 @@ endif()
 message("Target architecture: ${CMAKE_GENERATOR_PLATFORM}")
 
 if(MSVC)
-    # for SKYLABS_BUILD see external CMakeLists.txt
-    if(SKYLABS_BUILD)
-        add_compile_options("/W4" "/WX" "/std:c17" "/std:c++20")
-    else()
-        add_compile_options("/W3" "/std:c17" "/std:c++20")
-    endif()
+    add_compile_options("/W4" "/WX" "/std:c17" "/std:c++20")
 else()
-    if(SKYLABS_BUILD)
-        add_compile_options("-Wall" "-Wextra" "-Werror")
-    else()
-        add_compile_options("-Wall" "-Wextra")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -municode")
-    endif()
+    add_compile_options("-Wall" "-Wextra" "-Werror")
 endif()
 
 

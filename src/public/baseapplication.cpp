@@ -1,29 +1,43 @@
 #include <filesystem>
-#include <iostream>
-#include "exception.hpp"
+#include <system_error>
+#include "macros.hpp"
+#include "exceptions.hpp"
 #include "charconverters.hpp"
 #include "baseapplication.hpp"
 
 std::filesystem::path BaseApplication::rootDir;
 
 void BaseApplication::Init() {
-    try {
-        rootDir = std::filesystem::current_path();
-    }
-    catch(std::filesystem::filesystem_error const& ex) {
-        std::cerr << ex.what();
-    }
+    rootDir = std::filesystem::current_path();
 }
 
 void BaseApplication::AddToEnvPATH(const std::string_view path) {
-    // Getting length of PATH
-    size_t envPathLen = 0;
+    if (path.empty())
+        return;
 
-    // First call to get the length of PATH
-    if (!getenv_s(&envPathLen, nullptr, 0, "PATH")) {
-        throw Exception("Failed to get PATH length прикол");
+#ifdef _WIN32
+    wchar_t* currentPath;
+    size_t currentPathLen;
+    if (errno_t err = _wdupenv_s(&currentPath, &currentPathLen, L"PATH")) {
+        switch (err) {
+        case EINVAL: throw localized_exception(CurrentFunction + ": failed to do _wdupenv_s()\n\nEINVAL");
+        case ENOMEM: throw localized_exception(CurrentFunction + ": failed to do _wdupenv_s()\n\nENOMEM");
+        default:     throw std::system_error(
+                        std::error_code(err, std::system_category()),
+                        "BaseApplication::AddToEnvPATH: failed to do _wdupenv_s()!"
+                     );
+        }
     }
 
+    std::wstring newPath;
+    newPath = currentPath;
+    newPath += L";" + CharConverters::UTF8ToWideStr<std::string_view>(path);
+    _wputenv_s(L"PATH", L"");
+    currentPath = const_cast<wchar_t*>(reinterpret_cast<const wchar_t*>(path.data()));
+#endif
+
+
+    /*
     if (envPathLen > 0) {
         std::string envPath(envPathLen, '\0');
 
@@ -43,6 +57,6 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
     }
     else {
         throw Exception("Failed to find PATH");
-    }
+    }*/
 }
 
