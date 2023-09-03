@@ -21,13 +21,11 @@ int WINAPI wWinMain(
     try {
         BaseApplication::Init();
         BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
-        throw localized_exception("");
-        //return 0;
+        
+        return 0;
     }
     catch (const localized_exception& e) {
         std::cout << e.what() << std::endl;
-        //MessageBox(NULL, CharConverters::UTF8ToWideStr(e.what()).c_str(), L"", MB_OK);
-        //OutputDebugString(CharConverters::UTF8ToWideStr(e.what()).c_str());
         return 1;
     }
 }
