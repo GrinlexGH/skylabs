@@ -1,8 +1,8 @@
-#include <string.h>
+#include <string>
 #include "charconverters.hpp"
 #include "exceptions.hpp"
 
-localized_exception::localized_exception(const std::wstring_view msg) noexcept : message(CharConverters::WideStrToUTF8<std::u8string_view>(msg))
+localized_exception::localized_exception(const std::wstring_view msg) noexcept : message(CharConverters::WideStrToUTF8<std::u8string>(msg))
  { }
 localized_exception::localized_exception(const std::u8string_view msg) noexcept : message(msg)
  { }

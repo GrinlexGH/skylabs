@@ -4,7 +4,6 @@ set(CURRENT_TARGET_NAME public)
 set(SOURCES
     baseapplication.cpp
     baseapplication.hpp
-    charconverters.cpp
     charconverters.hpp
     exceptions.cpp
     exceptions.hpp
