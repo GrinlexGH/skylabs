@@ -28,12 +28,14 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
                      );
         }
     }
-
-    std::wstring newPath;
-    newPath = currentPath;
-    newPath += L";" + CharConverters::UTF8ToWideStr<std::string_view>(path);
-    _wputenv_s(L"PATH", L"");
-    currentPath = const_cast<wchar_t*>(reinterpret_cast<const wchar_t*>(path.data()));
+    std::wstring newPath = currentPath;
+    newPath += L";" + CharConverters::UTF8ToWideStr(path);
+    _wputenv_s(L"PATH", newPath.c_str());
+#else
+    if(char* currentPath = getenv("PATH") == nullptr);
+        throw localized_exception(CurrentFunction + ": failed to do getenv()\n\nCannot find PATH var");
+    std::string newPath = "PATH=" + currentPath + ";" + path;
+    putenv(newPath.cstr());
 #endif
 
 
