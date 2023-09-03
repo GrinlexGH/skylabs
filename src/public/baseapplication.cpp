@@ -35,7 +35,7 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
     if(char* currentPath = getenv("PATH") == nullptr);
         throw localized_exception(CurrentFunction + ": failed to do getenv()\n\nCannot find PATH var");
     std::string newPath = "PATH=" + currentPath + ";" + path;
-    putenv(newPath.cstr());
+    putenv(newPath.c_str());
 #endif
 
 
