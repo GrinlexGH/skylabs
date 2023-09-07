@@ -16,9 +16,13 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
         return;
 
 #ifdef _WIN32
-    wchar_t* currentPath;
     size_t currentPathLen;
-    if (errno_t err = _wdupenv_s(&currentPath, &currentPathLen, L"PATH")) {
+    getenv_s( &currentPathLen, nullptr, 0, "PATH");
+    if (currentPathLen == 0) {
+        throw localized_exception(CurrentFunction + ": failed to do getenv_s()\n\nCannot find PATH");
+    }
+    auto currentPath = std::make_unique<wchar_t[]>(currentPathLen);
+    if (errno_t err = _wgetenv_s(&currentPathLen, currentPath.get(), currentPathLen, L"PATH")) {
         switch (err) {
         case EINVAL: throw localized_exception(CurrentFunction + ": failed to do _wdupenv_s()\n\nEINVAL");
         case ENOMEM: throw localized_exception(CurrentFunction + ": failed to do _wdupenv_s()\n\nENOMEM");
@@ -28,8 +32,8 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
                      );
         }
     }
-    std::wstring newPath = currentPath;
-    newPath += L";" + CharConverters::UTF8ToWideStr(path);
+    std::wstring newPath = currentPath.get();
+    newPath += L";" + CharConverters::UTF8ToWideStr(path) + L";";
     _wputenv_s(L"PATH", newPath.c_str());
 #else
     if(char* currentPath = getenv("PATH") == nullptr);
@@ -37,28 +41,5 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
     std::string newPath = "PATH=" + currentPath + ";" + path;
     putenv(newPath.c_str());
 #endif
-
-
-    /*
-    if (envPathLen > 0) {
-        std::string envPath(envPathLen, '\0');
-
-        // Second call to actually retrieve the PATH value
-        if (!getenv_s(&envPathLen, envPath.data(), envPathLen, "PATH")) {
-            throw Exception("Failed to get PATH");
-        }
-
-        // Construct the new PATH value
-        std::string newEnvPath = "PATH=";
-        newEnvPath.append(envPath).append(path.empty() ? "" : ";").append(path);
-
-        // Set the new PATH value
-        if (!_putenv(newEnvPath.c_str())) {
-            throw Exception("Failed to set PATH");
-        }
-    }
-    else {
-        throw Exception("Failed to find PATH");
-    }*/
 }
 

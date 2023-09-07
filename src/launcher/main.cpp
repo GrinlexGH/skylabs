@@ -21,7 +21,8 @@ int WINAPI wWinMain(
     try {
         BaseApplication::Init();
         BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
-        
+#pragma warning(disable: 4996)
+        MessageBox(NULL, _wgetenv(L"PATH"), L"", MB_OK);
         return 0;
     }
     catch (const localized_exception& e) {

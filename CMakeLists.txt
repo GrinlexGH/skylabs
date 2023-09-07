@@ -25,13 +25,6 @@ endif()
 
 message("Target architecture: ${CMAKE_GENERATOR_PLATFORM}")
 
-if(MSVC)
-    add_compile_options("/W4" "/WX" "/std:c17" "/std:c++20")
-else()
-    add_compile_options("-Wall" "-Wextra" "-Werror")
-endif()
-
-
 if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     if(!MSVC)
         add_compile_options(-g)
