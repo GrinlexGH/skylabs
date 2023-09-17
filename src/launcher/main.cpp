@@ -7,6 +7,15 @@
 #include "baseapplication.hpp"
 #include "exceptions.hpp"
 
+#ifdef WIN32
+typedef int (*CoreMain_t)(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+    LPSTR lpCmdLine, int nCmdShow);
+#elif POSIX
+typedef int (*CoreMain_t)(int argc, char** argv);
+#else
+#error
+#endif
+
 int WINAPI wWinMain(
     _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -21,15 +30,20 @@ int WINAPI wWinMain(
     try {
         BaseApplication::Init();
         BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
-#pragma warning(disable: 4996)
-        MessageBox(NULL, _wgetenv(L"PATH"), L"", MB_OK);
-        return 0;
+        std::wstring corePath = BaseApplication::rootDir.wstring() + L"/bin/core.dll";
+
+        //HINSTANCE core = LoadLibrary(corePath.c_str());
+        //return 0;
+        throw localized_exception(u8"тебе пизда");
     }
-    catch (const localized_exception& e) {
+    catch (const std::exception& e) {
+        MessageBox(NULL, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"", MB_OK);
         std::cout << e.what() << std::endl;
         return 1;
     }
 }
+
+#elif defined(POSIX)
 
 #endif
 
