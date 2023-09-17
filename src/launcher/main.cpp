@@ -1,11 +1,11 @@
-﻿#ifdef _WIN32
-
-#include <Windows.h>
-#include <filesystem>
+﻿#include <filesystem>
 #include <iostream>
 #include "charconverters.hpp"
 #include "baseapplication.hpp"
 #include "exceptions.hpp"
+
+#ifdef _WIN32
+#include <Windows.h>
 
 #ifdef WIN32
 typedef int (*CoreMain_t)(HINSTANCE hInstance, HINSTANCE hPrevInstance,
@@ -29,12 +29,11 @@ int WINAPI wWinMain(
 
     try {
         BaseApplication::Init();
-        BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
+        BaseApplication::AddLibSearchPath(BaseApplication::rootDir.string() + "/bin");
         std::wstring corePath = BaseApplication::rootDir.wstring() + L"/bin/core.dll";
 
-        //HINSTANCE core = LoadLibrary(corePath.c_str());
+        HINSTANCE core = LoadLibrary(corePath.c_str());
         //return 0;
-        throw localized_exception(u8"тебе пизда");
     }
     catch (const std::exception& e) {
         MessageBox(NULL, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"", MB_OK);
@@ -44,6 +43,20 @@ int WINAPI wWinMain(
 }
 
 #elif defined(POSIX)
+int main(int argc, char** argv) {
+    try {
+        BaseApplication::Init();
+        BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
+        std::wstring corePath = BaseApplication::rootDir.wstring() + L"/bin/core.dll";
 
+        //HINSTANCE core = LoadLibrary(corePath.c_str());
+        //return 0;
+        throw localized_exception(u8"тебе пизда");
+    }
+    catch (const std::exception& e) {
+        std::cout << e.what() << std::endl;
+        return 1;
+    }
+}
 #endif
 
