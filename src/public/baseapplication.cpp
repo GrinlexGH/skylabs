@@ -19,17 +19,13 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
     size_t currentPathLen;
     getenv_s( &currentPathLen, nullptr, 0, "PATH");
     if (currentPathLen == 0) {
-        throw localized_exception(CurrentFunction + ": failed to do getenv_s()\n\nCannot find PATH");
+        throw current_func_exception("getenv_s() failed\n\nCannot find PATH");
     }
     auto currentPath = std::make_unique<wchar_t[]>(currentPathLen);
     if (errno_t err = _wgetenv_s(&currentPathLen, currentPath.get(), currentPathLen, L"PATH")) {
         switch (err) {
-        case EINVAL: throw localized_exception(CurrentFunction + ": failed to do _wdupenv_s()\n\nEINVAL");
-        case ENOMEM: throw localized_exception(CurrentFunction + ": failed to do _wdupenv_s()\n\nENOMEM");
-        default:     throw std::system_error(
-                        std::error_code(err, std::system_category()),
-                        "BaseApplication::AddToEnvPATH: failed to do _wdupenv_s()!"
-                     );
+        case EINVAL: throw current_func_exception("_wdupenv_s() failed\n\nEINVAL");
+        case ERANGE: throw current_func_exception("_wdupenv_s() failed\n\nERANGE");
         }
     }
     std::wstring newPath = currentPath.get();
@@ -37,7 +33,7 @@ void BaseApplication::AddToEnvPATH(const std::string_view path) {
     _wputenv_s(L"PATH", newPath.c_str());
 #else
     if(char* currentPath = getenv("PATH") == nullptr);
-        throw localized_exception(CurrentFunction + ": failed to do getenv()\n\nCannot find PATH var");
+        throw current_func_exception("failed to do getenv()\n\nCannot find PATH");
     std::string newPath = "PATH=" + currentPath + ";" + path;
     putenv(newPath.c_str());
 #endif
