@@ -1,8 +1,8 @@
-# coreinitializer
-set(CURRENT_TARGET_NAME coreinitializer)
+# core
+set(CURRENT_TARGET_NAME core)
 
 set(SOURCES
-    coreinitializer.cpp
+    main.cpp
 )
 
 set (CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)

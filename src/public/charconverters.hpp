@@ -4,7 +4,11 @@
 #include <cstdint>
 #include <stdexcept>
 
+#ifdef _WIN32
 #define WideCharIsUTF16
+#else
+#define WideCharIsUTF32
+#endif
 
 namespace CharConverters
 {
@@ -53,12 +57,12 @@ namespace CharConverters
                 out.push_back(static_cast<char8_t>((wchar & 0x3F) | 0x80));
             }
 #ifdef WideCharIsUTF32
-        else if (wchar <= 0x10FFFF) {
-            out.push_back(static_cast<char8_t>((wchar >> 18) | 0xF0));
-            out.push_back(static_cast<char8_t>(((wchar >> 12) & 0x3F) | 0x80));
-            out.push_back(static_cast<char8_t>(((wchar >> 6) & 0x3F) | 0x80));
-            out.push_back(static_cast<char8_t>((wchar & 0x3F) | 0x80));
-        }
+            else if (wchar <= 0x10FFFF) {
+                out.push_back(static_cast<char8_t>((wchar >> 18) | 0xF0));
+                out.push_back(static_cast<char8_t>(((wchar >> 12) & 0x3F) | 0x80));
+                out.push_back(static_cast<char8_t>(((wchar >> 6) & 0x3F) | 0x80));
+                out.push_back(static_cast<char8_t>((wchar & 0x3F) | 0x80));
+            }
 #endif
         }
         return out;
@@ -82,22 +86,40 @@ namespace CharConverters
                 i += 1;
             }
             else if ((in[i] & 0xE0) == 0xC0) {
-                out.push_back(static_cast<wchar_t>(((in[i] & 0x1F) << 6) | (in[i + 1] & 0x3F)));
-                i += 2;
+                // Checking for a valid utf8 sequence
+                if (i + 1 < in.size() && (in[i + 1] & 0xC0) == 0x80) {
+                    out.push_back(static_cast<wchar_t>(((in[i] & 0x1F) << 6) | (in[i + 1] & 0x3F)));
+                    i += 2;
+                }
+                else {
+                    throw std::invalid_argument("Invalid UTF-8 sequence");
+                }
             }
             else if ((in[i] & 0xF0) == 0xE0) {
-                out.push_back(static_cast<wchar_t>(((in[i] & 0x0F) << 12) | ((in[i + 1] & 0x3F) << 6) | (in[i + 2] & 0x3F)));
-                i += 3;
+                // Checking for a valid utf8 sequence
+                if (i + 2 < in.size() && (in[i + 1] & 0xC0) == 0x80 && (in[i + 2] & 0xC0) == 0x80) {
+                    out.push_back(static_cast<wchar_t>(((in[i] & 0x0F) << 12) | ((in[i + 1] & 0x3F) << 6) | (in[i + 2] & 0x3F)));
+                    i += 3;
+                }
+                else {
+                    throw std::invalid_argument("Invalid UTF-8 sequence");
+                }
             }
             else if ((in[i] & 0xF8) == 0xF0) {
+                // Checking for a valid utf8 sequence
+                if (i + 3 < in.size() && (in[i + 1] & 0xC0) == 0x80 && (in[i + 2] & 0xC0) == 0x80 && (in[i + 3] & 0xC0) == 0x80) {
 #ifdef _WIN32
-                uint32_t u32 = ((in[i] & 0x07) << 24) | ((in[i + 1] & 0x3F) << 12) | ((in[i + 2] & 0x3F) << 6) | (in[i + 3] & 0x3F);
-                out.push_back(static_cast<wchar_t>(((u32 - 0x10000) >> 10) + 0xD800));
-                out.push_back(static_cast<wchar_t>((u32 % 0x400) + 0xDC00));
+                    uint32_t u32 = ((in[i] & 0x07) << 24) | ((in[i + 1] & 0x3F) << 12) | ((in[i + 2] & 0x3F) << 6) | (in[i + 3] & 0x3F);
+                    out.push_back(static_cast<wchar_t>(((u32 - 0x10000) >> 10) + 0xD800));
+                    out.push_back(static_cast<wchar_t>((u32 % 0x400) + 0xDC00));
 #else
-                out.push_back(static_cast<wchar_t>(((in[i] & 0x07) << 24) | ((in[i + 1] & 0x3F) << 12) | ((in[i + 2] & 0x3F) << 6) | (in[i + 3] & 0x3F)));
+                    out.push_back(static_cast<wchar_t>(((in[i] & 0x07) << 24) | ((in[i + 1] & 0x3F) << 12) | ((in[i + 2] & 0x3F) << 6) | (in[i + 3] & 0x3F)));
 #endif
-                i += 4;
+                    i += 4;
+                }
+                else {
+                    throw std::invalid_argument("Invalid UTF-8 sequence");
+                }
             }
             else {
                 throw std::invalid_argument("Invalid character");

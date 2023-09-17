@@ -18,11 +18,25 @@ endif()
 
 add_custom_command(
     TARGET ${CURRENT_TARGET_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        $<TARGET_FILE_DIR:SDL3::SDL3>
+    COMMAND ${CMAKE_COMMAND} -E make_directory
         $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
-    COMMENT "Copying SDL3::SDL3 files"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:SDL3::SDL3>
+        $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
+    COMMENT "Copying SDL3::SDL3 dll"
 )
+
+if(MSVC)
+    add_custom_command(
+        TARGET ${CURRENT_TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE_DIR:SDL3::SDL3>/SDL3.pdb
+            $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
+        COMMENT "Copying SDL3::SDL3 pdb"
+    )
+endif()
+
+
 
 set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES

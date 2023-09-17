@@ -1,7 +1,7 @@
 # src
 set(projects
     launcher
-    coreinitializer
+    core
     public
 )
 
