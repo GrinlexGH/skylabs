@@ -42,15 +42,17 @@ int WINAPI wWinMain(
     }
 }
 
-#elif defined(POSIX)
+#elif defined(__linux__)
 int main(int argc, char** argv) {
+    UNUSED(argv);
+    UNUSED(argc);
     try {
         BaseApplication::Init();
-        BaseApplication::AddToEnvPATH(BaseApplication::rootDir.string() + "/bin");
-        std::wstring corePath = BaseApplication::rootDir.wstring() + L"/bin/core.dll";
-
+        BaseApplication::AddLibSearchPath("/bin");
+        //std::wstring corePath = BaseApplication::rootDir.wstring() + L"/bin/core.dll";
         //HINSTANCE core = LoadLibrary(corePath.c_str());
         //return 0;
+        std::cout << getenv("LD_LIBRARY_PATH");
         throw localized_exception(u8"тебе пизда");
     }
     catch (const std::exception& e) {
