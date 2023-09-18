@@ -1,4 +1,5 @@
 #include <string>
+#include <bit>
 #include "charconverters.hpp"
 #include "exceptions.hpp"
 
