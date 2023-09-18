@@ -1,3 +1,4 @@
+#include <cstring>
 #include <filesystem>
 #include <system_error>
 #include "macros.hpp"
@@ -17,6 +18,7 @@ void BaseApplication::AddLibSearchPath(const std::string_view path) {
 
 #ifdef _WIN32
     size_t currentPathLen;
+    // Getting length of PATH
     getenv_s(&currentPathLen, nullptr, 0, "PATH");
     if (currentPathLen == 0) {
         throw current_func_exception("getenv_s() failed\n\nCannot find PATH");
@@ -31,11 +33,19 @@ void BaseApplication::AddLibSearchPath(const std::string_view path) {
         throw current_func_exception("_wputenv_s() failed\n\nerror code: " + err);
     }
 #else
+    std::string newPath;
 
+    if(const char* currentLibEnv = getenv("LD_LIBRARY_PATH")) {
+        newPath = currentLibEnv + ':';
+    } else {
+        newPath = path;
+    }
+
+    setenv("LD_LIBRARY_PATH", newPath.c_str(), 1);
 #endif
 }
 
 void BaseApplication::LoadLib(const std::string_view path) {
-
+    UNUSED(path);
 }
 

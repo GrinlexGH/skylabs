@@ -23,7 +23,9 @@ namespace CharConverters
         }
         OutStringT out;
         out.reserve(in.size() * 4);
+    #ifdef WideCharIsUTF16
         uint32_t codePoint = 0;
+    #endif
         for (wchar_t wchar : in) {
             if (wchar <= 0x7F) {
                 out.push_back(static_cast<char8_t>(wchar));
@@ -51,7 +53,11 @@ namespace CharConverters
                 out.push_back(static_cast<char8_t>((codePoint & 0x3F) | 0x80));
             }
 #endif
-            else {
+            else
+        #ifdef WideCharIsUTF32
+            if(wchar <= 0xFFFF)
+        #endif
+             {
                 out.push_back(static_cast<char8_t>((wchar >> 12) | 0xE0));
                 out.push_back(static_cast<char8_t>(((wchar >> 6) & 0x3F) | 0x80));
                 out.push_back(static_cast<char8_t>((wchar & 0x3F) | 0x80));
