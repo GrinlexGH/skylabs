@@ -7,3 +7,5 @@
 
 #define UNUSED(x) (void)(x)
 
+#define DllExport   __declspec(dllexport)
+
