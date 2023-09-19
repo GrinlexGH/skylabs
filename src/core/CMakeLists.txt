@@ -10,7 +10,7 @@ add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
 
 set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/.output/${ARCH}/$<CONFIG>/bin/"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/.output/${ARCH}/$<CONFIG>/bin/"
 )
 
 target_link_libraries(${CURRENT_TARGET_NAME}
