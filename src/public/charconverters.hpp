@@ -12,6 +12,17 @@
 
 namespace CharConverters
 {
+    /**
+    * @brief Converts a wide string to UTF-8 encoding.
+    *
+    * This function takes a wide string and converts it to a UTF-8 encoded string.
+    *
+    * @tparam OutStringT - The type of the output string (std::string or std::u8string).
+    * @param in - The input wide string in UTF-16 (Windows) or UTF-32 (Linux) to be converted.
+    * @return An instance of the output string type containing the UTF-8 representation of the input.
+    * @throws std::invalid_argument if the input contains invalid wide characters.
+    * @throws std::bad_alloc if memory allocation fails during string conversion.
+    */
     template<typename OutStringT>
     OutStringT WideStrToUTF8(const std::wstring_view in) {
         static_assert(
@@ -74,6 +85,16 @@ namespace CharConverters
         return out;
     }
 
+    /**
+    * @brief Converts a UTF-8 encoded string to a wide string.
+    *
+    * This function takes a UTF-8 encoded string and converts it to a wide string.
+    *
+    * @tparam InStringT - The type of the input string (std::string_view or std::u8string_view).
+    * @param in - The input string to be converted.
+    * @return An instance of std::wstring containing the wide character representation of the input.
+    * @throws std::invalid_argument if the input contains invalid UTF-8 characters.
+    */
     template<typename InStringT>
     std::wstring UTF8ToWideStr(const InStringT in) {
         static_assert(
