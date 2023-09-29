@@ -9,7 +9,7 @@
 */
 class localized_exception : public std::exception
 {
-private:
+protected:
     const std::string message = "Unknown localized exception!";
 public:
     localized_exception() noexcept = default;
@@ -26,11 +26,13 @@ public:
 */
 class current_func_exception : public localized_exception
 {
-private:
-    const std::string message = CurrentFunction + ": Unknown localized exception!";
 public:
-    explicit current_func_exception(const std::wstring_view msg) noexcept;
-    explicit current_func_exception(const std::u8string_view msg) noexcept;
-    explicit current_func_exception(const std::string_view msg) noexcept;
+    current_func_exception() noexcept = delete;
+    explicit current_func_exception(std::string currentFuncName, const std::wstring_view msg) noexcept;
+    explicit current_func_exception(std::string currentFuncName, const std::u8string_view msg) noexcept;
+    explicit current_func_exception(std::string currentFuncName, const std::string_view msg) noexcept;
+    ~current_func_exception() noexcept override = default;
+    #define func_exception(msg) current_func_exception(CurrentFunction, msg)
+    const char* what() const noexcept override;
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "macros.hpp"
 #include <cstdint>
 #include <stdexcept>
 
