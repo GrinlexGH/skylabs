@@ -1,6 +1,6 @@
 #include "macros.hpp"
 
-double CoreInit() {
+double DllExport CoreInit() {
 return 3.14;
 }
 
