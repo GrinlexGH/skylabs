@@ -29,15 +29,14 @@ int WINAPI wWinMain(
 
     try {
         BaseApplication::Init();
-        BaseApplication::AddLibSearchPath(BaseApplication::rootDir.string() + "/bin");
-        std::wstring corePath = BaseApplication::rootDir.wstring() + L"/bin/core.dll";
-
-        HINSTANCE core = LoadLibrary(corePath.c_str());
-        //return 0;
+        BaseApplication::AddLibSearchPath(BaseApplication::rootDir.u8string() + u8"/bin");
+        std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"/bin/core.dll";
+        void* core = BaseApplication::LoadLib(corePath);
+        UNUSED(core);
+        return 0;
     }
     catch (const std::exception& e) {
         MessageBox(NULL, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"", MB_OK);
-        std::cout << e.what() << std::endl;
         return 1;
     }
 }
