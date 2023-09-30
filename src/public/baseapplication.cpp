@@ -38,7 +38,7 @@ void BaseApplication::AddLibSearchPath(const std::u8string_view path) {
 
 #ifdef _WIN32
     size_t currentPathLen;
-    std::wstring newPath
+    std::wstring newPath;
     // Getting length of PATH
     getenv_s(&currentPathLen, nullptr, 0, "PATH");
     if (currentPathLen != 0) {
