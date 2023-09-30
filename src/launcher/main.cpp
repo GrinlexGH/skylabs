@@ -1,21 +1,28 @@
-﻿#include <filesystem>
+﻿#ifdef _WIN32
+#include <Windows.h>
+
+#elif defined(__linux__)
+#include <dlfcn.h>
+
+#endif
+
+#include <filesystem>
 #include <iostream>
+#include <string>
 #include "charconverters.hpp"
 #include "baseapplication.hpp"
 #include "exceptions.hpp"
 
-#ifdef _WIN32
-#include <Windows.h>
-
 #ifdef WIN32
 typedef int (*CoreMain_t)(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     LPSTR lpCmdLine, int nCmdShow);
-#elif POSIX
+#elif defined(__linux__)
 typedef int (*CoreMain_t)(int argc, char** argv);
 #else
 #error
 #endif
 
+#ifdef _WIN32
 int WINAPI wWinMain(
     _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -47,12 +54,12 @@ int main(int argc, char** argv) {
     UNUSED(argc);
     try {
         BaseApplication::Init();
-        BaseApplication::AddLibSearchPath("/bin");
-        //std::wstring corePath = BaseApplication::rootDir.wstring() + L"/bin/core.dll";
-        //HINSTANCE core = LoadLibrary(corePath.c_str());
-        //return 0;
-        std::cout << getenv("LD_LIBRARY_PATH");
-        throw localized_exception(u8"тебе пизда");
+        BaseApplication::AddLibSearchPath(u8"/bin");
+        std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"/bin/libcore.so";
+        void* core = BaseApplication::LoadLib(corePath);
+        while(1);
+        dlclose(core);
+        return 0;
     }
     catch (const std::exception& e) {
         std::cout << e.what() << std::endl;

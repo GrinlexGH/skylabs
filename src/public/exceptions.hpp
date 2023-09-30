@@ -22,7 +22,7 @@ public:
 
 /**
 * @brief Inherits from localized_exception and just adds current function name + message
-* like Person::SayHello: Cant say hello because code page is invalid.
+* like `Person::SayHello: Cant say hello because code page is invalid.`
 */
 class current_func_exception : public localized_exception
 {
