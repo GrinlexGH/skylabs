@@ -15,7 +15,7 @@
 
 #ifdef WIN32
 typedef int (*CoreMain_t)(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-    LPSTR lpCmdLine, int nCmdShow);
+    LPWSTR lpCmdLine, int nShowCmd);
 #elif defined(__linux__)
 typedef int (*CoreMain_t)(int argc, char** argv);
 #else
@@ -39,8 +39,11 @@ int WINAPI wWinMain(
         BaseApplication::AddLibSearchPath(BaseApplication::rootDir.u8string() + u8"/bin");
         std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"/bin/core.dll";
         void* core = BaseApplication::LoadLib(corePath);
-        UNUSED(core);
-        return 0;
+        CoreMain_t main = (CoreMain_t)GetProcAddress((HINSTANCE)core, "CoreInit");
+        
+        int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
+        FreeLibrary((HMODULE)core);
+        return ret;
     }
     catch (const std::exception& e) {
         MessageBox(NULL, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"", MB_OK);
@@ -57,7 +60,6 @@ int main(int argc, char** argv) {
         BaseApplication::AddLibSearchPath(u8"/bin");
         std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"/bin/libcore.so";
         void* core = BaseApplication::LoadLib(corePath);
-        while(1);
         dlclose(core);
         return 0;
     }
