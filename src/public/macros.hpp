@@ -10,7 +10,13 @@
 
 #define UNUSED(x) (void)(x)
 
-#define DllExport __declspec(dllexport)
-
-
+#if defined(_MSC_VER)
+    // Microsoft
+    #define DLLEXPORT __declspec(dllexport)
+    #define DLLIMPORT __declspec(dllimport)
+#elif defined(__GNUC__)
+    // GCC
+    #define DLLEXPORT __attribute__((visibility("default")))
+    #define DLLIMPORT
+#endif
 
