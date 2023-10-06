@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <assert.h>
 #include "charconverters.hpp"
 #include "baseapplication.hpp"
 #include "exceptions.hpp"
@@ -23,21 +24,17 @@ typedef int (*CoreMain_t)(int argc, char** argv);
 #endif
 
 #ifdef _WIN32
+
 int WINAPI wWinMain(
     _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR lpCmdLine,
     _In_ int nShowCmd)
 {
-    UNREFERENCED_PARAMETER(lpCmdLine);
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(hInstance);
-    UNREFERENCED_PARAMETER(nShowCmd);
-
     try {
         BaseApplication::Init();
-        BaseApplication::AddLibSearchPath(BaseApplication::rootDir.u8string() + u8"/bin");
-        std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"/bin/core.dll";
+        BaseApplication::AddLibSearchPath(BaseApplication::rootDir.u8string() + u8"\\bin");
+        std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"\\bin\\core.dll";
         void* core = BaseApplication::LoadLib(corePath);
         CoreMain_t main = (CoreMain_t)GetProcAddress((HINSTANCE)core, "CoreInit");
         
@@ -46,7 +43,7 @@ int WINAPI wWinMain(
         return ret;
     }
     catch (const std::exception& e) {
-        MessageBox(NULL, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"", MB_OK);
+        MessageBox(NULL, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"Error!", MB_OK | MB_ICONERROR);
         return 1;
     }
 }

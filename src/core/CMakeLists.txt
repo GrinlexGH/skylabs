@@ -19,5 +19,6 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     PRIVATE
     external
     public
+    SDL3::SDL3
 )
 
