@@ -154,6 +154,7 @@ namespace CharConverters
                 break;
             }
         }
+        out.push_back('\0');
         return out;
     }
 }
