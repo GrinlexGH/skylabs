@@ -5,7 +5,6 @@
 #endif
 #include <cstring>
 #include <filesystem>
-#include <system_error>
 #include <bit>
 #include "macros.hpp"
 #include "exceptions.hpp"
@@ -19,11 +18,9 @@ void BaseApplication::Init() {
     wchar_t buffer[MAX_PATH];
 
     if (GetModuleFileName(nullptr, buffer, MAX_PATH) == MAX_PATH) {
-        wchar_t* pszError;
-        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&pszError, 0, NULL);
-        std::wstring szBuf = pszError;
-        szBuf = L"Failed to initialize:\n\n" + szBuf;
-        throw func_exception(szBuf);
+        wchar_t* errorMsg;
+        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
+        throw func_exception(errorMsg);
     }
 
     rootDir = buffer;
@@ -44,13 +41,13 @@ void BaseApplication::AddLibSearchPath(const std::u8string_view path) {
     if (currentPathLen != 0) {
         auto currentPath = std::make_unique<wchar_t[]>(currentPathLen);
         if (errno_t err = _wgetenv_s(&currentPathLen, currentPath.get(), currentPathLen, L"PATH")) {
-            throw func_exception("_wgetenv_s() failed\n\nerror code: " + err);
+            throw func_exception("_wgetenv_s() failed with code: " + std::to_string(err));
         }
         newPath = currentPath.get();
     }
     newPath += L";" + CharConverters::UTF8ToWideStr(path) + L";";
     if (errno_t err = _wputenv_s(L"PATH", newPath.c_str())) {
-        throw func_exception("_wputenv_s() failed\n\nerror code: " );
+        throw func_exception("_wputenv_s() failed with code: " + std::to_string(err));
     }
 #else
     std::string newPath;
@@ -68,18 +65,15 @@ void BaseApplication::AddLibSearchPath(const std::u8string_view path) {
 
 void* BaseApplication::LoadLib(const std::u8string_view path) {
 #ifdef _WIN32
-    void* lib = LoadLibraryEx(
-        CharConverters::UTF8ToWideStr<std::u8string>(std::u8string(path.data())).c_str(),
-        NULL,
-        LOAD_WITH_ALTERED_SEARCH_PATH
-    );
+    if (path.find('/') != std::string::npos)
+        throw func_exception("Don't use '/' in path on windows.");
+
+    void* lib = LoadLibraryEx(CharConverters::UTF8ToWideStr<std::u8string>(std::u8string(path.data())).c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
 
     if (!lib) {
-        wchar_t* pszError;
-        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&pszError, 0, NULL);
-        std::wstring szBuf = pszError;
-        szBuf = L"Failed to load the launcher DLL:\n\n" + szBuf;
-        throw func_exception(szBuf);
+        wchar_t* errorMsg;
+        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
+        throw func_exception(errorMsg);
     }
 
     return lib;
