@@ -15,10 +15,9 @@
 #include "exceptions.hpp"
 
 #ifdef WIN32
-typedef int (*CoreMain_t)(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-    LPWSTR lpCmdLine, int nShowCmd);
+using CoreMain_t = int(*)(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd);
 #elif defined(__linux__)
-typedef int (*CoreMain_t)(int argc, char** argv);
+using CoreMain_t = int(*)(int argc, char** argv);
 #else
 #error
 #endif
@@ -50,15 +49,19 @@ int WINAPI wWinMain(
 
 #elif defined(__linux__)
 int main(int argc, char** argv) {
-    UNUSED(argv);
-    UNUSED(argc);
     try {
         BaseApplication::Init();
         BaseApplication::AddLibSearchPath(u8"/bin");
         std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"/bin/libcore.so";
         void* core = BaseApplication::LoadLib(corePath);
+        auto main = (CoreMain_t)dlsym(core, "CoreInit");
+        if (!main) {
+            fprintf( stderr, "Failed to load the launcher entry proc\n" );
+            return 0;
+        }
+        int ret = main(argc, argv);
         dlclose(core);
-        return 0;
+        return ret;
     }
     catch (const std::exception& e) {
         std::cout << e.what() << std::endl;
