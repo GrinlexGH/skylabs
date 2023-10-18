@@ -13,10 +13,10 @@
 #if defined(_MSC_VER)
     // Microsoft
     #define DllExport extern "C" __declspec(dllexport)
-    #define DLLIMPORT __declspec(dllimport)
+    #define DllImport __declspec(dllimport)
 #elif defined(__GNUC__)
     // GCC
-    #define DLLEXPORT __attribute__((visibility("default")))
-    #define DLLIMPORT
+    #define DllExport extern "C" __attribute__((visibility("default")))
+    #define DllImport
 #endif
 
