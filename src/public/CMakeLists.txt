@@ -8,6 +8,10 @@ set(SOURCES
     exceptions.cpp
     exceptions.hpp
     macros.hpp
+    common.hpp
+    common.cpp
+    console.hpp
+    console.cpp
 )
 
 add_library(${CURRENT_TARGET_NAME} OBJECT ${SOURCES})
