@@ -1,15 +1,10 @@
 #pragma once
 
-#include <string>
 #include "macros.hpp"
+#include "exceptions.hpp"
+#include <string>
 #include <cstdint>
 #include <stdexcept>
-
-#ifdef _WIN32
-#define WideCharIsUTF16
-#else
-#define WideCharIsUTF32
-#endif
 
 namespace CharConverters
 {
@@ -52,7 +47,7 @@ namespace CharConverters
             }
             else if (wchar >= 0xDC00 && wchar <= 0xDFFF) {
                 if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
-                    throw std::invalid_argument("Invalid UTF-16 sequence: unexpected low surrogate");
+                    throw CCurrentFuncExcept("Invalid UTF-16 sequence: unexpected low surrogate!");
                 }
                 codePoint += (wchar - 0xDC00);
                 codePoint += 0x10000;

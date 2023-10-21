@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 
 #ifdef _WIN32
+#include <Windows.h>
 DllExport int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
     UNUSED(hInstance);
     UNUSED(hPrevInstance);

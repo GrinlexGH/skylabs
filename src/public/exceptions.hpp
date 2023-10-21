@@ -7,32 +7,33 @@
 /**
 * @brief Accepts any kind of strings and saves it in utf8.
 */
-class localized_exception : public std::exception
+class CLocalizedException : public std::exception
 {
 protected:
     const std::string message = "Unknown localized exception!";
+    const int code = 0;
 public:
-    localized_exception() noexcept = default;
-    explicit localized_exception(const std::wstring_view msg) noexcept;
-    explicit localized_exception(const std::u8string_view msg) noexcept;
-    explicit localized_exception(const std::string_view msg) noexcept;
-    ~localized_exception() noexcept override = default;
+    CLocalizedException() noexcept = default;
+    explicit CLocalizedException(const std::wstring_view msg) noexcept;
+    explicit CLocalizedException(const std::u8string_view msg) noexcept;
+    explicit CLocalizedException(const std::string_view msg) noexcept;
+    ~CLocalizedException() noexcept override = default;
     const char* what() const noexcept override;
 };
 
 /**
-* @brief Inherits from localized_exception and just adds current function name + message
+* @brief Inherits from CLocalizedException and adds current function name + message
 * like `Person::SayHello: Cant say hello because code page is invalid.`
 */
-class current_func_exception : public localized_exception
+class CCurrentFuncException : public CLocalizedException
 {
 public:
-    current_func_exception() noexcept = delete;
-    explicit current_func_exception(std::string currentFuncName, const std::wstring_view msg) noexcept;
-    explicit current_func_exception(std::string currentFuncName, const std::u8string_view msg) noexcept;
-    explicit current_func_exception(std::string currentFuncName, const std::string_view msg) noexcept;
-    ~current_func_exception() noexcept override = default;
-    #define func_exception(msg) current_func_exception(CurrentFunction, msg)
+    CCurrentFuncException() noexcept = delete;
+    explicit CCurrentFuncException(std::string currentFuncName, const std::wstring_view msg) noexcept;
+    explicit CCurrentFuncException(std::string currentFuncName, const std::u8string_view msg) noexcept;
+    explicit CCurrentFuncException(std::string currentFuncName, const std::string_view msg) noexcept;
+    ~CCurrentFuncException() noexcept override = default;
+    #define CCurrentFuncExcept(msg) CCurrentFuncException(CurrentFunction, msg)
     const char* what() const noexcept override;
 };
 

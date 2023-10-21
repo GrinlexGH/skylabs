@@ -10,6 +10,12 @@
 
 #define UNUSED(x) (void)(x)
 
+#ifdef _WIN32
+#define WideCharIsUTF16
+#else
+#define WideCharIsUTF32
+#endif
+
 #if defined(_MSC_VER)
     // Microsoft
     #define DllExport extern "C" __declspec(dllexport)
