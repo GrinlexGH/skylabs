@@ -11,16 +11,17 @@
 #include "charconverters.hpp"
 #include "baseapplication.hpp"
 
-std::filesystem::path BaseApplication::rootDir;
+std::filesystem::path CBaseApplication::rootDir;
+bool CBaseApplication::debugMode = false;
 
-void BaseApplication::Init() {
+void CBaseApplication::Init() {
 #ifdef _WIN32
     wchar_t buffer[MAX_PATH];
 
     if (GetModuleFileName(nullptr, buffer, MAX_PATH) == MAX_PATH) {
         wchar_t* errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
-        throw func_exception(errorMsg);
+        throw CCurrentFuncExcept(errorMsg);
     }
 
     rootDir = buffer;
@@ -29,7 +30,7 @@ void BaseApplication::Init() {
 #endif
 }
 
-void BaseApplication::AddLibSearchPath(const std::u8string_view path) {
+void CBaseApplication::AddLibSearchPath(const std::u8string_view path) {
     if (path.empty())
         return;
 
@@ -41,13 +42,13 @@ void BaseApplication::AddLibSearchPath(const std::u8string_view path) {
     if (currentPathLen != 0) {
         auto currentPath = std::make_unique<wchar_t[]>(currentPathLen);
         if (errno_t err = _wgetenv_s(&currentPathLen, currentPath.get(), currentPathLen, L"PATH")) {
-            throw func_exception("_wgetenv_s() failed with code: " + std::to_string(err));
+            throw CCurrentFuncExcept("_wgetenv_s() failed with code: " + std::to_string(err));
         }
         newPath = currentPath.get();
     }
     newPath += L";" + CharConverters::UTF8ToWideStr(path) + L";";
     if (errno_t err = _wputenv_s(L"PATH", newPath.c_str())) {
-        throw func_exception("_wputenv_s() failed with code: " + std::to_string(err));
+        throw CCurrentFuncExcept("_wputenv_s() failed with code: " + std::to_string(err));
     }
 #else
     std::string newPath;
@@ -63,17 +64,17 @@ void BaseApplication::AddLibSearchPath(const std::u8string_view path) {
 #endif
 }
 
-void* BaseApplication::LoadLib(const std::u8string_view path) {
+void* CBaseApplication::LoadLib(const std::u8string_view path) {
 #ifdef _WIN32
     if (path.find('/') != std::string::npos)
-        throw func_exception("Don't use '/' in path on windows.");
+        throw CCurrentFuncExcept("Don't use '/' in path on windows.");
 
     void* lib = LoadLibraryEx(CharConverters::UTF8ToWideStr<std::u8string>(std::u8string(path.data())).c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
 
     if (!lib) {
         wchar_t* errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
-        throw func_exception(errorMsg);
+        throw CCurrentFuncExcept(errorMsg);
     }
 
     return lib;
@@ -86,5 +87,13 @@ void* BaseApplication::LoadLib(const std::u8string_view path) {
 
     return lib;
 #endif
+}
+
+void CBaseApplication::switchDebugMode() {
+    debugMode = !debugMode;
+}
+
+bool CBaseApplication::isDebugMode() {
+    return debugMode;
 }
 

@@ -3,26 +3,26 @@
 #include "charconverters.hpp"
 #include "exceptions.hpp"
 
-localized_exception::localized_exception(const std::wstring_view msg) noexcept : message(CharConverters::WideStrToUTF8<std::string>(msg))
+CLocalizedException::CLocalizedException(const std::wstring_view msg) noexcept : message(CharConverters::WideStrToUTF8<std::string>(msg))
  { }
-localized_exception::localized_exception(const std::u8string_view msg) noexcept : message(std::bit_cast<const char*>(msg.data()))
+CLocalizedException::CLocalizedException(const std::u8string_view msg) noexcept : message(std::bit_cast<const char*>(msg.data()))
  { }
-localized_exception::localized_exception(const std::string_view msg) noexcept : message(msg)
+CLocalizedException::CLocalizedException(const std::string_view msg) noexcept : message(msg)
  { }
 
-const char* localized_exception::what() const noexcept {
+const char* CLocalizedException::what() const noexcept {
     return message.c_str();
 }
 
 
-current_func_exception::current_func_exception(std::string currentFuncName, const std::wstring_view msg) noexcept : localized_exception(currentFuncName + ":\n\n" + (CharConverters::WideStrToUTF8<std::string>(msg)))
+CCurrentFuncException::CCurrentFuncException(std::string currentFuncName, const std::wstring_view msg) noexcept : CLocalizedException(currentFuncName + ":\n\n" + (CharConverters::WideStrToUTF8<std::string>(msg)))
 { }
-current_func_exception::current_func_exception(std::string currentFuncName, const std::u8string_view msg) noexcept : localized_exception(currentFuncName + ":\n\n" + (std::bit_cast<const char*>(msg.data())))
+CCurrentFuncException::CCurrentFuncException(std::string currentFuncName, const std::u8string_view msg) noexcept : CLocalizedException(currentFuncName + ":\n\n" + (std::bit_cast<const char*>(msg.data())))
 { }
-current_func_exception::current_func_exception(std::string currentFuncName, const std::string_view msg) noexcept : localized_exception(currentFuncName + ":\n\n" + std::string(msg))
+CCurrentFuncException::CCurrentFuncException(std::string currentFuncName, const std::string_view msg) noexcept : CLocalizedException(currentFuncName + ":\n\n" + std::string(msg))
 { }
 
-const char* current_func_exception::what() const noexcept {
+const char* CCurrentFuncException::what() const noexcept {
     return message.c_str();
 }
 
