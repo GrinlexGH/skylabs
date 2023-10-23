@@ -146,7 +146,6 @@ namespace CharConverters
             }
             else {
                 throw std::invalid_argument("Invalid character");
-                break;
             }
         }
         out.push_back('\0');
