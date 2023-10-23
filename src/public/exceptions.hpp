@@ -29,11 +29,10 @@ class CCurrentFuncException : public CLocalizedException
 {
 public:
     CCurrentFuncException() noexcept = delete;
-    explicit CCurrentFuncException(std::string currentFuncName, const std::wstring_view msg) noexcept;
-    explicit CCurrentFuncException(std::string currentFuncName, const std::u8string_view msg) noexcept;
-    explicit CCurrentFuncException(std::string currentFuncName, const std::string_view msg) noexcept;
+    explicit CCurrentFuncException(const std::string &currentFuncName, const std::wstring_view msg) noexcept;
+    explicit CCurrentFuncException(const std::string &currentFuncName, const std::u8string_view msg) noexcept;
+    explicit CCurrentFuncException(const std::string &currentFuncName, const std::string_view msg) noexcept;
     ~CCurrentFuncException() noexcept override = default;
     #define CCurrentFuncExcept(msg) CCurrentFuncException(CurrentFunction, msg)
-    const char* what() const noexcept override;
 };
 

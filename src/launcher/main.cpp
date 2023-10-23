@@ -34,16 +34,18 @@ int WINAPI wWinMain(
         wchar_t** wcharArgList;
         int argCount;
         wcharArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
-        if (wcharArgList == NULL) {
+        if (wcharArgList == nullptr) {
             throw CCurrentFuncExcept("Unable to parse command line!");
         }
         std::vector<char*> argList(argCount);
         for (int i = 0; i < argCount; ++i) {
             argList[i] = _strdup(CharConverters::WideStrToUTF8<std::string>(wcharArgList[i]).c_str());
+            if(argList[i] == nullptr) {
+                throw CCurrentFuncExcept("failed to duplicate argument list!");
+            }
         }
         LocalFree(wcharArgList);
         CConsole::SetArgs(argCount, argList.data());
-
         if (CConsole::CheckParam("-debug")) {
             CBaseApplication::switchDebugMode();
             if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -58,14 +60,14 @@ int WINAPI wWinMain(
         CBaseApplication::AddLibSearchPath(CBaseApplication::rootDir.u8string() + u8"\\bin");
         std::u8string corePath = CBaseApplication::rootDir.parent_path().u8string() + u8"\\bin\\core.dll";
         void* core = CBaseApplication::LoadLib(corePath);
-        CoreMain_t main = (CoreMain_t)GetProcAddress((HINSTANCE)core, "CoreInit");
+        auto main = (CoreMain_t)(void*)GetProcAddress((HINSTANCE)core, "CoreInit");
         int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
         FreeLibrary((HMODULE)core);
         CConsole::Destroy();
         return ret;
     }
     catch (const std::exception& e) {
-        MessageBox(NULL, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"Error!", MB_OK | MB_ICONERROR);
+        MessageBox(nullptr, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"Error!", MB_OK | MB_ICONERROR);
         return 1;
     }
 }

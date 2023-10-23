@@ -1,14 +1,15 @@
 #pragma once
 
+#include <vector>
 #include "baseapplication.hpp"
 
 class CConsole : public CBaseApplication {
     static int argc;
-    static char** argv;
+    static std::vector<std::string> argv;
 public:
     static void SetArgs(const int argC, char** argV);
     static int GetArgc();
-    static const char** GetArgv();
+    static std::vector<std::string> GetArgv();
     static void Destroy();
     /**
      * @brief checks for the presence of a command line parameter
@@ -18,8 +19,11 @@ public:
      *  where the given parameter appears, or 0 if not present
      */
     static short CheckParam(const char* param);
-    static void Print(const char* msg);
-    static void Print(const wchar_t* msg);
-    static void Print(const char8_t* msg);
+    static void Print(const char* format, ...);
+    static void Print(const wchar_t* format, ...);
+    static void Print(const char8_t* format, ...);
+    static void PrintLn(const char* format, ...);
+    static void PrintLn(const wchar_t* format, ...);
+    static void PrintLn(const char8_t* format, ...);
 };
 
