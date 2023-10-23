@@ -1,29 +1,33 @@
 #ifdef _WIN32
 #include <Windows.h>
 #endif
+#include <iostream>
+#include <cstdarg>
 #include "console.hpp"
 #include "common.hpp"
+#include "charconverters.hpp"
 
 int CConsole::argc = 0;
-char** CConsole::argv = 0;
+std::vector<std::string> CConsole::argv;
 
 void CConsole::SetArgs(const int argC, char** argV) {
     argc = argC;
-    argv = argV;
+    argv.clear();
+    for (int i = 0; i < argC; ++i) {
+        argv.emplace_back(argV[i]);
+    }
 }
 
 int CConsole::GetArgc() {
     return argc;
 }
 
-const char** CConsole::GetArgv() {
-    return const_cast<const char**>(argv);
+std::vector<std::string> CConsole::GetArgv() {
+    return argv;
 }
 
 void CConsole::Destroy() {
-    for (int i = 0; i < argc; ++i) {
-        delete[] argv[i];
-    }
+    argv.clear();
 #ifdef _WIN32
     if (CBaseApplication::isDebugMode()) {
         FreeConsole();
@@ -32,26 +36,60 @@ void CConsole::Destroy() {
 }
 
 short CConsole::CheckParam(const char* param) {
-    short i;
-    for (i = 1; i < argc; i++)
+    for (short i = 1; i < argc; i++)
     {
-        if (!argv[i])
-            continue;       // NEXTSTEP sometimes clears appkit vars.
-        if (M_strcmp(param, argv[i]))
+        if (M_strcmp(param, GetArgv()[i].c_str()))
             return i;
     }
     return 0;
 }
 
-void CConsole::Print(const char* msg) {
-    UNUSED(msg);
+void CConsole::Print(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
 }
 
-void CConsole::Print(const wchar_t* msg) {
-    UNUSED(msg);
+void CConsole::Print(const wchar_t* format, ...) {
+    std::string msg = CharConverters::WideStrToUTF8<std::string>(format);
+    va_list args;
+    va_start(args, format);
+    vprintf(msg.c_str(), args);
+    va_end(args);
 }
 
-void CConsole::Print(const char8_t* msg) {
-    UNUSED(msg);
+void CConsole::Print(const char8_t* format, ...) {
+    std::string msg = std::bit_cast<const char*>(format);
+    va_list args;
+    va_start(args, format);
+    vprintf(msg.c_str(), args);
+    va_end(args);
+}
+
+void CConsole::PrintLn(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+    std::cout << std::endl;
+}
+
+void CConsole::PrintLn(const wchar_t* format, ...) {
+    std::string msg = CharConverters::WideStrToUTF8<std::string>(format);
+    va_list args;
+    va_start(args, format);
+    vprintf(msg.c_str(), args);
+    va_end(args);
+    std::cout << std::endl;
+}
+
+void CConsole::PrintLn(const char8_t* format, ...) {
+    std::string msg = std::bit_cast<const char*>(format);
+    va_list args;
+    va_start(args, format);
+    vprintf(msg.c_str(), args);
+    va_end(args);
+    std::cout << std::endl;
 }
 
