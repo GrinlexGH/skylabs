@@ -3,6 +3,7 @@
 #endif
 #include <iostream>
 #include <cstdarg>
+#include <bit>
 #include "console.hpp"
 #include "common.hpp"
 #include "charconverters.hpp"
