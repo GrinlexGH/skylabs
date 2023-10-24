@@ -35,6 +35,7 @@ void CBaseApplication::Init() {
     CConsole::PrintLn("rootDir == %s", rootDir.string().c_str());
 #else
     rootDir = std::filesystem::canonical("/proc/self/exe");
+    CConsole::PrintLn("rootDir == %s", rootDir.string().c_str());
 #endif
     CConsole::PrintLn("Initializing finished.\n");
 }
@@ -95,11 +96,10 @@ void* CBaseApplication::LoadLib(const std::u8string_view path) {
     return lib;
 #else
     void* lib = dlopen(std::bit_cast<const char*>(path.data()), RTLD_NOW);
-
     if(!lib) {
-        throw func_exception(std::string("failed open library:\n\n") + dlerror());
+        throw CCurrentFuncExcept(std::string("failed open library:\n\n") + dlerror());
     }
-    CConsole::PrintLn("Library loaded.");
+    CConsole::PrintLn("\x1B[38;2;64;224;208mLibrary loaded.\n\x1B[0m");
     return lib;
 #endif
 }

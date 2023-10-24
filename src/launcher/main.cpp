@@ -75,13 +75,22 @@ int WINAPI wWinMain(
 #elif defined(__linux__)
 int main(int argc, char** argv) {
     try {
-        BaseApplication::Init();
-        BaseApplication::AddLibSearchPath(u8"/bin");
-        std::u8string corePath = BaseApplication::rootDir.parent_path().u8string() + u8"/bin/libcore.so";
-        void* core = BaseApplication::LoadLib(corePath);
+        CConsole::SetArgs(argc, argv);
+        if (CConsole::CheckParam("-debug")) {
+            CBaseApplication::switchDebugMode();
+            if(!getenv("TERM")) {
+                std::string path = "xterm -e ";
+                path += argv[0];
+                std::system(path.c_str());
+            }
+        }
+        CBaseApplication::Init();
+        CBaseApplication::AddLibSearchPath(u8"/bin");
+        std::u8string corePath = CBaseApplication::rootDir.parent_path().u8string() + u8"/bin/libcore.so";
+        void* core = CBaseApplication::LoadLib(corePath);
         auto main = (CoreMain_t)dlsym(core, "CoreInit");
         if (!main) {
-            fprintf( stderr, "Failed to load the launcher entry proc\n" );
+            CConsole::PrintLn("Failed to load the launcher entry proc\n");
             return 0;
         }
         int ret = main(argc, argv);
