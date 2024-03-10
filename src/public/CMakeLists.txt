@@ -4,14 +4,13 @@ set(CURRENT_TARGET_NAME public)
 set(SOURCES
     baseapplication.cpp
     baseapplication.hpp
-    charconverters.hpp
-    exceptions.cpp
-    exceptions.hpp
     macros.hpp
     common.hpp
     common.cpp
     console.hpp
     console.cpp
+    unicode.hpp
+    unicode.cpp
 )
 
 add_library(${CURRENT_TARGET_NAME} OBJECT ${SOURCES})
