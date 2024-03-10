@@ -26,13 +26,13 @@ add_custom_command(
     COMMENT "Copying SDL3::SDL3 dll"
 )
 
-if(MSVC)
+if(MSVC AND ($<CONFIG:Debug> OR $<CONFIG:RelWithDebInfo>))
     add_custom_command(
         TARGET ${CURRENT_TARGET_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE_DIR:SDL3::SDL3>/SDL3.pdb
             $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
-        COMMENT "Copying SDL3::SDL3 pdb"
+        COMMENT "}Copying SDL3::SDL3 pdb"
     )
 endif()
 
