@@ -2,7 +2,7 @@
 set(CURRENT_TARGET_NAME core)
 
 set(SOURCES
-    main.cpp
+    coremain.cpp
 )
 
 set (CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -20,5 +20,8 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     external
     public
     SDL3::SDL3
+    glad
+    glfw
 )
+
 

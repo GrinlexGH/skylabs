@@ -7,11 +7,11 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
-#include <assert.h>
+#include <cassert>
+#include <cstdlib>
 #include <vector>
-#include "charconverters.hpp"
+#include "unicode.hpp"
 #include "baseapplication.hpp"
-#include "exceptions.hpp"
 #include "console.hpp"
 
 #ifdef WIN32
@@ -31,34 +31,28 @@ int WINAPI wWinMain(
     _In_ int nShowCmd)
 {
     try {
-        wchar_t** wcharArgList;
-        int argCount;
-        wcharArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
-        if (wcharArgList == nullptr) {
-            throw CCurrentFuncExcept("Unable to parse command line!");
-        }
-        std::vector<char*> argList(argCount);
-        for (int i = 0; i < argCount; ++i) {
-            argList[i] = _strdup(CharConverters::WideStrToUTF8<std::string>(wcharArgList[i]).c_str());
-            if(argList[i] == nullptr) {
-                throw CCurrentFuncExcept("failed to duplicate argument list!");
+        {
+            wchar_t** wcharArgList;
+            int argCount;
+            wcharArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
+            if (wcharArgList == nullptr) {
+                throw std::runtime_error("Unable to parse command line!");
             }
+            std::vector<std::string> argList(argCount);
+            argList.reserve(argCount);
+            for (int i = 0; i < argCount; ++i) {
+                argList[i] = utf16_to_utf8(wcharArgList[i]);
+            }
+            LocalFree(wcharArgList);
+            CConsole::SetArgs(argCount, argList);
         }
-        LocalFree(wcharArgList);
-        CConsole::SetArgs(argCount, argList.data());
+
         if (CConsole::CheckParam("-debug")) {
             CBaseApplication::switchDebugMode();
-            if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
-                AllocConsole();
-                freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-            }
-            else {
-                freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-            }
         }
         CBaseApplication::Init();
-        CBaseApplication::AddLibSearchPath(CBaseApplication::rootDir.u8string() + u8"\\bin");
-        std::u8string corePath = CBaseApplication::rootDir.parent_path().u8string() + u8"\\bin\\core.dll";
+        CBaseApplication::AddLibSearchPath(CBaseApplication::rootDir.string() + "\\bin");
+        std::string corePath = CBaseApplication::rootDir.parent_path().string() + "\\bin\\core.dll";
         void* core = CBaseApplication::LoadLib(corePath);
         auto main = (CoreMain_t)(void*)GetProcAddress((HINSTANCE)core, "CoreInit");
         int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
@@ -67,7 +61,7 @@ int WINAPI wWinMain(
         return ret;
     }
     catch (const std::exception& e) {
-        MessageBox(nullptr, CharConverters::UTF8ToWideStr<std::string>(std::string(e.what())).c_str(), L"Error!", MB_OK | MB_ICONERROR);
+        MessageBox(nullptr, utf8_to_utf16(e.what()).c_str(), L"Error!", MB_OK | MB_ICONERROR);
         return 1;
     }
 }

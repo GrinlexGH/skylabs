@@ -2,7 +2,6 @@
 
 #include <filesystem>
 #include <string>
-#include "macros.hpp"
 
 class CBaseApplication
 {
@@ -27,8 +26,8 @@ public:
     * @throws current_func_exception with error code if _wgetenv_s failed.
     * 
     */
-    static void AddLibSearchPath(const std::u8string_view path);
-    static void* LoadLib(const std::u8string_view path);
+    static void AddLibSearchPath(const std::string_view path);
+    static void* LoadLib(std::string path);
     static void switchDebugMode();
     static bool isDebugMode();
     static std::filesystem::path rootDir;

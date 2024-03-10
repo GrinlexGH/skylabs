@@ -6,10 +6,8 @@
 #include <cstring>
 #include <filesystem>
 #include <bit>
-#include "macros.hpp"
 #include "console.hpp"
-#include "exceptions.hpp"
-#include "charconverters.hpp"
+#include "unicode.hpp"
 #include "baseapplication.hpp"
 
 std::filesystem::path CBaseApplication::rootDir;
@@ -18,20 +16,20 @@ bool CBaseApplication::debugMode = false;
 void CBaseApplication::Init() {
     CConsole::PrintLn("Initializing CBaseApplication...");
 #ifdef _WIN32
-    if (CBaseApplication::isDebugMode()) {
-        SetConsoleCP(CP_UTF8);
-        SetConsoleOutputCP(CP_UTF8);
-        CConsole::PrintLn("Console code page: %d", CP_UTF8);
-    }
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    CConsole::PrintLn("Console code page: %d", CP_UTF8);
+
     wchar_t buffer[MAX_PATH];
 
     if (GetModuleFileName(nullptr, buffer, MAX_PATH) == MAX_PATH) {
         wchar_t* errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
-        throw CCurrentFuncExcept(errorMsg);
+        throw std::runtime_error(utf16_to_utf8(errorMsg).c_str());
     }
 
     rootDir = buffer;
+    rootDir.remove_filename();
     CConsole::PrintLn("rootDir == %s", rootDir.string().c_str());
 #else
     rootDir = std::filesystem::canonical("/proc/self/exe");
@@ -40,28 +38,30 @@ void CBaseApplication::Init() {
     CConsole::PrintLn("Initializing finished.\n");
 }
 
-void CBaseApplication::AddLibSearchPath(const std::u8string_view path) {
+void CBaseApplication::AddLibSearchPath(const std::string_view path) {
     CConsole::PrintLn("Adding library serach path...");
     if (path.empty()) {
         CConsole::PrintLn("Library search not path added.\n");
         return;
     }
-    CConsole::PrintLn(u8"Path to add: %s", path.data());
+    CConsole::PrintLn("Path to add: %s", path.data());
 #ifdef _WIN32
     size_t currentPathLen;
     std::wstring newPath;
     // Getting length of PATH
     getenv_s(&currentPathLen, nullptr, 0, "PATH");
     if (currentPathLen != 0) {
-        auto currentPath = std::make_unique<wchar_t[]>(currentPathLen);
-        if (errno_t err = _wgetenv_s(&currentPathLen, currentPath.get(), currentPathLen, L"PATH")) {
-            throw CCurrentFuncExcept("_wgetenv_s() failed with code: " + std::to_string(err));
+        wchar_t* currentPath = new wchar_t[currentPathLen];
+        if (errno_t err = _wgetenv_s(&currentPathLen, currentPath, currentPathLen, L"PATH")) {
+            delete[] currentPath;
+            throw std::runtime_error("_wgetenv_s() failed with code: " + std::to_string(err));
         }
-        newPath = currentPath.get();
+        newPath = currentPath;
+        delete[] currentPath;
     }
-    newPath += L";" + CharConverters::UTF8ToWideStr(path) + L";";
+    newPath += L";" + utf8_to_utf16(path.data()) + L";";
     if (errno_t err = _wputenv_s(L"PATH", newPath.c_str())) {
-        throw CCurrentFuncExcept("_wputenv_s() failed with code: " + std::to_string(err));
+        throw std::runtime_error("_wputenv_s() failed with code: " + std::to_string(err));
     }
 #else
     std::string newPath;
@@ -78,26 +78,33 @@ void CBaseApplication::AddLibSearchPath(const std::u8string_view path) {
     CConsole::PrintLn("Library search path added.\n");
 }
 
-void* CBaseApplication::LoadLib(const std::u8string_view path) {
+void* CBaseApplication::LoadLib(std::string path) {
     CConsole::PrintLn("Loading library...");
-    CConsole::PrintLn(u8"library to add: %s", path.data());
+    CConsole::PrintLn("library to add: %s", path.data());
 #ifdef _WIN32
-    if (path.find('/') != std::string::npos)
-        throw CCurrentFuncExcept("Don't use '/' in path on windows.");
+    if (path.find('/') != std::string::npos) {
+        CConsole::PrintLn("Don't use '/' in path on windows.");
+        while (true) {
+            size_t pos = path.find('/');
+            if (pos == std::string::npos)
+                break;
+            path.replace(pos, 1, "\\");
+        }
+    }
 
-    void* lib = LoadLibraryEx(CharConverters::UTF8ToWideStr<std::u8string>(std::u8string(path.data())).c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+    void* lib = LoadLibraryEx(utf8_to_utf16(path.data()).c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
 
     if (!lib) {
         wchar_t* errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
-        throw CCurrentFuncExcept(errorMsg);
+        throw std::runtime_error(utf16_to_utf8(errorMsg));
     }
     CConsole::PrintLn("Library loaded.\n");
     return lib;
 #else
     void* lib = dlopen(std::bit_cast<const char*>(path.data()), RTLD_NOW);
     if(!lib) {
-        throw CCurrentFuncExcept(std::string("failed open library:\n\n") + dlerror());
+        throw std::runtime_error(std::string("failed open library:\n\n") + dlerror());
     }
     CConsole::PrintLn("\x1B[38;2;64;224;208mLibrary loaded.\n\x1B[0m");
     return lib;
@@ -105,6 +112,20 @@ void* CBaseApplication::LoadLib(const std::u8string_view path) {
 }
 
 void CBaseApplication::switchDebugMode() {
+#ifdef WIN32
+    if (!debugMode) {
+        if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+            AllocConsole();
+            freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+        }
+        else {
+            freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+        }
+    }
+    else {
+        FreeConsole();
+    }
+#endif
     debugMode = !debugMode;
 }
 
