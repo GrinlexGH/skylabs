@@ -25,7 +25,7 @@ void CBaseApplication::Init() {
     if (GetModuleFileName(nullptr, buffer, MAX_PATH) == MAX_PATH) {
         wchar_t* errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
-        throw std::runtime_error(utf16_to_utf8(errorMsg).c_str());
+        throw std::runtime_error(Utf16ToUtf8(errorMsg).c_str());
     }
 
     rootDir = buffer;
@@ -59,7 +59,7 @@ void CBaseApplication::AddLibSearchPath(const std::string_view path) {
         newPath = currentPath;
         delete[] currentPath;
     }
-    newPath += L";" + utf8_to_utf16(path.data()) + L";";
+    newPath += L";" + Utf8ToUtf16(path.data()) + L";";
     if (errno_t err = _wputenv_s(L"PATH", newPath.c_str())) {
         throw std::runtime_error("_wputenv_s() failed with code: " + std::to_string(err));
     }
@@ -92,12 +92,12 @@ void* CBaseApplication::LoadLib(std::string path) {
         }
     }
 
-    void* lib = LoadLibraryEx(utf8_to_utf16(path.data()).c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+    void* lib = LoadLibraryEx(Utf8ToUtf16(path.data()).c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
 
     if (!lib) {
         wchar_t* errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg, 0, nullptr);
-        throw std::runtime_error(utf16_to_utf8(errorMsg));
+        throw std::runtime_error(Utf16ToUtf8(errorMsg));
     }
     CConsole::PrintLn("Library loaded.\n");
     return lib;

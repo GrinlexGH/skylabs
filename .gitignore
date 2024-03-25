@@ -26,3 +26,5 @@
 
 build/*
 .vscode/
+libs/*
+!libs/readme.txt

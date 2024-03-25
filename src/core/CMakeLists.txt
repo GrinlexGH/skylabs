@@ -17,11 +17,7 @@ set_target_properties(${CURRENT_TARGET_NAME}
 
 target_link_libraries(${CURRENT_TARGET_NAME}
     PRIVATE
-    external
     public
-    SDL3::SDL3
-    glad
-    glfw
+    SDL2::SDL2
 )
-
 

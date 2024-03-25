@@ -15,16 +15,6 @@ message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 add_compile_definitions(UNICODE _UNICODE)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(ARCH "x86")
-    message("Device architecture: ${ARCH}")
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(ARCH "x64")
-    message("Device architecture: ${ARCH}")
-else()
-    message(FATAL_ERROR "Unsupported architecture, only x86 and x64 are supported.")
-endif()
-
 message("Target architecture: ${CMAKE_GENERATOR_PLATFORM}")
 
 if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
@@ -33,8 +23,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     endif()
 endif()
 
+set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/)
+find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
+
 set(PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/public)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
-

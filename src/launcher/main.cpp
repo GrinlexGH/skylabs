@@ -32,19 +32,18 @@ int WINAPI wWinMain(
 {
     try {
         {
-            wchar_t** wcharArgList;
-            int argCount;
-            wcharArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
-            if (wcharArgList == nullptr) {
-                throw std::runtime_error("Unable to parse command line!");
+            wchar_t** wchar_arg_list;
+            int arg_count;
+            wchar_arg_list = CommandLineToArgvW(GetCommandLine(), &arg_count);
+            if (wchar_arg_list == NULL)
+                throw std::runtime_error("Unable to get argv!");
+
+            std::vector<std::string> arg_list(arg_count);
+            for (int i = 0; i < arg_count; ++i) {
+                arg_list[i] = Utf16ToUtf8(wchar_arg_list[i]);
             }
-            std::vector<std::string> argList(argCount);
-            argList.reserve(argCount);
-            for (int i = 0; i < argCount; ++i) {
-                argList[i] = utf16_to_utf8(wcharArgList[i]);
-            }
-            LocalFree(wcharArgList);
-            CConsole::SetArgs(argCount, argList);
+            LocalFree(wchar_arg_list);
+            CConsole::SetArgs(arg_count, arg_list);
         }
 
         if (CConsole::CheckParam("-debug")) {
@@ -61,7 +60,7 @@ int WINAPI wWinMain(
         return ret;
     }
     catch (const std::exception& e) {
-        MessageBox(nullptr, utf8_to_utf16(e.what()).c_str(), L"Error!", MB_OK | MB_ICONERROR);
+        MessageBox(nullptr, Utf8ToUtf16(e.what()).c_str(), L"Error!", MB_OK | MB_ICONERROR);
         return 1;
     }
 }
