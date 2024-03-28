@@ -5,14 +5,12 @@
 #endif
 
 #include <filesystem>
-#include <iostream>
 #include <string>
-#include <cassert>
 #include <cstdlib>
 #include <vector>
 #include "unicode.hpp"
-#include "baseapplication.hpp"
-#include "console.hpp"
+#include "application.hpp"
+#include "icommandline.hpp"
 
 #ifdef WIN32
 using CoreMain_t = int(*)(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd);
@@ -31,32 +29,34 @@ int WINAPI wWinMain(
     _In_ int nShowCmd)
 {
     try {
+
         {
             wchar_t** wchar_arg_list;
-            int arg_count;
-            wchar_arg_list = CommandLineToArgvW(GetCommandLine(), &arg_count);
+            int argc;
+            wchar_arg_list = CommandLineToArgvW(GetCommandLine(), &argc);
             if (wchar_arg_list == NULL)
                 throw std::runtime_error("Unable to get argv!");
 
-            std::vector<std::string> arg_list(arg_count);
-            for (int i = 0; i < arg_count; ++i) {
-                arg_list[i] = Utf16ToUtf8(wchar_arg_list[i]);
+            std::vector<std::string> char_arg_list(argc);
+            for (int i = 0; i < argc; ++i) {
+                char_arg_list[i] = Utf16ToUtf8(wchar_arg_list[i]).data();
             }
+
+            CommandLine()->CreateCmdLine(argc, char_arg_list);
+
             LocalFree(wchar_arg_list);
-            CConsole::SetArgs(arg_count, arg_list);
         }
 
-        if (CConsole::CheckParam("-debug")) {
-            CBaseApplication::switchDebugMode();
+        if (CommandLine()->CheckParm("-debug")) {
+            Application::switchDebugMode();
         }
-        CBaseApplication::Init();
-        CBaseApplication::AddLibSearchPath(CBaseApplication::rootDir.string() + "\\bin");
-        std::string corePath = CBaseApplication::rootDir.parent_path().string() + "\\bin\\core.dll";
-        void* core = CBaseApplication::LoadLib(corePath);
+        Application::Init();
+        Application::AddLibSearchPath(Application::rootDir.string() + "\\bin");
+        std::string corePath = Application::rootDir.parent_path().string() + "\\bin\\core.dll";
+        void* core = Application::LoadLib(corePath);
         auto main = (CoreMain_t)(void*)GetProcAddress((HINSTANCE)core, "CoreInit");
         int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
         FreeLibrary((HMODULE)core);
-        CConsole::Destroy();
         return ret;
     }
     catch (const std::exception& e) {

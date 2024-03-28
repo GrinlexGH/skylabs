@@ -2,16 +2,27 @@
 set(CURRENT_TARGET_NAME public)
 
 set(SOURCES
-    baseapplication.cpp
-    baseapplication.hpp
+    application.cpp
+    application.hpp
     macros.hpp
-    common.hpp
-    common.cpp
-    console.hpp
-    console.cpp
+    icommandline.hpp
+    commandline.cpp
     unicode.hpp
     unicode.cpp
+    platform.hpp
 )
+
+if(WIN32)
+	set(SOURCES
+		${SOURCES}
+		winapp.cpp
+	)
+elseif(UNIX)
+	set(SOURCES
+		${SOURCES}
+		posixapp.cpp
+	)
+endif()
 
 add_library(${CURRENT_TARGET_NAME} OBJECT ${SOURCES})
 

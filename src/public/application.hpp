@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string>
 
-class CBaseApplication
+class Application
 {
     static bool debugMode;
 public:
