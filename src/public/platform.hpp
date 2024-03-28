@@ -1,0 +1,1 @@
+#define abstract_class class
