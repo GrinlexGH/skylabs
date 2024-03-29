@@ -5,6 +5,8 @@ set(SOURCES
     application.cpp
     application.hpp
     macros.hpp
+	console.hpp
+	console.cpp
     icommandline.hpp
     commandline.cpp
     unicode.hpp
