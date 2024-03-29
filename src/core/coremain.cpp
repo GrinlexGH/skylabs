@@ -41,7 +41,8 @@ DllExport int CoreInit(int argc, char** argv) {
     UNUSED(hPrevInstance);
     UNUSED(lpCmdLine);
     UNUSED(nShowCmd);
-    
+    return 0;
+    /*
     MSG msg;
     BOOL bRet;
     WNDCLASS wc;
@@ -105,6 +106,6 @@ DllExport int CoreInit(int argc, char** argv) {
 
     // Return the exit code to the system. 
 
-    return (int)msg.wParam;
+    return (int)msg.wParam;*/
 }
 

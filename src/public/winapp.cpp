@@ -3,15 +3,16 @@
 #else
 #include <Windows.h>
 #include "application.hpp"
-//#include "console.hpp"
+#include "console.hpp"
 #include "unicode.hpp"
+using console::Msg;
 
 void Application::Init() {
-    //console::Msg("Initializing application...\n");
+    Msg("Initializing application...\n");
 
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
-    //console::Msg("Console code page: %d\n", CP_UTF8);
+    Msg("Console code page: %d\n", CP_UTF8);
 
     wchar_t buffer[MAX_PATH];
 
@@ -23,17 +24,17 @@ void Application::Init() {
 
     rootDir = buffer;
     rootDir.remove_filename();
-    //console::Msg("rootDir == %s\n", rootDir.string().c_str());
-    //console::Msg("Initializing finished.\n\n");
+    Msg("rootDir == %s\n", rootDir.string().c_str());
+    Msg("Initializing finished.\n\n");
 }
 
 void Application::AddLibSearchPath(const std::string_view path) {
-    //console::Msg("Adding library serach path...\n");
+    Msg("Adding library serach path...\n");
     if (path.empty()) {
-        //console::Msg("Library search not path added.\n\n");
+        Msg("Library search not path added.\n\n");
         return;
     }
-    //console::Msg("Path to add: %s\n", path.data());
+    Msg("Path to add: %s\n", path.data());
 
     size_t currentPathLen;
     std::wstring newPath;
@@ -52,15 +53,15 @@ void Application::AddLibSearchPath(const std::string_view path) {
     if (errno_t err = _wputenv_s(L"PATH", newPath.c_str())) {
         throw std::runtime_error("_wputenv_s() failed with code: " + std::to_string(err));
     }
-    //console::Msg("Library search path added.\n\n");
+    Msg("Library search path added.\n\n");
 }
 
 void* Application::LoadLib(std::string path) {
-    //console::Msg("Loading library...\n");
-    //console::Msg("library to add: %s\n", path.data());
+    Msg("Loading library...\n");
+    Msg("library to add: %s\n", path.data());
 
     if (path.find('/') != std::string::npos) {
-        //console::Msg("Don't use '/' in path on windows.\n");
+        Msg("Don't use '/' in path on windows.\n");
         while (true) {
             size_t pos = path.find('/');
             if (pos == std::string::npos)
@@ -77,15 +78,9 @@ void* Application::LoadLib(std::string path) {
         throw std::runtime_error(Utf16ToUtf8(errorMsg));
     }
 
-    //console::Msg("Library loaded.\n\n");
+    Msg("Library loaded.\n\n");
     return lib;
 }
 
-/*void console::Destroy() {
-    argv.clear();
-    if (Application::isDebugMode()) {
-        FreeConsole();
-    }
-}*/
 #endif
 

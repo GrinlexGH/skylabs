@@ -67,7 +67,7 @@ inline std::string Utf16ToUtf8(std::wstring_view utf16) {
         kUtf16Length,
         nullptr,
         0,
-        NULL, NULL) - 1;
+        NULL, NULL);
     if (kUtf8Length == 0) {
         return utf8;
     }

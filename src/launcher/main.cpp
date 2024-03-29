@@ -42,16 +42,16 @@ int WINAPI wWinMain(
                 char_arg_list[i] = Utf16ToUtf8(wchar_arg_list[i]).data();
             }
 
-            CommandLine()->CreateCmdLine(argc, char_arg_list);
+            CommandLine().CreateCmdLine(argc, char_arg_list);
 
             LocalFree(wchar_arg_list);
         }
 
-        if (CommandLine()->CheckParm("-debug")) {
+        if (CommandLine().CheckParm("-debug")) {
             Application::switchDebugMode();
         }
         Application::Init();
-        Application::AddLibSearchPath(Application::rootDir.string() + "\\bin");
+        Application::AddLibSearchPath(Application::rootDir.string() + "bin");
         std::string corePath = Application::rootDir.parent_path().string() + "\\bin\\core.dll";
         void* core = Application::LoadLib(corePath);
         auto main = (CoreMain_t)(void*)GetProcAddress((HINSTANCE)core, "CoreInit");
