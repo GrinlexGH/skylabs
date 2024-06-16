@@ -4,31 +4,30 @@ set(CURRENT_TARGET_NAME public)
 set(SOURCES
     application.cpp
     application.hpp
-    macros.hpp
-	console.hpp
-	console.cpp
-    icommandline.hpp
+    console.hpp
+    console.cpp
+    commandline.hpp
     commandline.cpp
     unicode.hpp
-    unicode.cpp
+    utf/convert.hpp;
+    utf/is_string_container.hpp
+    utf/utf.hpp
     platform.hpp
 )
 
 if(WIN32)
-	set(SOURCES
-		${SOURCES}
-		winapp.cpp
-	)
+    set(SOURCES
+        ${SOURCES}
+        winapp.cpp
+    )
 elseif(UNIX)
-	set(SOURCES
-		${SOURCES}
-		posixapp.cpp
-	)
+    set(SOURCES
+        ${SOURCES}
+        posixapp.cpp
+    )
 endif()
 
-add_library(${CURRENT_TARGET_NAME} OBJECT ${SOURCES})
-
-set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+add_library(${CURRENT_TARGET_NAME} STATIC ${SOURCES})
 target_include_directories(${CURRENT_TARGET_NAME} INTERFACE
     $<BUILD_INTERFACE:${PUBLIC_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:include>

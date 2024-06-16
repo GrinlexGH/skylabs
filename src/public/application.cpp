@@ -3,34 +3,29 @@
 #else
 #include <dlfcn.h>
 #endif
+#include "application.hpp"
+#include "unicode.hpp"
+#include <bit>
 #include <cstring>
 #include <filesystem>
-#include <bit>
-#include "unicode.hpp"
-#include "application.hpp"
 
 std::filesystem::path Application::rootDir;
 bool Application::debugMode = false;
 
 void Application::switchDebugMode() {
-#ifdef WIN32
-    if (!debugMode) {
-        if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
-            AllocConsole();
-            freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-        }
-        else {
-            freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-        }
+#ifdef _WIN32
+  if (!debugMode) {
+    if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+      AllocConsole();
+      freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
+    } else {
+      freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
     }
-    else {
-        FreeConsole();
-    }
+  } else {
+    FreeConsole();
+  }
 #endif
-    debugMode = !debugMode;
+  debugMode = !debugMode;
 }
 
-bool Application::isDebugMode() {
-    return debugMode;
-}
-
+bool Application::isDebugMode() { return debugMode; }
