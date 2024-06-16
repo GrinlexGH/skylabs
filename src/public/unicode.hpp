@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "utf/convert.hpp"
-#include "utf/is_string_container.hpp"
+#include "nowide/convert.hpp"
+#include "nowide/is_string_container.hpp"
 #include <string>
 
 ///
