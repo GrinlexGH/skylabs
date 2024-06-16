@@ -17,14 +17,13 @@ add_compile_definitions(UNICODE _UNICODE)
 
 message("Target architecture: ${CMAKE_GENERATOR_PLATFORM}")
 
-if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
-    if(!MSVC)
-        add_compile_options(-g)
-    endif()
+if(!MSVC)
+  set(CMAKE_CXX_FLAGS_DEBUG "-g")
 endif()
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/)
-find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
+find_package(SDL2 REQUIRED CONFIG)
 
 set(PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/public)
 

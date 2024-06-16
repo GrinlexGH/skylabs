@@ -6,7 +6,7 @@
 #include <string_view>
 
 namespace console {
-    void Msg(std::string_view format, ...);
+void Msg(std::string_view format, ...);
 }
 
 #endif

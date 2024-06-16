@@ -1,47 +1,48 @@
 #ifdef _WIN32
 #include <Windows.h>
 #endif
+#include "commandline.hpp"
+#include <algorithm>
+#include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include "icommandline.hpp"
 
 class CCommandLine : public ICommandLine {
 public:
-    virtual void CreateCmdLine(const int& argc, const std::vector<std::string>& argv) override final;
-    virtual int CheckParm(std::string_view parm) override final;
+  CCommandLine() = default;
+  ~CCommandLine() = default;
 
-    friend ICommandLine& CommandLine();
+  virtual void
+  CreateCmdLine(int argc, const std::vector<std::string> &argv) override final;
+  virtual int CheckParm(std::string_view parm) override final;
+
+  friend ICommandLine *CommandLine();
 
 protected:
-    // singleton stuff
-    CCommandLine() = default;
-    ~CCommandLine() = default;
-    CCommandLine(const CCommandLine&) = delete;
-    CCommandLine(CCommandLine&&) = delete;
-    CCommandLine& operator=(const CCommandLine&) = delete;
-    CCommandLine& operator=(CCommandLine&&) = delete;
+  // Singleton stuff
+  CCommandLine(const CCommandLine &) = delete;
+  CCommandLine(CCommandLine &&) = delete;
+  CCommandLine &operator=(const CCommandLine &) = delete;
+  CCommandLine &operator=(CCommandLine &&) = delete;
 
 private:
-    int argc_;
-    std::vector<std::string> argv_;
+  int argc_ = 0;
+  std::vector<std::string> argv_;
 };
 
-ICommandLine& CommandLine() {
-    static CCommandLine instance;
-    return instance;
-}
+static CCommandLine instance;
+ICommandLine *CommandLine() { return &instance; }
 
-void CCommandLine::CreateCmdLine(const int& argc, const std::vector<std::string>& argv) {
-    argc_ = argc;
-    argv_ = argv;
+void CCommandLine::CreateCmdLine(int argc,
+                                 const std::vector<std::string> &argv) {
+  argc_ = argc;
+  argv_ = argv;
 }
 
 int CCommandLine::CheckParm(std::string_view parm) {
-    auto it = std::find(argv_.begin() + 1, argv_.end(), parm);
-    if (it == std::end(argv_)) {
-        return 0;
-    }
-    return static_cast<int>(std::distance(argv_.begin(), it));
+  auto it = std::find(argv_.begin() + 1, argv_.end(), parm);
+  if (it == std::end(argv_)) {
+    return 0;
+  }
+  return static_cast<int>(std::distance(argv_.begin(), it));
 }
-
