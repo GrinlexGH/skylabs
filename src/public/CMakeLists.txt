@@ -9,9 +9,9 @@ set(SOURCES
     commandline.hpp
     commandline.cpp
     unicode.hpp
-    utf/convert.hpp;
-    utf/is_string_container.hpp
-    utf/utf.hpp
+    nowide/convert.hpp;
+    nowide/is_string_container.hpp
+    nowide/utf.hpp
     platform.hpp
 )
 
