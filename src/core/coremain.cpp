@@ -29,10 +29,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 HINSTANCE hinst;
 HWND hwndMain;
 
-int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine,
+DllExport int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine,
              int nShowCmd) {
 #else
-int CoreInit(int argc, char **argv) {
+DllExport int CoreInit(int argc, char **argv) {
 #endif
 #ifdef _WIN32
   UNUSED(hInstance);
