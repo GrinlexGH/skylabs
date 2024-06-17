@@ -1,9 +1,4 @@
-#ifndef ICOMMANDLINE_HPP
-#define ICOMMANDLINE_HPP
-
-#ifdef _WIN32
 #pragma once
-#endif
 
 #include "platform.hpp"
 #include <string>
@@ -17,5 +12,3 @@ public:
 };
 
 ICommandLine *CommandLine();
-
-#endif

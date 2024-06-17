@@ -19,8 +19,8 @@ message("Target architecture: ${CMAKE_GENERATOR_PLATFORM}")
 
 if(!MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "-g")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 endif()
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/)
 find_package(SDL2 REQUIRED CONFIG)
