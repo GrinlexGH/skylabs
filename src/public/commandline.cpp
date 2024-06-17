@@ -20,24 +20,24 @@ protected:
   CCommandLine &operator=(CCommandLine &&) = delete;
 
 private:
-  int m_argc = 0;
-  std::vector<std::string> m_argv;
+  int argc_ = 0;
+  std::vector<std::string> argv_;
 };
 
-static CCommandLine instance;
-ICommandLine *CommandLine() { return &instance; }
+static CCommandLine g_CmdLine;
+ICommandLine *CommandLine() { return &g_CmdLine; }
 
 // Should call only once in one at start of program
 void CCommandLine::CreateCmdLine(int argc,
                                  const std::vector<std::string> &argv) {
-  m_argc = argc;
-  m_argv = argv;
+  argc_ = argc;
+  argv_ = argv;
 }
 
 int CCommandLine::CheckParm(std::string_view parm) {
-  auto it = std::find(m_argv.begin() + 1, m_argv.end(), parm);
-  if (it == std::end(m_argv)) {
+  auto it = std::find(argv_.begin() + 1, argv_.end(), parm);
+  if (it == std::end(argv_)) {
     return 0;
   }
-  return static_cast<int>(std::distance(m_argv.begin(), it));
+  return static_cast<int>(std::distance(argv_.begin(), it));
 }
