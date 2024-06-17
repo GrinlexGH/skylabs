@@ -5,6 +5,20 @@
 #include <Windows.h>
 using console::Msg;
 
+void Application::switchDebugMode() {
+  if (!debugMode) {
+    if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+      AllocConsole();
+      freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
+    } else {
+      freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
+    }
+  } else {
+    FreeConsole();
+  }
+  debugMode = !debugMode;
+}
+
 void Application::Init() {
   Msg("Initializing application...\n");
 

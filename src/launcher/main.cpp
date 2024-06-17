@@ -70,7 +70,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 #elif defined(__linux__)
 int main(int argc, char **argv) {
   try {
-
     Application::Init();
     Application::AddLibSearchPath("/bin");
     std::string corePath =

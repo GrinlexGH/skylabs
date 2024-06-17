@@ -1,4 +1,5 @@
 #include "platform.hpp"
+#include <SDL.h>
 
 #ifdef _WIN32
 
