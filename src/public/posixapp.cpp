@@ -7,6 +7,10 @@
 #include <dlfcn.h>
 #include <filesystem>
 
+void Application::switchDebugMode() {
+  debugMode = !debugMode;
+}
+
 void Application::Init() {
   console::Msg("Initializing CBaseApplication...\n");
   rootDir = std::filesystem::canonical("/proc/self/exe");
