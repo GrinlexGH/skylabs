@@ -3,21 +3,22 @@
 #include <filesystem>
 #include <string>
 
-class Application {
-  static bool debugMode;
-
+class IApplication
+{
 public:
-  static void Init();
-  static void AddLibSearchPath(const std::string_view path);
-  static void *LoadLib(std::string path);
-  static void switchDebugMode();
-  static bool isDebugMode();
-  static std::filesystem::path rootDir;
+    virtual void Init() = 0;
+    virtual void SwitchDebugMode() { debugMode_ = !debugMode_; }
+    virtual bool GetDebugMode() { return debugMode_; }
+    virtual std::filesystem::path GetRootDir() { return rootDir_; }
 
 protected:
-  // Singleton stuff
-  Application(const Application &) = delete;
-  Application(Application &&) = delete;
-  Application &operator=(const Application &) = delete;
-  Application &operator=(Application &&) = delete;
+    // Singleton stuff
+    IApplication() = default;
+    IApplication(const IApplication &) = delete;
+    IApplication(IApplication &&) = delete;
+    IApplication &operator=(const IApplication &) = delete;
+    IApplication &operator=(IApplication &&) = delete;
+
+    bool debugMode_;
+    std::filesystem::path rootDir_;
 };
