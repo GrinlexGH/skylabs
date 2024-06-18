@@ -2,12 +2,14 @@
 set(CURRENT_TARGET_NAME public)
 
 set(SOURCES
-    application.cpp
     application.hpp
+    application.cpp
     console.hpp
     console.cpp
     commandline.hpp
     commandline.cpp
+    utilities.hpp
+    utilities.cpp
     unicode.hpp
     nowide/convert.hpp;
     nowide/is_string_container.hpp
