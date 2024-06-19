@@ -19,6 +19,6 @@ protected:
     IApplication &operator=(const IApplication &) = delete;
     IApplication &operator=(IApplication &&) = delete;
 
-    bool debugMode_;
+    bool debugMode_ = false;
     std::filesystem::path rootDir_;
 };
