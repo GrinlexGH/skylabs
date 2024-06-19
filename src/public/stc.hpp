@@ -24,6 +24,7 @@ SOFTWARE.
 
 #pragma once
 #include <ostream>
+#include <ranges>
 
 namespace stc {
 
@@ -347,8 +348,8 @@ constexpr int _find_closest_color_code(int r, int g, int b) {
     return _256colors[16].code;
   // we start at index 16, because colors 0 - 16 are system colors (terminal
   // emulators often define custom values for these)
-  size_t best_index = 16;
-  for (size_t i = best_index; i < 256; i++) {
+  std::size_t best_index = 16;
+  for (std::size_t i = best_index; i < 256; i++) {
     if (_color_distance(r, g, b, _256colors[i]) <
         _color_distance(r, g, b, _256colors[best_index]))
       best_index = i;
@@ -376,7 +377,7 @@ constexpr void _hsl_to_rgb(float h, float s, float l, int &r, int &g, int &b) {
   const float alpha = s * std::min(l, 1 - l);
   auto f = [=](float n) {
     const float k = fmod((n + (h * 12)), 12);
-    return l - (alpha * std::max(-1.0F, std::min({k - 3, 9 - k, 1.0F})));
+    return l - (alpha * std::max(-1.0F, std::ranges::min({k - 3, 9 - k, 1.0F})));
   };
   r = round(f(0) * 255);
   g = round(f(8) * 255);
