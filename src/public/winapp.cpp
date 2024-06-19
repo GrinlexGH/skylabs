@@ -10,29 +10,24 @@ void AddLibSearchPath(const std::string_view path)
 {
     Msg("Adding library serach path...\n");
     if (path.empty())
-    {
         return;
-    }
     Msg("Path to add: %s\n", path.data());
 
     size_t currentPathLen;
     std::wstring newPath;
-    // Getting length of PATH
-    getenv_s(&currentPathLen, nullptr, 0, "PATH");
-    if (currentPathLen != 0)
-    {
+    _wgetenv_s(&currentPathLen, NULL, 0, L"PATH");
+    if (currentPathLen > 0) {
         wchar_t *currentPath = new wchar_t[currentPathLen];
-        if (errno_t err =
-                _wgetenv_s(&currentPathLen, currentPath, currentPathLen, L"PATH"))
-        {
+        if (_wgetenv_s(&currentPathLen, currentPath, currentPathLen, L"PATH")) {
             delete[] currentPath;
-            throw std::runtime_error("_wgetenv_s() failed with code: " +
-                                     std::to_string(err));
+            throw std::runtime_error("Failed to add lib search path: _wgetenv_s() failed.");
         }
         newPath = currentPath;
         delete[] currentPath;
+        newPath += L';' + widen(path.data()) + L';';
+    } else {
+        newPath += widen(path.data()) + L";";
     }
-    newPath += L";" + widen(path.data()) + L";";
     if (errno_t err = _wputenv_s(L"PATH", newPath.c_str()))
     {
         throw std::runtime_error("_wputenv_s() failed with code: " +
@@ -43,6 +38,7 @@ void AddLibSearchPath(const std::string_view path)
 
 void *LoadLib(std::string path)
 {
+    Error << "HUI" << std::endl;
     Msg("Loading library...\n");
     Msg("library to add: %s\n", path.data());
 
