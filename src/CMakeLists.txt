@@ -15,6 +15,8 @@ foreach(SUBDIR ${projects})
     add_subdirectory("${SUBDIR}")
 endforeach()
 
+set(CMAKE_COLOR_DIAGNOSTICS ON)
+
 foreach(project ${projects})
 target_compile_definitions(${project} PRIVATE NOMINMAX)
 if(MSVC)

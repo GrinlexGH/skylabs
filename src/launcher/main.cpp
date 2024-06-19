@@ -50,21 +50,15 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 
             std::vector<std::string> char_arg_list(argc);
             for (int i = 0; i < argc; ++i)
-            {
                 char_arg_list[i] = narrow(wchar_arg_list[i]).data();
-            }
 
             CommandLine()->CreateCmdLine(argc, char_arg_list);
-
             LocalFree(wchar_arg_list);
         }
 
         CLauncher launcher;
-
         if (CommandLine()->CheckParm("-debug"))
-        {
             launcher.SwitchDebugMode();
-        }
 
         launcher.Init();
         AddLibSearchPath(launcher.GetRootDir().string() + "bin");
@@ -74,6 +68,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         auto main = (CoreMain_t)(void *)GetProcAddress((HINSTANCE)core, "CoreInit");
         int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
         FreeLibrary((HMODULE)core);
+        std::cin.get();
         return ret;
     }
     catch (const std::exception &e)
@@ -87,15 +82,13 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 void CLauncher::Init()
 {
     Msg("Initializing application...\n");
-
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
     Msg("Console code page: %d\n", CP_UTF8);
 
     wchar_t buffer[MAX_PATH];
 
-    if (GetModuleFileName(nullptr, buffer, MAX_PATH) == MAX_PATH)
-    {
+    if (GetModuleFileName(nullptr, buffer, MAX_PATH) == MAX_PATH) {
         wchar_t *errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
                           FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -113,22 +106,13 @@ void CLauncher::Init()
 
 void CLauncher::SwitchDebugMode()
 {
-    if (!debugMode_)
-    {
-        if (!AttachConsole(ATTACH_PARENT_PROCESS))
-        {
-            AllocConsole();
-            freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
-        }
-        else
-        {
-            freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
-        }
-    }
-    else
-    {
+    if (!debugMode_) {
+        AllocConsole();
+        freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+        freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
+        freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
+    } else
         FreeConsole();
-    }
     debugMode_ = !debugMode_;
 }
 
