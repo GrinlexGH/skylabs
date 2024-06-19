@@ -6,11 +6,12 @@
 #include <string>
 #include <Windows.h>
 
-void AddLibSearchPath(const std::string_view path)
-{
+void AddLibSearchPath(const std::string_view path) {
     Msg("Adding library serach path...\n");
-    if (path.empty())
+    if (path.empty()) {
+        Msg("Path is empty.\n\n")
         return;
+    }
     Msg("Path to add: %s\n", path.data());
 
     size_t currentPathLen;
@@ -28,8 +29,7 @@ void AddLibSearchPath(const std::string_view path)
     } else {
         newPath += widen(path.data()) + L";";
     }
-    if (errno_t err = _wputenv_s(L"PATH", newPath.c_str()))
-    {
+    if (errno_t err = _wputenv_s(L"PATH", newPath.c_str())) {
         throw std::runtime_error("_wputenv_s() failed with code: " +
                                  std::to_string(err));
     }
@@ -38,15 +38,11 @@ void AddLibSearchPath(const std::string_view path)
 
 void *LoadLib(std::string path)
 {
-    Error << "HUI" << std::endl;
     Msg("Loading library...\n");
-    Msg("library to add: %s\n", path.data());
+    Msg("library to load: %s\n", path.data());
 
-    if (path.find('/') != std::string::npos)
-    {
-        Msg("Don't use '/' in path on windows.\n");
-        while (true)
-        {
+    if (path.find('/') != std::string::npos) {
+        while (true) {
             size_t pos = path.find('/');
             if (pos == std::string::npos)
                 break;
@@ -57,8 +53,7 @@ void *LoadLib(std::string path)
     void *lib = LoadLibraryEx(widen(path.data()).c_str(), nullptr,
                               LOAD_WITH_ALTERED_SEARCH_PATH);
 
-    if (!lib)
-    {
+    if (!lib) {
         wchar_t *errorMsg;
         FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
                           FORMAT_MESSAGE_IGNORE_INSERTS,
