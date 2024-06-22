@@ -9,14 +9,14 @@
 void AddLibSearchPath(const std::string_view path) {
     Msg("Adding library serach path...\n");
     if (path.empty()) {
-        Msg("Path is empty.\n\n")
+        Msg("Path is empty.\n\n");
         return;
     }
     Msg("Path to add: %s\n", path.data());
 
     size_t currentPathLen;
     std::wstring newPath;
-    _wgetenv_s(&currentPathLen, NULL, 0, L"PATH");
+    std::ignore = _wgetenv_s(&currentPathLen, NULL, 0, L"PATH");
     if (currentPathLen > 0) {
         wchar_t *currentPath = new wchar_t[currentPathLen];
         if (_wgetenv_s(&currentPathLen, currentPath, currentPathLen, L"PATH")) {

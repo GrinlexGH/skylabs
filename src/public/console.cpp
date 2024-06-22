@@ -1,5 +1,6 @@
 #include "console.hpp"
 #include "stc.hpp"
+#include "platform.hpp"
 #include <iostream>
 #include <cstdarg>
 #include <cstdio>
@@ -57,5 +58,5 @@ void CConsoleErrorMsg::operator()(std::string_view format, ...) {
     std::cout << stc::reset;
 }
 
-CConsoleInfoMsg Msg { IConsoleMessage::rgb {0, 175, 215} };
-CConsoleErrorMsg Error { IConsoleMessage::rgb {175, 0, 0} };
+PLATFORM_CLASS CConsoleInfoMsg Msg { IConsoleMessage::rgb {0, 175, 215} };
+PLATFORM_CLASS CConsoleErrorMsg Error { IConsoleMessage::rgb {175, 0, 0} };

@@ -11,4 +11,4 @@ public:
   virtual int CheckParm(std::string_view parm) = 0;
 };
 
-ICommandLine *CommandLine();
+PLATFORM_INTERFACE ICommandLine *CommandLine();

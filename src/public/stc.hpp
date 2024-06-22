@@ -370,7 +370,7 @@ constexpr void _hsl_to_rgb(float h, float s, float l, int &r, int &g, int &b) {
   };
 
   // (https://en.wikipedia.org/wiki/HSL_and_HSV#Color_conversion_formulae)
-  if (s == 0) {
+  if (s <= DBL_EPSILON) {
     r = g = b = round(l * 255);
     return;
   }
