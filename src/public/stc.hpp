@@ -25,6 +25,7 @@ SOFTWARE.
 #pragma once
 #include <ostream>
 #include <ranges>
+#include <limits>
 
 namespace stc {
 
@@ -370,7 +371,7 @@ constexpr void _hsl_to_rgb(float h, float s, float l, int &r, int &g, int &b) {
   };
 
   // (https://en.wikipedia.org/wiki/HSL_and_HSV#Color_conversion_formulae)
-  if (s <= DBL_EPSILON) {
+  if (s <= std::numeric_limits<double>::epsilon()) {
     r = g = b = round(l * 255);
     return;
   }

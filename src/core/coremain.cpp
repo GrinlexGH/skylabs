@@ -33,13 +33,16 @@ HWND hwndMain;
 DLL_EXPORT int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine,
              int nShowCmd) {
 #else
-DllExport int CoreInit(int argc, char **argv) {
+DLL_EXPORT int CoreInit(int argc, char **argv) {
 #endif
 #ifdef _WIN32
   UNUSED(hInstance);
   UNUSED(hPrevInstance);
   UNUSED(lpCmdLine);
   UNUSED(nShowCmd);
+#else
+    UNUSED(argc);
+    UNUSED(argv);
 #endif
   return 0;
   /*

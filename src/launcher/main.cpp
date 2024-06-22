@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 #include "application.hpp"
 #include "commandline.hpp"
@@ -66,6 +67,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
             launcher.GetRootDir().string() + "\\bin\\core.dll";
         void *core = LoadLib(corePath);
         auto main = (CoreMain_t)(void *)GetProcAddress((HINSTANCE)core, "CoreInit");
+        if (!main)
+            throw std::runtime_error("Failed to load the launcher entry proc\n");
         int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
         FreeLibrary((HMODULE)core);
         std::cin.get();
@@ -123,16 +126,16 @@ int main(int argc, char **argv)
     {
         CommandLine()->CreateCmdLine(argc, std::vector<std::string>(argv, argv + argc));
         CLauncher launcher;
+        if (CommandLine()->CheckParm("-debug"))
+            launcher.SwitchDebugMode();
         launcher.Init();
         AddLibSearchPath("/bin");
         std::string corePath =
             launcher.GetRootDir().string() + "/bin/libcore.so";
         void *core = LoadLib(corePath);
         auto main = (CoreMain_t)dlsym(core, "CoreInit");
-        if (!main) {
-            Msg("Failed to load the launcher entry proc\n");
-            return 0;
-        }
+        if (!main)
+            throw std::runtime_error("Failed to load the launcher entry proc\n");
         int ret = main(argc, argv);
         dlclose(core);
         return ret;
