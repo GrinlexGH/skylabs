@@ -25,7 +25,7 @@ private:
 };
 
 static CCommandLine g_CmdLine;
-ICommandLine *CommandLine() { return &g_CmdLine; }
+PLATFORM_INTERFACE ICommandLine *CommandLine() { return &g_CmdLine; }
 
 // Should call only once in one at start of program
 void CCommandLine::CreateCmdLine(int argc,
