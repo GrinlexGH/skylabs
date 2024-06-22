@@ -2,6 +2,7 @@
 #include <string_view>
 #include <iostream>
 
+#include "platform.hpp"
 #include "stc.hpp"
 
 class IConsoleMessage {
@@ -10,15 +11,15 @@ public:
     IConsoleMessage() = default;
     IConsoleMessage(rgb col) : Color(col) { }
     virtual ~IConsoleMessage() = default;
-    virtual void operator()(std::string_view format, ...);
+    PLATFORM_CLASS virtual void operator()(std::string_view format, ...);
     rgb Color {255, 255, 255};
 protected:
     virtual void _AcceptOstreamManips(std::ostream& (*f)(std::ostream &));
     virtual void _AcceptIosManips    (std::ostream& (*f)(std::ios &));
     virtual void _AcceptIosBaseManips(std::ostream& (*f)(std::ios_base &));
-    friend IConsoleMessage& operator<< (IConsoleMessage &s, std::ostream& (*f)(std::ostream &));
-    friend IConsoleMessage& operator<< (IConsoleMessage &s, std::ostream& (*f)(std::ios &));
-    friend IConsoleMessage& operator<< (IConsoleMessage &s, std::ostream& (*f)(std::ios_base &));
+    PLATFORM_CLASS friend IConsoleMessage& operator<< (IConsoleMessage &s, std::ostream& (*f)(std::ostream &));
+    PLATFORM_CLASS friend IConsoleMessage& operator<< (IConsoleMessage &s, std::ostream& (*f)(std::ios &));
+    PLATFORM_CLASS friend IConsoleMessage& operator<< (IConsoleMessage &s, std::ostream& (*f)(std::ios_base &));
 };
 
 template <typename T>
@@ -29,7 +30,7 @@ IConsoleMessage& operator<< (IConsoleMessage &s, const T &x) {
 
 struct CConsoleInfoMsg : public IConsoleMessage {
     using IConsoleMessage::IConsoleMessage;
-    void operator()(std::string_view format, ...) override;
+    PLATFORM_CLASS void operator()(std::string_view format, ...) override;
 };
 
 template <typename T>
@@ -40,7 +41,7 @@ CConsoleInfoMsg& operator<< (CConsoleInfoMsg &s, const T &x) {
 
 struct CConsoleErrorMsg : public IConsoleMessage {
     using IConsoleMessage::IConsoleMessage;
-    void operator()(std::string_view format, ...) override;
+    PLATFORM_CLASS void operator()(std::string_view format, ...) override;
 };
 
 template <typename T>
@@ -49,5 +50,5 @@ CConsoleErrorMsg& operator<< (CConsoleErrorMsg &s, const T &x) {
   return s;
 }
 
-extern CConsoleInfoMsg Msg;
-extern CConsoleErrorMsg Error;
+extern PLATFORM_CLASS CConsoleInfoMsg Msg;
+extern PLATFORM_CLASS CConsoleErrorMsg Error;
