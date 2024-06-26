@@ -4,11 +4,11 @@
 #include <string>
 #include <vector>
 
-class ICommandLine {
+class ICommandLine
+{
 public:
-  virtual void CreateCmdLine(int argc,
-                             const std::vector<std::string> &argv) = 0;
-  virtual int CheckParm(std::string_view parm) = 0;
+    virtual void CreateCmdLine(std::vector<std::string_view> &&argv) = 0;
+    virtual int FindParam(std::string_view parm) = 0;
 };
 
 PLATFORM_INTERFACE ICommandLine *CommandLine();

@@ -20,7 +20,7 @@
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline char *narrow(char *output, size_t output_size, const wchar_t *begin,
+inline char *narrow(char *output, std::size_t output_size, const wchar_t *begin,
                     const wchar_t *end) {
   return utf::convert_buffer(output, output_size, begin, end);
 }
@@ -32,7 +32,7 @@ inline char *narrow(char *output, size_t output_size, const wchar_t *begin,
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline char *narrow(char *output, size_t output_size, const wchar_t *source) {
+inline char *narrow(char *output, std::size_t output_size, const wchar_t *source) {
   return narrow(output, output_size, source, source + utf::strlen(source));
 }
 
@@ -45,7 +45,7 @@ inline char *narrow(char *output, size_t output_size, const wchar_t *source) {
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline wchar_t *widen(wchar_t *output, size_t output_size, const char *begin,
+inline wchar_t *widen(wchar_t *output, std::size_t output_size, const char *begin,
                       const char *end) {
   return utf::convert_buffer(output, output_size, begin, end);
 }
@@ -57,7 +57,7 @@ inline wchar_t *widen(wchar_t *output, size_t output_size, const char *begin,
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline wchar_t *widen(wchar_t *output, size_t output_size, const char *source) {
+inline wchar_t *widen(wchar_t *output, std::size_t output_size, const char *source) {
   return widen(output, output_size, source, source + utf::strlen(source));
 }
 
@@ -70,7 +70,7 @@ inline wchar_t *widen(wchar_t *output, size_t output_size, const char *source) {
 /// #REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_wide_char<T_Char>>
-inline std::string narrow(const T_Char *s, size_t count) {
+inline std::string narrow(const T_Char *s, std::size_t count) {
   return utf::convert_string<char>(s, s + count);
 }
 ///
@@ -106,7 +106,7 @@ inline std::string narrow(const StringOrStringView &s) {
 /// #REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_narrow_char<T_Char>>
-inline std::wstring widen(const T_Char *s, size_t count) {
+inline std::wstring widen(const T_Char *s, std::size_t count) {
   return utf::convert_string<wchar_t>(s, s + count);
 }
 ///

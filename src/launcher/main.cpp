@@ -22,16 +22,21 @@
 #include "console.hpp"
 
 #ifdef WIN32
+
 using CoreMain_t = int (*)(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                            LPWSTR lpCmdLine, int nShowCmd);
+
 #elif defined(__linux__)
+
 using CoreMain_t = int (*)(int argc, char **argv);
+
 #endif
 
 class CLauncher final : public IApplication
 {
 public:
-    void Init() override;
+    CLauncher();
+    int Run(int argc, char** argv) override;
     void SwitchDebugMode() override;
 };
 
@@ -40,8 +45,7 @@ public:
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                     _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
 {
-    try
-    {
+    try {
         {
             wchar_t **wchar_arg_list;
             int argc;
@@ -74,8 +78,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         std::cin.get();
         return ret;
     }
-    catch (const std::exception &e)
-    {
+    catch (const std::exception &e) {
         MessageBox(nullptr, widen(e.what()).c_str(), L"Error!",
                    MB_OK | MB_ICONERROR);
         return 1;
@@ -107,37 +110,28 @@ void CLauncher::Init()
     Msg("Initializing finished.\n\n");
 }
 
-void CLauncher::SwitchDebugMode()
-{
+void CLauncher::SwitchDebugMode() {
     if (!debugMode_) {
         AllocConsole();
-        freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-        freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
-        freopen_s((FILE**)stdin,  "CONIN$",  "r", stdin);
-    } else
+        freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
+        freopen_s((FILE **)stderr, "CONOUT$", "w", stderr);
+        freopen_s((FILE **)stdin, "CONIN$", "r", stdin);
+    }
+    else
         FreeConsole();
     debugMode_ = !debugMode_;
 }
 
 #elif defined(__linux__)
-int main(int argc, char **argv)
-{
+
+int main(int argc, char **argv) {
     try
     {
-        CommandLine()->CreateCmdLine(argc, std::vector<std::string>(argv, argv + argc));
+        CommandLine()->CreateCmdLine(std::vector<std::string_view>(argv, argv + argc));
         CLauncher launcher;
-        if (CommandLine()->CheckParm("-debug"))
+        if (CommandLine()->FindParam("-debug"))
             launcher.SwitchDebugMode();
-        launcher.Init();
-        AddLibSearchPath("/bin");
-        std::string corePath =
-            launcher.GetRootDir().string() + "/bin/libcore.so";
-        void *core = LoadLib(corePath);
-        auto main = (CoreMain_t)dlsym(core, "CoreInit");
-        if (!main)
-            throw std::runtime_error("Failed to load the launcher entry proc\n");
-        int ret = main(argc, argv);
-        dlclose(core);
+        auto ret = launcher.Run(argc, argv);
         return ret;
     }
     catch (const std::exception &e)
@@ -147,11 +141,21 @@ int main(int argc, char **argv)
     }
 }
 
-void CLauncher::Init() {
+CLauncher::CLauncher() {
     Msg("Initializing Launcher...\n");
     rootDir_ = std::filesystem::canonical("/proc/self/exe");
+    rootDir_.remove_filename();
     Msg("rootDir == %s\n", rootDir_.string().c_str());
     Msg("Initializing finished.\n\n");
+}
+
+int CLauncher::Run(int argc, char** argv) {
+    void *core = LoadLib(rootDir_.string() + "/bin/libcore.so");
+    auto main = (CoreMain_t)dlsym(core, "CoreInit");
+    if (!main)
+        throw std::runtime_error("Failed to load the launcher entry proc!\n");
+    int ret = main(argc, argv);
+    dlclose(core);
 }
 
 void CLauncher::SwitchDebugMode() { debugMode_ = !debugMode_; }
