@@ -7,7 +7,7 @@ class IApplication
 {
 public:
     IApplication() = default;
-    virtual int Run(int argc, char** argv) { }
+    virtual int Run() { return 0; };
     virtual void SwitchDebugMode() { debugMode_ = !debugMode_; }
     virtual bool GetDebugMode() { return debugMode_; }
     virtual std::filesystem::path GetRootDir() { return rootDir_; }

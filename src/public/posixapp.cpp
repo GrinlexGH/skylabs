@@ -14,8 +14,8 @@ void *LoadLib(std::string path) {
 
     void *lib = dlopen(path.data(), RTLD_NOW);
     if (!lib) {
-        throw std::runtime_error(std::string("failed open library:\n\n") +
-                             dlerror());
+        throw std::runtime_error(std::string("failed open library: ") +
+                             dlerror() + "\n\n");
     }
 
     Msg("Library loaded.\n\n");

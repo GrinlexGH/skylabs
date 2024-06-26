@@ -9,6 +9,7 @@ class CCommandLine final : public ICommandLine
 {
 public:
     void CreateCmdLine(std::vector<std::string_view> &&argv) override;
+    void CreateCmdLine(const std::vector<std::string_view> &argv) override;
     int FindParam(std::string_view parm) override;
 
 private:
@@ -19,6 +20,10 @@ static CCommandLine g_CmdLine;
 PLATFORM_INTERFACE ICommandLine *CommandLine() { return &g_CmdLine; }
 
 void CCommandLine::CreateCmdLine(std::vector<std::string_view> &&argv) {
+    argv_ = argv;
+}
+
+void CCommandLine::CreateCmdLine(const std::vector<std::string_view> &argv) {
     argv_ = argv;
 }
 
