@@ -1,6 +1,6 @@
 #pragma once
 #include <string_view>
-#include <iostream>
+#include <ostream>
 
 #include "platform.hpp"
 #include "stc.hpp"
@@ -29,7 +29,7 @@ IConsoleMessage& operator<< (IConsoleMessage &s, const T &x) {
 }
 
 struct CConsoleInfoMsg : public IConsoleMessage {
-    using IConsoleMessage::IConsoleMessage;
+    using IConsoleMessage::IConsoleMessage;     // Using constructors of base class
     PLATFORM_CLASS void operator()(std::string_view format, ...) override;
 };
 
@@ -40,7 +40,7 @@ CConsoleInfoMsg& operator<< (CConsoleInfoMsg &s, const T &x) {
 }
 
 struct CConsoleErrorMsg : public IConsoleMessage {
-    using IConsoleMessage::IConsoleMessage;
+    using IConsoleMessage::IConsoleMessage;     // Using constructors of base class
     PLATFORM_CLASS void operator()(std::string_view format, ...) override;
 };
 
