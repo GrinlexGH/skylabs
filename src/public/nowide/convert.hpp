@@ -17,7 +17,7 @@ namespace utf {
 /// Return the length of the given string in code units.
 /// That is the number of elements of type Char until the first NULL character.
 /// Equivalent to `std::strlen(s)` but can handle wide-strings
-template <typename Char> size_t strlen(const Char *s) {
+template <typename Char> std::size_t strlen(const Char *s) {
   const Char *end = s;
   while (*end)
     end++;
@@ -33,7 +33,7 @@ template <typename Char> size_t strlen(const Char *s) {
 /// of the buffer is undefined. Any illegal sequences are replaced with the
 /// replacement character, see #REPLACEMENT_CHARACTER
 template <typename CharOut, typename CharIn>
-CharOut *convert_buffer(CharOut *buffer, size_t buffer_size,
+CharOut *convert_buffer(CharOut *buffer, std::size_t buffer_size,
                         const CharIn *source_begin, const CharIn *source_end) {
   CharOut *rv = buffer;
   if (buffer_size == 0)
@@ -44,7 +44,7 @@ CharOut *convert_buffer(CharOut *buffer, size_t buffer_size,
     if (c == illegal || c == incomplete) {
       c = REPLACEMENT_CHARACTER;
     }
-    size_t width = utf_traits<CharOut>::width(c);
+    std::size_t width = utf_traits<CharOut>::width(c);
     if (buffer_size < width) {
       rv = nullptr;
       break;
