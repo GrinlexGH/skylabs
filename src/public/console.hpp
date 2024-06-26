@@ -1,6 +1,6 @@
 #pragma once
 #include <string_view>
-#include <ostream>
+#include <iostream>
 
 #include "platform.hpp"
 #include "stc.hpp"
