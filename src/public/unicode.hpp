@@ -8,7 +8,6 @@
 #pragma once
 
 #include "nowide/convert.hpp"
-#include "nowide/is_string_container.hpp"
 #include <string>
 
 ///

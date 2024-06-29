@@ -1,71 +1,22 @@
 #ifdef _WIN32
-#include "console.hpp"
-#include "utilities.hpp"
-#include "unicode.hpp"
-#include <stdexcept>
+
 #include <string>
 #include <Windows.h>
 
-void AddLibSearchPath(const std::string_view path) {
-    Msg("Adding library serach path...\n");
-    if (path.empty()) {
-        Msg("Path is empty.\n\n");
-        return;
-    }
-    Msg("Path to add: %s\n", path.data());
+#include "unicode.hpp"
 
-    size_t currentPathLen;
-    std::wstring newPath;
-    std::ignore = _wgetenv_s(&currentPathLen, NULL, 0, L"PATH");
-    if (currentPathLen > 0) {
-        wchar_t *currentPath = new wchar_t[currentPathLen];
-        if (_wgetenv_s(&currentPathLen, currentPath, currentPathLen, L"PATH")) {
-            delete[] currentPath;
-            throw std::runtime_error("Failed to add lib search path: _wgetenv_s() failed.");
-        }
-        newPath = currentPath;
-        delete[] currentPath;
-        newPath += L';' + widen(path.data()) + L';';
-    } else {
-        newPath += widen(path.data()) + L";";
-    }
-    if (errno_t err = _wputenv_s(L"PATH", newPath.c_str())) {
-        throw std::runtime_error("_wputenv_s() failed with code: " +
-                                 std::to_string(err));
-    }
-    Msg("Library search path added.\n\n");
+std::string getWinapiErrorMessage() {
+    wchar_t* errorMsg;
+    ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg,
+        0, NULL);
+    std::string finalMsg{ narrow(errorMsg) };
+    ::LocalFree(errorMsg);
+    return finalMsg;
 }
 
-void *LoadLib(std::string path)
-{
-    Msg("Loading library...\n");
-    Msg("library to load: %s\n", path.data());
-
-    if (path.find('/') != std::string::npos) {
-        while (true) {
-            size_t pos = path.find('/');
-            if (pos == std::string::npos)
-                break;
-            path.replace(pos, 1, "\\");
-        }
-    }
-
-    void *lib = LoadLibraryEx(widen(path.data()).c_str(), nullptr,
-                              LOAD_WITH_ALTERED_SEARCH_PATH);
-
-    if (!lib) {
-        wchar_t *errorMsg;
-        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                          FORMAT_MESSAGE_IGNORE_INSERTS,
-                      nullptr, GetLastError(),
-                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg,
-                      0, nullptr);
-        throw std::runtime_error(narrow(errorMsg));
-    }
-
-    Msg("Library loaded.\n\n");
-    return lib;
-}
 #else
 #error
 #endif

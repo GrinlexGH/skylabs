@@ -7,10 +7,8 @@ set(SOURCES
     console.cpp
     commandline.hpp
     commandline.cpp
-    utilities.hpp
     unicode.hpp
     nowide/convert.hpp;
-    nowide/is_string_container.hpp
     nowide/utf.hpp
     platform.hpp
     stc.hpp
