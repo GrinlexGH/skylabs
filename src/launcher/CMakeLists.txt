@@ -41,5 +41,3 @@ set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${ROOT_OUTPUT_DIRECTORY}/
 )
-
-target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE public)
