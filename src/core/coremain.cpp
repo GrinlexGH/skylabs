@@ -1,115 +1,113 @@
+#include <vector>
+#include <string>
+
 #include "platform.hpp"
+#include "application.hpp"
 #include "commandline.hpp"
 #include "console.hpp"
-#include <SDL.h>
+#include "unicode.hpp"
+
+class CLauncher final : public IApplication
+{
+public:
+    CLauncher();
+    ~CLauncher();
+    int Run() override;
+    void SwitchDebugMode() override;
+};
 
 #ifdef _WIN32
-
 #include <Windows.h>
 
-void OnSize(HWND hwnd, UINT flag, int width, int height) {
-  UNUSED(hwnd);
-  UNUSED(flag);
-  UNUSED(width);
-  UNUSED(height);
-  // Handle resizing
-}
-
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
-                            LPARAM lParam) {
-  switch (uMsg) {
-  case WM_SIZE: {
-    int width = LOWORD(lParam);  // Macro to get the low-order word.
-    int height = HIWORD(lParam); // Macro to get the high-order word.
-
-    // Respond to the message:
-    OnSize(hwnd, (UINT)wParam, width, height);
-  } break;
-  }
-  return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-HINSTANCE hinst;
-HWND hwndMain;
-
 DLL_EXPORT int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine,
-             int nShowCmd) {
+    int nShowCmd)
+{
 #else
-DLL_EXPORT int CoreInit(int argc, char **argv) {
+DLL_EXPORT int CoreInit(int argc, char** argv)
+{
 #endif
+    try {
 #ifdef _WIN32
-  UNUSED(hInstance);
-  UNUSED(hPrevInstance);
-  UNUSED(lpCmdLine);
-  UNUSED(nShowCmd);
+        UNUSED(hInstance);
+        UNUSED(hPrevInstance);
+        UNUSED(lpCmdLine);
+        UNUSED(nShowCmd);
+        {
+            int argc;
+            wchar_t** wchar_arg_list{ ::CommandLineToArgvW(::GetCommandLineW(), &argc) };
+
+            std::vector<std::string> char_arg_list(argc);
+            for (int i = 0; i < argc; ++i)
+                char_arg_list[i] = narrow(wchar_arg_list[i]);
+
+            CommandLine()->CreateCmdLine(char_arg_list);
+            LocalFree(wchar_arg_list);
+        }
 #else
-    UNUSED(argc);
-    UNUSED(argv);
+        CommandLine()->CreateCmdLine(std::vector<std::string>(argv, argv + argc));
 #endif
-  return 0;
-  /*
-  MSG msg;
-  BOOL bRet;
-  WNDCLASS wc;
-  UNREFERENCED_PARAMETER(lpCmdLine);
+        CLauncher launcher;
+        if (CommandLine()->FindParam("-debug"))
+            launcher.SwitchDebugMode();
+        return launcher.Run();
+    }
+    catch (const std::exception& e) {
+        #ifdef _WIN32
+        ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!",
+            MB_OK | MB_ICONERROR);
+        #else
+        Error << e.what() << "!\n\n";
+        #endif
+        return 1;
+    }
+}
 
-  // Register the window class for the main window.
+CLauncher::CLauncher() {
+    std::cout << stc::true_color;
+}
 
-  if (!hPrevInstance)
-  {
-      wc.style = 0;
-      wc.lpfnWndProc = (WNDPROC)WindowProc;
-      wc.cbClsExtra = 0;
-      wc.cbWndExtra = 0;
-      wc.hInstance = hInstance;
-      wc.hIcon = LoadIcon((HINSTANCE)NULL,
-          IDI_APPLICATION);
-      wc.hCursor = LoadCursor((HINSTANCE)NULL,
-          IDC_ARROW);
-      wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-      wc.lpszMenuName = L"MainMenu";
-      wc.lpszClassName = L"MainWndClass";
+CLauncher::~CLauncher() {
+    #ifdef _WIN32
+    if (debugMode_)
+        FreeConsole();
+    #endif
+}
 
-      if (!RegisterClass(&wc))
-          return FALSE;
-  }
+int CLauncher::Run() {
+    Msg << "Application successfully finished\n\n";
+    return 0;
+}
 
-  hinst = hInstance;  // save instance handle
+void CLauncher::SwitchDebugMode()
+{
+    if (!debugMode_)
+    {
+        #ifdef _WIN32
+        FILE* fDummy;
+        ::AllocConsole();
+        freopen_s(&fDummy, "CONOUT$", "w", stdout);
+        freopen_s(&fDummy, "CONOUT$", "w", stderr);
+        freopen_s(&fDummy, "CONIN$", "r", stdin);
+        std::cout.clear();
+        std::clog.clear();
+        std::cerr.clear();
+        std::cin.clear();
 
-  // Create the main window.
+        ::SetConsoleCP(CP_UTF8);
+        ::SetConsoleOutputCP(CP_UTF8);
 
-  hwndMain = CreateWindow(L"MainWndClass", L"Sample",
-      WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-      CW_USEDEFAULT, CW_USEDEFAULT, (HWND)NULL,
-      (HMENU)NULL, hinst, (LPVOID)NULL);
-
-  // If the main window cannot be created, terminate
-  // the application.
-
-  if (!hwndMain)
-      return FALSE;
-
-  // Show the window and paint its contents.
-
-  ShowWindow(hwndMain, nShowCmd);
-  UpdateWindow(hwndMain);
-
-  // Start the message loop.
-
-  while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
-  {
-      if (bRet == -1)
-      {
-          // handle the error and possibly exit
-      }
-      else
-      {
-          TranslateMessage(&msg);
-          DispatchMessage(&msg);
-      }
-  }
-
-  // Return the exit code to the system.
-
-  return (int)msg.wParam;*/
+        // Making allow ansi escape
+        DWORD dwMode = 0;
+        HANDLE a{ ::GetStdHandle(STD_OUTPUT_HANDLE) };
+        ::GetConsoleMode(a, &dwMode);
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        ::SetConsoleMode(a, dwMode);
+        std::cout << stc::true_color;
+        #endif
+    }
+    #ifdef _WIN32
+    else
+        FreeConsole();
+    #endif
+    debugMode_ = !debugMode_;
 }
