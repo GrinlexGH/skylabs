@@ -112,7 +112,7 @@ int main(int argc, char** argv)
         void* lib = dlopen((rootDir.string() + "/bin/libcore.so").c_str(), RTLD_NOW);
         if (!lib)
             throw std::runtime_error(std::string{ "failed open library: " } +
-            dlerror() + "!\n");
+                dlerror() + "!\n");
         auto main = (CoreMain_t)dlsym(lib, "CoreInit");
         if (!main)
             throw std::runtime_error(std::string{ "Failed to load the launcher entry proc: " } +
