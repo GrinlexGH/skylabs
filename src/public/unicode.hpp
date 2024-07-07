@@ -31,7 +31,8 @@ inline char *narrow(char *output, std::size_t output_size, const wchar_t *begin,
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline char *narrow(char *output, std::size_t output_size, const wchar_t *source) {
+inline char *narrow(char *output, std::size_t output_size,
+                    const wchar_t *source) {
   return narrow(output, output_size, source, source + utf::strlen(source));
 }
 
@@ -44,8 +45,8 @@ inline char *narrow(char *output, std::size_t output_size, const wchar_t *source
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline wchar_t *widen(wchar_t *output, std::size_t output_size, const char *begin,
-                      const char *end) {
+inline wchar_t *widen(wchar_t *output, std::size_t output_size,
+                      const char *begin, const char *end) {
   return utf::convert_buffer(output, output_size, begin, end);
 }
 ///
@@ -56,7 +57,8 @@ inline wchar_t *widen(wchar_t *output, std::size_t output_size, const char *begi
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline wchar_t *widen(wchar_t *output, std::size_t output_size, const char *source) {
+inline wchar_t *widen(wchar_t *output, std::size_t output_size,
+                      const char *source) {
   return widen(output, output_size, source, source + utf::strlen(source));
 }
 
