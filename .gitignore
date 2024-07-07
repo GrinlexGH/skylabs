@@ -24,6 +24,7 @@
 *.out
 *.app
 
+.cache/
 build/*
 .vscode/
 libs/*

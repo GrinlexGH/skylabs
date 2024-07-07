@@ -28,6 +28,10 @@ if(UNIX)
     target_compile_definitions(${project} PRIVATE PLATFORM_POSIX)
 endif()
 
+if(WIN32)
+    target_compile_definitions(${project} PRIVATE PLATFORM_WINDOWS)
+endif()
+
 if(MSVC)
     target_compile_options(${project} PRIVATE "/WX" "/W4")
 

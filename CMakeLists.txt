@@ -15,15 +15,17 @@ message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 add_compile_definitions(UNICODE _UNICODE)
 
-message("Target architecture: ${CMAKE_GENERATOR_PLATFORM}")
-
 if(!MSVC)
-  set(CMAKE_CXX_FLAGS_DEBUG "-g")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 endif()
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/)
-find_package(SDL2 REQUIRED CONFIG)
+find_package(SDL2 REQUIRED)
+find_package(GLFW3 REQUIRED)
+find_package(Vulkan REQUIRED)
 
 set(PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/public)
 
