@@ -2,8 +2,8 @@
 
 class CLauncher final : public CBaseApplication {
 public:
-  CLauncher() = default;
-  ~CLauncher() = default;
+    CLauncher() = default;
+    ~CLauncher() = default;
 
-  void Main() override;
+    void Main() override;
 };

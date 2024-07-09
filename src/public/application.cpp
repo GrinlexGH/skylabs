@@ -1,13 +1,13 @@
 #include "application.hpp"
 
 void CBaseApplication::Run() {
-  PreCreate();
-  Create();
-  PostCreate();
+    PreCreate();
+    Create();
+    PostCreate();
 
-  Main();
+    Main();
 
-  PreDestroy();
-  Destroy();
-  PostDestroy();
+    PreDestroy();
+    Destroy();
+    PostDestroy();
 }
