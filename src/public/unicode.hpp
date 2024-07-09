@@ -59,7 +59,7 @@ inline wchar_t *widen(wchar_t *output, std::size_t output_size,
 ///
 inline wchar_t *widen(wchar_t *output, std::size_t output_size,
                       const char *source) {
-  return widen(output, output_size, source, source + utf::strlen(source));
+    return widen(output, output_size, source, source + utf::strlen(source));
 }
 
 ///
@@ -72,7 +72,7 @@ inline wchar_t *widen(wchar_t *output, std::size_t output_size,
 ///
 template <typename T_Char, typename = detail::requires_wide_char<T_Char>>
 inline std::string narrow(const T_Char *s, std::size_t count) {
-  return utf::convert_string<char>(s, s + count);
+    return utf::convert_string<char>(s, s + count);
 }
 ///
 /// Convert wide string (UTF-16/32) to narrow string (UTF-8).
@@ -83,7 +83,7 @@ inline std::string narrow(const T_Char *s, std::size_t count) {
 ///
 template <typename T_Char, typename = detail::requires_wide_char<T_Char>>
 inline std::string narrow(const T_Char *s) {
-  return narrow(s, utf::strlen(s));
+    return narrow(s, utf::strlen(s));
 }
 ///
 /// Convert wide string (UTF-16/32) to narrow string (UTF-8).
@@ -95,7 +95,7 @@ inline std::string narrow(const T_Char *s) {
 template <typename StringOrStringView,
           typename = detail::requires_wide_string_container<StringOrStringView>>
 inline std::string narrow(const StringOrStringView &s) {
-  return utf::convert_string<char>(s.data(), s.data() + s.size());
+    return utf::convert_string<char>(s.data(), s.data() + s.size());
 }
 
 ///
@@ -108,7 +108,7 @@ inline std::string narrow(const StringOrStringView &s) {
 ///
 template <typename T_Char, typename = detail::requires_narrow_char<T_Char>>
 inline std::wstring widen(const T_Char *s, std::size_t count) {
-  return utf::convert_string<wchar_t>(s, s + count);
+    return utf::convert_string<wchar_t>(s, s + count);
 }
 ///
 /// Convert narrow string (UTF-8) to wide string (UTF-16/32).
@@ -119,7 +119,7 @@ inline std::wstring widen(const T_Char *s, std::size_t count) {
 ///
 template <typename T_Char, typename = detail::requires_narrow_char<T_Char>>
 inline std::wstring widen(const T_Char *s) {
-  return widen(s, utf::strlen(s));
+    return widen(s, utf::strlen(s));
 }
 ///
 /// Convert narrow string (UTF-8) to wide string (UTF-16/32).
@@ -132,5 +132,5 @@ template <
     typename StringOrStringView,
     typename = detail::requires_narrow_string_container<StringOrStringView>>
 inline std::wstring widen(const StringOrStringView &s) {
-  return utf::convert_string<wchar_t>(s.data(), s.data() + s.size());
+    return utf::convert_string<wchar_t>(s.data(), s.data() + s.size());
 }
