@@ -1,10 +1,11 @@
 ﻿#ifdef PLATFORM_WINDOWS
-#include <Windows.h>
+    #include <Windows.h>
 #elif defined(PLATFORM_POSIX)
-#include <dlfcn.h>
-#include <iostream>
+    #include <dlfcn.h>
+
+    #include <iostream>
 #else
-#error
+    #error
 #endif
 
 #include <cstddef>
@@ -23,7 +24,7 @@ using CoreMain_t = int (*)(int argc, char **argv);
 
 static std::string narrow(const std::wstring_view wstr) {
     if (wstr.empty()) {
-        return { };
+        return {};
     }
     int len = ::WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(),
                                     nullptr, 0, nullptr, nullptr);
@@ -35,10 +36,10 @@ static std::string narrow(const std::wstring_view wstr) {
 
 static std::wstring widen(const std::string_view str) {
     if (str.empty()) {
-        return { };
+        return {};
     }
-    int len = ::MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(),
-                                    nullptr, 0);
+    int len =
+        ::MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), nullptr, 0);
     std::wstring out(len, 0);
     ::MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &out[0], len);
     return out;
@@ -46,19 +47,18 @@ static std::wstring widen(const std::string_view str) {
 
 static std::string getWinapiErrorMessage() {
     wchar_t *errorMsg;
-    ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                        FORMAT_MESSAGE_IGNORE_INSERTS,
-                    nullptr, GetLastError(),
-                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&errorMsg,
-                    0, nullptr);
-    std::string finalMsg{ narrow(errorMsg) };
+    ::FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+            FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&errorMsg, 0, nullptr);
+    std::string finalMsg{narrow(errorMsg)};
     ::LocalFree(errorMsg);
     return finalMsg;
 }
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
-                    _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
-{
+                    _In_ LPWSTR lpCmdLine, _In_ int nShowCmd) {
     try {
         std::filesystem::path rootDir;
         {
@@ -70,12 +70,12 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         }
         rootDir.remove_filename();
 
-        auto core =
-            ::LoadLibraryExW((widen(rootDir.string()) + L"\\bin\\core.dll").c_str(),
-                             NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        auto core = ::LoadLibraryExW(
+            (widen(rootDir.string()) + L"\\bin\\core.dll").c_str(), NULL,
+            LOAD_WITH_ALTERED_SEARCH_PATH);
         if (!core) {
-            throw std::runtime_error(
-                "Failed to load core library: " + getWinapiErrorMessage());
+            throw std::runtime_error("Failed to load core library: " +
+                                     getWinapiErrorMessage());
         }
 
         auto main = (CoreMain_t)(void *)GetProcAddress(core, "CoreInit");
@@ -87,8 +87,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
         ::FreeLibrary(core);
         return ret;
-    }
-    catch (const std::exception &e) {
+    } catch (const std::exception &e) {
         ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!",
                       MB_OK | MB_ICONERROR);
         return 1;
@@ -97,10 +96,8 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 
 #elif defined(PLATFORM_POSIX)
 
-int main(int argc, char **argv)
-{
-    try
-    {
+int main(int argc, char **argv) {
+    try {
         std::filesystem::path rootDir =
             std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();
@@ -112,13 +109,12 @@ int main(int argc, char **argv)
         auto main = (CoreMain_t)dlsym(lib, "CoreInit");
         if (!main)
             throw std::runtime_error(
-                std::string{"Failed to load the launcher entry proc: "} + dlerror());
+                std::string{"Failed to load the launcher entry proc: "} +
+                dlerror());
         int ret = main(argc, argv);
         dlclose(lib);
         return ret;
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception &e) {
         std::cout << e.what() << std::endl;
         return 1;
     }
