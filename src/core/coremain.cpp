@@ -18,7 +18,6 @@ void InitConsole() {
     FILE *fDummy;
     ::AllocConsole();
     freopen_s(&fDummy, "CONOUT$", "w", stdout);
-    freopen_s(&fDummy, "CONOUT$", "w", stdout);
     freopen_s(&fDummy, "CONOUT$", "w", stderr);
     freopen_s(&fDummy, "CONIN$", "r", stdin);
     std::cout.clear();
@@ -71,9 +70,11 @@ DLL_EXPORT int CoreInit(int argc, char **argv) {
         CommandLine()->CreateCmdLine(std::vector<std::string>(argv, argv + argc));
 #endif
         CLauncher launcher;
+        Warning << "Warning! пошёл нахуй короче хуй" << std::endl;
         launcher.Run();
         return 0;
     } catch (const std::exception &e) {
+        //todo: get rid of ifdefs
 #ifdef PLATFORM_WINDOWS
         ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!",
                       MB_OK | MB_ICONERROR);

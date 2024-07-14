@@ -8,6 +8,7 @@
 #pragma once
 
 #include "nowide/convert.hpp"
+
 #include <string>
 
 ///
@@ -21,7 +22,7 @@
 ///
 inline char *narrow(char *output, std::size_t output_size, const wchar_t *begin,
                     const wchar_t *end) {
-  return utf::convert_buffer(output, output_size, begin, end);
+    return utf::convert_buffer(output, output_size, begin, end);
 }
 ///
 /// Convert NULL terminated wide string (UTF-16/32) to NULL terminated narrow
@@ -33,7 +34,7 @@ inline char *narrow(char *output, std::size_t output_size, const wchar_t *begin,
 ///
 inline char *narrow(char *output, std::size_t output_size,
                     const wchar_t *source) {
-  return narrow(output, output_size, source, source + utf::strlen(source));
+    return narrow(output, output_size, source, source + utf::strlen(source));
 }
 
 ///
@@ -47,7 +48,7 @@ inline char *narrow(char *output, std::size_t output_size,
 ///
 inline wchar_t *widen(wchar_t *output, std::size_t output_size,
                       const char *begin, const char *end) {
-  return utf::convert_buffer(output, output_size, begin, end);
+    return utf::convert_buffer(output, output_size, begin, end);
 }
 ///
 /// Convert NULL terminated narrow string (UTF-8) to NULL terminated wide string

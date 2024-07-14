@@ -33,7 +33,7 @@ if(WIN32)
 endif()
 
 if(MSVC)
-    target_compile_options(${project} PRIVATE "/WX" "/W4")
+    target_compile_options(${project} PRIVATE "/WX" "/W4" "/utf-8")
 
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         target_compile_definitions(${project} PRIVATE COMPILER_MSVC64)
