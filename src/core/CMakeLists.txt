@@ -5,7 +5,6 @@ set(SOURCES
   coremain.cpp
   launcher.hpp
   launcher.cpp
-  libraries.hpp
 )
 
 if(WIN32)
@@ -41,5 +40,5 @@ target_link_libraries(${CURRENT_TARGET_NAME}
   public
   SDL2::SDL2
   Vulkan::Vulkan
-  GLFW3::GLFW3
+  #GLFW3::GLFW3
 )

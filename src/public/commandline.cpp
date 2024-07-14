@@ -1,8 +1,8 @@
+#include "commandline.hpp"
+
 #include <algorithm>
 #include <string>
 #include <vector>
-
-#include "commandline.hpp"
 
 class CCommandLine final : public ICommandLine {
 public:
