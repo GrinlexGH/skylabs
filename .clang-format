@@ -6,6 +6,9 @@ IndentPPDirectives: BeforeHash
 AllowShortIfStatementsOnASingleLine: Never
 IndentCaseLabels: true
 ColumnLimit: 80
+SpaceInEmptyBlock: true
+SpaceBeforeCpp11BracedList: true
+Cpp11BracedListStyle: false
 AccessModifierOffset: -4
 NamespaceIndentation: All
 FixNamespaceComments: false
