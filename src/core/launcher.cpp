@@ -1,5 +1,7 @@
 #include "launcher.hpp"
 
+#include "console.hpp"
+
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.hpp>
@@ -48,18 +50,30 @@ debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
               VkDebugUtilsMessageTypeFlagsEXT messageType,
               const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
               void *pUserData) {
-    (void)messageSeverity;
     (void)messageType;
     (void)pUserData;
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+    switch (messageSeverity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            Msg << pCallbackData->pMessage << std::endl;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            Msg << pCallbackData->pMessage << std::endl;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            Warning << pCallbackData->pMessage << std::endl;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            Error << pCallbackData->pMessage << std::endl;
+            break;
+        default:
+            break;
+    }
 
     return VK_FALSE;
 }
 
-static void setupDebugMessenger() {
-    if (!enableValidationLayers)
-        return;
-    vk::DebugUtilsMessengerCreateInfoEXT createInfo{};
+static void populateDebugMessengerCreateInfo(
+    vk::DebugUtilsMessengerCreateInfoEXT &createInfo) {
     createInfo.messageSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
@@ -71,6 +85,13 @@ static void setupDebugMessenger() {
         vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
         vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
     createInfo.pfnUserCallback = debugCallback;
+}
+
+static void setupDebugMessenger() {
+    if (!enableValidationLayers)
+        return;
+    vk::DebugUtilsMessengerCreateInfoEXT createInfo{};
+    populateDebugMessengerCreateInfo(createInfo);
 
     g_debugMessenger = g_instance.createDebugUtilsMessengerEXT(createInfo);
 }
@@ -113,6 +134,7 @@ static bool checkValidationLayerSupport() {
 
 static void createInstance() {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
+
     if (enableValidationLayers && !checkValidationLayerSupport()) {
         throw std::runtime_error(
             "validation layers requested, but not available!");
@@ -153,17 +175,7 @@ static void createInstance() {
             static_cast<uint32_t>(g_validationLayers.size());
         createInfo.ppEnabledLayerNames = g_validationLayers.data();
 
-        debugCreateInfo.messageSeverity =
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-        debugCreateInfo.messageType =
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
-        debugCreateInfo.pfnUserCallback = debugCallback;
+        populateDebugMessengerCreateInfo(debugCreateInfo);
         createInfo.pNext =
             (vk::DebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
     } else {
