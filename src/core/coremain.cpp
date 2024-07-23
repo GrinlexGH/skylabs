@@ -1,21 +1,30 @@
+#include "commandline.hpp"
+#include "console.hpp"
+#include "launcher.hpp"
+#include "platform.hpp"
+#include "stc.hpp"
+#include "unicode.hpp"
+
+#include <stdio.h>
+
 #include <cstdio>
 #include <iostream>
-#include <stdio.h>
 #include <string>
 #include <vector>
 
-#include "commandline.hpp"
-#include "launcher.hpp"
-#include "platform.hpp"
-#include "console.hpp"
-#include "unicode.hpp"
-#include "stc.hpp"
-
 #ifdef PLATFORM_WINDOWS
-#include <Windows.h>
+    #include <Windows.h>
+
+void cleanup();
+
+BOOL CtrlHandler(DWORD fdwCtrlType) {
+    UNREFERENCED_PARAMETER(fdwCtrlType);
+    cleanup();
+    return FALSE;
+}
 
 void InitConsole() {
-    FILE *fDummy;
+    FILE* fDummy;
     ::AllocConsole();
     freopen_s(&fDummy, "CONOUT$", "w", stdout);
     freopen_s(&fDummy, "CONOUT$", "w", stderr);
@@ -34,6 +43,7 @@ void InitConsole() {
     ::GetConsoleMode(cmdOutputHandle, &dwMode);
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     ::SetConsoleMode(cmdOutputHandle, dwMode);
+    ::SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
 
     std::cout << stc::true_color;
 }
@@ -41,7 +51,7 @@ void InitConsole() {
 DLL_EXPORT int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                         LPWSTR lpCmdLine, int nShowCmd) {
 #else
-DLL_EXPORT int CoreInit(int argc, char **argv) {
+DLL_EXPORT int CoreInit(int argc, char** argv) {
 #endif
     try {
 #ifdef PLATFORM_WINDOWS
@@ -51,8 +61,8 @@ DLL_EXPORT int CoreInit(int argc, char **argv) {
         UNUSED(nShowCmd);
         {
             int argc;
-            wchar_t **wchar_arg_list{
-                ::CommandLineToArgvW(::GetCommandLineW(), &argc) };
+            wchar_t** wchar_arg_list { ::CommandLineToArgvW(::GetCommandLineW(),
+                                                            &argc) };
 
             std::vector<std::string> char_arg_list(argc);
             for (int i = 0; i < argc; ++i) {
@@ -67,14 +77,15 @@ DLL_EXPORT int CoreInit(int argc, char **argv) {
             InitConsole();
         }
 #else
-        CommandLine()->CreateCmdLine(std::vector<std::string>(argv, argv + argc));
+        CommandLine()->CreateCmdLine(
+            std::vector<std::string>(argv, argv + argc));
 #endif
         CLauncher launcher;
-        Warning << "Warning! пошёл нахуй короче хуй" << std::endl;
+        Warning << "Warning! пошёл нахуй короче хуй💀💀💀" << std::endl;
         launcher.Run();
         return 0;
-    } catch (const std::exception &e) {
-        //todo: get rid of ifdefs
+    } catch (const std::exception& e) {
+        // todo: get rid of ifdefs
 #ifdef PLATFORM_WINDOWS
         ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!",
                       MB_OK | MB_ICONERROR);
