@@ -12,7 +12,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include <iostream>
 #include <memory>
 
-static SDL_Window *g_window;
+static SDL_Window* g_window;
 static vk::Instance g_instance;
 static vk::DebugUtilsMessengerEXT g_debugMessenger;
 
@@ -22,12 +22,13 @@ static constexpr bool enableValidationLayers = false;
 static constexpr bool enableValidationLayers = true;
 #endif
 
-static std::vector<const char *> g_validationLayers = {
-    "VK_LAYER_KHRONOS_validation"};
+static std::vector<const char*> g_validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
+};
 
-static void cleanup() {
+void cleanup() {
     if (enableValidationLayers) {
-        g_instance.destroyDebugUtilsMessengerEXT();
+        g_instance.destroyDebugUtilsMessengerEXT(g_debugMessenger);
     }
     g_instance.destroy();
     SDL_DestroyWindow(g_window);
@@ -48,8 +49,8 @@ static void mainLoop() {
 static VKAPI_ATTR VkBool32 VKAPI_CALL
 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
               VkDebugUtilsMessageTypeFlagsEXT messageType,
-              const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-              void *pUserData) {
+              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+              void* pUserData) {
     (void)messageType;
     (void)pUserData;
     switch (messageSeverity) {
@@ -73,7 +74,7 @@ debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 }
 
 static void populateDebugMessengerCreateInfo(
-    vk::DebugUtilsMessengerCreateInfoEXT &createInfo) {
+    vk::DebugUtilsMessengerCreateInfoEXT& createInfo) {
     createInfo.messageSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
@@ -90,20 +91,20 @@ static void populateDebugMessengerCreateInfo(
 static void setupDebugMessenger() {
     if (!enableValidationLayers)
         return;
-    vk::DebugUtilsMessengerCreateInfoEXT createInfo{};
+    vk::DebugUtilsMessengerCreateInfoEXT createInfo {};
     populateDebugMessengerCreateInfo(createInfo);
 
     g_debugMessenger = g_instance.createDebugUtilsMessengerEXT(createInfo);
 }
 
-std::vector<const char *> getRequiredExtensions() {
+std::vector<const char*> getRequiredExtensions() {
     uint32_t extCount = 0;
     SDL_Vulkan_GetInstanceExtensions(g_window, &extCount, nullptr);
-    auto extNames = std::make_unique<const char *[]>(extCount);
+    auto extNames = std::make_unique<const char*[]>(extCount);
     SDL_Vulkan_GetInstanceExtensions(g_window, &extCount, extNames.get());
 
-    std::vector<const char *> extensions(extNames.get(),
-                                         extNames.get() + extCount);
+    std::vector<const char*> extensions(extNames.get(),
+                                        extNames.get() + extCount);
 
     if (enableValidationLayers) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -116,9 +117,9 @@ static bool checkValidationLayerSupport() {
     std::vector<vk::LayerProperties> availableLayers =
         vk::enumerateInstanceLayerProperties();
 
-    for (const auto &layerName : g_validationLayers) {
+    for (const auto& layerName : g_validationLayers) {
         bool layerFound = false;
-        for (const auto &Layer : availableLayers) {
+        for (const auto& Layer : availableLayers) {
             if (strcmp(layerName, Layer.layerName) == 0) {
                 layerFound = true;
                 break;
@@ -135,16 +136,16 @@ static bool checkValidationLayerSupport() {
 static void createInstance() {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    if (enableValidationLayers && !checkValidationLayerSupport()) {
+    if (!checkValidationLayerSupport() && enableValidationLayers) {
         throw std::runtime_error(
             "validation layers requested, but not available!");
     }
 
-    vk::ApplicationInfo appInfo{"Skylabs", VK_MAKE_API_VERSION(0, 0, 0, 0),
-                                "Skylabs", VK_MAKE_API_VERSION(0, 0, 0, 0),
-                                VK_API_VERSION_1_3};
+    vk::ApplicationInfo appInfo { "Skylabs", VK_MAKE_API_VERSION(0, 0, 0, 0),
+                                  "Skylabs", VK_MAKE_API_VERSION(0, 0, 0, 0),
+                                  VK_API_VERSION_1_3 };
 
-    vk::InstanceCreateInfo createInfo{};
+    vk::InstanceCreateInfo createInfo {};
 
     createInfo.pApplicationInfo = &appInfo;
     auto requiredExtensions = getRequiredExtensions();
@@ -155,9 +156,9 @@ static void createInstance() {
     std::vector<vk::ExtensionProperties> availableExtensions =
         vk::enumerateInstanceExtensionProperties();
 
-    for (const auto &neededExtension : requiredExtensions) {
+    for (const auto& neededExtension : requiredExtensions) {
         bool extensionFound = false;
-        for (const auto &extension : availableExtensions) {
+        for (const auto& extension : availableExtensions) {
             if (strcmp(neededExtension, extension.extensionName) == 0) {
                 extensionFound = true;
                 break;
@@ -169,7 +170,7 @@ static void createInstance() {
         }
     }
 
-    vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo {};
     if (enableValidationLayers) {
         createInfo.enabledLayerCount =
             static_cast<uint32_t>(g_validationLayers.size());
@@ -177,7 +178,7 @@ static void createInstance() {
 
         populateDebugMessengerCreateInfo(debugCreateInfo);
         createInfo.pNext =
-            (vk::DebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+            (vk::DebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
     } else {
         createInfo.enabledLayerCount = 0;
         createInfo.pNext = nullptr;
