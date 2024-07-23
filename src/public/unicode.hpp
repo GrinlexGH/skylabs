@@ -90,7 +90,7 @@ namespace utf {
         static bool is_lead(char_type ci) { return !is_trail(ci); }
 
         template <typename Iterator>
-        static code_point decode(Iterator &p, Iterator e) {
+        static code_point decode(Iterator& p, Iterator e) {
             if (p == e) [[unlikely]]
                 return incomplete;
 
@@ -150,7 +150,7 @@ namespace utf {
         }
 
         template <typename Iterator>
-        static code_point decode_valid(Iterator &p) {
+        static code_point decode_valid(Iterator& p) {
             unsigned char lead = *p++;
             if (lead < 192)
                 return lead;
@@ -231,7 +231,7 @@ namespace utf {
         /// Return true if c is lead code unit, always true of UTF-32
         static bool is_lead(char_type c) { return !is_second_surrogate(c); }
 
-        template <typename It> static code_point decode(It &current, It last) {
+        template <typename It> static code_point decode(It& current, It last) {
             if (current == last) [[unlikely]]
                 return incomplete;
             uint16_t w1 = *current++;
@@ -248,7 +248,7 @@ namespace utf {
                 return illegal;
             return combine_surrogate(w1, w2);
         }
-        template <typename It> static code_point decode_valid(It &current) {
+        template <typename It> static code_point decode_valid(It& current) {
             uint16_t w1 = *current++;
             if (is_single_codepoint(w1)) [[likely]] {
                 return w1;
@@ -284,11 +284,11 @@ namespace utf {
         static bool is_trail(char_type /*c*/) { return false; }
         static bool is_lead(char_type /*c*/) { return true; }
 
-        template <typename It> static code_point decode_valid(It &current) {
+        template <typename It> static code_point decode_valid(It& current) {
             return *current++;
         }
 
-        template <typename It> static code_point decode(It &current, It last) {
+        template <typename It> static code_point decode(It& current, It last) {
             if (current == last) [[unlikely]]
                 return incomplete;
             code_point c = *current++;
@@ -323,7 +323,7 @@ namespace detail {
 #endif
 
     template <typename T> struct is_c_string : std::false_type { };
-    template <typename T> struct is_c_string<const T *> : is_char_type<T> { };
+    template <typename T> struct is_c_string<const T*> : is_char_type<T> { };
 
     template <typename T>
     using const_data_result = decltype(std::declval<const T>().data());
@@ -377,8 +377,8 @@ namespace utf {
     /// Return the length of the given string in code units.
     /// That is the number of elements of type Char until the first NULL
     /// character. Equivalent to `std::strlen(s)` but can handle wide-strings
-    template <typename Char> std::size_t strlen(const Char *s) {
-        const Char *end = s;
+    template <typename Char> std::size_t strlen(const Char* s) {
+        const Char* end = s;
         while (*end)
             end++;
         return end - s;
@@ -394,10 +394,10 @@ namespace utf {
     /// content of the buffer is undefined. Any illegal sequences are replaced
     /// with the replacement character, see #REPLACEMENT_CHARACTER
     template <typename CharOut, typename CharIn>
-    CharOut *convert_buffer(CharOut *buffer, std::size_t buffer_size,
-                            const CharIn *source_begin,
-                            const CharIn *source_end) {
-        CharOut *rv = buffer;
+    CharOut* convert_buffer(CharOut* buffer, std::size_t buffer_size,
+                            const CharIn* source_begin,
+                            const CharIn* source_end) {
+        CharOut* rv = buffer;
         if (buffer_size == 0)
             return nullptr;
         buffer_size--;
@@ -424,8 +424,8 @@ namespace utf {
     /// Any illegal sequences are replaced with the replacement character, see
     /// #REPLACEMENT_CHARACTER \tparam CharOut Output character type
     template <typename CharOut, typename CharIn>
-    std::basic_string<CharOut> convert_string(const CharIn *begin,
-                                              const CharIn *end) {
+    std::basic_string<CharOut> convert_string(const CharIn* begin,
+                                              const CharIn* end) {
         std::basic_string<CharOut> result;
         result.reserve(end - begin);
         using inserter_type =
@@ -449,7 +449,7 @@ namespace utf {
     /// #REPLACEMENT_CHARACTER \tparam CharOut Output character type
     template <typename CharOut, typename CharIn>
     std::basic_string<CharOut>
-    convert_string(const std::basic_string<CharIn> &s) {
+    convert_string(const std::basic_string<CharIn>& s) {
         return convert_string<CharOut>(s.data(), s.data() + s.size());
     }
 
@@ -464,8 +464,8 @@ namespace utf {
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline char *narrow(char *output, std::size_t output_size, const wchar_t *begin,
-                    const wchar_t *end) {
+inline char* narrow(char* output, std::size_t output_size, const wchar_t* begin,
+                    const wchar_t* end) {
     return utf::convert_buffer(output, output_size, begin, end);
 }
 ///
@@ -476,8 +476,8 @@ inline char *narrow(char *output, std::size_t output_size, const wchar_t *begin,
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline char *narrow(char *output, std::size_t output_size,
-                    const wchar_t *source) {
+inline char* narrow(char* output, std::size_t output_size,
+                    const wchar_t* source) {
     return narrow(output, output_size, source, source + utf::strlen(source));
 }
 
@@ -490,8 +490,8 @@ inline char *narrow(char *output, std::size_t output_size,
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline wchar_t *widen(wchar_t *output, std::size_t output_size,
-                      const char *begin, const char *end) {
+inline wchar_t* widen(wchar_t* output, std::size_t output_size,
+                      const char* begin, const char* end) {
     return utf::convert_buffer(output, output_size, begin, end);
 }
 ///
@@ -502,8 +502,8 @@ inline wchar_t *widen(wchar_t *output, std::size_t output_size,
 /// Any illegal sequences are replaced with the replacement character, see
 /// #REPLACEMENT_CHARACTER
 ///
-inline wchar_t *widen(wchar_t *output, std::size_t output_size,
-                      const char *source) {
+inline wchar_t* widen(wchar_t* output, std::size_t output_size,
+                      const char* source) {
     return widen(output, output_size, source, source + utf::strlen(source));
 }
 
@@ -516,7 +516,7 @@ inline wchar_t *widen(wchar_t *output, std::size_t output_size,
 /// #REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_wide_char<T_Char>>
-inline std::string narrow(const T_Char *s, std::size_t count) {
+inline std::string narrow(const T_Char* s, std::size_t count) {
     return utf::convert_string<char>(s, s + count);
 }
 ///
@@ -527,7 +527,7 @@ inline std::string narrow(const T_Char *s, std::size_t count) {
 /// #REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_wide_char<T_Char>>
-inline std::string narrow(const T_Char *s) {
+inline std::string narrow(const T_Char* s) {
     return narrow(s, utf::strlen(s));
 }
 ///
@@ -539,7 +539,7 @@ inline std::string narrow(const T_Char *s) {
 ///
 template <typename StringOrStringView,
           typename = detail::requires_wide_string_container<StringOrStringView>>
-inline std::string narrow(const StringOrStringView &s) {
+inline std::string narrow(const StringOrStringView& s) {
     return utf::convert_string<char>(s.data(), s.data() + s.size());
 }
 
@@ -552,7 +552,7 @@ inline std::string narrow(const StringOrStringView &s) {
 /// #REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_narrow_char<T_Char>>
-inline std::wstring widen(const T_Char *s, std::size_t count) {
+inline std::wstring widen(const T_Char* s, std::size_t count) {
     return utf::convert_string<wchar_t>(s, s + count);
 }
 ///
@@ -563,7 +563,7 @@ inline std::wstring widen(const T_Char *s, std::size_t count) {
 /// #REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_narrow_char<T_Char>>
-inline std::wstring widen(const T_Char *s) {
+inline std::wstring widen(const T_Char* s) {
     return widen(s, utf::strlen(s));
 }
 ///
@@ -576,6 +576,6 @@ inline std::wstring widen(const T_Char *s) {
 template <
     typename StringOrStringView,
     typename = detail::requires_narrow_string_container<StringOrStringView>>
-inline std::wstring widen(const StringOrStringView &s) {
+inline std::wstring widen(const StringOrStringView& s) {
     return utf::convert_string<wchar_t>(s.data(), s.data() + s.size());
 }
