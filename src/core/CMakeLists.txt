@@ -35,6 +35,7 @@ set_target_properties(${CURRENT_TARGET_NAME}
     LIBRARY_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
 )
 
+add_dependencies(${CURRENT_TARGET_NAME} public)
 target_link_libraries(${CURRENT_TARGET_NAME}
     PRIVATE
     public

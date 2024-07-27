@@ -12,5 +12,6 @@ Cpp11BracedListStyle: false
 AccessModifierOffset: -4
 NamespaceIndentation: All
 FixNamespaceComments: false
+SortIncludes: false
 AlignEscapedNewlines: Left
 PointerAlignment: Left
