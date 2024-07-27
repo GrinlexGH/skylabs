@@ -1,9 +1,10 @@
 #ifdef PLATFORM_WINDOWS
+    #include "platform.hpp"
     #include "unicode.hpp"
     #include <Windows.h>
     #include <string>
 
-std::string getWinapiErrorMessage() {
+PLATFORM_CLASS std::string getWinapiErrorMessage() {
     wchar_t* errorMsg = nullptr;
     ::FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |

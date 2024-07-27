@@ -23,6 +23,8 @@ BOOL CtrlHandler(DWORD fdwCtrlType) {
     return FALSE;
 }
 
+std::string getWinapiErrorMessage();
+
 void InitConsole() {
     FILE* fDummy;
     ::AllocConsole();
@@ -42,7 +44,8 @@ void InitConsole() {
     HANDLE cmdOutputHandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
     ::GetConsoleMode(cmdOutputHandle, &dwMode);
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    ::SetConsoleMode(cmdOutputHandle, dwMode);
+    if(!::SetConsoleMode(cmdOutputHandle, dwMode))
+        throw std::runtime_error(getWinapiErrorMessage());
     ::SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
 
     std::cout << stc::true_color;
@@ -87,6 +90,7 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
     } catch (const std::exception& e) {
         // todo: get rid of ifdefs
 #ifdef PLATFORM_WINDOWS
+        ::MessageBeep(MB_ICONERROR);
         ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!",
                       MB_OK | MB_ICONERROR);
 #else

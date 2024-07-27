@@ -8,6 +8,7 @@
 #endif
 
 #include <cstddef>
+#include <cassert>
 #include <filesystem>
 #include <stdexcept>
 #include <string>
@@ -62,7 +63,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         std::filesystem::path rootDir;
         {
             wchar_t buffer[MAX_PATH] = { 0 };
-            if (!::GetModuleFileNameW(NULL, buffer, MAX_PATH))
+            if (!::GetModuleFileNameW(nullptr, buffer, MAX_PATH))
                 throw std::runtime_error("GetModuleFileNameW call failed: " +
                                          getWinapiErrorMessage());
             rootDir = narrow(buffer);
@@ -70,7 +71,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         rootDir.remove_filename();
 
         auto core = ::LoadLibraryExW(
-            (widen(rootDir.string()) + L"\\bin\\core.dll").c_str(), NULL,
+            (widen(rootDir.string()) + L"\\bin\\core.dll").c_str(), nullptr,
             LOAD_WITH_ALTERED_SEARCH_PATH);
         if (!core) {
             throw std::runtime_error("Failed to load core library: " +
@@ -87,6 +88,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
         ::FreeLibrary(core);
         return ret;
     } catch (const std::exception& e) {
+        ::MessageBeep(MB_ICONERROR);
         ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!",
                       MB_OK | MB_ICONERROR);
         return 1;
@@ -102,14 +104,16 @@ int main(int argc, char** argv) {
         rootDir.remove_filename();
         void* lib =
             dlopen((rootDir.string() + "/bin/libcore.so").c_str(), RTLD_NOW);
-        if (!lib)
+        if (!lib) {
             throw std::runtime_error(std::string { "failed open library: " } +
                                      dlerror() + "!\n");
+        }
         auto main = (CoreMain_t)dlsym(lib, "CoreInit");
-        if (!main)
+        if (!main) {
             throw std::runtime_error(
                 std::string { "Failed to load the launcher entry proc: " } +
                 dlerror());
+        }
         int ret = main(argc, argv);
         dlclose(lib);
         return ret;
