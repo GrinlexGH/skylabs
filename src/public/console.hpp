@@ -54,6 +54,6 @@ protected:
     }
 };
 
-extern PLATFORM_CLASS CConsoleMessage Msg;
-extern PLATFORM_CLASS CConsoleMessage Warning;
-extern PLATFORM_CLASS CConsoleMessage Error;
+PLATFORM_OVERLOAD CConsoleMessage Msg;
+PLATFORM_OVERLOAD CConsoleMessage Warning;
+PLATFORM_OVERLOAD CConsoleMessage Error;
