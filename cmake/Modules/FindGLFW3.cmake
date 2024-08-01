@@ -16,6 +16,7 @@ set(_glfw3_HEADER_SEARCH_DIRS
   "/usr/include"
   "/usr/local/include"
   "/opt/local/include"
+  "${PROJECT_SOURCE_DIR}/libs/glfw*/include"
   "${CMAKE_SOURCE_DIR}/includes"
   "C:/Program Files (x86)/glfw/include"
 )
@@ -24,6 +25,7 @@ set(_glfw3_LIB_SEARCH_DIRS
   "/usr/lib"
   "/usr/local/lib"
   "/opt/local/lib"
+  "${PROJECT_SOURCE_DIR}/libs/glfw*/lib-vc2022"
   "${CMAKE_SOURCE_DIR}/lib"
   "${CMAKE_SOURCE_DIR}/libs"
   "C:/Program Files (x86)/glfw/lib"
@@ -42,10 +44,33 @@ if(GLFW3_ROOT)
   list(INSERT _glfw3_LIB_SEARCH_DIRS 0 "${GLFW3_ROOT}/lib")
 endif()
 
+file(GLOB GLFW3_LOCATION "${CMAKE_SOURCE_DIR}/libs/glfw*")
+
+if(WIN32)
+  if(MSVC)
+    if(MSVC_TOOLSET_VERSION EQUAL 143)
+      file(GLOB GLFW3_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/glfw*/lib-vc2022")
+    elseif(MSVC_TOOLSET_VERSION EQUAL 142)
+      file(GLOB GLFW3_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/glfw*/lib-vc2019")
+    elseif(MSVC_TOOLSET_VERSION EQUAL 141)
+      file(GLOB GLFW3_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/glfw*/lib-vc2017")
+    elseif(MSVC_TOOLSET_VERSION EQUAL 140)
+      file(GLOB GLFW3_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/glfw*/lib-vc2015")
+    elseif(MSVC_TOOLSET_VERSION EQUAL 120)
+      file(GLOB GLFW3_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/glfw*/lib-vc2013")
+    endif()
+  else()
+    file(GLOB GLFW3_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/glfw*/lib-mingw-w64")
+  endif()
+elseif(APPLE)
+  file(GLOB GLFW3_LIB_DIR "${CMAKE_SOURCE_DIR}/libs/glfw*/lib-universal")
+endif()
+
 # Search for the header
 FIND_PATH(GLFW3_INCLUDE_DIR
   NAMES GLFW/glfw3.h
   PATHS ${_glfw3_HEADER_SEARCH_DIRS}
+  HINTS "${GLFW3_LOCATION}/include"
 )
 
 # Search for the library
@@ -54,6 +79,7 @@ FIND_LIBRARY(GLFW3_LIBRARY
   ENV LD_LIBRARY_PATH
   ENV DYLD_LIBRARY_PATH
   PATHS ${_glfw3_LIB_SEARCH_DIRS}
+  HINTS ${GLFW3_LIB_DIR}
 )
 
 set(GLFW3_LIBRARIES ${GLFW3_LIBRARY} ${CMAKE_DL_LIBS})
