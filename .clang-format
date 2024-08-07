@@ -7,7 +7,7 @@ IndentPPDirectives: BeforeHash
 AllowShortIfStatementsOnASingleLine: Never
 IndentCaseLabels: true
 ColumnLimit: 0
-AlignConsecutiveStyle: Enabled
+# AlignConsecutiveStyle: Enabled
 SpaceInEmptyBlock: true
 SpaceBeforeCpp11BracedList: true
 Cpp11BracedListStyle: false
