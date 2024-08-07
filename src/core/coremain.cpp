@@ -1,29 +1,22 @@
 #include "commandline.hpp"
-#include "console.hpp"
 #include "launcher.hpp"
 #include "platform.hpp"
-#include "stc.hpp"
+#include "console.hpp"
 #include "unicode.hpp"
+#include "stc.hpp"
+#include "SDL.hpp"
+#include "window.hpp"
 
-#include <stdio.h>
-
-#include <cstdio>
 #include <iostream>
-#include <string>
 #include <vector>
 
 #ifdef PLATFORM_WINDOWS
-    #include <Windows.h>
-
-void cleanup();
+#include <Windows.h>
 
 BOOL CtrlHandler(DWORD fdwCtrlType) {
     UNREFERENCED_PARAMETER(fdwCtrlType);
-    cleanup();
     return FALSE;
 }
-
-std::string getWinapiErrorMessage();
 
 void InitConsole() {
     FILE* fDummy;
@@ -44,8 +37,7 @@ void InitConsole() {
     HANDLE cmdOutputHandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
     ::GetConsoleMode(cmdOutputHandle, &dwMode);
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if(!::SetConsoleMode(cmdOutputHandle, dwMode))
-        throw std::runtime_error(getWinapiErrorMessage());
+    ::SetConsoleMode(cmdOutputHandle, dwMode);
     ::SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE);
 
     std::cout << stc::true_color;
@@ -64,8 +56,9 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
         UNUSED(nShowCmd);
         {
             int argc;
-            wchar_t** wchar_arg_list { ::CommandLineToArgvW(::GetCommandLineW(),
-                                                            &argc) };
+            wchar_t** wchar_arg_list {
+                ::CommandLineToArgvW(::GetCommandLineW(), &argc)
+            };
 
             std::vector<std::string> char_arg_list(argc);
             for (int i = 0; i < argc; ++i) {
@@ -84,7 +77,7 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
             std::vector<std::string>(argv, argv + argc));
 #endif
         CLauncher launcher;
-        Warning << "Warning! пошёл нахуй короче хуй💀💀💀" << std::endl;
+        Error << "Warning! пошёл нахуй короче хуй💀💀💀" << std::endl;
         launcher.Run();
         return 0;
     } catch (const std::exception& e) {

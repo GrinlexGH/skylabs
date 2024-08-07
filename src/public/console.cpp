@@ -38,8 +38,7 @@ CConsoleMessage& operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ios&)) {
     return s;
 }
 
-CConsoleMessage& operator<<(CConsoleMessage& s,
-                            std::ostream& (*f)(std::ios_base&)) {
+CConsoleMessage& operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ios_base&)) {
     s._AcceptIosBaseManips(f);
     return s;
 }

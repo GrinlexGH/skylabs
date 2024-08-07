@@ -5,10 +5,13 @@ set(SOURCES
     coremain.cpp
     launcher.hpp
     launcher.cpp
+    renderapi.hpp
     vulkanapi.hpp
+    vulkanapi.cpp
     window.hpp
-    sdlwindow.hpp
-    sdlwindow.cpp
+    SDL.hpp
+    SDL_Vulkan.hpp
+    SDL.cpp
 )
 
 if(WIN32)
@@ -46,5 +49,5 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     SDL2::SDL2
     Vulkan::Vulkan
 
-    #GLFW3::GLFW3
+    GLFW3::GLFW3
 )
