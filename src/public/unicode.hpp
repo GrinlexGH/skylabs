@@ -7,18 +7,19 @@
 
 #pragma once
 
-#define REPLACEMENT_CHARACTER 0xFFFD
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <string>
 #include <type_traits>
 
+static constexpr std::uint16_t REPLACEMENT_CHARACTER = 0xFFFD;
+
 ///
 /// \brief Namespace that holds basic operations on UTF encoded sequences
 ///
-/// All functions defined in this namespace do not require linking with
-/// Boost.Nowide library. Extracted from Boost.Locale
+/// All functions defined in this namespace do not require linking with Boost.Nowide library.
+/// Extracted from Boost.Locale
 ///
 namespace utf {
 
@@ -48,9 +49,11 @@ namespace utf {
         return true;
     }
 
-    template <typename CharType, int size = sizeof(CharType)> struct utf_traits;
+    template <typename CharType, int size = sizeof(CharType)>
+    struct utf_traits;
 
-    template <typename CharType> struct utf_traits<CharType, 1> {
+    template <typename CharType>
+    struct utf_traits<CharType, 1> {
         using char_type = CharType;
 
         static int trail_length(char_type ci) {
@@ -199,13 +202,13 @@ namespace utf {
         }
     }; // utf8
 
-    template <typename CharType> struct utf_traits<CharType, 2> {
+    template <typename CharType>
+    struct utf_traits<CharType, 2> {
         using char_type = CharType;
 
         // See RFC 2781
         static bool is_single_codepoint(uint16_t x) {
-            // Ranges [U+0000, 0+D7FF], [U+E000, U+FFFF] are numerically equal
-            // in UTF-16
+            // Ranges [U+0000, 0+D7FF], [U+E000, U+FFFF] are numerically equal in UTF-16
             return x <= 0xD7FF || x >= 0xE000;
         }
         static bool is_first_surrogate(uint16_t x) {
@@ -231,7 +234,8 @@ namespace utf {
         /// Return true if c is lead code unit, always true of UTF-32
         static bool is_lead(char_type c) { return !is_second_surrogate(c); }
 
-        template <typename It> static code_point decode(It& current, It last) {
+        template <typename It>
+        static code_point decode(It& current, It last) {
             if (current == last) [[unlikely]]
                 return incomplete;
             uint16_t w1 = *current++;
@@ -248,7 +252,8 @@ namespace utf {
                 return illegal;
             return combine_surrogate(w1, w2);
         }
-        template <typename It> static code_point decode_valid(It& current) {
+        template <typename It>
+        static code_point decode_valid(It& current) {
             uint16_t w1 = *current++;
             if (is_single_codepoint(w1)) [[likely]] {
                 return w1;
@@ -258,11 +263,11 @@ namespace utf {
         }
 
         static const int max_width = 2;
-        static int width(code_point u) // LCOV_EXCL_LINE
-        {
+        static int width(code_point u) { // LCOV_EXCL_LINE
             return u >= 0x10000 ? 2 : 1;
         }
-        template <typename It> static It encode(code_point u, It out) {
+        template <typename It>
+        static It encode(code_point u, It out) {
             if (u <= 0xFFFF) [[likely]] {
                 *out++ = static_cast<char_type>(u);
             } else {
@@ -274,7 +279,8 @@ namespace utf {
         }
     }; // utf16;
 
-    template <typename CharType> struct utf_traits<CharType, 4> {
+    template <typename CharType>
+    struct utf_traits<CharType, 4> {
         using char_type = CharType;
         static int trail_length(char_type c) {
             if (is_valid_codepoint(c))
@@ -284,11 +290,13 @@ namespace utf {
         static bool is_trail(char_type /*c*/) { return false; }
         static bool is_lead(char_type /*c*/) { return true; }
 
-        template <typename It> static code_point decode_valid(It& current) {
+        template <typename It>
+        static code_point decode_valid(It& current) {
             return *current++;
         }
 
-        template <typename It> static code_point decode(It& current, It last) {
+        template <typename It>
+        static code_point decode(It& current, It last) {
             if (current == last) [[unlikely]]
                 return incomplete;
             code_point c = *current++;
@@ -298,105 +306,33 @@ namespace utf {
         }
         static const int max_width = 1;
         static int width(code_point /*u*/) { return 1; }
-        template <typename It> static It encode(code_point u, It out) {
+        template <typename It>
+        static It encode(code_point u, It out) {
             *out++ = static_cast<char_type>(u);
             return out;
         }
     }; // utf32
 
-} // namespace utf
-
-namespace detail {
-    template <class...> struct make_void {
-        typedef void type;
-    };
-
-    template <class... Ts> using void_t = typename make_void<Ts...>::type;
-
-    template <typename T> struct is_char_type : std::false_type { };
-    template <> struct is_char_type<char> : std::true_type { };
-    template <> struct is_char_type<wchar_t> : std::true_type { };
-    template <> struct is_char_type<char16_t> : std::true_type { };
-    template <> struct is_char_type<char32_t> : std::true_type { };
-#ifdef __cpp_char8_t
-    template <> struct is_char_type<char8_t> : std::true_type { };
-#endif
-
-    template <typename T> struct is_c_string : std::false_type { };
-    template <typename T> struct is_c_string<const T*> : is_char_type<T> { };
-
-    template <typename T>
-    using const_data_result = decltype(std::declval<const T>().data());
-    /// Return the size of the char type returned by the data() member function
-    template <typename T>
-    using get_data_width = std::integral_constant<
-        std::size_t,
-        sizeof(typename std::remove_pointer<const_data_result<T>>::type)>;
-    template <typename T>
-    using size_result = decltype(std::declval<T>().size());
-    /// Return true if the data() member function returns a pointer to a type of
-    /// size 1
-    template <typename T>
-    using has_narrow_data =
-        std::integral_constant<bool, (get_data_width<T>::value == 1)>;
-
-    /// Return true if T is a string container, e.g. std::basic_string,
-    /// std::basic_string_view Requires a static value `npos`, a member function
-    /// `size()` returning an integral, and a member function `data()` returning
-    /// a C string
-    template <typename T, bool isNarrow, typename = void>
-    struct is_string_container : std::false_type { };
-    // clang-format off
-        template<typename T, bool isNarrow>
-        struct is_string_container<T, isNarrow, void_t<decltype(T::npos), size_result<T>, const_data_result<T>>>
-            : std::integral_constant<bool,
-                                     std::is_integral<decltype(T::npos)>::value
-                                       && std::is_integral<size_result<T>>::value
-                                       && is_c_string<const_data_result<T>>::value
-                                       && isNarrow == has_narrow_data<T>::value>
-        {};
-    // clang-format on
-    template <typename T>
-    using requires_narrow_string_container =
-        typename std::enable_if<is_string_container<T, true>::value>::type;
-    template <typename T>
-    using requires_wide_string_container =
-        typename std::enable_if<is_string_container<T, false>::value>::type;
-
-    template <typename T>
-    using requires_narrow_char =
-        typename std::enable_if<sizeof(T) == 1 && is_char_type<T>::value>::type;
-    template <typename T>
-    using requires_wide_char =
-        typename std::enable_if<(sizeof(T) > 1) &&
-                                is_char_type<T>::value>::type;
-
-} // namespace detail
-
-namespace utf {
     /// Return the length of the given string in code units.
-    /// That is the number of elements of type Char until the first NULL
-    /// character. Equivalent to `std::strlen(s)` but can handle wide-strings
-    template <typename Char> std::size_t strlen(const Char* s) {
+    /// That is the number of elements of type Char until the first NULL character.
+    /// Equivalent to `std::strlen(s)` but can handle wide-strings
+    template <typename Char>
+    std::size_t strlen(const Char* s) {
         const Char* end = s;
         while (*end)
             end++;
         return end - s;
     }
 
-    /// Convert a buffer of UTF sequences in the range [source_begin,
-    /// source_end) from \a CharIn to \a CharOut to the output \a buffer of size
-    /// \a buffer_size.
+    /// Convert a buffer of UTF sequences in the range [source_begin, source_end)
+    /// from \a CharIn to \a CharOut to the output \a buffer of size \a buffer_size.
     ///
     /// \return original buffer containing the NULL terminated string or NULL
     ///
-    /// If there is not enough room in the buffer NULL is returned, and the
-    /// content of the buffer is undefined. Any illegal sequences are replaced
-    /// with the replacement character, see #REPLACEMENT_CHARACTER
+    /// If there is not enough room in the buffer NULL is returned, and the content of the buffer is undefined.
+    /// Any illegal sequences are replaced with the replacement character, see #REPLACEMENT_CHARACTER
     template <typename CharOut, typename CharIn>
-    CharOut* convert_buffer(CharOut* buffer, std::size_t buffer_size,
-                            const CharIn* source_begin,
-                            const CharIn* source_end) {
+    CharOut* convert_buffer(CharOut* buffer, std::size_t buffer_size, const CharIn* source_begin, const CharIn* source_end) {
         CharOut* rv = buffer;
         if (buffer_size == 0)
             return nullptr;
@@ -418,14 +354,13 @@ namespace utf {
         return rv;
     }
 
-    /// Convert the UTF sequences in range [begin, end) from \a CharIn to \a
-    /// CharOut and return it as a string
+    /// Convert the UTF sequences in range [begin, end) from \a CharIn to \a CharOut
+    /// and return it as a string
     ///
-    /// Any illegal sequences are replaced with the replacement character, see
-    /// #REPLACEMENT_CHARACTER \tparam CharOut Output character type
+    /// Any illegal sequences are replaced with the replacement character, see #REPLACEMENT_CHARACTER
+    /// \tparam CharOut Output character type
     template <typename CharOut, typename CharIn>
-    std::basic_string<CharOut> convert_string(const CharIn* begin,
-                                              const CharIn* end) {
+    std::basic_string<CharOut> convert_string(const CharIn* begin, const CharIn* end) {
         std::basic_string<CharOut> result;
         result.reserve(end - begin);
         using inserter_type =
@@ -442,11 +377,11 @@ namespace utf {
         return result;
     }
 
-    /// Convert the UTF sequence in the input string from \a CharIn to \a
-    /// CharOut and return it as a string
+    /// Convert the UTF sequence in the input string from \a CharIn to \a CharOut
+    /// and return it as a string
     ///
-    /// Any illegal sequences are replaced with the replacement character, see
-    /// #REPLACEMENT_CHARACTER \tparam CharOut Output character type
+    /// Any illegal sequences are replaced with the replacement character, see #REPLACEMENT_CHARACTER
+    /// \tparam CharOut Output character type
     template <typename CharOut, typename CharIn>
     std::basic_string<CharOut>
     convert_string(const std::basic_string<CharIn>& s) {
@@ -455,55 +390,113 @@ namespace utf {
 
 } // namespace utf
 
+namespace detail {
+    template <class...>
+    struct make_void {
+        typedef void type;
+    };
+
+    template <class... Ts>
+    using void_t = typename make_void<Ts...>::type;
+
+    template <typename T>
+    struct is_char_type : std::false_type { };
+    template <>
+    struct is_char_type<char> : std::true_type { };
+    template <>
+    struct is_char_type<wchar_t> : std::true_type { };
+    template <>
+    struct is_char_type<char16_t> : std::true_type { };
+    template <>
+    struct is_char_type<char32_t> : std::true_type { };
+#ifdef __cpp_char8_t
+    template <>
+    struct is_char_type<char8_t> : std::true_type { };
+#endif
+
+    template <typename T>
+    struct is_c_string : std::false_type { };
+    template <typename T>
+    struct is_c_string<const T*> : is_char_type<T> { };
+
+    template <typename T>
+    using const_data_result = decltype(std::declval<const T>().data());
+    /// Return the size of the char type returned by the data() member function
+    template <typename T>
+    using get_data_width =
+        std::integral_constant<std::size_t, sizeof(typename std::remove_pointer<const_data_result<T>>::type)>;
+    template <typename T>
+    using size_result = decltype(std::declval<T>().size());
+    /// Return true if the data() member function returns a pointer to a type of size 1
+    template <typename T>
+    using has_narrow_data = std::integral_constant<bool, (get_data_width<T>::value == 1)>;
+
+    /// Return true if T is a string container, e.g. std::basic_string, std::basic_string_view
+    /// Requires a static value `npos`, a member function `size()` returning an integral,
+    /// and a member function `data()` returning a C string
+    template <typename T, bool isNarrow, typename = void>
+    struct is_string_container : std::false_type { };
+    // clang-format off
+    template<typename T, bool isNarrow>
+    struct is_string_container<T, isNarrow, void_t<decltype(T::npos), size_result<T>, const_data_result<T>>>
+        : std::integral_constant<bool,
+                                    std::is_integral<decltype(T::npos)>::value
+                                    && std::is_integral<size_result<T>>::value
+                                    && is_c_string<const_data_result<T>>::value
+                                    && isNarrow == has_narrow_data<T>::value>
+    {};
+    // clang-format on
+    template <typename T>
+    using requires_narrow_string_container = typename std::enable_if<is_string_container<T, true>::value>::type;
+    template <typename T>
+    using requires_wide_string_container = typename std::enable_if<is_string_container<T, false>::value>::type;
+
+    template <typename T>
+    using requires_narrow_char = typename std::enable_if<sizeof(T) == 1 && is_char_type<T>::value>::type;
+    template <typename T>
+    using requires_wide_char = typename std::enable_if<(sizeof(T) > 1) && is_char_type<T>::value>::type;
+
+} // namespace detail
+
 ///
-/// Convert wide string (UTF-16/32) in range [begin,end) to NULL terminated
-/// narrow string (UTF-8) stored in \a output of size \a output_size (including
-/// NULL)
+/// Convert wide string (UTF-16/32) in range [begin,end) to NULL terminated narrow string (UTF-8)
+/// stored in \a output of size \a output_size (including NULL)
 ///
 /// If there is not enough room NULL is returned, else output is returned.
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
-inline char* narrow(char* output, std::size_t output_size, const wchar_t* begin,
-                    const wchar_t* end) {
+inline char* narrow(char* output, size_t output_size, const wchar_t* begin, const wchar_t* end) {
     return utf::convert_buffer(output, output_size, begin, end);
 }
 ///
-/// Convert NULL terminated wide string (UTF-16/32) to NULL terminated narrow
-/// string (UTF-8) stored in \a output of size \a output_size (including NULL)
+/// Convert NULL terminated wide string (UTF-16/32) to NULL terminated narrow string (UTF-8)
+/// stored in \a output of size \a output_size (including NULL)
 ///
 /// If there is not enough room NULL is returned, else output is returned.
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
-inline char* narrow(char* output, std::size_t output_size,
-                    const wchar_t* source) {
+inline char* narrow(char* output, size_t output_size, const wchar_t* source) {
     return narrow(output, output_size, source, source + utf::strlen(source));
 }
 
 ///
-/// Convert narrow string (UTF-8) in range [begin,end) to NULL terminated wide
-/// string (UTF-16/32) stored in \a output of size \a output_size (including
-/// NULL)
+/// Convert narrow string (UTF-8) in range [begin,end) to NULL terminated wide string (UTF-16/32)
+/// stored in \a output of size \a output_size (including NULL)
 ///
 /// If there is not enough room NULL is returned, else output is returned.
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
-inline wchar_t* widen(wchar_t* output, std::size_t output_size,
-                      const char* begin, const char* end) {
+inline wchar_t* widen(wchar_t* output, size_t output_size, const char* begin, const char* end) {
     return utf::convert_buffer(output, output_size, begin, end);
 }
 ///
-/// Convert NULL terminated narrow string (UTF-8) to NULL terminated wide string
-/// (UTF-16/32) most output_size (including NULL)
+/// Convert NULL terminated narrow string (UTF-8) to NULL terminated wide string (UTF-16/32)
+/// most output_size (including NULL)
 ///
 /// If there is not enough room NULL is returned, else output is returned.
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
-inline wchar_t* widen(wchar_t* output, std::size_t output_size,
-                      const char* source) {
+inline wchar_t* widen(wchar_t* output, size_t output_size, const char* source) {
     return widen(output, output_size, source, source + utf::strlen(source));
 }
 
@@ -512,19 +505,17 @@ inline wchar_t* widen(wchar_t* output, std::size_t output_size,
 ///
 /// \param s Input string
 /// \param count Number of characters to convert
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_wide_char<T_Char>>
-inline std::string narrow(const T_Char* s, std::size_t count) {
+inline std::string narrow(const T_Char* s, size_t count) {
     return utf::convert_string<char>(s, s + count);
 }
 ///
 /// Convert wide string (UTF-16/32) to narrow string (UTF-8).
 ///
 /// \param s NULL terminated input string
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_wide_char<T_Char>>
 inline std::string narrow(const T_Char* s) {
@@ -534,11 +525,9 @@ inline std::string narrow(const T_Char* s) {
 /// Convert wide string (UTF-16/32) to narrow string (UTF-8).
 ///
 /// \param s Input string
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
-template <typename StringOrStringView,
-          typename = detail::requires_wide_string_container<StringOrStringView>>
+template <typename StringOrStringView, typename = detail::requires_wide_string_container<StringOrStringView>>
 inline std::string narrow(const StringOrStringView& s) {
     return utf::convert_string<char>(s.data(), s.data() + s.size());
 }
@@ -548,19 +537,17 @@ inline std::string narrow(const StringOrStringView& s) {
 ///
 /// \param s Input string
 /// \param count Number of characters to convert
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_narrow_char<T_Char>>
-inline std::wstring widen(const T_Char* s, std::size_t count) {
+inline std::wstring widen(const T_Char* s, size_t count) {
     return utf::convert_string<wchar_t>(s, s + count);
 }
 ///
 /// Convert narrow string (UTF-8) to wide string (UTF-16/32).
 ///
 /// \param s NULL terminated input string
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
 template <typename T_Char, typename = detail::requires_narrow_char<T_Char>>
 inline std::wstring widen(const T_Char* s) {
@@ -570,12 +557,9 @@ inline std::wstring widen(const T_Char* s) {
 /// Convert narrow string (UTF-8) to wide string (UTF-16/32).
 ///
 /// \param s Input string
-/// Any illegal sequences are replaced with the replacement character, see
-/// #REPLACEMENT_CHARACTER
+/// Any illegal sequences are replaced with the replacement character, see #BOOST_NOWIDE_REPLACEMENT_CHARACTER
 ///
-template <
-    typename StringOrStringView,
-    typename = detail::requires_narrow_string_container<StringOrStringView>>
+template <typename StringOrStringView, typename = detail::requires_narrow_string_container<StringOrStringView>>
 inline std::wstring widen(const StringOrStringView& s) {
     return utf::convert_string<wchar_t>(s.data(), s.data() + s.size());
 }
