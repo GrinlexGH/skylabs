@@ -23,12 +23,16 @@ SOFTWARE.
 */
 
 #pragma once
-#include <limits>
 #include <ostream>
+#include "platform.hpp"
 
 namespace stc {
 
-    enum _color_modes { COLOR_256 = 0, TRUE_COLOR = 1, NO_COLOR = 2 };
+    enum _color_modes {
+        COLOR_256 = 0,
+        TRUE_COLOR = 1,
+        NO_COLOR = 2
+    };
 
     inline int _get_color_mode_index() {
         static const int i = std::ios_base::xalloc();
@@ -40,15 +44,17 @@ namespace stc {
         unsigned int r : 8, g : 8, b : 8, code : 8;
         constexpr _color_data(int r, int g, int b, int code)
             : r(r), g(g), b(b), code(code) {};
+        constexpr _color_data(unsigned int r, unsigned int g, unsigned int b, unsigned int code)
+            : r(r), g(g), b(b), code(code) {};
     };
 
-    template <bool IS_FOREGROUND> class _color_code : public _color_data {
+    template <bool IS_FOREGROUND>
+    class _color_code : public _color_data {
         using _color_data::_color_data;
     };
 
     // foreground
-    inline std::ostream& operator<<(std::ostream& os,
-                                    const _color_code<true>& color_code) {
+    inline std::ostream& operator<<(std::ostream& os, const _color_code<true>& color_code) {
         const long mode = os.iword(_get_color_mode_index());
         if (mode == _color_modes::COLOR_256)
             os << "\033[38;5;" << color_code.code << 'm';
@@ -59,8 +65,7 @@ namespace stc {
     }
 
     // background
-    inline std::ostream& operator<<(std::ostream& os,
-                                    const _color_code<false>& color_code) {
+    inline std::ostream& operator<<(std::ostream& os, const _color_code<false>& color_code) {
         const long mode = os.iword(_get_color_mode_index());
         if (mode == _color_modes::COLOR_256)
             os << "\033[48;5;" << color_code.code << 'm';
@@ -347,10 +352,10 @@ namespace stc {
         // prevent artifacting from redmean color distance approximation
         if (r < 20 && g < 15 && b < 15)
             return _256colors[16].code;
-        // we start at index 16, because colors 0 - 16 are system colors
-        // (terminal emulators often define custom values for these)
-        std::size_t best_index = 16;
-        for (std::size_t i = best_index; i < 256; i++) {
+        // we start at index 16, because colors 0 - 16 are system colors (terminal
+        // emulators often define custom values for these)
+        size_t best_index = 16;
+        for (size_t i = best_index; i < 256; i++) {
             if (_color_distance(r, g, b, _256colors[i]) <
                 _color_distance(r, g, b, _256colors[best_index]))
                 best_index = i;
@@ -358,8 +363,7 @@ namespace stc {
         return _256colors[best_index].code;
     }
 
-    constexpr void _hsl_to_rgb(float h, float s, float l, int& r, int& g,
-                               int& b) {
+    constexpr void _hsl_to_rgb(float h, float s, float l, int& r, int& g, int& b) {
         auto fmod = [](float number, int divisor) {
             const int i = (int)number;
             return (float)(i % divisor) + (number - (float)i);
@@ -379,8 +383,7 @@ namespace stc {
         const float alpha = s * std::min(l, 1 - l);
         auto f = [=](float n) {
             const float k = fmod((n + (h * 12)), 12);
-            return l - (alpha * std::max(-1.0F, std::ranges::min(
-                                                    { k - 3, 9 - k, 1.0F })));
+            return l - (alpha * std::max(-1.0F, std::min({ k - 3, 9 - k, 1.0F })));
         };
         r = round(f(0) * 255);
         g = round(f(8) * 255);
@@ -400,8 +403,7 @@ namespace stc {
         _clamp(b, 0, 255);
     }
 
-    inline std::ostream& _print_if_color(std::ostream& os,
-                                         std::string_view text) {
+    inline std::ostream& _print_if_color(std::ostream& os, std::string_view text) {
         const auto mode = os.iword(_get_color_mode_index());
         if (mode != _color_modes::NO_COLOR)
             return os << text;
@@ -476,15 +478,13 @@ namespace stc {
     constexpr _color_code<true> code_fg(int code) {
         _clamp(code, 0, 255);
         const auto color_data = _256colors[code];
-        return { (int)color_data.r, (int)color_data.g, (int)color_data.b,
-                 (int)color_data.code };
+        return { color_data.r, color_data.g, color_data.b, color_data.code };
     }
 
     constexpr _color_code<false> code_bg(int code) {
         _clamp(code, 0, 255);
         const auto color_data = _256colors[code];
-        return { (int)color_data.r, (int)color_data.g, (int)color_data.b,
-                 (int)color_data.code };
+        return { color_data.r, color_data.g, color_data.b, color_data.code };
     }
 
 } // namespace stc

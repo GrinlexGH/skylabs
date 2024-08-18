@@ -4,16 +4,16 @@
 #include "stc.hpp"
 
 #include <cstdarg>
-#include <cstdio>
-#include <functional>
 #include <iostream>
 #include <string_view>
 
 void CConsoleMessage::operator()(std::string_view format, ...) {
+    std::cout << stc::rgb_fg(Color_.r, Color_.g, Color_.b);
     std::va_list argList;
     va_start(argList, format);
     vprintf(format.data(), argList);
     va_end(argList);
+    std::cout << stc::reset_fg;
 }
 
 void CConsoleMessage::_AcceptOstreamManips(std::ostream& (*f)(std::ostream&)) {

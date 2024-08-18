@@ -13,8 +13,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
-add_compile_definitions(UNICODE _UNICODE)
-
 if(!MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "-g")
     set(CMAKE_CXX_FLAGS_RELEASE "-O2")

@@ -29,11 +29,11 @@ foreach(project ${projects})
     endif()
 
     if(WIN32)
-        target_compile_definitions(${project} PRIVATE PLATFORM_WINDOWS)
+        target_compile_definitions(${project} PRIVATE PLATFORM_WINDOWS UNICODE _UNICODE)
     endif()
 
     if(MSVC)
-        target_compile_options(${project} PRIVATE "/WX" "/W4" "/utf-8")
+        target_compile_options(${project} PRIVATE "/WX" "/W4" "/utf-8" "/Zc:__cplusplus")
 
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             target_compile_definitions(${project} PRIVATE COMPILER_MSVC64)

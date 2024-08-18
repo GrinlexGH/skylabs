@@ -3,13 +3,13 @@
 
 //============
 // SDL Handle
-unsigned int SDL::Handle::instanceCount_ = 0;
+int SDL::Handle::instanceCount_ = 0;
 
 SDL::Handle::Handle() {
     if (instanceCount_ == 0) {
         if (SDL_Init(SDL_INIT_VIDEO) != 0) {
             throw std::runtime_error(
-                std::string { "Couldn't initialize SDL!" } + SDL_GetError()
+                std::string("Couldn't initialize SDL!\n") + SDL_GetError()
             );
         }
     }
@@ -26,17 +26,29 @@ SDL::Handle::~Handle() {
 
 //============
 // SDL Window
+SDL::CWindow::CWindow(CWindow&& window) noexcept {
+    window_ = window.window_;
+    window.window_ = nullptr;
+};
+
+SDL::CWindow& SDL::CWindow::operator=(CWindow&& window) noexcept {
+    window_ = window.window_;
+    window.window_ = nullptr;
+    return *this;
+}
+
 SDL::CWindow::CWindow(const char* title, int x, int y, int w, int h, unsigned int SDLflags) {
     Create(title, x, y, w, h, SDLflags);
 }
 
 void SDL::CWindow::Create(const char* title, int x, int y, int w, int h, unsigned int SDLflags) {
-    if (window_)
+    if (window_) {
         return;
+    }
 
     if (SDL::Handle::InstanceCount() == 0) {
         throw std::runtime_error(
-            "You must create SDL::Handle object before using this function!"
+            "Cant create window: you must create SDL::Handle object!"
         );
     }
 

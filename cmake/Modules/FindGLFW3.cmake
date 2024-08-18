@@ -16,7 +16,7 @@ set(_glfw3_HEADER_SEARCH_DIRS
   "/usr/include"
   "/usr/local/include"
   "/opt/local/include"
-  "${PROJECT_SOURCE_DIR}/libs/glfw*/include"
+  "${CMAKE_SOURCE_DIR}/libs/glfw*/include"
   "${CMAKE_SOURCE_DIR}/includes"
   "C:/Program Files (x86)/glfw/include"
 )
@@ -25,7 +25,6 @@ set(_glfw3_LIB_SEARCH_DIRS
   "/usr/lib"
   "/usr/local/lib"
   "/opt/local/lib"
-  "${PROJECT_SOURCE_DIR}/libs/glfw*/lib-vc2022"
   "${CMAKE_SOURCE_DIR}/lib"
   "${CMAKE_SOURCE_DIR}/libs"
   "C:/Program Files (x86)/glfw/lib"

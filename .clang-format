@@ -1,5 +1,4 @@
-# DO NOT USE IT yet...
-BasedOnStyle: LLVM
+BasedOnStyle: llvm
 UseTab: Never
 IndentWidth: 4
 TabWidth: 4
@@ -7,7 +6,7 @@ IndentPPDirectives: BeforeHash
 AllowShortIfStatementsOnASingleLine: Never
 IndentCaseLabels: true
 ColumnLimit: 0
-# AlignConsecutiveStyle: Enabled
+# AlignConsecutiveAssignments : Enabled
 SpaceInEmptyBlock: true
 SpaceBeforeCpp11BracedList: true
 Cpp11BracedListStyle: false
@@ -17,3 +16,5 @@ FixNamespaceComments: false
 SortIncludes: false
 AlignEscapedNewlines: Left
 PointerAlignment: Left
+AlignAfterOpenBracket: BlockIndent
+BreakBeforeConceptDeclarations: Always
