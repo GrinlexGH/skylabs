@@ -49,10 +49,10 @@ void CVulkanAPI::Destroy() {
         return;
 
     for (const auto& imageView : swapChainImageViews_) {
-        vkDestroyImageView(device_, imageView, nullptr);
+        device_.destroyImageView(imageView);
     }
 
-    device_.destroySwapchainKHR();
+    device_.destroySwapchainKHR(swapChain_);
     device_.destroy();
     instance_.destroySurfaceKHR(surface_);
     if (enableValidationLayers) {
