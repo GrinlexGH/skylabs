@@ -8,13 +8,11 @@ namespace SDL {
             return SDL_Vulkan_GetInstanceExtensions(nullptr, count, names);
         }
 
-        inline bool CreateSurface(SDL_Window* window,
-                                  vk::Instance instance,
-                                  vk::SurfaceKHR* surface) {
+        inline bool CreateSurface(SDL_Window* window, vk::Instance instance, vk::SurfaceKHR* surface) {
             return SDL_Vulkan_CreateSurface(window, instance, reinterpret_cast<VkSurfaceKHR*>(surface));
         }
 
-        inline void GetDrawableSize(SDL_Window* window, int *w, int *h) {
+        inline void GetDrawableSize(SDL_Window* window, int* w, int* h) {
             SDL_Vulkan_GetDrawableSize(window, w, h);
         }
     }

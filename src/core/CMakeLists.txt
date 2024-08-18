@@ -8,6 +8,8 @@ set(SOURCES
     renderapi.hpp
     vulkanapi.hpp
     vulkanapi.cpp
+    vulkan_initializer.hpp
+    vulkan_initializer.cpp
     window.hpp
     SDL.hpp
     SDL_Vulkan.hpp

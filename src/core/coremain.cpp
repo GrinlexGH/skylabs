@@ -11,10 +11,10 @@
 #include <vector>
 
 #ifdef PLATFORM_WINDOWS
-#include <Windows.h>
+    #include <Windows.h>
 
 BOOL CtrlHandler(DWORD fdwCtrlType) {
-    UNREFERENCED_PARAMETER(fdwCtrlType);
+    UNUSED(fdwCtrlType);
     return FALSE;
 }
 
@@ -43,8 +43,7 @@ void InitConsole() {
     std::cout << stc::true_color;
 }
 
-DLL_EXPORT int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-                        LPWSTR lpCmdLine, int nShowCmd) {
+DLL_EXPORT int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
 #else
 DLL_EXPORT int CoreInit(int argc, char** argv) {
 #endif
@@ -56,9 +55,7 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
         UNUSED(nShowCmd);
         {
             int argc;
-            wchar_t** wchar_arg_list {
-                ::CommandLineToArgvW(::GetCommandLineW(), &argc)
-            };
+            wchar_t** wchar_arg_list = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
 
             std::vector<std::string> char_arg_list(argc);
             for (int i = 0; i < argc; ++i) {
@@ -74,20 +71,19 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
         }
 #else
         CommandLine()->CreateCmdLine(
-            std::vector<std::string>(argv, argv + argc));
+            std::vector<std::string>(argv, argv + argc)
+        );
 #endif
         CLauncher launcher;
-        Error << "Warning! пошёл нахуй короче хуй💀💀💀" << std::endl;
         launcher.Run();
         return 0;
     } catch (const std::exception& e) {
         // todo: get rid of ifdefs
 #ifdef PLATFORM_WINDOWS
         ::MessageBeep(MB_ICONERROR);
-        ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!",
-                      MB_OK | MB_ICONERROR);
+        ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!", MB_OK | MB_ICONERROR);
 #else
-        Error << e.what() << "!\n\n";
+        Error << e.what() << '\n';
 #endif
         return 1;
     }
