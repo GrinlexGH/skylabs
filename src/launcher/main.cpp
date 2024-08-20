@@ -104,13 +104,12 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
 int main(int argc, char** argv) {
     try {
-        std::filesystem::path rootDir =
-            std::filesystem::canonical("/proc/self/exe");
+        std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();
         void* lib =
             dlopen((rootDir.string() + "/bin/libcore.so").c_str(), RTLD_NOW);
         if (!lib) {
-            throw std::runtime_error(std::string { "failed open library: " } + dlerror() + "!\n");
+            throw std::runtime_error(std::string("failed open library: ") + dlerror() + "!\n");
         }
         auto main = (CoreMain_t)dlsym(lib, "CoreInit");
         if (!main) {

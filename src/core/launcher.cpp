@@ -7,11 +7,11 @@
 
 SDL::CWindow g_window;
 
-void mainLoop() {
+void MainLoop() {
     bool quit = false;
     while (!quit) {
         SDL_Event e;
-        SDL_WaitEvent(&e);
+        SDL_PollEvent(&e);
         if (e.type == SDL_QUIT) {
             quit = true;
         }
@@ -19,7 +19,8 @@ void mainLoop() {
 }
 
 void CLauncher::Main() {
-    SDL::Handle SdlHandle;
+    SDL::CHandle SdlHandle;
+
     g_window.Create(
         "Skylabs",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -28,5 +29,5 @@ void CLauncher::Main() {
     );
     CVulkanAPI vulkan;
     vulkan.Init(&g_window);
-    mainLoop();
+    MainLoop();
 }

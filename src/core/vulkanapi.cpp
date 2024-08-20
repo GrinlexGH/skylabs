@@ -38,9 +38,12 @@ void CVulkanAPI::Init(IWindow* window) {
     surface_ = CreateSurface(instance_, window);
     physicalDevice_ = PickPhysicalDevice(instance_, surface_);
     device_ = CreateLogicalDevice(physicalDevice_, surface_, graphicsQueue_, presentQueue_);
-    swapChain_ = CreateSwapChain(physicalDevice_, device_, surface_, window, swapChainImages_, swapChainImageFormat_, swapChainExtent_);
+    swapChain_ = CreateSwapChain(
+        physicalDevice_, device_,
+        surface_, window,
+        swapChainImages_, swapChainImageFormat_, swapChainExtent_
+    );
     swapChainImageViews_ = CreateImageViews(device_, swapChainImages_, swapChainImageFormat_);
-
     initialized_ = true;
 }
 

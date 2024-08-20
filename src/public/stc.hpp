@@ -24,6 +24,8 @@ SOFTWARE.
 
 #pragma once
 #include <ostream>
+#include <algorithm>
+#include <limits>
 #include "platform.hpp"
 
 namespace stc {

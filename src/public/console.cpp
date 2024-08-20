@@ -4,11 +4,32 @@
 #include "stc.hpp"
 
 #include <cstdarg>
-#include <iostream>
-#include <string_view>
 
-void CConsoleMessage::operator()(std::string_view format, ...) {
-    std::cout << stc::rgb_fg(Color_.r, Color_.g, Color_.b);
+void CDefaultConsoleMessage::operator()(std::string_view format, ...) {
+    std::cout << stc::reset_fg;
+    std::va_list argList;
+    va_start(argList, format);
+    vprintf(format.data(), argList);
+    va_end(argList);
+}
+
+CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ostream&)) {
+    f(std::cout);
+    return s;
+}
+
+CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios&)) {
+    f(std::cout);
+    return s;
+}
+
+CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios_base&)) {
+    f(std::cout);
+    return s;
+}
+
+void CColorfulConsoleMessage::operator()(std::string_view format, ...) {
+    std::cout << stc::rgb_fg(m_color[0], m_color[1], m_color[2]);
     std::va_list argList;
     va_start(argList, format);
     vprintf(format.data(), argList);
@@ -16,33 +37,21 @@ void CConsoleMessage::operator()(std::string_view format, ...) {
     std::cout << stc::reset_fg;
 }
 
-void CConsoleMessage::_AcceptOstreamManips(std::ostream& (*f)(std::ostream&)) {
+CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&)) {
     f(std::cout);
-}
-
-void CConsoleMessage::_AcceptIosManips(std::ostream& (*f)(std::ios&)) {
-    f(std::cout);
-}
-
-void CConsoleMessage::_AcceptIosBaseManips(std::ostream& (*f)(std::ios_base&)) {
-    f(std::cout);
-}
-
-CConsoleMessage& operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ostream&)) {
-    s._AcceptOstreamManips(f);
     return s;
 }
 
-CConsoleMessage& operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ios&)) {
-    s._AcceptIosManips(f);
+CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios&)) {
+    f(std::cout);
     return s;
 }
 
-CConsoleMessage& operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ios_base&)) {
-    s._AcceptIosBaseManips(f);
+CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios_base&)) {
+    f(std::cout);
     return s;
 }
 
-PLATFORM_CLASS CConsoleMessage Msg;
-PLATFORM_CLASS CConsoleMessage Warning { CConsoleMessage::rgb { 215, 135, 0 } };
-PLATFORM_CLASS CConsoleMessage Error { CConsoleMessage::rgb { 175, 0, 0 } };
+PLATFORM_CLASS CDefaultConsoleMessage Msg;
+PLATFORM_CLASS CColorfulConsoleMessage Warning { { 215, 135, 0 } };
+PLATFORM_CLASS CColorfulConsoleMessage Error { { 175, 0, 0 } };
