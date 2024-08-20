@@ -5,24 +5,24 @@
 #include "window.hpp"
 
 namespace SDL {
-    class Handle {
+    class CHandle {
     private:
-        static int instanceCount_;
+        static int m_instanceCount;
 
     public:
-        Handle();
-        Handle(const Handle&) noexcept { ++instanceCount_; }
-        Handle(Handle&&) noexcept { ++instanceCount_; }
-        Handle& operator=(const Handle&) = default;
-        Handle& operator=(Handle&&) = default;
-        virtual ~Handle();
+        CHandle();
+        CHandle(const CHandle&) noexcept { ++m_instanceCount; }
+        CHandle(CHandle&&) noexcept { ++m_instanceCount; }
+        CHandle& operator=(const CHandle&) = default;
+        CHandle& operator=(CHandle&&) = default;
+        virtual ~CHandle();
 
-        static int InstanceCount() { return instanceCount_; }
+        static int InstanceCount() { return m_instanceCount; }
     };
 
     class CWindow final : public IWindow {
     private:
-        SDL_Window* window_ = nullptr;
+        SDL_Window* m_window = nullptr;
 
     public:
         CWindow() = default;
@@ -35,6 +35,6 @@ namespace SDL {
 
         void Create(const char* title, int x, int y, int w, int h, unsigned int SDLflags) override;
         void Close() override;
-        void* GetHandle() const override { return window_; }
+        void* GetHandle() const override { return m_window; }
     };
 }
