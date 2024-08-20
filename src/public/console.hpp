@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <string_view>
+#include <array>
+#include <cstdint>
 
 template <typename T>
 concept Printable = requires(std::ostream& os, T a) { os << a; };
@@ -19,53 +21,63 @@ public:
 
     // Printing to console in same format as printf()
     PLATFORM_CLASS virtual void operator()(std::string_view format, ...) = 0;
-
-protected:
-    virtual void _AcceptOstreamManips(std::ostream& (*f)(std::ostream&)) = 0;
-    virtual void _AcceptIosManips(std::ostream& (*f)(std::ios&)) = 0;
-    virtual void _AcceptIosBaseManips(std::ostream& (*f)(std::ios_base&)) = 0;
 };
 
-class CConsoleMessage : public IConsoleMessage {
+class CDefaultConsoleMessage final : IConsoleMessage {
 public:
-    struct rgb {
-        int r, g, b;
-    };
-
-    CConsoleMessage() = default;
-    CConsoleMessage(rgb col) : Color_(col) { }
-    CConsoleMessage(const CConsoleMessage&) = default;
-    CConsoleMessage(CConsoleMessage&&) = default;
-    CConsoleMessage& operator=(const CConsoleMessage&) = default;
-    CConsoleMessage& operator=(CConsoleMessage&&) = default;
-    virtual ~CConsoleMessage() = default;
-
     PLATFORM_CLASS virtual void operator()(std::string_view format, ...);
 
 protected:
-    rgb Color_ { 255, 255, 255 };
+    PLATFORM_CLASS friend CDefaultConsoleMessage&
+    operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ostream&));
 
-protected:
-    virtual void _AcceptOstreamManips(std::ostream& (*f)(std::ostream&));
-    virtual void _AcceptIosManips(std::ostream& (*f)(std::ios&));
-    virtual void _AcceptIosBaseManips(std::ostream& (*f)(std::ios_base&));
+    PLATFORM_CLASS friend CDefaultConsoleMessage&
+    operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios&));
 
-    PLATFORM_CLASS friend CConsoleMessage&
-    operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ostream&));
-
-    PLATFORM_CLASS friend CConsoleMessage&
-    operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ios&));
-
-    PLATFORM_CLASS friend CConsoleMessage&
-    operator<<(CConsoleMessage& s, std::ostream& (*f)(std::ios_base&));
+    PLATFORM_CLASS friend CDefaultConsoleMessage&
+    operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios_base&));
 
     template <Printable T>
-    friend CConsoleMessage& operator<<(CConsoleMessage& s, const T& message) {
-        std::cout << stc::rgb_fg(s.Color_.r, s.Color_.g, s.Color_.b) << message << stc::reset_fg;
+    friend CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, const T& message) {
+        std::cout << stc::reset_fg << message;
         return s;
     }
 };
 
-PLATFORM_OVERLOAD CConsoleMessage Msg;
-PLATFORM_OVERLOAD CConsoleMessage Warning;
-PLATFORM_OVERLOAD CConsoleMessage Error;
+class CColorfulConsoleMessage final : public IConsoleMessage {
+public:
+    using rgb_t = std::array<std::uint8_t, 3>;
+
+    CColorfulConsoleMessage() = default;
+    CColorfulConsoleMessage(rgb_t color) : m_color(color) { }
+    CColorfulConsoleMessage(const CColorfulConsoleMessage&) = default;
+    CColorfulConsoleMessage(CColorfulConsoleMessage&&) = default;
+    CColorfulConsoleMessage& operator=(const CColorfulConsoleMessage&) = default;
+    CColorfulConsoleMessage& operator=(CColorfulConsoleMessage&&) = default;
+    virtual ~CColorfulConsoleMessage() = default;
+
+    PLATFORM_CLASS virtual void operator()(std::string_view format, ...);
+
+protected:
+    rgb_t m_color { 255, 255, 255 };
+
+protected:
+    PLATFORM_CLASS friend CColorfulConsoleMessage&
+    operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&));
+
+    PLATFORM_CLASS friend CColorfulConsoleMessage&
+    operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios&));
+
+    PLATFORM_CLASS friend CColorfulConsoleMessage&
+    operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios_base&));
+
+    template <Printable T>
+    friend CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, const T& message) {
+        std::cout << stc::rgb_fg(s.m_color[0], s.m_color[1], s.m_color[2]) << message << stc::reset_fg;
+        return s;
+    }
+};
+
+PLATFORM_OVERLOAD CDefaultConsoleMessage Msg;
+PLATFORM_OVERLOAD CColorfulConsoleMessage Warning;
+PLATFORM_OVERLOAD CColorfulConsoleMessage Error;
