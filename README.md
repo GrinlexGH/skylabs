@@ -11,3 +11,4 @@ If you want to contact me, you can do it via Discord: grinlex
 
 Useful links:
 - https://utf8everywhere.org/
+- https://github.com/aminosbh/sdl2-cmake-modules/blob/master/FindSDL2.cmake
