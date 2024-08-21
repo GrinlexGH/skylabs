@@ -22,8 +22,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/)
 find_package(SDL2 REQUIRED)
-find_package(GLFW3 REQUIRED)
 find_package(Vulkan REQUIRED)
+#find_package(GLFW3 REQUIRED)
 
 set(PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/public)
 
