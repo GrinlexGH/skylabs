@@ -36,13 +36,28 @@ void CVulkanAPI::Init(IWindow* window) {
 
     m_instance = CreateInstance(m_debugMessenger);
     m_surface = CreateSurface(m_instance, window);
+
     m_physicalDevice = PickPhysicalDevice(m_instance, m_surface);
-    m_device = CreateLogicalDevice(m_physicalDevice, m_surface, m_graphicsQueue, m_presentQueue);
+    CQueueFamilyIndices queueIndices = FindQueueFamilies(m_physicalDevice, m_surface);
+
+    m_device = CreateLogicalDevice(m_physicalDevice, queueIndices);
+    m_graphicsQueue = m_device.getQueue(queueIndices.m_graphicsFamily.value(), 0);
+    m_presentQueue = m_device.getQueue(queueIndices.m_presentFamily.value(), 0);
+
+    CSwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_physicalDevice, m_surface);
+    vk::SurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.m_formats);
+    vk::PresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.m_presentModes);
+    m_swapChainExtent = ChooseSwapExtent(window, swapChainSupport.m_capabilities);
+
     m_swapChain = CreateSwapChain(
-        m_physicalDevice, m_device,
-        m_surface, window,
-        m_swapChainImages, m_swapChainImageFormat, m_swapChainExtent
+        m_device, m_surface,
+        queueIndices, swapChainSupport,
+        surfaceFormat, presentMode, m_swapChainExtent
     );
+
+    m_swapChainImages = m_device.getSwapchainImagesKHR(m_swapChain);
+    m_swapChainImageFormat = surfaceFormat.format;
+
     m_swapChainImageViews = CreateImageViews(m_device, m_swapChainImages, m_swapChainImageFormat);
     m_initialized = true;
 }

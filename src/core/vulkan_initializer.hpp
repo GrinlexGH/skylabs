@@ -34,18 +34,16 @@ namespace VulkanInitializer {
     vk::PhysicalDevice PickPhysicalDevice(vk::Instance instance, vk::SurfaceKHR surface);
     vk::Device CreateLogicalDevice(
         vk::PhysicalDevice physicalDevice,
-        vk::SurfaceKHR surface,
-        vk::Queue& graphicsQueue,
-        vk::Queue& presentQueue
+        CQueueFamilyIndices queueIndices
     );
     vk::SwapchainKHR CreateSwapChain(
-        vk::PhysicalDevice physicalDevice,
         vk::Device device,
         vk::SurfaceKHR surface,
-        IWindow* window,
-        std::vector<vk::Image>& swapChainImages,
-        vk::Format& swapChainImageFormat,
-        vk::Extent2D& swapChainExtent
+        CQueueFamilyIndices queueIndices,
+        CSwapChainSupportDetails swapChainSupport,
+        vk::SurfaceFormatKHR surfaceFormat,
+        vk::PresentModeKHR presentMode,
+        vk::Extent2D extent
     );
     std::vector<vk::ImageView> CreateImageViews(
         vk::Device device,
@@ -64,9 +62,9 @@ namespace VulkanInitializer {
     std::vector<std::string_view> FindMissingExtensions(const std::vector<vk::ExtensionProperties>& availableExts, const std::vector<const char*>& neededExts);
     std::vector<const char*> GetRequiredInstanceExtensions();
 
-    bool isDeviceSuitable(vk::PhysicalDevice device, vk::SurfaceKHR surface);
-    CQueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice device, vk::SurfaceKHR surface);
-    CSwapChainSupportDetails QuerySwapChainSupport(vk::PhysicalDevice device, vk::SurfaceKHR surface);
+    bool isDeviceSuitable(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface);
+    CQueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface);
+    CSwapChainSupportDetails QuerySwapChainSupport(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface);
 
     vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
     vk::PresentModeKHR ChooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
