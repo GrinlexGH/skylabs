@@ -39,8 +39,8 @@ namespace VulkanInitializer {
     vk::SwapchainKHR CreateSwapChain(
         vk::Device device,
         vk::SurfaceKHR surface,
-        CQueueFamilyIndices queueIndices,
-        CSwapChainSupportDetails swapChainSupport,
+        const CQueueFamilyIndices& queueIndices,
+        const CSwapChainSupportDetails& swapChainSupport,
         vk::SurfaceFormatKHR surfaceFormat,
         vk::PresentModeKHR presentMode,
         vk::Extent2D extent
