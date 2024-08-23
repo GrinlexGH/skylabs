@@ -34,32 +34,32 @@ void CVulkanAPI::Init(IWindow* window) {
         throw std::runtime_error("Cant initialize vulkan: window is nullptr!\n");
     }
 
-    instance_ = CreateInstance(debugMessenger_);
-    surface_ = CreateSurface(instance_, window);
-    physicalDevice_ = PickPhysicalDevice(instance_, surface_);
-    device_ = CreateLogicalDevice(physicalDevice_, surface_, graphicsQueue_, presentQueue_);
-    swapChain_ = CreateSwapChain(
-        physicalDevice_, device_,
-        surface_, window,
-        swapChainImages_, swapChainImageFormat_, swapChainExtent_
+    m_instance = CreateInstance(m_debugMessenger);
+    m_surface = CreateSurface(m_instance, window);
+    m_physicalDevice = PickPhysicalDevice(m_instance, m_surface);
+    m_device = CreateLogicalDevice(m_physicalDevice, m_surface, m_graphicsQueue, m_presentQueue);
+    m_swapChain = CreateSwapChain(
+        m_physicalDevice, m_device,
+        m_surface, window,
+        m_swapChainImages, m_swapChainImageFormat, m_swapChainExtent
     );
-    swapChainImageViews_ = CreateImageViews(device_, swapChainImages_, swapChainImageFormat_);
-    initialized_ = true;
+    m_swapChainImageViews = CreateImageViews(m_device, m_swapChainImages, m_swapChainImageFormat);
+    m_initialized = true;
 }
 
 void CVulkanAPI::Destroy() {
-    if (!initialized_)
+    if (!m_initialized)
         return;
 
-    for (const auto& imageView : swapChainImageViews_) {
-        device_.destroyImageView(imageView);
+    for (const auto& imageView : m_swapChainImageViews) {
+        m_device.destroyImageView(imageView);
     }
 
-    device_.destroySwapchainKHR(swapChain_);
-    device_.destroy();
-    instance_.destroySurfaceKHR(surface_);
+    m_device.destroySwapchainKHR(m_swapChain);
+    m_device.destroy();
+    m_instance.destroySurfaceKHR(m_surface);
     if (enableValidationLayers) {
-        instance_.destroyDebugUtilsMessengerEXT(debugMessenger_);
+        m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger);
     }
-    instance_.destroy();
+    m_instance.destroy();
 }
