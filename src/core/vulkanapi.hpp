@@ -21,17 +21,17 @@ public:
 
 private:
 
-    bool initialized_ = false;
-    vk::Instance instance_;
-    vk::DebugUtilsMessengerEXT debugMessenger_;
-    vk::SurfaceKHR surface_;
-    vk::PhysicalDevice physicalDevice_;
-    vk::Device device_;
-    vk::Queue graphicsQueue_;
-    vk::Queue presentQueue_;
-    vk::SwapchainKHR swapChain_;
-    std::vector<vk::Image> swapChainImages_;
-    vk::Format swapChainImageFormat_;
-    vk::Extent2D swapChainExtent_;
-    std::vector<vk::ImageView> swapChainImageViews_;
+    bool m_initialized = false;
+    vk::Instance m_instance;
+    vk::DebugUtilsMessengerEXT m_debugMessenger;
+    vk::SurfaceKHR m_surface;
+    vk::PhysicalDevice m_physicalDevice;
+    vk::Device m_device;
+    vk::Queue m_graphicsQueue;
+    vk::Queue m_presentQueue;
+    vk::SwapchainKHR m_swapChain;
+    std::vector<vk::Image> m_swapChainImages;
+    vk::Format m_swapChainImageFormat;
+    vk::Extent2D m_swapChainExtent;
+    std::vector<vk::ImageView> m_swapChainImageViews;
 };
