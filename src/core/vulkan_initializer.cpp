@@ -387,7 +387,7 @@ std::vector<vk::ImageView> VulkanInitializer::CreateImageViews(
 ) {
     std::vector<vk::ImageView> swapChainImageViews {};
     swapChainImageViews.resize(swapChainImages.size());
-    for (size_t i = 0; i < swapChainImages.size(); i++) {
+    for (std::size_t i = 0; i < swapChainImages.size(); i++) {
         vk::ImageViewCreateInfo createInfo {};
         createInfo.image = swapChainImages[i];
         createInfo.viewType = vk::ImageViewType::e2D;
