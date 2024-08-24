@@ -33,7 +33,11 @@ foreach(project ${projects})
     endif()
 
     if(MSVC)
-        target_compile_options(${project} PRIVATE "/WX" "/W4" "/utf-8" "/Zc:__cplusplus")
+        target_compile_options(
+            ${project} PRIVATE
+            "/WX" "/W4" "/utf-8" "/Zc:__cplusplus"
+            "/external:anglebrackets" "/external:W0"
+        )
 
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             target_compile_definitions(${project} PRIVATE COMPILER_MSVC64)
