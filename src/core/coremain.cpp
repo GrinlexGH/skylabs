@@ -11,7 +11,7 @@
 #include <vector>
 
 #ifdef PLATFORM_WINDOWS
-    #include <Windows.h>
+    #include <windows.h>
 
 BOOL CtrlHandler(DWORD fdwCtrlType) {
     UNUSED(fdwCtrlType);

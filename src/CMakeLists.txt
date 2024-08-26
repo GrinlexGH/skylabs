@@ -15,6 +15,8 @@ foreach(SUBDIR ${projects})
     add_subdirectory("${SUBDIR}")
 endforeach()
 
+add_subdirectory("shaders")
+
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 foreach(project ${projects})
@@ -33,11 +35,7 @@ foreach(project ${projects})
     endif()
 
     if(MSVC)
-        target_compile_options(
-            ${project} PRIVATE
-            "/WX" "/W4" "/utf-8" "/Zc:__cplusplus"
-            "/external:anglebrackets" "/external:W0"
-        )
+        target_compile_options(${project} PRIVATE "/WX" "/W4" "/utf-8" "/Zc:__cplusplus")
 
         if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             target_compile_definitions(${project} PRIVATE COMPILER_MSVC64)
