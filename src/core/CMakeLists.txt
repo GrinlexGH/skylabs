@@ -53,3 +53,8 @@ target_link_libraries(${CURRENT_TARGET_NAME}
 
     #GLFW3::GLFW3
 )
+
+set(SHADER_FILES
+    shader.frag
+    shader.vert
+)

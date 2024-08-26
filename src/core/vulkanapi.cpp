@@ -1,9 +1,12 @@
+#include <fstream>
+#include <filesystem>
 #include <set>
 
 #include "console.hpp"
 #include "vulkanapi.hpp"
 #include "SDL.hpp"
 #include "SDL_Vulkan.hpp"
+#include "unicode.hpp"
 
 #include "vulkan_initializer.hpp"
 
@@ -25,6 +28,40 @@ const std::vector<const char*> g_deviceExtensions = {
 // CVulkanAPI
 CVulkanAPI::~CVulkanAPI() {
     Destroy();
+}
+
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+#endif
+
+// uses the relative path from root of application
+static std::vector<char> readFile(const std::string& filename) {
+    static std::filesystem::path rootDir;
+
+    if (rootDir.empty()) {
+    #ifdef _WIN32
+        wchar_t buffer[MAX_PATH] = { 0 };
+        ::GetModuleFileNameW(NULL, buffer, MAX_PATH);
+        rootDir = narrow(buffer);
+    #else
+        rootDir = std::filesystem::canonical("/proc/self/exe");
+    #endif
+        rootDir.remove_filename();
+    }
+
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file!");
+    }
+
+    std::size_t fileSize = static_cast<std::size_t>(file.tellg());
+    std::vector<char> buffer(fileSize);
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+    file.close();
+    return buffer;
 }
 
 void CVulkanAPI::Init(IWindow* window) {
@@ -59,6 +96,10 @@ void CVulkanAPI::Init(IWindow* window) {
     m_swapChainImageFormat = surfaceFormat.format;
 
     m_swapChainImageViews = CreateImageViews(m_device, m_swapChainImages, m_swapChainImageFormat);
+
+    auto vertShaderCode = readFile("shaders/vert.spv");
+    auto fragShaderCode = readFile("shaders/frag.spv");
+
     m_initialized = true;
 }
 

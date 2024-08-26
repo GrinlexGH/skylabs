@@ -1,5 +1,5 @@
 ﻿#ifdef PLATFORM_WINDOWS
-    #include <Windows.h>
+    #include <windows.h>
 #elif defined(PLATFORM_POSIX)
     #include <dlfcn.h>
     #include <iostream>
