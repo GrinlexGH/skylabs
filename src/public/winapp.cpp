@@ -1,7 +1,7 @@
 #ifdef PLATFORM_WINDOWS
     #include "platform.hpp"
     #include "unicode.hpp"
-    #include <Windows.h>
+    #include <windows.h>
     #include <string>
 
 PLATFORM_CLASS std::string getWinapiErrorMessage() {

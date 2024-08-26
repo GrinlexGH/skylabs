@@ -327,8 +327,8 @@ vk::Device VulkanInitializer::CreateLogicalDevice(
 vk::SwapchainKHR VulkanInitializer::CreateSwapChain(
     vk::Device device,
     vk::SurfaceKHR surface,
-    const CQueueFamilyIndices& queueIndices,
-    const CSwapChainSupportDetails& swapChainSupport,
+    CQueueFamilyIndices queueIndices,
+    CSwapChainSupportDetails swapChainSupport,
     vk::SurfaceFormatKHR surfaceFormat,
     vk::PresentModeKHR presentMode,
     vk::Extent2D extent
@@ -367,8 +367,9 @@ vk::SwapchainKHR VulkanInitializer::CreateSwapChain(
     createInfo.presentMode = presentMode;
     createInfo.clipped = vk::True;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
+    vk::SwapchainKHR swapChain {};
+    swapChain = device.createSwapchainKHR(createInfo);
 
-    vk::SwapchainKHR swapChain = device.createSwapchainKHR(createInfo);
     return swapChain;
 }
 
