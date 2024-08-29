@@ -1,14 +1,14 @@
-#include <fstream>
-#include <filesystem>
-#include <set>
-
 #include "console.hpp"
 #include "vulkanapi.hpp"
 #include "SDL.hpp"
 #include "SDL_Vulkan.hpp"
 #include "unicode.hpp"
-
+#include "resourceloader.hpp"
 #include "vulkan_initializer.hpp"
+
+#include <fstream>
+#include <filesystem>
+#include <set>
 
 #ifdef NDEBUG
 bool enableValidationLayers = false;
@@ -25,8 +25,8 @@ const std::vector<const char*> g_deviceExtensions = {
 };
 
 //============
-// CVulkanAPI
-CVulkanAPI::~CVulkanAPI() {
+// CVulkanRenderer
+CVulkanRenderer::~CVulkanRenderer() {
     Destroy();
 }
 
@@ -35,37 +35,8 @@ CVulkanAPI::~CVulkanAPI() {
     #include <windows.h>
 #endif
 
-// uses the relative path from root of application
-static std::vector<char> readFile(const std::string& filename) {
-    static std::filesystem::path rootDir;
-
-    if (rootDir.empty()) {
-    #ifdef _WIN32
-        wchar_t buffer[MAX_PATH] = { 0 };
-        ::GetModuleFileNameW(NULL, buffer, MAX_PATH);
-        rootDir = narrow(buffer);
-    #else
-        rootDir = std::filesystem::canonical("/proc/self/exe");
-    #endif
-        rootDir.remove_filename();
-    }
-
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file!");
-    }
-
-    std::size_t fileSize = static_cast<std::size_t>(file.tellg());
-    std::vector<char> buffer(fileSize);
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-    file.close();
-    return buffer;
-}
-
-void CVulkanAPI::Init(IWindow* window) {
-    using namespace VulkanInitializer;
+void CVulkanRenderer::Init(IWindow* window) {
+    using namespace vulkan_initializer;
 
     if (!window->GetHandle()) {
         throw std::runtime_error("Cant initialize vulkan: window is nullptr!\n");
@@ -92,22 +63,137 @@ void CVulkanAPI::Init(IWindow* window) {
         surfaceFormat, presentMode, m_swapChainExtent
     );
 
-    m_swapChainImages = m_device.getSwapchainImagesKHR(m_swapChain);
-    m_swapChainImageFormat = surfaceFormat.format;
+    m_images = m_device.getSwapchainImagesKHR(m_swapChain);
+    m_imageFormat = surfaceFormat.format;
+    m_imageViews = CreateImageViews(m_device, m_images, m_imageFormat);
 
-    m_swapChainImageViews = CreateImageViews(m_device, m_swapChainImages, m_swapChainImageFormat);
+    m_renderPass = CreateRenderPass(m_device, m_imageFormat);
+    m_pipelineLayout = CreatePipelineLayout(m_device);
+    m_pipeline = CreatePipeline(m_device, m_pipelineLayout, m_renderPass);
 
-    auto vertShaderCode = readFile("shaders/vert.spv");
-    auto fragShaderCode = readFile("shaders/frag.spv");
+    m_frameBuffers = CreateFramebuffers(m_device, m_imageViews, m_renderPass, m_swapChainExtent);
+
+    m_commandPool = CreateCommandPool(m_device, queueIndices);
+    m_commandBuffer = CreateCommandBuffer(m_device, m_commandPool);
+
+    m_imageAvailableSemaphore = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
+    m_renderFinishedSemaphore = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
+    m_inFlightFence = m_device.createFence(vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled });
 
     m_initialized = true;
 }
 
-void CVulkanAPI::Destroy() {
+void CVulkanRenderer::RecordCommandBuffer(
+    vk::CommandBuffer commandBuffer,
+    std::vector<vk::Framebuffer> frameBuffers,
+    uint32_t imageIndex,
+    vk::RenderPass renderPass,
+    vk::Extent2D extent,
+    vk::Pipeline pipeline
+) {
+    vk::CommandBufferBeginInfo beginInfo {};
+    beginInfo.pInheritanceInfo = nullptr;
+    m_commandBuffer.begin(beginInfo);
+
+    vk::RenderPassBeginInfo renderPassInfo {};
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = frameBuffers[imageIndex];
+    renderPassInfo.renderArea.offset = vk::Offset2D { 0, 0 };
+    renderPassInfo.renderArea.extent = extent;
+    vk::ClearValue clearColor {};
+    clearColor.color = std::array<float, 4>({ { 0.01f, 0.01f, 0.033f, 1.0f } });
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+    commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+
+    vk::Viewport viewport {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(extent.width);
+    viewport.height = static_cast<float>(extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    commandBuffer.setViewport(0, viewport);
+
+    vk::Rect2D scissor {};
+    scissor.offset = vk::Offset2D { 0, 0 };
+    scissor.extent = extent;
+    commandBuffer.setScissor(0, scissor);
+
+    commandBuffer.draw(3, 1, 0, 0);
+
+    commandBuffer.endRenderPass();
+    commandBuffer.end();
+}
+
+void CVulkanRenderer::Draw() {
+    std::ignore = m_device.waitForFences(m_inFlightFence, vk::True, std::numeric_limits<unsigned int>::max());
+    m_device.resetFences(m_inFlightFence);
+
+    uint32_t imageIndex;
+    std::ignore = m_device.acquireNextImageKHR(
+        m_swapChain,
+        std::numeric_limits<unsigned int>::max(),
+        m_imageAvailableSemaphore,
+        m_inFlightFence,
+        &imageIndex
+    );
+
+    m_commandBuffer.reset();
+
+    RecordCommandBuffer(m_commandBuffer, m_frameBuffers, 0, m_renderPass, m_swapChainExtent, m_pipeline);
+
+    vk::SubmitInfo submitInfo {};
+
+    vk::Semaphore waitSemaphores[] = { m_imageAvailableSemaphore };
+    vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_commandBuffer;
+    vk::Semaphore signalSemaphores[] = { m_renderFinishedSemaphore };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+    m_graphicsQueue.submit(submitInfo);
+
+    vk::PresentInfoKHR presentInfo {};
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    vk::SwapchainKHR swapChains[] = { m_swapChain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr; // Optional
+
+    std::ignore = m_presentQueue.presentKHR(presentInfo);
+}
+
+void CVulkanRenderer::WaitIdle() {
+    m_device.waitIdle();
+}
+
+void CVulkanRenderer::Destroy() {
     if (!m_initialized)
         return;
 
-    for (const auto& imageView : m_swapChainImageViews) {
+    m_device.destroySemaphore(m_imageAvailableSemaphore);
+    m_device.destroySemaphore(m_renderFinishedSemaphore);
+    m_device.destroyFence(m_inFlightFence);
+
+    m_device.destroyCommandPool(m_commandPool);
+
+    for (auto framebuffer : m_frameBuffers) {
+        m_device.destroyFramebuffer(framebuffer);
+    }
+
+    m_device.destroyPipeline(m_pipeline);
+    m_device.destroyPipelineLayout(m_pipelineLayout);
+    m_device.destroyRenderPass(m_renderPass);
+
+    for (const auto& imageView : m_imageViews) {
         m_device.destroyImageView(imageView);
     }
 

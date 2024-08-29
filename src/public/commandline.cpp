@@ -17,18 +17,18 @@ public:
     int FindParam(std::string_view parm) override;
 };
 
-static CCommandLine g_CmdLine;
-PLATFORM_INTERFACE ICommandLine* CommandLine() { return &g_CmdLine; }
+static CCommandLine g_cmdLine;
+PLATFORM_INTERFACE ICommandLine* CommandLine() { return &g_cmdLine; }
 
 void CCommandLine::CreateCmdLine(const std::vector<std::string>& argv) {
-    argv_ = argv;
+    m_argv = argv;
 }
 
 // Returns index of found parameter. 0 if not found.
 int CCommandLine::FindParam(std::string_view parm) {
-    auto it = std::find(argv_.begin() + 1, argv_.end(), parm);
-    if (it == std::end(argv_)) {
+    auto it = std::find(m_argv.begin() + 1, m_argv.end(), parm);
+    if (it == std::end(m_argv)) {
         return 0;
     }
-    return static_cast<int>(std::distance(argv_.begin(), it));
+    return static_cast<int>(std::distance(m_argv.begin(), it));
 }

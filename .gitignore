@@ -25,7 +25,8 @@
 *.app
 
 .cache/
+.PVS-Studio/
+.vscode/settings.json
 build/*
 libs/*
-.PVS-Studio/
 !libs/readme.txt
