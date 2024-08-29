@@ -18,7 +18,7 @@ public:
     virtual int FindParam(std::string_view parm) = 0;
 
 protected:
-    std::vector<std::string> argv_;
+    std::vector<std::string> m_argv;
 };
 
 PLATFORM_INTERFACE ICommandLine* CommandLine();

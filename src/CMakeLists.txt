@@ -11,11 +11,11 @@ set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
 set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
 set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
 
+add_subdirectory("shaders")
+
 foreach(SUBDIR ${projects})
     add_subdirectory("${SUBDIR}")
 endforeach()
-
-add_subdirectory("shaders")
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
