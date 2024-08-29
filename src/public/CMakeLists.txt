@@ -8,6 +8,7 @@ set(SOURCES
     console.cpp
     commandline.hpp
     commandline.cpp
+    resourceloader.hpp
     unicode.hpp
     platform.hpp
     stc.hpp

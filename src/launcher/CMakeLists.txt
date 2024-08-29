@@ -13,7 +13,7 @@ foreach(source IN LISTS SOURCES)
     source_group("${source_path_msvc}" FILES "${source}")
 endforeach()
 
-if(WIN32)
+if(WIN32 AND NOT UNIX)
     set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES WIN32_EXECUTABLE true)
 endif()
 

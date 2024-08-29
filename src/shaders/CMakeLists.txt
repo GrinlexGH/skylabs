@@ -34,6 +34,7 @@ endforeach()
 
 add_custom_target(
     ${CURRENT_TARGET_NAME} ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ROOT_OUTPUT_DIRECTORY}/shaders/
     COMMAND ${SHADER_COMMAND}
     COMMENT "Compiling Shaders..."
     SOURCES ${SHADER_SOURCE_FILES}

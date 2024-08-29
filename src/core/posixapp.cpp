@@ -1,5 +1,5 @@
-#ifdef PLATFORM_WINDOWS
-#error
-#else
+#ifdef PLATFORM_POSIX
 
+#else
+    #error
 #endif
