@@ -596,7 +596,7 @@ std::vector<vk::Framebuffer> CreateFramebuffers(
     std::vector<vk::Framebuffer> frameBuffers {};
     frameBuffers.resize(imageViews.size());
 
-    for (size_t i = 0; i < imageViews.size(); i++) {
+    for (std::size_t i = 0; i < imageViews.size(); i++) {
         vk::ImageView attachments[] = {
             imageViews[i]
         };
