@@ -10,20 +10,6 @@
 #include <filesystem>
 #include <set>
 
-#ifdef NDEBUG
-bool enableValidationLayers = false;
-#else
-bool enableValidationLayers = true;
-#endif
-
-const std::vector<const char*> g_validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-};
-
-const std::vector<const char*> g_deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
-
 //============
 // CVulkanRenderer
 CVulkanRenderer::~CVulkanRenderer() {
@@ -142,7 +128,7 @@ void CVulkanRenderer::Draw() {
 
     m_commandBuffer.reset();
 
-    RecordCommandBuffer(m_commandBuffer, m_frameBuffers, 0, m_renderPass, m_swapChainExtent, m_pipeline);
+    RecordCommandBuffer(m_commandBuffer, m_frameBuffers, imageIndex, m_renderPass, m_swapChainExtent, m_pipeline);
 
     vk::SubmitInfo submitInfo {};
 
@@ -176,6 +162,8 @@ void CVulkanRenderer::WaitIdle() {
 }
 
 void CVulkanRenderer::Destroy() {
+    using namespace vulkan_initializer;
+
     if (!m_initialized)
         return;
 
