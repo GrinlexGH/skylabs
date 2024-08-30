@@ -6,6 +6,12 @@
 #include <vector>
 
 namespace vulkan_initializer {
+    #ifdef NDEBUG
+        extern bool enableValidationLayers;
+    #else
+        extern bool enableValidationLayers;
+    #endif
+
     const std::vector<const char*> g_validationLayers = {
         "VK_LAYER_KHRONOS_validation"
     };
