@@ -69,50 +69,6 @@ void CVulkanRenderer::Init(IWindow* window) {
     m_initialized = true;
 }
 
-void CVulkanRenderer::RecordCommandBuffer(
-    vk::CommandBuffer commandBuffer,
-    std::vector<vk::Framebuffer> frameBuffers,
-    uint32_t imageIndex,
-    vk::RenderPass renderPass,
-    vk::Extent2D extent,
-    vk::Pipeline pipeline
-) {
-    vk::CommandBufferBeginInfo beginInfo {};
-    beginInfo.pInheritanceInfo = nullptr;
-    m_commandBuffer.begin(beginInfo);
-
-    vk::RenderPassBeginInfo renderPassInfo {};
-    renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = frameBuffers[imageIndex];
-    renderPassInfo.renderArea.offset = vk::Offset2D { 0, 0 };
-    renderPassInfo.renderArea.extent = extent;
-    vk::ClearValue clearColor {};
-    clearColor.color = std::array<float, 4>({ { 0.01f, 0.01f, 0.033f, 1.0f } });
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
-    commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-
-    vk::Viewport viewport {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(extent.width);
-    viewport.height = static_cast<float>(extent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    commandBuffer.setViewport(0, viewport);
-
-    vk::Rect2D scissor {};
-    scissor.offset = vk::Offset2D { 0, 0 };
-    scissor.extent = extent;
-    commandBuffer.setScissor(0, scissor);
-
-    commandBuffer.draw(3, 1, 0, 0);
-
-    commandBuffer.endRenderPass();
-    commandBuffer.end();
-}
-
 void CVulkanRenderer::Draw() {
     std::ignore = m_device.waitForFences(m_inFlightFence, vk::True, std::numeric_limits<unsigned int>::max());
     m_device.resetFences(m_inFlightFence);
@@ -128,7 +84,40 @@ void CVulkanRenderer::Draw() {
 
     m_commandBuffer.reset();
 
-    RecordCommandBuffer(m_commandBuffer, m_frameBuffers, imageIndex, m_renderPass, m_swapChainExtent, m_pipeline);
+    vk::CommandBufferBeginInfo beginInfo {};
+    beginInfo.pInheritanceInfo = nullptr;
+    m_commandBuffer.begin(beginInfo);
+
+    vk::RenderPassBeginInfo renderPassInfo {};
+    renderPassInfo.renderPass = m_renderPass;
+    renderPassInfo.framebuffer = m_frameBuffers[imageIndex];
+    renderPassInfo.renderArea.offset = vk::Offset2D { 0, 0 };
+    renderPassInfo.renderArea.extent = m_swapChainExtent;
+    vk::ClearValue clearColor {};
+    clearColor.color = std::array<float, 4>({ { 0.01f, 0.01f, 0.033f, 1.0f } });
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+    m_commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+    m_commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
+
+    vk::Viewport viewport {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(m_swapChainExtent.width);
+    viewport.height = static_cast<float>(m_swapChainExtent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    m_commandBuffer.setViewport(0, viewport);
+
+    vk::Rect2D scissor {};
+    scissor.offset = vk::Offset2D { 0, 0 };
+    scissor.extent = m_swapChainExtent;
+    m_commandBuffer.setScissor(0, scissor);
+
+    m_commandBuffer.draw(3, 1, 0, 0);
+
+    m_commandBuffer.endRenderPass();
+    m_commandBuffer.end();
 
     vk::SubmitInfo submitInfo {};
 

@@ -42,13 +42,4 @@ private:
     vk::Semaphore m_imageAvailableSemaphore {};
     vk::Semaphore m_renderFinishedSemaphore {};
     vk::Fence m_inFlightFence {};
-
-    void RecordCommandBuffer(
-        vk::CommandBuffer commandBuffer,
-        std::vector<vk::Framebuffer> frameBuffers,
-        uint32_t imageIndex,
-        vk::RenderPass renderPass,
-        vk::Extent2D extent,
-        vk::Pipeline pipeline
-    );
 };
