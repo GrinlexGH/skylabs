@@ -10,7 +10,7 @@
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
-VKAPI_ATTR vk::Bool32 VKAPI_CALL vulkan_initializer::DebugCallback(
+VKAPI_ATTR vk::Bool32 VKAPI_CALL vk_initializer::DebugCallback(
     vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagBitsEXT messageType,
     const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -28,7 +28,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL vulkan_initializer::DebugCallback(
     return VK_FALSE;
 }
 
-namespace vulkan_initializer {
+namespace vk_initializer {
 #ifdef NDEBUG
     bool enableValidationLayers = false;
 #else
@@ -207,7 +207,7 @@ vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
     const std::vector<vk::SurfaceFormatKHR>& availableFormats
 ) {
     for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == vk::Format::eB8G8R8A8Srgb &&
+        if (availableFormat.format == vk::Format::eR8G8B8A8Srgb &&
             availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
             return availableFormat;
         }
@@ -220,7 +220,8 @@ vk::PresentModeKHR ChooseSwapPresentMode(
     const std::vector<vk::PresentModeKHR>& availablePresentModes
 ) {
     for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == vk::PresentModeKHR::eFifo) { // todo: change
+        // VSYNC
+        if (availablePresentMode == vk::PresentModeKHR::eImmediate) { // todo: change
             return availablePresentMode;
         }
     }
@@ -338,13 +339,13 @@ vk::Device CreateLogicalDevice(
 vk::SwapchainKHR CreateSwapChain(
     vk::Device device,
     vk::SurfaceKHR surface,
-    CQueueFamilyIndices queueIndices,
+    const CQueueFamilyIndices& queueIndices,
     const CSwapChainSupportDetails& swapChainSupport,
     vk::SurfaceFormatKHR surfaceFormat,
     vk::PresentModeKHR presentMode,
     vk::Extent2D extent
 ) {
-    uint32_t imageCount = swapChainSupport.m_capabilities.minImageCount + 1;
+    uint32_t imageCount = swapChainSupport.m_capabilities.minImageCount;
 
     if (swapChainSupport.m_capabilities.maxImageCount > 0 && imageCount > swapChainSupport.m_capabilities.maxImageCount) {
         imageCount = swapChainSupport.m_capabilities.maxImageCount;
@@ -376,7 +377,7 @@ vk::SwapchainKHR CreateSwapChain(
     createInfo.preTransform = swapChainSupport.m_capabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     createInfo.presentMode = presentMode;
-    createInfo.clipped = vk::True;
+    createInfo.clipped = vk::False;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     vk::SwapchainKHR swapChain = device.createSwapchainKHR(createInfo);
@@ -551,7 +552,7 @@ vk::Pipeline CreatePipeline(vk::Device device, vk::PipelineLayout pipelineLayout
         vk::ColorComponentFlagBits::eG |
         vk::ColorComponentFlagBits::eB |
         vk::ColorComponentFlagBits::eA;
-    colorBlendAttachment.blendEnable = vk::False;
+    colorBlendAttachment.blendEnable = vk::True;
     colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eOne;
     colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eZero;
     colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
@@ -560,11 +561,11 @@ vk::Pipeline CreatePipeline(vk::Device device, vk::PipelineLayout pipelineLayout
     colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
 
     vk::PipelineColorBlendStateCreateInfo colorBlending {};
-    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOpEnable = vk::False;
     colorBlending.logicOp = vk::LogicOp::eCopy;
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
-    colorBlending.blendConstants[0] = 0.0f;
+    colorBlending.blendConstants[0] = 1.0f;
     colorBlending.blendConstants[1] = 0.0f;
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
@@ -589,7 +590,7 @@ vk::Pipeline CreatePipeline(vk::Device device, vk::PipelineLayout pipelineLayout
 
 std::vector<vk::Framebuffer> CreateFramebuffers(
     vk::Device device,
-    std::vector<vk::ImageView> imageViews,
+    const std::vector<vk::ImageView>& imageViews,
     vk::RenderPass renderPass,
     vk::Extent2D extent
 ) {
@@ -614,23 +615,26 @@ std::vector<vk::Framebuffer> CreateFramebuffers(
     return frameBuffers;
 }
 
-vk::CommandPool CreateCommandPool(vk::Device device, CQueueFamilyIndices queueIndices) {
+vk::CommandPool CreateCommandPool(vk::Device device, uint32_t graphicsFamilyIndex) {
     vk::CommandPoolCreateInfo createInfo{};
     createInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    createInfo.queueFamilyIndex = queueIndices.m_graphicsFamily.value();
+    createInfo.queueFamilyIndex = graphicsFamilyIndex;
 
     vk::CommandPool commandPool = device.createCommandPool(createInfo);
     return commandPool;
 }
 
-vk::CommandBuffer CreateCommandBuffer(vk::Device device, vk::CommandPool commandPool) {
+std::vector<vk::CommandBuffer> CreateCommandBuffers(vk::Device device, vk::CommandPool commandPool) {
+    std::vector<vk::CommandBuffer> commandBuffers {};
+    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
     vk::CommandBufferAllocateInfo allocInfo {};
     allocInfo.commandPool = commandPool;
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
-    vk::CommandBuffer commandBuffer = device.allocateCommandBuffers(allocInfo)[0];
-    return commandBuffer;
+    commandBuffers = device.allocateCommandBuffers(allocInfo);
+    return commandBuffers;
 }
 
 } // vulkan_initializer

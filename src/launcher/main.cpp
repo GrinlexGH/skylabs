@@ -60,18 +60,23 @@ static std::string getWinapiErrorMessage() {
     return finalMsg;
 }
 
-int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nShowCmd) {
+int WINAPI wWinMain(
+    _In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPWSTR lpCmdLine,
+    _In_ int nShowCmd
+) {
     try {
         std::filesystem::path rootDir;
         {
             wchar_t buffer[MAX_PATH] = { 0 };
             ::GetModuleFileNameW(nullptr, buffer, MAX_PATH);
-            rootDir = narrow(buffer);
+            rootDir = buffer;
         }
         rootDir.remove_filename();
 
         auto core = ::LoadLibraryExW(
-            (widen(rootDir.string()) + L"\\bin\\core.dll").c_str(),
+            (rootDir.wstring() + L"\\bin\\core.dll").c_str(),
             nullptr,
             LOAD_WITH_ALTERED_SEARCH_PATH
         );

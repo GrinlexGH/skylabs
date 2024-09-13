@@ -6,6 +6,18 @@ set(SHADER_SOURCE_FILES
     shader.vert
 )
 
+foreach(FILE ${SHADER_SOURCE_FILES})
+    get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
+    string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "" GROUP "${PARENT_DIR}")
+    string(REPLACE "/" "\\" GROUP "${GROUP}")
+    if ("${FILE}" MATCHES ".*\\.vert")
+       set(GROUP "Vertex Shaders${GROUP}")
+    elseif("${FILE}" MATCHES ".*\\.frag")
+       set(GROUP "Fragment Shaders${GROUP}")
+    endif()
+    source_group("${GROUP}" FILES "${FILE}")
+endforeach()
+
 # Validate that source files have been passed
 list(LENGTH SHADER_SOURCE_FILES FILE_COUNT)
 if(FILE_COUNT EQUAL 0)

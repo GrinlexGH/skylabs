@@ -5,12 +5,14 @@
 #include <optional>
 #include <vector>
 
-namespace vulkan_initializer {
+namespace vk_initializer {
     #ifdef NDEBUG
         extern bool enableValidationLayers;
     #else
         extern bool enableValidationLayers;
     #endif
+
+    constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 2;
 
     const std::vector<const char*> g_validationLayers = {
         "VK_LAYER_KHRONOS_validation"
@@ -45,7 +47,7 @@ namespace vulkan_initializer {
     vk::SwapchainKHR CreateSwapChain(
         vk::Device device,
         vk::SurfaceKHR surface,
-        CQueueFamilyIndices queueIndices,
+        const CQueueFamilyIndices& queueIndices,
         const CSwapChainSupportDetails& swapChainSupport,
         vk::SurfaceFormatKHR surfaceFormat,
         vk::PresentModeKHR presentMode,
@@ -65,12 +67,12 @@ namespace vulkan_initializer {
     );
     std::vector<vk::Framebuffer> CreateFramebuffers(
         vk::Device device,
-        std::vector<vk::ImageView> imageViews,
+        const std::vector<vk::ImageView>& imageViews,
         vk::RenderPass renderPass,
         vk::Extent2D extent
     );
-    vk::CommandPool CreateCommandPool(vk::Device device, CQueueFamilyIndices queueIndices);
-    vk::CommandBuffer CreateCommandBuffer(vk::Device device, vk::CommandPool commandPool);
+    vk::CommandPool CreateCommandPool(vk::Device device, uint32_t graphicsFamilyIndex);
+    std::vector<vk::CommandBuffer> CreateCommandBuffers(vk::Device device, vk::CommandPool commandPool);
 
     VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
         vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
