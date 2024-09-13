@@ -15,7 +15,7 @@ public:
     virtual ~ICommandLine() = default;
 
     virtual void CreateCmdLine(const std::vector<std::string>& argv) = 0;
-    virtual int FindParam(std::string_view parm) = 0;
+    virtual int FindParam(std::string_view param) = 0;
 
 protected:
     std::vector<std::string> m_argv;
