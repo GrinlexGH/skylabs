@@ -14,7 +14,7 @@ public:
     ~CCommandLine() = default;
 
     void CreateCmdLine(const std::vector<std::string>& argv) override;
-    int FindParam(std::string_view parm) override;
+    int FindParam(std::string_view param) override;
 };
 
 static CCommandLine g_cmdLine;
@@ -25,8 +25,8 @@ void CCommandLine::CreateCmdLine(const std::vector<std::string>& argv) {
 }
 
 // Returns index of found parameter. 0 if not found.
-int CCommandLine::FindParam(std::string_view parm) {
-    auto it = std::find(m_argv.begin() + 1, m_argv.end(), parm);
+int CCommandLine::FindParam(std::string_view param) {
+    auto it = std::find(m_argv.begin() + 1, m_argv.end(), param);
     if (it == std::end(m_argv)) {
         return 0;
     }

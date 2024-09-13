@@ -61,7 +61,6 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
             for (int i = 0; i < argc; ++i) {
                 char_arg_list[i] = narrow(wchar_arg_list[i]);
             }
-
             CommandLine()->CreateCmdLine(char_arg_list);
             LocalFree(wchar_arg_list);
         }
