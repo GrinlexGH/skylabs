@@ -6,11 +6,7 @@
 #include <vector>
 
 namespace vk_initializer {
-    #ifdef NDEBUG
-        extern bool enableValidationLayers;
-    #else
-        extern bool enableValidationLayers;
-    #endif
+    extern bool enableValidationLayers;
 
     constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 2;
 

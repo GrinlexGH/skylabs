@@ -56,7 +56,6 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
         {
             int argc;
             wchar_t** wchar_arg_list = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
-
             std::vector<std::string> char_arg_list(argc);
             for (int i = 0; i < argc; ++i) {
                 char_arg_list[i] = narrow(wchar_arg_list[i]);

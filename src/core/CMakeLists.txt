@@ -42,7 +42,6 @@ foreach(FILE ${SOURCES})
     source_group("${GROUP}" FILES "${FILE}")
 endforeach()
 
-
 set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBS_OUTPUT_DIRECTORY}/

@@ -13,14 +13,23 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
-if(!MSVC)
-    set(CMAKE_CXX_FLAGS_DEBUG "-g")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    add_compile_options(
+        "$<$<CONFIG:Release>:-O2>"
+        "$<$<CONFIG:RelWithDebInfo>:-O2;-g>"
+        "$<$<CONFIG:MinSizeRel>:-Os>"
+        "$<$<CONFIG:Debug>:-g;-g3;-Og>"
+        "-Wall" "-Wextra" "-Wpedantic" "-Werror"
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    add_compile_options(
+        "/WX" "/W4" "/utf-8" "/Zc:__cplusplus"
+    )
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/)
+set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/)
 find_package(SDL2 REQUIRED)
 find_package(Vulkan REQUIRED)
 #find_package(GLFW3 REQUIRED)

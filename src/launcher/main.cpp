@@ -111,15 +111,14 @@ int main(int argc, char** argv) {
     try {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();
-        void* lib =
-            dlopen((rootDir.string() + "/bin/libcore.so").c_str(), RTLD_NOW);
+        void* lib = dlopen((rootDir.string() + "/bin/libcore.so").c_str(), RTLD_NOW);
         if (!lib) {
             throw std::runtime_error(std::string("failed open library: ") + dlerror() + "!\n");
         }
         auto main = (CoreMain_t)dlsym(lib, "CoreInit");
         if (!main) {
             throw std::runtime_error(
-                std::string { "Failed to load the launcher entry proc: " } +
+                std::string("Failed to load the launcher entry proc: ") +
                 dlerror()
             );
         }

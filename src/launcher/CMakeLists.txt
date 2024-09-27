@@ -19,13 +19,12 @@ foreach(FILE ${SOURCES})
     source_group("${GROUP}" FILES "${FILE}")
 endforeach()
 
-if(WIN32 AND NOT UNIX)
+if(WIN32)
     set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES WIN32_EXECUTABLE true)
 endif()
 
 # set project as startup project
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-
 if(NOT CMKR_VS_STARTUP_PROJECT)
     set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 endif()
