@@ -316,8 +316,10 @@ vk::Device CreateLogicalDevice(
         queueCreateInfo.pQueuePriorities = &queuePriority;
         queueCreateInfos.push_back(queueCreateInfo);
     }
-
-    vk::PhysicalDeviceFeatures deviceFeatures {};
+    vk::PhysicalDeviceFeatures deviceFeatures {
+       
+    };
+    deviceFeatures.fillModeNonSolid = true;
 
     vk::DeviceCreateInfo createInfo {};
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -523,7 +525,7 @@ vk::Pipeline CreatePipeline(vk::Device device, vk::PipelineLayout pipelineLayout
     vk::PipelineRasterizationStateCreateInfo rasterizer {};
     rasterizer.depthClampEnable = vk::False;
     rasterizer.rasterizerDiscardEnable = vk::False;
-    rasterizer.polygonMode = vk::PolygonMode::eFill;
+    rasterizer.polygonMode = vk::PolygonMode::eLine;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = vk::CullModeFlagBits::eBack;
     rasterizer.frontFace = vk::FrontFace::eClockwise;
