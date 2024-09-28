@@ -25,15 +25,17 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
         "/WX" "/W4" "/utf-8" "/Zc:__cplusplus"
     )
+else()
+    message(FATAL_ERROR "${PROJECT_NAME} Compiles only on gcc, clang, apple clang or msvc!")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
 set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/)
 find_package(SDL2 REQUIRED)
 find_package(Vulkan REQUIRED)
 #find_package(GLFW3 REQUIRED)
 
-set(PUBLIC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/public)
+set(PUBLIC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/public)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${PROJECT_SOURCE_DIR}/src)

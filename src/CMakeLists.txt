@@ -5,14 +5,11 @@ set(projects
     public
 )
 
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
 set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
 set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
 set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
 
 add_subdirectory("shaders")
-
 foreach(SUBDIR ${projects})
     add_subdirectory("${SUBDIR}")
 endforeach()
