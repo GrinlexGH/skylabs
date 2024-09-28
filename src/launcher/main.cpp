@@ -7,7 +7,6 @@
     #error
 #endif
 
-#include <cstddef>
 #include <cassert>
 #include <filesystem>
 #include <stdexcept>
