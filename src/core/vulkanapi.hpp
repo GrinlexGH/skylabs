@@ -43,12 +43,16 @@ private:
     vk::PipelineLayout m_pipelineLayout {};
     vk::Pipeline m_pipeline {};
     std::vector<vk::Framebuffer> m_frameBuffers {};
+    vk::Buffer m_vertexBuffer {};
+    vk::DeviceMemory m_vertexBufferMemory {};
 
     vk::CommandPool m_commandPool {};
     std::vector<vk::CommandBuffer> m_commandBuffers {};
     std::vector<vk::Semaphore> m_imageAvailableSemaphores {};
     std::vector<vk::Semaphore> m_renderFinishedSemaphores {};
     std::vector<vk::Fence> m_inFlightFences {};
+
+    vk::MemoryRequirements m_memRequirements;
 
     IWindow* m_window = nullptr;
 

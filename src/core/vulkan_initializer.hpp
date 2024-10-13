@@ -1,9 +1,13 @@
 #pragma once
 #include "window.hpp"
 
+#include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 #include <optional>
 #include <vector>
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_handles.hpp>
+#include <vulkan/vulkan_structs.hpp>
 
 namespace vk_initializer {
     extern bool enableValidationLayers;
@@ -32,6 +36,36 @@ namespace vk_initializer {
         std::vector<vk::SurfaceFormatKHR> m_formats;
         std::vector<vk::PresentModeKHR> m_presentModes;
     };
+
+    struct CVertex {
+        glm::vec2 pos;
+        glm::vec3 color;
+
+        static vk::VertexInputBindingDescription getBindingDescription() {
+            vk::VertexInputBindingDescription bindingDescription{};
+            bindingDescription.binding = 0;
+            bindingDescription.stride = sizeof(CVertex);
+            bindingDescription.inputRate = vk::VertexInputRate::eVertex;
+
+            return bindingDescription;
+        }
+
+        static std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions() {
+            std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions {};
+            attributeDescriptions[0].binding = 0;
+            attributeDescriptions[0].location = 0;
+            attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
+            attributeDescriptions[0].offset = offsetof(CVertex, pos);
+            attributeDescriptions[1].binding = 0;
+            attributeDescriptions[1].location = 1;
+            attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
+            attributeDescriptions[1].offset = offsetof(CVertex, color);
+
+            return attributeDescriptions;
+        }
+    };
+
+    extern const std::vector<CVertex> vertices;
 
     vk::Instance CreateInstance(vk::DebugUtilsMessengerEXT &debugMessenger);
     vk::SurfaceKHR CreateSurface(vk::Instance instance, IWindow* window);
@@ -69,6 +103,7 @@ namespace vk_initializer {
     );
     vk::CommandPool CreateCommandPool(vk::Device device, uint32_t graphicsFamilyIndex);
     std::vector<vk::CommandBuffer> CreateCommandBuffers(vk::Device device, vk::CommandPool commandPool);
+    vk::Buffer CreateVertexBuffer(vk::Device device, vk::PhysicalDevice physicalDevice, vk::DeviceMemory& deviceMemory);
 
     VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
         vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -90,4 +125,6 @@ namespace vk_initializer {
     vk::Extent2D ChooseSwapExtent(IWindow* window, const vk::SurfaceCapabilitiesKHR& capabilities);
 
     vk::ShaderModule CreateShaderModule(vk::Device device, const std::vector<char>& byteCode);
+
+    uint32_t FindMemoryType(vk::PhysicalDevice physicalDevice, uint32_t typeFilter, vk::MemoryPropertyFlags properties);
 };

@@ -56,6 +56,8 @@ void CVulkanRenderer::Init(IWindow* window) {
 
     m_frameBuffers = CreateFramebuffers(m_device, m_imageViews, m_renderPass, m_swapChainExtent);
 
+    m_vertexBuffer = CreateVertexBuffer(m_device, m_physicalDevice, m_vertexBufferMemory);
+
     m_commandPool = CreateCommandPool(m_device, queueIndices.m_graphicsFamily.value());
     m_commandBuffers = CreateCommandBuffers(m_device, m_commandPool);
 
@@ -103,11 +105,15 @@ void CVulkanRenderer::Draw() {
     renderPassInfo.renderArea.offset = vk::Offset2D { 0, 0 };
     renderPassInfo.renderArea.extent = m_swapChainExtent;
     vk::ClearValue clearColor {};
-    clearColor.color = std::array<float, 4>({ { 0.01f, 0.01f, 0.033f, 1.0f } });
+    clearColor.color = std::array<float, 4>({ { 0.0f, 0.0f, 0.0f, 1.0f } });
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
     m_commandBuffers[m_currentFrame].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
     m_commandBuffers[m_currentFrame].bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
+
+    vk::Buffer vertexBuffers[] = {m_vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    m_commandBuffers[m_currentFrame].bindVertexBuffers(0, 1, vertexBuffers, offsets);
 
     vk::Viewport viewport {};
     viewport.x = 0.0f;
@@ -123,7 +129,7 @@ void CVulkanRenderer::Draw() {
     scissor.extent = m_swapChainExtent;
     m_commandBuffers[m_currentFrame].setScissor(0, scissor);
 
-    m_commandBuffers[m_currentFrame].draw(3, 1, 0, 0);
+    m_commandBuffers[m_currentFrame].draw(static_cast<uint32_t>(vk_initializer::vertices.size()), 1, 0, 0);
 
     m_commandBuffers[m_currentFrame].endRenderPass();
     m_commandBuffers[m_currentFrame].end();
@@ -204,6 +210,9 @@ void CVulkanRenderer::Destroy() {
     }
 
     CleanupSwapChain();
+
+    m_device.destroyBuffer(m_vertexBuffer);
+    m_device.freeMemory(m_vertexBufferMemory);
 
     m_device.destroyPipeline(m_pipeline);
     m_device.destroyPipelineLayout(m_pipelineLayout);

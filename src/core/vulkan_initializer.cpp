@@ -1,7 +1,6 @@
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #include "vulkan_initializer.hpp"
 
-#include "SDL.hpp"
 #include "SDL_Vulkan.hpp"
 #include "console.hpp"
 #include "resourceloader.hpp"
@@ -34,6 +33,12 @@ namespace vk_initializer {
 #else
     bool enableValidationLayers = true;
 #endif
+
+    const std::vector<CVertex> vertices = {
+        {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
 
 std::vector<std::string_view> FindMissingLayers(
     const std::vector<vk::LayerProperties>& availableLayers,
@@ -140,6 +145,19 @@ vk::ShaderModule CreateShaderModule(vk::Device device, const std::vector<char>& 
 
     VkShaderModule shaderModule = device.createShaderModule(createInfo);
     return shaderModule;
+}
+
+uint32_t FindMemoryType(vk::PhysicalDevice physicalDevice, uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
+    vk::PhysicalDeviceMemoryProperties memProperties;
+    memProperties = physicalDevice.getMemoryProperties();
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("Failed to find suitable memory type!");
 }
 
 vk::Instance CreateInstance(vk::DebugUtilsMessengerEXT& debugMessenger) {
@@ -525,7 +543,7 @@ vk::Pipeline CreatePipeline(vk::Device device, vk::PipelineLayout pipelineLayout
     vk::PipelineRasterizationStateCreateInfo rasterizer {};
     rasterizer.depthClampEnable = vk::False;
     rasterizer.rasterizerDiscardEnable = vk::False;
-    rasterizer.polygonMode = vk::PolygonMode::eLine;
+    rasterizer.polygonMode = vk::PolygonMode::eFill;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = vk::CullModeFlagBits::eBack;
     rasterizer.frontFace = vk::FrontFace::eClockwise;
@@ -582,6 +600,14 @@ vk::Pipeline CreatePipeline(vk::Device device, vk::PipelineLayout pipelineLayout
     createInfo.basePipelineHandle = VK_NULL_HANDLE;
     createInfo.basePipelineIndex = -1;
 
+    auto bindingDescription = CVertex::getBindingDescription();
+    auto attributeDescriptions = CVertex::getAttributeDescriptions();
+
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
     vk::Pipeline pipeline = device.createGraphicsPipeline(VK_NULL_HANDLE, createInfo).value;
 
     device.destroyShaderModule(fragmentShader);
@@ -637,6 +663,32 @@ std::vector<vk::CommandBuffer> CreateCommandBuffers(vk::Device device, vk::Comma
 
     commandBuffers = device.allocateCommandBuffers(allocInfo);
     return commandBuffers;
+}
+
+vk::Buffer CreateVertexBuffer(vk::Device device, vk::PhysicalDevice physicalDevice, vk::DeviceMemory& vertexBufferMemory) {
+    vk::BufferCreateInfo bufferInfo{};
+    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+    bufferInfo.usage = vk::BufferUsageFlagBits::eVertexBuffer;
+    bufferInfo.sharingMode = vk::SharingMode::eExclusive;
+
+    vk::Buffer vertexBuffer = device.createBuffer(bufferInfo);
+
+    vk::MemoryRequirements memRequirements = device.getBufferMemoryRequirements(vertexBuffer);
+
+    vk::MemoryAllocateInfo allocInfo{};
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(physicalDevice, memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+    vertexBufferMemory = device.allocateMemory(allocInfo);
+
+    device.bindBufferMemory(vertexBuffer, vertexBufferMemory, 0);
+
+    void* data;
+    data = device.mapMemory(vertexBufferMemory, 0, bufferInfo.size);
+    memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+    device.unmapMemory(vertexBufferMemory);
+
+    return vertexBuffer;
 }
 
 } // vulkan_initializer
