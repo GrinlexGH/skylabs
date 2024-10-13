@@ -3,15 +3,15 @@
 #include "platform.hpp"
 #include "console.hpp"
 #include "unicode.hpp"
-#include "stc.hpp"
 #include "SDL.hpp"
-#include "window.hpp"
 
-#include <iostream>
 #include <vector>
 
 #ifdef PLATFORM_WINDOWS
     #include <windows.h>
+    #include <iostream>
+
+    #include "stc.hpp"
 
 BOOL CtrlHandler(DWORD fdwCtrlType) {
     UNUSED(fdwCtrlType);
