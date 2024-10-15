@@ -6,8 +6,13 @@
 #include "resourceloader.hpp"
 #include "vulkan_initializer.hpp"
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <fstream>
 #include <filesystem>
+#include <chrono>
 #include <set>
 
 //============
@@ -51,15 +56,33 @@ void CVulkanRenderer::Init(IWindow* window) {
     m_imageViews = CreateImageViews(m_device, m_images, m_imageFormat);
 
     m_renderPass = CreateRenderPass(m_device, m_imageFormat);
-    m_pipelineLayout = CreatePipelineLayout(m_device);
+    m_descriptorSetLayout = CreateDescriptorSetLayout(m_device);
+    m_pipelineLayout = CreatePipelineLayout(m_device, m_descriptorSetLayout);
     m_pipeline = CreatePipeline(m_device, m_pipelineLayout, m_renderPass);
 
     m_frameBuffers = CreateFramebuffers(m_device, m_imageViews, m_renderPass, m_swapChainExtent);
 
-    m_vertexBuffer = CreateVertexBuffer(m_device, m_physicalDevice, m_vertexBufferMemory);
-
     m_commandPool = CreateCommandPool(m_device, queueIndices.m_graphicsFamily.value());
     m_commandBuffers = CreateCommandBuffers(m_device, m_commandPool);
+
+    m_vertexBuffer = CreateVertexBuffer(
+        m_physicalDevice,
+        m_device,
+        m_commandPool,
+        m_graphicsQueue,
+        m_vertexBufferMemory
+    );
+    m_indexBuffer = CreateIndexBuffer(
+        m_physicalDevice,
+        m_device,
+        m_commandPool,
+        m_graphicsQueue,
+        m_indexBufferMemory
+    );
+
+    m_uniformBuffers = CreateUniformBuffers(m_physicalDevice, m_device, m_uniformBuffersMemory, m_uniformBuffersMapped);
+    m_descriptorPool = CreateDescriptorPool(m_device);
+    m_descriptorSets = CreateDescriptorSets(m_device, m_descriptorSetLayout, m_descriptorPool, m_uniformBuffers);
 
     m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -91,6 +114,8 @@ void CVulkanRenderer::Draw() {
         return;
     }
 
+    UpdateUniformBuffer(m_currentFrame, m_swapChainExtent);
+
     m_device.resetFences(m_inFlightFences[m_currentFrame]);
 
     m_commandBuffers[m_currentFrame].reset();
@@ -105,7 +130,7 @@ void CVulkanRenderer::Draw() {
     renderPassInfo.renderArea.offset = vk::Offset2D { 0, 0 };
     renderPassInfo.renderArea.extent = m_swapChainExtent;
     vk::ClearValue clearColor {};
-    clearColor.color = std::array<float, 4>({ { 0.0f, 0.0f, 0.0f, 1.0f } });
+    clearColor.color = std::array<float, 4>{ 0.0f, 0.0f, 0.005f, 1.0f };
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
     m_commandBuffers[m_currentFrame].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
@@ -114,6 +139,7 @@ void CVulkanRenderer::Draw() {
     vk::Buffer vertexBuffers[] = {m_vertexBuffer};
     VkDeviceSize offsets[] = {0};
     m_commandBuffers[m_currentFrame].bindVertexBuffers(0, 1, vertexBuffers, offsets);
+    m_commandBuffers[m_currentFrame].bindIndexBuffer(m_indexBuffer, 0, vk::IndexType::eUint16);
 
     vk::Viewport viewport {};
     viewport.x = 0.0f;
@@ -129,7 +155,19 @@ void CVulkanRenderer::Draw() {
     scissor.extent = m_swapChainExtent;
     m_commandBuffers[m_currentFrame].setScissor(0, scissor);
 
-    m_commandBuffers[m_currentFrame].draw(static_cast<uint32_t>(vk_initializer::vertices.size()), 1, 0, 0);
+    m_commandBuffers[m_currentFrame].bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics,
+        m_pipelineLayout,
+        0,
+        1,
+        &m_descriptorSets[m_currentFrame],
+        0,
+        nullptr
+    );
+    m_commandBuffers[m_currentFrame].drawIndexed(
+        static_cast<uint32_t>(vk_initializer::g_indices.size()),
+        1, 0, 0, 0
+    );
 
     m_commandBuffers[m_currentFrame].endRenderPass();
     m_commandBuffers[m_currentFrame].end();
@@ -191,6 +229,21 @@ void CVulkanRenderer::RecreateSwapChain() {
     m_frameBuffers = CreateFramebuffers(m_device, m_imageViews, m_renderPass, m_swapChainExtent);
 }
 
+void CVulkanRenderer::UpdateUniformBuffer(uint32_t currentImage, vk::Extent2D swapChainExtent) {
+    using namespace vk_initializer;
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    CUniformBufferObject ubo {};
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+    ubo.proj[1][1] *= -1;
+    memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+}
+
 void CVulkanRenderer::CleanupSwapChain() {
     for (size_t i = 0; i < m_frameBuffers.size(); ++i) {
         m_device.destroyFramebuffer(m_frameBuffers[i]);
@@ -210,6 +263,18 @@ void CVulkanRenderer::Destroy() {
     }
 
     CleanupSwapChain();
+
+    m_device.destroyDescriptorPool(m_descriptorPool);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        m_device.destroyBuffer(m_uniformBuffers[i]);
+        m_device.freeMemory(m_uniformBuffersMemory[i]);
+    }
+
+    m_device.destroyDescriptorSetLayout(m_descriptorSetLayout);
+
+    m_device.destroyBuffer(m_indexBuffer);
+    m_device.freeMemory(m_indexBufferMemory);
 
     m_device.destroyBuffer(m_vertexBuffer);
     m_device.freeMemory(m_vertexBufferMemory);

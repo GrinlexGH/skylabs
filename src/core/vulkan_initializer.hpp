@@ -12,7 +12,7 @@
 namespace vk_initializer {
     extern bool enableValidationLayers;
 
-    constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 2;
+    constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 3;
 
     const std::vector<const char*> g_validationLayers = {
         "VK_LAYER_KHRONOS_validation"
@@ -65,7 +65,14 @@ namespace vk_initializer {
         }
     };
 
-    extern const std::vector<CVertex> vertices;
+    struct CUniformBufferObject {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    };
+
+    extern const std::vector<CVertex> g_vertices;
+    extern const std::vector<uint16_t> g_indices;
 
     vk::Instance CreateInstance(vk::DebugUtilsMessengerEXT &debugMessenger);
     vk::SurfaceKHR CreateSurface(vk::Instance instance, IWindow* window);
@@ -89,7 +96,7 @@ namespace vk_initializer {
         vk::Format imageFormat
     );
     vk::RenderPass CreateRenderPass(vk::Device device, vk::Format imageFormat);
-    vk::PipelineLayout CreatePipelineLayout(vk::Device device);
+    vk::PipelineLayout CreatePipelineLayout(vk::Device device, vk::DescriptorSetLayout& descriptorSetLayout);
     vk::Pipeline CreatePipeline(
         vk::Device device,
         vk::PipelineLayout pipelineLayout,
@@ -103,7 +110,34 @@ namespace vk_initializer {
     );
     vk::CommandPool CreateCommandPool(vk::Device device, uint32_t graphicsFamilyIndex);
     std::vector<vk::CommandBuffer> CreateCommandBuffers(vk::Device device, vk::CommandPool commandPool);
-    vk::Buffer CreateVertexBuffer(vk::Device device, vk::PhysicalDevice physicalDevice, vk::DeviceMemory& deviceMemory);
+    vk::Buffer CreateVertexBuffer(
+        vk::PhysicalDevice physicalDevice,
+        vk::Device device,
+        vk::CommandPool commandPool,
+        vk::Queue graphicsQueue,
+        vk::DeviceMemory& vertexBufferMemory
+    );
+    vk::Buffer CreateIndexBuffer(
+        vk::PhysicalDevice physicalDevice,
+        vk::Device device,
+        vk::CommandPool commandPool,
+        vk::Queue graphicsQueue,
+        vk::DeviceMemory& indexBufferMemory
+    );
+    std::vector<vk::Buffer> CreateUniformBuffers(
+        vk::PhysicalDevice physicalDevice,
+        vk::Device device,
+        std::vector<vk::DeviceMemory>& uniformBuffersMemory,
+        std::vector<void*>& uniformBuffersMapped
+    );
+    vk::DescriptorSetLayout CreateDescriptorSetLayout(vk::Device device);
+    vk::DescriptorPool CreateDescriptorPool(vk::Device device);
+    std::vector<vk::DescriptorSet> CreateDescriptorSets(
+        vk::Device device,
+        vk::DescriptorSetLayout descriptorSetLayout,
+        vk::DescriptorPool descriptorPool,
+        std::vector<vk::Buffer> uniformBuffers
+    );
 
     VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
         vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -127,4 +161,20 @@ namespace vk_initializer {
     vk::ShaderModule CreateShaderModule(vk::Device device, const std::vector<char>& byteCode);
 
     uint32_t FindMemoryType(vk::PhysicalDevice physicalDevice, uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+
+    vk::Buffer CreateBuffer(
+        vk::PhysicalDevice physicalDevice,
+        vk::Device device,
+        vk::DeviceSize size,
+        vk::BufferUsageFlags usage,
+        vk::MemoryPropertyFlags properties,
+        vk::DeviceMemory& bufferMemory
+    );
+    void CopyBuffer(
+        vk::Device device,
+        vk::CommandPool commandPool,
+        vk::Buffer srcBuffer,
+        vk::Buffer dstBuffer,
+        vk::DeviceSize size
+    );
 };
