@@ -3,11 +3,12 @@ This is my own game engine and I plan to include all the best that other game en
 
 Requirements for build:
 * CMake
-* GLM
-* SDL2
 * VulkanSDK
+* MSVC, clang++ or gcc++
 
-My discord: grinlex
+For other dependencies use build_dependencies.sh script.
+
+Discord: grinlex
 
 ## Style guide
 ```cpp
