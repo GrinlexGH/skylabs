@@ -31,9 +31,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
-if(WIN32)
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/)
-endif()
+set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs)
 find_package(glm REQUIRED)
 find_package(SDL3 REQUIRED)
