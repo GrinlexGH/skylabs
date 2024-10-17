@@ -30,18 +30,18 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E make_directory
     $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:SDL2::SDL2>
+    $<TARGET_FILE:SDL3::SDL3>
     $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
-    COMMENT "Copying SDL2::SDL2 dll"
+    COMMENT "Copying SDL3::SDL3 dll"
 )
 
 if(MSVC AND($<CONFIG:Debug> OR $<CONFIG:RelWithDebInfo>))
     add_custom_command(
         TARGET ${CURRENT_TARGET_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE_DIR:SDL2::SDL2>/SDL2.pdb
+        $<TARGET_FILE_DIR:SDL3::SDL3>/SDL3.pdb
         $<TARGET_FILE_DIR:${CURRENT_TARGET_NAME}>/bin
-        COMMENT "Copying SDL2::SDL2 pdb"
+        COMMENT "Copying SDL3::SDL3 pdb"
     )
 endif()
 
