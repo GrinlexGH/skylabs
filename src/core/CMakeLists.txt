@@ -51,5 +51,6 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     public
     SDL3::SDL3
     Vulkan::Vulkan
+    glm::glm
     #GLFW3::GLFW3
 )
