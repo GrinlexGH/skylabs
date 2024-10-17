@@ -15,15 +15,6 @@
 *.mod
 *.smod
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-
-# Executables
-*.out
-*.app
-
 .cache/
 .PVS-Studio/
 .vscode/settings.json
