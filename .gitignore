@@ -28,5 +28,3 @@
 .PVS-Studio/
 .vscode/settings.json
 build/*
-libs/*
-!libs/readme.txt

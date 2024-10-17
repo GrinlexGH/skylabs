@@ -49,7 +49,7 @@ add_dependencies(${CURRENT_TARGET_NAME} public shaders)
 target_link_libraries(${CURRENT_TARGET_NAME}
     PRIVATE
     public
-    SDL2::SDL2
+    SDL3::SDL3
     Vulkan::Vulkan
     #GLFW3::GLFW3
 )

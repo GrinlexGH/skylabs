@@ -1,5 +1,6 @@
 #include "SDL.hpp"
 
+#include "console.hpp"
 #include <stdexcept>
 
 //============
@@ -8,7 +9,7 @@ int SDL::CHandle::m_instanceCount = 0;
 
 SDL::CHandle::CHandle() {
     if (m_instanceCount == 0) {
-        if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        if (!SDL_Init(SDL_INIT_VIDEO)) {
             throw std::runtime_error(
                 std::string("Couldn't initialize SDL!\n") + SDL_GetError()
             );
@@ -53,7 +54,15 @@ void SDL::CWindow::Create(const char* title, int x, int y, int w, int h, unsigne
         );
     }
 
-    m_window = SDL_CreateWindow(title, x, y, w, h, SDLflags);
+    SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, title);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDLflags);
+    m_window = SDL_CreateWindowWithProperties(props);
+    SDL_DestroyProperties(props);
 }
 
 SDL::CWindow::~CWindow() {
