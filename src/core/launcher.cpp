@@ -12,23 +12,17 @@ void MainLoop(CVulkanRenderer& renderer) {
         SDL_Event e;
         SDL_PollEvent(&e);
         switch (e.type) {
-            case SDL_QUIT:
+            case SDL_EVENT_QUIT:
                 quit = true;
                 break;
-            case SDL_WINDOWEVENT:
-                switch (e.window.event) {
-                    case SDL_WINDOWEVENT_MINIMIZED:
-                        minimized = true;
-                        break;
-
-                    case SDL_WINDOWEVENT_RESTORED:
-                        minimized = false;
-                        break;
-
-                    case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        renderer.m_frameBufferResized = true;
-                        break;
-                    }
+            case SDL_EVENT_WINDOW_MINIMIZED:
+                minimized = true;
+                break;
+            case SDL_EVENT_WINDOW_RESTORED:
+                minimized = false;
+                break;
+            case SDL_EVENT_WINDOW_RESIZED:
+                renderer.m_frameBufferResized = true;
                 break;
         }
         if(!minimized) {

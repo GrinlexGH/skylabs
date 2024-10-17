@@ -67,9 +67,8 @@ std::vector<std::string_view> FindMissingLayers(
 
 std::vector<const char*> GetRequiredInstanceExtensions() {
     uint32_t extCount = 0;
-    SDL::Vulkan::GetRequiredInstanceExtensions(&extCount, nullptr);
-    std::vector<const char*> extensions(extCount);
-    SDL::Vulkan::GetRequiredInstanceExtensions(&extCount, extensions.data());
+    const char*const* extensionsTemp = SDL::Vulkan::GetRequiredInstanceExtensions(&extCount);
+    std::vector<const char*> extensions(extensionsTemp, extensionsTemp + extCount);
 
     if (enableValidationLayers) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -340,7 +339,7 @@ vk::SurfaceKHR CreateSurface(vk::Instance instance, IWindow* window) {
             instance,
             &surface
         )) {
-        throw std::runtime_error("Failed to create window surface!\n");
+        throw std::runtime_error(std::string("Failed to create window surface!\n") + SDL_GetError());
     }
     return surface;
 }
