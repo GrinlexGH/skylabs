@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+set -e
 
 # libraries
 sdl=SDL-preview-3.1.3
