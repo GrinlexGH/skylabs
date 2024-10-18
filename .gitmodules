@@ -1,0 +1,6 @@
+[submodule "libs/sources/SDL"]
+	path = libs/sources/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "libs/sources/glm"]
+	path = libs/sources/glm
+	url = https://github.com/g-truc/glm.git
