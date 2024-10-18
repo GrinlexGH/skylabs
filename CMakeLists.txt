@@ -29,10 +29,24 @@ else()
     message(FATAL_ERROR "${PROJECT_NAME} Compiles only on gcc, clang, apple clang or msvc!")
 endif()
 
+if(MSVC)
+    set(CMAKE_OPTIONS
+        -A ${CMAKE_GENERATOR_PLATFORM}
+        -T ${CMAKE_GENERATOR_TOOLSET}
+    )
+endif()
+
+set(CMAKE_OPTIONS
+    ${CMAKE_OPTIONS}
+    -G ${CMAKE_GENERATOR}
+    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+)
+
 if(WIN32)
-    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
+    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd ${CMAKE_OPTIONS})
 else()
-    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
+    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh ${})
 endif()
 
 execute_process(
