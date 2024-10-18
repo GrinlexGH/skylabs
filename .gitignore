@@ -19,3 +19,5 @@
 .PVS-Studio/
 .vscode/settings.json
 build/*
+libs/glm
+libs/SDL3
