@@ -30,10 +30,17 @@ else()
 endif()
 
 if(MSVC)
-    set(CMAKE_OPTIONS
-        -A ${CMAKE_GENERATOR_PLATFORM}
-        -T ${CMAKE_GENERATOR_TOOLSET}
-    )
+    if(CMAKE_GENERATOR_PLATFORM)
+        set(CMAKE_OPTIONS
+            -A ${CMAKE_GENERATOR_PLATFORM}
+        )
+    endif()
+    if(CMAKE_GENERATOR_TOOLSET)
+        set(CMAKE_OPTIONS
+            ${CMAKE_OPTIONS}
+            -T ${CMAKE_GENERATOR_TOOLSET}
+        )
+    endif()
 endif()
 
 set(CMAKE_OPTIONS
