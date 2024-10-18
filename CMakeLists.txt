@@ -29,6 +29,17 @@ else()
     message(FATAL_ERROR "${PROJECT_NAME} Compiles only on gcc, clang, apple clang or msvc!")
 endif()
 
+if(WIN32)
+    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
+else()
+    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
+endif()
+
+execute_process(
+    COMMAND ${BUILD_SCRIPT_CMD}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs/
+)
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
 set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/)

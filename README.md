@@ -6,7 +6,7 @@ Requirements for build:
 * Vulkan SDK
 * MSVC, clang++ or gcc++
 
-For other libraries use `build_dependencies` script. **You must install all dependencies to build these libraries manually.**
+For other libraries cmake uses `build_dependencies` script. **You must install all dependencies to build these libraries manually.**
 
 Discord: grinlex
 
