@@ -1,21 +1,17 @@
 #!/usr/bin/bash
 set -e
 
-# libraries
-sdl=SDL-preview-3.1.3
-glm=glm-1.0.1
-
-cd sources/$sdl
+cd sources/SDL
 mkdir -p build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../../SDL3" ..
+cmake -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DCMAKE_INSTALL_PREFIX="../../../SDL3" $* ..
 cmake --build . --config Release --parallel
 cmake --install . --config Release
 
-cd ../../$glm
+cd ../../glm
 mkdir -p build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="../../../glm" ..
+cmake -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="../../../glm" $* ..
 cmake --build . -- all
 cmake --build . -- install
 
