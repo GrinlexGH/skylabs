@@ -3,10 +3,10 @@ This is my own game engine and I plan to include all the best that other game en
 
 Requirements for build:
 * CMake
-* VulkanSDK
+* Vulkan SDK
 * MSVC, clang++ or gcc++
 
-For other dependencies use build_dependencies.sh script.
+For other libraries use `build_dependencies` script. **You must install all dependencies to build these libraries manually.**
 
 Discord: grinlex
 
