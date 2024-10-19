@@ -1,4 +1,4 @@
-#include "vulkanapi.hpp"
+#include "vulkan_renderer.hpp"
 #include "SDL.hpp"
 
 #include "launcher.hpp"
@@ -40,6 +40,6 @@ void CLauncher::Main() {
         SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
     );
     CVulkanRenderer vulkan;
-    vulkan.Init(&g_window);
+    vulkan.Initialize(&g_window);
     MainLoop(vulkan);
 }

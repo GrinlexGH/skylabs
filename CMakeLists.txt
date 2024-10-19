@@ -43,17 +43,10 @@ if(MSVC)
     endif()
 endif()
 
-set(CMAKE_OPTIONS
-    ${CMAKE_OPTIONS}
-    -G ${CMAKE_GENERATOR}
-    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-)
-
 if(WIN32)
-    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd ${CMAKE_OPTIONS})
+    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
 else()
-    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh ${})
+    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
 endif()
 
 execute_process(

@@ -199,6 +199,7 @@ void CopyBuffer(
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
     allocInfo.commandPool = commandPool;
     allocInfo.commandBufferCount = 1;
+
     vk::CommandBuffer commandBuffer = device.allocateCommandBuffers(allocInfo)[0];
     vk::CommandBufferBeginInfo beginInfo {};
     beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
