@@ -1,5 +1,5 @@
 #include "console.hpp"
-#include "vulkanapi.hpp"
+#include "vulkan_renderer.hpp"
 #include "SDL.hpp"
 #include "SDL_Vulkan.hpp"
 #include "unicode.hpp"
@@ -21,7 +21,7 @@ CVulkanRenderer::~CVulkanRenderer() {
     Destroy();
 }
 
-void CVulkanRenderer::Init(IWindow* window) {
+void CVulkanRenderer::Initialize(IWindow* window) {
     using namespace vk_initializer;
 
     if (!window->GetHandle()) {
