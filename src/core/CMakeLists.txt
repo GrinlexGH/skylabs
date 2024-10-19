@@ -5,11 +5,12 @@ set(SOURCES
     coremain.cpp
     launcher.hpp
     launcher.cpp
-    renderapi.hpp
-    vulkanapi.hpp
-    vulkanapi.cpp
+    renderer.hpp
+    vulkan_renderer.hpp
+    vulkan_renderer.cpp
     vulkan_initializer.hpp
     vulkan_initializer.cpp
+    renderer_context.hpp
     window.hpp
     SDL.hpp
     SDL_Vulkan.hpp

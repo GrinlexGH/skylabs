@@ -1,11 +1,11 @@
 #pragma once
 
-#include "renderapi.hpp"
+#include "renderer.hpp"
 
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #include <vulkan/vulkan.hpp>
 
-class CVulkanRenderer final : public IRenderApi {
+class CVulkanRenderer final : public IRenderer {
 public:
     CVulkanRenderer() = default;
     CVulkanRenderer(const CVulkanRenderer&) = default;
@@ -14,7 +14,7 @@ public:
     CVulkanRenderer& operator=(CVulkanRenderer&&) = default;
     ~CVulkanRenderer();
 
-    void Init(IWindow* window) override;
+    void Initialize(IWindow* window) override;
     void Draw();
     void Destroy() override;
 

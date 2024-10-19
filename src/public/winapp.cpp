@@ -21,6 +21,7 @@ namespace resource_loader {
             rootDir.remove_filename();
         }
 
+        // todo: use boost.nowide here
         std::ifstream file((rootDir.wstring() + widen(filename)).c_str(), std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {

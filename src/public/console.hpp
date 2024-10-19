@@ -12,11 +12,6 @@ concept Printable = requires(std::ostream& os, T a) { os << a; };
 
 class IConsoleMessage {
 public:
-    IConsoleMessage() = default;
-    IConsoleMessage(const IConsoleMessage&) = default;
-    IConsoleMessage(IConsoleMessage&&) = default;
-    IConsoleMessage& operator=(const IConsoleMessage&) = default;
-    IConsoleMessage& operator=(IConsoleMessage&&) = default;
     virtual ~IConsoleMessage() = default;
 
     // Printing to console in same format as printf()
