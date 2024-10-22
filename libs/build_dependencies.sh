@@ -1,6 +1,8 @@
 #!/usr/bin/bash
 set -e
 
+# Author: Grinlex
+
 cd sources
 
 if [ ! -d "../bin/linux/SDL3" ]; then
