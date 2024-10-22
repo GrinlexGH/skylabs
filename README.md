@@ -35,8 +35,9 @@ namespace my_namespace {
                 if( ) {
                     ...
                     return localVariable;
-                } else if()
+                } else if() {
                     return localVariable;
+                }
             }
             return m_memberVariable * localVariable;
         }
@@ -46,6 +47,10 @@ namespace my_namespace {
     };
 
     CClass g_globalVariable;
+
+    int UseGlobalVariable() {
+        return g_globalVariable.JustFunction()
+    }
 };
 ```
 ---
