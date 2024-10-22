@@ -56,7 +56,12 @@ execute_process(
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
-set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/)
+if(WIN32)
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
+elseif(UNIX)
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
+endif()
+
 find_package(glm REQUIRED)
 find_package(SDL3 REQUIRED)
 find_package(Vulkan REQUIRED)
