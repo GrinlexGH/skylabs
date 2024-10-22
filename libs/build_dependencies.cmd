@@ -1,6 +1,8 @@
 @echo off
 setlocal
 
+rem Author: Grinlex
+
 cd sources
 
 if not exist "..\bin\windows\SDL3" (
