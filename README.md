@@ -11,48 +11,39 @@ For other libraries cmake uses `build_dependencies` script. **You must install a
 Discord: grinlex
 
 ## Style guide
+### General
+- Use 4 spaces for indentation.
+- Use space before opening brace instead of new line (classes and structs are exceptions).
+- Use space after control statement.
 ```cpp
-/*
- * Multi-line comment
-*/
-// class.hpp
-namespace my_namespace {
-    class CClass : public IBase
-    {
-    public:
-        // 4 spaces for indentation
-        int JustFunction() {
-            int localVariable = 4;
-            for( ) {
-                switch( ) {
-                    case 0: {
-                        ...
-                        break;
-                    }
-                    case 1: break;
-                }
-
-                if( ) {
-                    ...
-                    return localVariable;
-                } else if() {
-                    return localVariable;
-                }
-            }
-            return m_memberVariable * localVariable;
-        }
-
-    private:
-        int m_memberVariable;
-    };
-
-    CClass g_globalVariable;
-
-    int UseGlobalVariable() {
-        return g_globalVariable.JustFunction()
+int Func() {
+    if (bar) {
     }
+}
+```
+
+### Variables
+- Use camelCase.
+- Use `g_` prefix for globals.
+- Use `m_` prefix for members.
+
+### Functions
+- Use PascalCase.
+
+### Classes and structs
+- Use new line after brace.
+- Do NOT use indentation before access modifier.
+- Use I prefix for interfaces, C prefix for classes
+```cpp
+class CClass : IBase
+{
+public:
+
 };
 ```
+
+### Comments
+- Use space after start of comment.
 ---
 Useful links:
 - https://utf8everywhere.org/
