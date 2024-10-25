@@ -56,4 +56,3 @@ namespace my_namespace {
 ---
 Useful links:
 - https://utf8everywhere.org/
-- https://github.com/aminosbh/sdl2-cmake-modules/blob/master/FindSDL2.cmake
