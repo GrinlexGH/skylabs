@@ -1,6 +1,17 @@
 #pragma once
 
-class IWindow {
+enum WindowVendor : unsigned char
+{
+    eUnknown = 0,
+    eSDL,
+    eGLFW,
+    eX11,
+    eWayland,
+    eWin32
+};
+
+class IWindow
+{
 public:
     IWindow() = default;
     IWindow(const IWindow&) = delete;
@@ -18,4 +29,5 @@ public:
     virtual void Create(const char* title, int x, int y, int w, int h, unsigned int flags) = 0;
     virtual void Close() = 0;
     virtual void* GetHandle() const = 0;
+    virtual WindowVendor GetVendor() const { return WindowVendor::eUnknown; }
 };

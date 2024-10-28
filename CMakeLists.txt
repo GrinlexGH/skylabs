@@ -65,6 +65,8 @@ endif()
 find_package(glm REQUIRED)
 find_package(SDL3 REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(VulkanMemoryAllocator REQUIRED)
+find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 #find_package(GLFW3 REQUIRED)
 
 set(PUBLIC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/public)

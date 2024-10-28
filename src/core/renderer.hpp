@@ -4,8 +4,8 @@
 
 class IRenderer {
 public:
+    // Initializing should be in constructor, destruction in descructor
     virtual ~IRenderer() = default;
 
-    virtual void Initialize(IWindow*) = 0;
-    virtual void Destroy() = 0;
+    virtual void Draw() = 0;
 };

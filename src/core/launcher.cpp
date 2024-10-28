@@ -39,7 +39,6 @@ void CLauncher::Main() {
         640, 480,
         SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
     );
-    CVulkanRenderer vulkan;
-    vulkan.Initialize(&g_window);
+    CVulkanRenderer vulkan(&g_window);
     MainLoop(vulkan);
 }
