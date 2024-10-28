@@ -11,6 +11,7 @@ void CDefaultConsoleMessage::operator()(std::string_view format, ...) {
     va_start(argList, format);
     vprintf(format.data(), argList);
     va_end(argList);
+    std::cout << '\n';
 }
 
 CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ostream&)) {
@@ -34,7 +35,7 @@ void CColorfulConsoleMessage::operator()(std::string_view format, ...) {
     va_start(argList, format);
     vprintf(format.data(), argList);
     va_end(argList);
-    std::cout << stc::reset_fg;
+    std::cout << '\n' << stc::reset_fg;
 }
 
 CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&)) {

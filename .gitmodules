@@ -4,3 +4,9 @@
 [submodule "libs/sources/glm"]
 	path = libs/sources/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "libs/sources/VulkanMemoryAllocator"]
+	path = libs/sources/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "libs/sources/VulkanMemoryAllocator-Hpp"]
+	path = libs/sources/VulkanMemoryAllocator-Hpp
+	url = https://github.com/YaaZ/VulkanMemoryAllocator-Hpp.git

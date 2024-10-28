@@ -11,6 +11,7 @@ For other libraries cmake uses `build_dependencies` script. **You must install a
 Discord: grinlex
 
 ## Style guide
+
 ### General
 - Use 4 spaces for indentation.
 - Use space before opening brace instead of new line (classes and structs are exceptions).
@@ -31,9 +32,9 @@ int Func() {
 - Use PascalCase.
 
 ### Classes and structs
-- Use new line after brace.
+- Use new line before opening brace.
 - Do NOT use indentation before access modifier.
-- Use I prefix for interfaces, C prefix for classes
+- Use `I` prefix for interfaces, `C` prefix for classes
 ```cpp
 class CClass : IBase
 {
