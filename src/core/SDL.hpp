@@ -25,6 +25,8 @@ namespace SDL {
         SDL_Window* m_window = nullptr;
 
     public:
+        using IWindow::IWindow;
+
         CWindow() = default;
         CWindow(const char* title, int x, int y, int w, int h, unsigned int SDLflags);
         CWindow(const CWindow&) = delete;
@@ -36,5 +38,6 @@ namespace SDL {
         void Create(const char* title, int x, int y, int w, int h, unsigned int SDLflags) override;
         void Close() override;
         void* GetHandle() const override { return m_window; }
+        WindowVendor GetVendor() const override { return WindowVendor::eSDL; }
     };
 }

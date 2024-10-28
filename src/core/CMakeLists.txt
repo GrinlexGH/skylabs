@@ -8,13 +8,12 @@ set(SOURCES
     renderer.hpp
     vulkan_renderer.hpp
     vulkan_renderer.cpp
-    vulkan_initializer.hpp
-    vulkan_initializer.cpp
-    renderer_context.hpp
     window.hpp
     SDL.hpp
     SDL_Vulkan.hpp
     SDL.cpp
+    headerfactory.cpp
+    stb_image.h
 )
 
 if(WIN32)
@@ -53,5 +52,7 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     SDL3::SDL3
     Vulkan::Vulkan
     glm::glm
+    GPUOpen::VulkanMemoryAllocator
+    VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
     #GLFW3::GLFW3
 )

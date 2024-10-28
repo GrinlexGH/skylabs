@@ -21,3 +21,4 @@
 build/*
 libs/bin/linux/*
 libs/bin/windows/*
+**/build/

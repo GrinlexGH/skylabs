@@ -69,6 +69,16 @@
         "unordered_map": "cpp",
         "list": "cpp",
         "xhash": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "unordered_set": "cpp",
+        "functional": "cpp",
+        "cinttypes": "cpp",
+        "condition_variable": "cpp",
+        "mutex": "cpp",
+        "numeric": "cpp",
+        "shared_mutex": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp",
+        "codecvt": "cpp"
     }
 }
