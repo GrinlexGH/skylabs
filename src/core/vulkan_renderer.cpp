@@ -30,217 +30,15 @@ bool g_enableValidationLayers = true;
 constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 3;
 
 const std::vector<CVertex> g_vertices = {
-    { { -1.5f, -1.5f }, { 1.0f, 0.0f, 0.0f } },
-    { { 1.5f, -1.5f }, { 0.0f, 1.0f, 0.0f } },
-    { { 1.5f, 1.5f }, { 0.0f, 0.0f, 1.0f } },
-    { { -1.5f, 1.5f }, { 1.0f, 1.0f, 1.0f } }
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 };
+
 const std::vector<uint16_t> g_indices = {
     0, 1, 2, 2, 3, 0
 };
-
-//============
-// CVulkanRendererContext
-void CVulkanRendererContext::Initialize(IWindow* window) {
-    if (!window->GetHandle()) {
-        throw std::runtime_error("Can't initialize vulkan renderer context: window is nullptr!\n");
-    }
-
-    m_window = window;
-
-    InitializeInstanceExtensions();
-    InitializeInstance();
-
-    m_surface = CreateSurface();
-}
-
-void CVulkanRendererContext::InitializeInstanceExtensions() {
-    VULKAN_HPP_DEFAULT_DISPATCHER.init();
-
-    uint32_t extCount = 0;
-    const char* const* requiredExtensions = nullptr;
-
-    // Register required platform extensions
-    if (m_window->GetVendor() == WindowVendor::eSDL) {
-        requiredExtensions = SDL::Vulkan::GetRequiredInstanceExtensions(&extCount);
-    } else {
-        assert(false && "Nothing except sdl is implemented yet."); // TODO
-    }
-
-    if (requiredExtensions) {
-        for (uint32_t i = 0; i < extCount; ++i) {
-            m_requestedInstanceExtensions[requiredExtensions[i]] = true;
-        }
-    }
-
-    // Optional debug utils
-    if (g_enableValidationLayers) {
-        m_requestedInstanceExtensions[VK_EXT_DEBUG_UTILS_EXTENSION_NAME] = false;
-    }
-
-    // Enable all extensions that are supported and requested.
-    std::vector<vk::ExtensionProperties> instanceExtensions = vk::enumerateInstanceExtensionProperties();
-    for (uint32_t i = 0; i < instanceExtensions.size(); ++i) {
-        if (m_requestedInstanceExtensions.contains(instanceExtensions[i].extensionName)) {
-            m_enabledInstanceExtensions.push_back(instanceExtensions[i].extensionName);
-        }
-    }
-
-    // Check for required extensions
-    // .first is extension name, .second is required or not
-    bool allReqExtsFound = true;
-    for (const std::pair<const std::string, bool>& reqExt : m_requestedInstanceExtensions) {
-        if (std::ranges::find(m_enabledInstanceExtensions, reqExt.first.c_str()) == m_enabledInstanceExtensions.end()) {
-            if (reqExt.second) {
-                Error("Required instance extension \"%s\" not found.\n", reqExt.first.c_str());
-                allReqExtsFound = false;
-            } else {
-                Msg("Optional instance extension \"%s\" not found.\n", reqExt.first.c_str());
-            }
-        }
-    }
-
-    if (!allReqExtsFound) {
-        throw std::runtime_error("Can't find required instance extensions! See log.");
-    }
-}
-
-std::vector<const char*> CVulkanRendererContext::FindValidationLayers() {
-    if (!g_enableValidationLayers)
-        return {};
-
-    std::vector<vk::LayerProperties> availableLayers = vk::enumerateInstanceLayerProperties();
-    std::vector<const char*> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
-
-    for (int i = 0; i < validationLayers.size(); ++i) {
-        const char* neededLayer = validationLayers[i];
-
-        bool layerFound = false;
-        for (const auto& availableLayer : availableLayers) {
-            if (!strcmp(neededLayer, availableLayer.layerName)) {
-                layerFound = true;
-                break;
-            }
-        }
-        if (!layerFound) {
-            validationLayers.erase(validationLayers.begin() + i);
-            Warning("Can't find validation layer \"%s\"", neededLayer);
-        }
-    }
-
-    return validationLayers;
-}
-
-void CVulkanRendererContext::InitializeInstance() {
-    std::vector<const char*> validationLayers = FindValidationLayers();
-    if (g_enableValidationLayers && validationLayers.empty()) {
-        g_enableValidationLayers = false;
-        Warning << "Validation layers disabled because system doesn't have vulkan validation layers!\n";
-    }
-
-    vk::ApplicationInfo appInfo {};
-    appInfo.pApplicationName = "Skylabs";
-    appInfo.applicationVersion = vk::makeApiVersion(0, 0, 0, 0);
-    appInfo.pEngineName = "Skylabs";
-    appInfo.engineVersion = vk::makeApiVersion(0, 0, 0, 0);
-    appInfo.apiVersion = vk::ApiVersion13;
-
-    vk::InstanceCreateInfo instanceInfo {};
-    instanceInfo.pApplicationInfo = &appInfo;
-
-    std::vector<const char*> enabledExtensions {};
-    enabledExtensions.reserve(m_enabledInstanceExtensions.size());
-    for (int i = 0; i < m_enabledInstanceExtensions.size(); ++i)
-        enabledExtensions.emplace_back(m_enabledInstanceExtensions[i].c_str());
-
-    instanceInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-    instanceInfo.ppEnabledExtensionNames = enabledExtensions.data();
-
-    vk::DebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo {};
-    if (g_enableValidationLayers) {
-        debugMessengerCreateInfo.messageSeverity =
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-
-        debugMessengerCreateInfo.messageType =
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
-
-        debugMessengerCreateInfo.pfnUserCallback =
-            reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(DebugCallback);
-
-        instanceInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-        instanceInfo.ppEnabledLayerNames = validationLayers.data();
-        instanceInfo.pNext = &debugMessengerCreateInfo;
-    } else {
-        instanceInfo.enabledLayerCount = 0;
-        instanceInfo.pNext = nullptr;
-    }
-
-    m_instance = vk::createInstance(instanceInfo);
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance);
-    if (g_enableValidationLayers) {
-        m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(debugMessengerCreateInfo);
-    }
-}
-
-vk::SurfaceKHR CVulkanRendererContext::CreateSurface() {
-    vk::SurfaceKHR surface {};
-
-    if (m_window->GetVendor() == WindowVendor::eSDL) {
-        if (!SDL::Vulkan::CreateSurface(
-            static_cast<SDL_Window*>(m_window->GetHandle()),
-            m_instance,
-            &surface
-        )) {
-            throw std::runtime_error(std::string("Failed to create window surface!\n") + SDL_GetError());
-        }
-    } else {
-        assert(false && "Nothing except sdl is implemented yet."); // TODO
-    }
-
-    return surface;
-}
-
-vk::Instance CVulkanRendererContext::GetInstance() const {
-    return m_instance;
-}
-
-vk::SurfaceKHR CVulkanRendererContext::GetSurface() const {
-    return m_surface;
-}
-
-IWindow* CVulkanRendererContext::GetWindow() const {
-    return m_window;
-}
-
-vk::DebugUtilsMessengerEXT CVulkanRendererContext::GetDebugMessenger() const {
-    return m_debugMessenger;
-}
-
-VKAPI_ATTR vk::Bool32 VKAPI_CALL CVulkanRendererContext::DebugCallback(
-    vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    vk::DebugUtilsMessageTypeFlagBitsEXT messageType,
-    const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData
-) {
-    UNUSED(messageType);
-    UNUSED(pUserData);
-    if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eError) {
-        Error << pCallbackData->pMessage << std::endl;
-    } else if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
-        Warning << pCallbackData->pMessage << std::endl;
-    } else {
-        Msg << pCallbackData->pMessage << std::endl;
-    }
-    return VK_FALSE;
-}
 
 //============
 // CVulkanRenderer
@@ -262,13 +60,13 @@ CVulkanRenderer::CVulkanRenderer(IWindow* window) {
     m_presentQueue = m_device.getQueue(m_queueFamilies.m_presentFamily.value(), 0);
 
     m_swapChainInfo = GetSwapChainInfo(m_physicalDevice);
-    m_surfaceFormat = GetImageFormat();
-    m_presentMode = GetPresentMode();
-    m_swapChainExtent = GetSwapChainExtent();
+    m_surfaceFormat = ChoosetSurfaceFormat(m_swapChainInfo.m_formats);
+    m_presentMode = ChoosePresentMode(m_swapChainInfo.m_presentModes);
+    m_swapChainExtent = ChooseSwapChainExtent(m_swapChainInfo.m_capabilities);
     CreateSwapChain(m_surfaceFormat, m_presentMode, m_swapChainExtent);
 
     m_images = m_device.getSwapchainImagesKHR(m_swapChain);
-    CreateImageViews();
+    CreateImageViews(m_images, m_surfaceFormat.format);
 
     CreateRenderPass();
 
@@ -286,11 +84,12 @@ CVulkanRenderer::CVulkanRenderer(IWindow* window) {
 
     CreateUniformBuffers();
 
+    CreateTextureImage();
+    CreateTextureImageView(m_surfaceFormat.format);
+    CreateTextureSampler();
+
     CreateDescriptorPool();
     CreateDescriptorSets();
-    UpdateDecriptorSets(m_uniformBuffers, sizeof(CUniformBufferObject));
-
-    CreateTextureImage();
 
     m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -310,6 +109,8 @@ CVulkanRenderer::~CVulkanRenderer() {
         m_device.destroyFence(m_inFlightFences[i]);
     }
 
+    m_device.destroySampler(m_textureSampler);
+    m_device.destroyImageView(m_textureImageView);
     m_allocator.destroyImage(m_textureImage.image, m_textureImage.allocation);
 
     m_device.destroyDescriptorPool(m_descriptorPool);
@@ -385,13 +186,13 @@ void CVulkanRenderer::RegisterRequestedDeviceExtensions() {
 
 bool CVulkanRenderer::InitializeDeviceExtensions(
     vk::PhysicalDevice physicalDevice,
-    std::vector<std::string>& enabledExtensions
+    std::unordered_set<std::string>& enabledExtensions
 ) {
-    // Enable all extensions that are supported and requested.
+    // Enable all requested extensions that are supported
     std::vector<vk::ExtensionProperties> deviceExtensions = physicalDevice.enumerateDeviceExtensionProperties();
     for (uint32_t i = 0; i < deviceExtensions.size(); ++i) {
         if (m_requestedDeviceExtensions.contains(deviceExtensions[i].extensionName)) {
-            enabledExtensions.push_back(deviceExtensions[i].extensionName);
+            enabledExtensions.insert(deviceExtensions[i].extensionName);
         }
     }
 
@@ -426,12 +227,16 @@ bool CVulkanRenderer::isDeviceSuitable(vk::PhysicalDevice physicalDevice) {
     if (!GetQueueFamilies(physicalDevice).isComplete())
         return false;
 
-    std::vector<std::string> stub;
+    std::unordered_set<std::string> stub;
     if (!InitializeDeviceExtensions(physicalDevice, stub))
         return false;
 
     CSwapChainInfo swapChainInfo = GetSwapChainInfo(physicalDevice);
     if (swapChainInfo.m_formats.empty() || swapChainInfo.m_presentModes.empty())
+        return false;
+
+    vk::PhysicalDeviceFeatures supportedFeatures = physicalDevice.getFeatures();;
+    if (!supportedFeatures.fillModeNonSolid || !supportedFeatures.samplerAnisotropy)
         return false;
 
     return true;
@@ -454,6 +259,8 @@ vk::PhysicalDevice CVulkanRenderer::PickPhysicalDevice() {
         throw std::runtime_error("Failed to find a suitable GPU!\n");
     }
 
+    m_physicslDeviceProps = physicalDevice.getProperties();
+
     return physicalDevice;
 }
 
@@ -473,12 +280,14 @@ void CVulkanRenderer::InitializeLogicalDevice() {
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    m_requestedDeviceFeatures.fillModeNonSolid = true;
-
     std::vector<const char*> enabledExtensions {};
     enabledExtensions.reserve(m_enabledDeviceExtensions.size());
-    for (int i = 0; i < m_enabledDeviceExtensions.size(); ++i)
-        enabledExtensions.emplace_back(m_enabledDeviceExtensions[i].c_str());
+    for (const std::string& extension_name : m_enabledDeviceExtensions) {
+        enabledExtensions.push_back(extension_name.c_str());
+    }
+
+    m_requestedDeviceFeatures.fillModeNonSolid = true;
+    m_requestedDeviceFeatures.samplerAnisotropy = true;
 
     vk::DeviceCreateInfo deviceInfo {};
     deviceInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -490,42 +299,36 @@ void CVulkanRenderer::InitializeLogicalDevice() {
     m_device = m_physicalDevice.createDevice(deviceInfo);
 }
 
-vk::SurfaceFormatKHR CVulkanRenderer::GetImageFormat() {
-    vk::SurfaceFormatKHR surfaceFormat {};
-
+vk::SurfaceFormatKHR CVulkanRenderer::ChoosetSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& formats) {
     for (const auto& availableFormat : m_swapChainInfo.m_formats) {
         if (availableFormat.format == vk::Format::eR8G8B8A8Srgb &&
             availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear
         ) {
-            surfaceFormat = availableFormat;
-            return surfaceFormat;
+            return availableFormat;
         }
     }
 
     Error << "Surface format was not selected!\n";
-    return surfaceFormat;
+    return formats[0];
 }
 
-vk::PresentModeKHR CVulkanRenderer::GetPresentMode() {
-    vk::PresentModeKHR presentMode {};
-
-    for (const auto& availablePresentMode : m_swapChainInfo.m_presentModes) {
+vk::PresentModeKHR CVulkanRenderer::ChoosePresentMode(const std::vector<vk::PresentModeKHR>& presentModes) {
+    for (const auto& availablePresentMode : presentModes) {
         // VSYNC
         if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
-            presentMode = availablePresentMode;
-            return presentMode;
+            return availablePresentMode;
         }
     }
 
-    Error << "Correct present mode was not selected!";
-    return presentMode;
+    Error << "Correct present mode was not selected!\n";
+    return presentModes[0];
 }
 
-vk::Extent2D CVulkanRenderer::GetSwapChainExtent() {
+vk::Extent2D CVulkanRenderer::ChooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
     vk::Extent2D swapChainExtent {};
 
-    if (m_swapChainInfo.m_capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        swapChainExtent = m_swapChainInfo.m_capabilities.currentExtent;
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        swapChainExtent = capabilities.currentExtent;
     } else {
         int width = 0, height = 0;
         if (m_context.GetWindow()->GetVendor() == WindowVendor::eSDL) {    // TODO: make special vulkan window
@@ -603,24 +406,29 @@ void CVulkanRenderer::CreateSwapChain(
     m_swapChain = m_device.createSwapchainKHR(swapChainInfo);
 }
 
-void CVulkanRenderer::CreateImageViews() {
-    m_imageViews.resize(m_images.size());
+vk::ImageView CVulkanRenderer::CreateImageView(vk::Image image, vk::Format format) {
+    vk::ImageViewCreateInfo imageViewInfo {};
+    imageViewInfo.image = image;
+    imageViewInfo.viewType = vk::ImageViewType::e2D;
+    imageViewInfo.format = format;
+    imageViewInfo.components.r = vk::ComponentSwizzle::eIdentity;
+    imageViewInfo.components.g = vk::ComponentSwizzle::eIdentity;
+    imageViewInfo.components.b = vk::ComponentSwizzle::eIdentity;
+    imageViewInfo.components.a = vk::ComponentSwizzle::eIdentity;
+    imageViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+    imageViewInfo.subresourceRange.baseMipLevel = 0;
+    imageViewInfo.subresourceRange.levelCount = 1;
+    imageViewInfo.subresourceRange.baseArrayLayer = 0;
+    imageViewInfo.subresourceRange.layerCount = 1;
 
-    for (std::size_t i = 0; i < m_images.size(); ++i) {
-        vk::ImageViewCreateInfo imageViewInfo {};
-        imageViewInfo.image = m_images[i];
-        imageViewInfo.viewType = vk::ImageViewType::e2D;
-        imageViewInfo.format = m_surfaceFormat.format;
-        imageViewInfo.components.r = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.components.g = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.components.b = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.components.a = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        imageViewInfo.subresourceRange.baseMipLevel = 0;
-        imageViewInfo.subresourceRange.levelCount = 1;
-        imageViewInfo.subresourceRange.baseArrayLayer = 0;
-        imageViewInfo.subresourceRange.layerCount = 1;
-        m_imageViews[i] = m_device.createImageView(imageViewInfo);
+    return m_device.createImageView(imageViewInfo);
+}
+
+void CVulkanRenderer::CreateImageViews(const std::vector<vk::Image>& images, vk::Format format) {
+    m_imageViews.resize(images.size());
+
+    for (std::size_t i = 0; i < images.size(); ++i) {
+        m_imageViews[i] = CreateImageView(images[i], format);
     }
 }
 
@@ -664,6 +472,13 @@ void CVulkanRenderer::CreateRenderPass() {
 }
 
 vk::DescriptorSetLayout CVulkanRenderer::CreateDescriptorSetLayout() {
+    vk::DescriptorSetLayoutBinding samplerLayoutBinding {};
+    samplerLayoutBinding.binding = 1;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+    
     vk::DescriptorSetLayoutBinding uboLayoutBinding {};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -671,9 +486,10 @@ vk::DescriptorSetLayout CVulkanRenderer::CreateDescriptorSetLayout() {
     uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
+    std::array<vk::DescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
     vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutInfo {};
-    descriptorSetLayoutInfo.bindingCount = 1;
-    descriptorSetLayoutInfo.pBindings = &uboLayoutBinding;
+    descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    descriptorSetLayoutInfo.pBindings = bindings.data();
 
     return m_device.createDescriptorSetLayout(descriptorSetLayoutInfo);
 }
@@ -762,7 +578,7 @@ void CVulkanRenderer::CreatePipeline() {
     rasterizer.rasterizerDiscardEnable = vk::False;
     rasterizer.polygonMode = vk::PolygonMode::eFill;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = vk::CullModeFlagBits::eBack;
+    rasterizer.cullMode = vk::CullModeFlagBits::eNone;
     rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
     rasterizer.depthBiasEnable = vk::False;
     rasterizer.depthBiasConstantFactor = 0.0f;
@@ -1004,12 +820,15 @@ void CVulkanRenderer::CreateUniformBuffers() {
 }
 
 void CVulkanRenderer::CreateDescriptorPool() {
-    vk::DescriptorPoolSize poolSize {};
-    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    std::array<vk::DescriptorPoolSize, 2> poolSizes{};
+    poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     vk::DescriptorPoolCreateInfo poolInfo {};
     poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     m_descriptorPool = m_device.createDescriptorPool(poolInfo);
@@ -1025,26 +844,35 @@ void CVulkanRenderer::CreateDescriptorSets() {
 
     m_descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
     m_descriptorSets = m_device.allocateDescriptorSets(allocInfo);
-}
 
-void CVulkanRenderer::UpdateDecriptorSets(const std::vector<CBuffer>& buffer, vk::DeviceSize sizeOfBuffer) {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vk::DescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = buffer[i].buffer;
+        vk::DescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = m_uniformBuffers[i].buffer;
         bufferInfo.offset = 0;
-        bufferInfo.range = sizeOfBuffer;
+        bufferInfo.range = sizeof(CUniformBufferObject);
 
-        vk::WriteDescriptorSet descriptorWrite {};
-        descriptorWrite.dstSet = m_descriptorSets[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &bufferInfo;
-        descriptorWrite.pImageInfo = nullptr;       // Optional
-        descriptorWrite.pTexelBufferView = nullptr; // Optional
+        vk::DescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfo.imageView = m_textureImageView;
+        imageInfo.sampler = m_textureSampler;
 
-        m_device.updateDescriptorSets(1, &descriptorWrite, 0, nullptr);
+        std::array<vk::WriteDescriptorSet, 2> descriptorWrites {};
+
+        descriptorWrites[0].dstSet = m_descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+        descriptorWrites[1].dstSet = m_descriptorSets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+
+        m_device.updateDescriptorSets(static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 }
 
@@ -1107,13 +935,19 @@ void CVulkanRenderer::TransitionImageLayout(
     vk::PipelineStageFlags sourceStage {};
     vk::PipelineStageFlags destinationStage {};
 
-    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
+    if (
+        oldLayout == vk::ImageLayout::eUndefined &&
+        newLayout == vk::ImageLayout::eTransferDstOptimal
+    ) {
         barrier.srcAccessMask = {};
         barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
         sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
         destinationStage = vk::PipelineStageFlagBits::eTransfer;
-    } else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+    } else if (
+        oldLayout == vk::ImageLayout::eTransferDstOptimal &&
+        newLayout == vk::ImageLayout::eShaderReadOnlyOptimal
+    ) {
         barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
         barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
@@ -1123,8 +957,6 @@ void CVulkanRenderer::TransitionImageLayout(
         throw std::invalid_argument("unsupported layout transition!");
     }
 
-    barrier.srcAccessMask = {}; // TODO
-    barrier.dstAccessMask = {}; // TODO
     commandBuffer.pipelineBarrier(
         sourceStage, destinationStage,
         {},
@@ -1217,8 +1049,33 @@ void CVulkanRenderer::CreateTextureImage() {
         vk::ImageLayout::eTransferDstOptimal,
         vk::ImageLayout::eShaderReadOnlyOptimal
     );
-    
+
     m_allocator.destroyBuffer(stagingBuffer.buffer, stagingBuffer.allocation);
+}
+
+void CVulkanRenderer::CreateTextureImageView(vk::Format format) {
+    m_textureImageView = CreateImageView(m_textureImage.image, format);
+}
+
+void CVulkanRenderer::CreateTextureSampler() {
+    vk::SamplerCreateInfo samplerInfo{};
+    samplerInfo.magFilter = vk::Filter::eLinear;
+    samplerInfo.minFilter = vk::Filter::eLinear;
+    samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.anisotropyEnable = vk::True;
+    samplerInfo.maxAnisotropy = m_physicslDeviceProps.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+    samplerInfo.unnormalizedCoordinates = vk::False;
+    samplerInfo.compareEnable = vk::False;
+    samplerInfo.compareOp = vk::CompareOp::eAlways;
+    samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    m_textureSampler = m_device.createSampler(samplerInfo);
 }
 
 void CVulkanRenderer::Draw() {
@@ -1329,28 +1186,33 @@ void CVulkanRenderer::Draw() {
 }
 
 void CVulkanRenderer::RecreateSwapChain() {
-    vkDeviceWaitIdle(m_device);
     m_device.waitIdle();
 
     CleanupSwapChain();
-    m_swapChainExtent = GetSwapChainExtent();
+
+    m_swapChainInfo = GetSwapChainInfo(m_physicalDevice);
+
+    m_surfaceFormat = ChoosetSurfaceFormat(m_swapChainInfo.m_formats);
+    m_presentMode = ChoosePresentMode(m_swapChainInfo.m_presentModes);
+    m_swapChainExtent = ChooseSwapChainExtent(m_swapChainInfo.m_capabilities);
 
     CreateSwapChain(m_surfaceFormat, m_presentMode, m_swapChainExtent);
+
     m_images = m_device.getSwapchainImagesKHR(m_swapChain);
-    CreateImageViews();
+    CreateImageViews(m_images, m_surfaceFormat.format);
     CreateFramebuffers();
 }
 
 void CVulkanRenderer::UpdateUniformBuffer(uint32_t currentImage, vk::Extent2D swapChainExtent) {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
-    auto currentTime = std::chrono::high_resolution_clock::now(); //-V656
+    auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     CUniformBufferObject ubo {};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+    ubo.proj = glm::perspective(glm::radians(40.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
     memcpy(m_uniformBuffers[currentImage].mapped, &ubo, sizeof(ubo));
 }

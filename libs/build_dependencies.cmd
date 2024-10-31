@@ -16,7 +16,9 @@ if not exist "..\bin\windows\SDL3" (
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="..\..\..\bin\windows\SDL3" %* .. || exit /b 1
     cmake --build . --config Release --parallel || exit /b 1
     cmake --install . --config Release || exit /b 1
-    cd ..\..\
+    cd ..\
+    rmdir /s /q build
+    cd ..
 )
 
 if not exist "..\bin\windows\glm" (
@@ -30,7 +32,9 @@ if not exist "..\bin\windows\glm" (
     cmake -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="..\..\..\bin\windows\glm" %* .. || exit /b 1
     cmake --build . --config Release --parallel || exit /b 1
     cmake --install . --config Release || exit /b 1
-    cd ..\..\
+    cd ..\
+    rmdir /s /q build
+    cd ..
 )
 
 if not exist "..\bin\windows\VulkanMemoryAllocator" (
@@ -44,7 +48,9 @@ if not exist "..\bin\windows\VulkanMemoryAllocator" (
     cmake -DCMAKE_BUILD_TYPE=Release -DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DCMAKE_INSTALL_PREFIX="..\..\..\bin\windows\VulkanMemoryAllocator" %* .. || exit /b 1
     cmake --build . --config Release --parallel || exit /b 1
     cmake --install . --config Release || exit /b 1
-    cd ..\..\
+    cd ..\
+    rmdir /s /q build
+    cd ..
 )
 
 if not exist "..\bin\windows\VulkanMemoryAllocator-Hpp" (
@@ -58,7 +64,9 @@ if not exist "..\bin\windows\VulkanMemoryAllocator-Hpp" (
     cmake -DCMAKE_BUILD_TYPE=Release -DVMA_HPP_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX="..\..\..\bin\windows\VulkanMemoryAllocator-Hpp" %* .. || exit /b 1
     cmake --build . --config Release --parallel || exit /b 1
     cmake --install . --config Release || exit /b 1
-    cd ..\..\
+    cd ..\
+    rmdir /s /q build
+    cd ..
 )
 
 echo Done.
