@@ -8,6 +8,8 @@ set(SOURCES
     renderer.hpp
     vulkan_renderer.hpp
     vulkan_renderer.cpp
+    vulkan_renderer_context.hpp
+    vulkan_renderer_context.cpp
     window.hpp
     SDL.hpp
     SDL_Vulkan.hpp
