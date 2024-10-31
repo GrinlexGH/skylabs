@@ -64,9 +64,7 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
             LocalFree(wchar_arg_list);
         }
 
-        if (CommandLine()->FindParam("-console")) {
-            InitConsole();
-        }
+        InitConsole();
 #else
         CommandLine()->CreateCmdLine(
             std::vector<std::string>(argv, argv + argc)

@@ -43,23 +43,27 @@ if(MSVC)
     endif()
 endif()
 
-if(WIN32)
-    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
-else()
-    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
-endif()
+option(SKYLABS_BUILD_DEPENDENCIES "Should you build all dependencies from the libs folder." ON)
 
-execute_process(
-    COMMAND ${BUILD_SCRIPT_CMD}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs/
-)
+if (SKYLABS_BUILD_DEPENDENCIES)
+    if(WIN32)
+        set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
+    else()
+        set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
+    endif()
 
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
+    execute_process(
+        COMMAND ${BUILD_SCRIPT_CMD}
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs/
+    )
 
-if(WIN32)
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
-elseif(UNIX)
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
+    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
+
+    if(WIN32)
+        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
+    elseif(UNIX)
+        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
+    endif()
 endif()
 
 find_package(glm REQUIRED)
