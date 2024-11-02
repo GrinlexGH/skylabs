@@ -18,7 +18,7 @@ BOOL CtrlHandler(DWORD fdwCtrlType) {
     return FALSE;
 }
 
-void InitConsole() {
+void SetupConsole() {
     FILE* fDummy;
     ::AllocConsole();
     freopen_s(&fDummy, "CONOUT$", "w", stdout);
@@ -64,7 +64,7 @@ DLL_EXPORT int CoreInit(int argc, char** argv) {
             LocalFree(wchar_arg_list);
         }
 
-        InitConsole();
+        SetupConsole();
 #else
         CommandLine()->CreateCmdLine(
             std::vector<std::string>(argv, argv + argc)

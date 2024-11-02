@@ -1,6 +1,6 @@
 #include "vulkan_renderer_context.hpp"
 
-#include "SDL_vulkan.hpp"
+#include "SDL_Vulkan.hpp"
 #include "console.hpp"
 
 #include <ranges>
@@ -87,7 +87,7 @@ std::vector<const char*> CVulkanRendererContext::FindValidationLayers() {
         "VK_LAYER_KHRONOS_validation"
     };
 
-    for (int i = 0; i < validationLayers.size(); ++i) {
+    for (std::size_t i = 0; i < validationLayers.size(); ++i) {
         const char* neededLayer = validationLayers[i];
 
         bool layerFound = false;

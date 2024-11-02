@@ -27,7 +27,7 @@ bool g_enableValidationLayers = false;
 bool g_enableValidationLayers = true;
 #endif
 
-constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 3;
+constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 1;
 
 const std::vector<CVertex> g_vertices = {
     {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
@@ -71,7 +71,6 @@ CVulkanRenderer::CVulkanRenderer(IWindow* window) {
     CreateRenderPass();
 
     m_descriptorSetLayout = CreateDescriptorSetLayout();
-    CreatePipelineLayout(m_descriptorSetLayout);
     CreatePipeline();
 
     CreateFramebuffers();
@@ -286,7 +285,6 @@ void CVulkanRenderer::InitializeLogicalDevice() {
         enabledExtensions.push_back(extension_name.c_str());
     }
 
-    m_requestedDeviceFeatures.fillModeNonSolid = true;
     m_requestedDeviceFeatures.samplerAnisotropy = true;
 
     vk::DeviceCreateInfo deviceInfo {};
@@ -325,10 +323,8 @@ vk::PresentModeKHR CVulkanRenderer::ChoosePresentMode(const std::vector<vk::Pres
 }
 
 vk::Extent2D CVulkanRenderer::ChooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
-    vk::Extent2D swapChainExtent {};
-
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        swapChainExtent = capabilities.currentExtent;
+        return capabilities.currentExtent;
     } else {
         int width = 0, height = 0;
         if (m_context.GetWindow()->GetVendor() == WindowVendor::eSDL) {    // TODO: make special vulkan window
@@ -357,10 +353,8 @@ vk::Extent2D CVulkanRenderer::ChooseSwapChainExtent(const vk::SurfaceCapabilitie
             m_swapChainInfo.m_capabilities.maxImageExtent.height
         );
 
-        swapChainExtent = actualExtent;
+        return actualExtent;
     }
-
-    return swapChainExtent;
 }
 
 void CVulkanRenderer::CreateSwapChain(
@@ -376,7 +370,6 @@ void CVulkanRenderer::CreateSwapChain(
 
     vk::SwapchainCreateInfoKHR swapChainInfo {};
     swapChainInfo.surface = m_context.GetSurface();
-    swapChainInfo.pNext = nullptr;
     swapChainInfo.minImageCount = imageCount;
     swapChainInfo.imageFormat = surfaceFormat.format;
     swapChainInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -401,7 +394,6 @@ void CVulkanRenderer::CreateSwapChain(
     swapChainInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     swapChainInfo.presentMode = presentMode;
     swapChainInfo.clipped = vk::False;
-    swapChainInfo.oldSwapchain = VK_NULL_HANDLE;
 
     m_swapChain = m_device.createSwapchainKHR(swapChainInfo);
 }
@@ -411,10 +403,6 @@ vk::ImageView CVulkanRenderer::CreateImageView(vk::Image image, vk::Format forma
     imageViewInfo.image = image;
     imageViewInfo.viewType = vk::ImageViewType::e2D;
     imageViewInfo.format = format;
-    imageViewInfo.components.r = vk::ComponentSwizzle::eIdentity;
-    imageViewInfo.components.g = vk::ComponentSwizzle::eIdentity;
-    imageViewInfo.components.b = vk::ComponentSwizzle::eIdentity;
-    imageViewInfo.components.a = vk::ComponentSwizzle::eIdentity;
     imageViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     imageViewInfo.subresourceRange.baseMipLevel = 0;
     imageViewInfo.subresourceRange.levelCount = 1;
@@ -452,19 +440,19 @@ void CVulkanRenderer::CreateRenderPass() {
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.pColorAttachments = &colorAttachmentRef;
 
+    vk::SubpassDependency dependency {};
+    dependency.srcSubpass = vk::SubpassExternal;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.srcAccessMask = vk::AccessFlagBits::eNone;
+    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+
     vk::RenderPassCreateInfo renderPassInfo {};
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpassDesc;
-
-    vk::SubpassDependency dependency {};
-    dependency.srcSubpass = vk::SubpassExternal;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.srcAccessMask = vk::AccessFlags {};
-    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
@@ -472,13 +460,6 @@ void CVulkanRenderer::CreateRenderPass() {
 }
 
 vk::DescriptorSetLayout CVulkanRenderer::CreateDescriptorSetLayout() {
-    vk::DescriptorSetLayoutBinding samplerLayoutBinding {};
-    samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorCount = 1;
-    samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
-    samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-    
     vk::DescriptorSetLayoutBinding uboLayoutBinding {};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -486,22 +467,19 @@ vk::DescriptorSetLayout CVulkanRenderer::CreateDescriptorSetLayout() {
     uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
+    vk::DescriptorSetLayoutBinding samplerLayoutBinding {};
+    samplerLayoutBinding.binding = 1;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
     std::array<vk::DescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
-    vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutInfo {};
-    descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    descriptorSetLayoutInfo.pBindings = bindings.data();
+    vk::DescriptorSetLayoutCreateInfo layoutInfo {};
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
-    return m_device.createDescriptorSetLayout(descriptorSetLayoutInfo);
-}
-
-void CVulkanRenderer::CreatePipelineLayout(vk::DescriptorSetLayout descriptorSetLayout) {
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-    m_pipelineLayout = m_device.createPipelineLayout(pipelineLayoutInfo);
+    return m_device.createDescriptorSetLayout(layoutInfo);
 }
 
 vk::ShaderModule CVulkanRenderer::CreateShaderModule(const std::vector<char>& byteCode) {
@@ -522,7 +500,6 @@ void CVulkanRenderer::CreatePipeline() {
     vk::ShaderModule vertexShader = CreateShaderModule(vertShaderCode);
     vk::ShaderModule fragmentShader = CreateShaderModule(fragShaderCode);
 
-    // this I can implement via templates
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo {};
     vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
     vertShaderStageInfo.module = vertexShader;
@@ -538,11 +515,14 @@ void CVulkanRenderer::CreatePipeline() {
     pipelineInfo.pStages = shaderStages;
 
     //==========
+    vk::VertexInputBindingDescription bindingDescription = CVertex::getBindingDescription();
+    std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions = CVertex::getAttributeDescriptions();
+
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.pVertexBindingDescriptions = nullptr;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     pipelineInfo.pVertexInputState = &vertexInputInfo;
 
@@ -552,6 +532,13 @@ void CVulkanRenderer::CreatePipeline() {
     inputAssembly.primitiveRestartEnable = vk::False;
 
     pipelineInfo.pInputAssemblyState = &inputAssembly;
+
+    //==========
+    vk::PipelineViewportStateCreateInfo viewportState {};
+    viewportState.viewportCount = 1;
+    viewportState.scissorCount = 1;
+
+    pipelineInfo.pViewportState = &viewportState;
 
     //==========
     std::vector<vk::DynamicState> dynamicStates = {
@@ -566,24 +553,14 @@ void CVulkanRenderer::CreatePipeline() {
     pipelineInfo.pDynamicState = &dynamicState;
 
     //==========
-    vk::PipelineViewportStateCreateInfo viewportState {};
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount = 1;
-
-    pipelineInfo.pViewportState = &viewportState;
-
-    //==========
     vk::PipelineRasterizationStateCreateInfo rasterizer {};
     rasterizer.depthClampEnable = vk::False;
     rasterizer.rasterizerDiscardEnable = vk::False;
     rasterizer.polygonMode = vk::PolygonMode::eFill;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = vk::CullModeFlagBits::eNone;
+    rasterizer.cullMode = vk::CullModeFlagBits::eBack;
     rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
     rasterizer.depthBiasEnable = vk::False;
-    rasterizer.depthBiasConstantFactor = 0.0f;
-    rasterizer.depthBiasClamp = 0.0f;
-    rasterizer.depthBiasSlopeFactor = 0.0f;
 
     pipelineInfo.pRasterizationState = &rasterizer;
 
@@ -591,10 +568,6 @@ void CVulkanRenderer::CreatePipeline() {
     vk::PipelineMultisampleStateCreateInfo multisampling {};
     multisampling.sampleShadingEnable = vk::False;
     multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
-    multisampling.minSampleShading = 1.0f;
-    multisampling.pSampleMask = nullptr;
-    multisampling.alphaToCoverageEnable = vk::False;
-    multisampling.alphaToOneEnable = vk::False;
 
     pipelineInfo.pMultisampleState = &multisampling;
 
@@ -623,8 +596,14 @@ void CVulkanRenderer::CreatePipeline() {
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
 
-    pipelineInfo.pDepthStencilState = nullptr;
     pipelineInfo.pColorBlendState = &colorBlending;
+
+    //==========
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
+
+    m_pipelineLayout = m_device.createPipelineLayout(pipelineLayoutInfo);
 
     //==========
     pipelineInfo.layout = m_pipelineLayout;
@@ -632,14 +611,6 @@ void CVulkanRenderer::CreatePipeline() {
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
-
-    auto bindingDescription = CVertex::getBindingDescription();
-    auto attributeDescriptions = CVertex::getAttributeDescriptions();
-
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     m_pipeline = m_device.createGraphicsPipeline(VK_NULL_HANDLE, pipelineInfo).value;
 
@@ -711,14 +682,14 @@ CVulkanRenderer::CBuffer CVulkanRenderer::CreateBuffer(
 }
 
 vk::CommandBuffer CVulkanRenderer::BeginSingleTimeCommands() {
-    vk::CommandBufferAllocateInfo allocInfo{};
+    vk::CommandBufferAllocateInfo allocInfo {};
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
     allocInfo.commandPool = m_commandPool;
     allocInfo.commandBufferCount = 1;
 
     vk::CommandBuffer commandBuffer = m_device.allocateCommandBuffers(allocInfo)[0];
 
-    vk::CommandBufferBeginInfo beginInfo{};
+    vk::CommandBufferBeginInfo beginInfo {};
     beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
     commandBuffer.begin(beginInfo);
 
@@ -728,7 +699,7 @@ vk::CommandBuffer CVulkanRenderer::BeginSingleTimeCommands() {
 void CVulkanRenderer::EndSingleTimeCommands(vk::CommandBuffer commandBuffer) {
     commandBuffer.end();
 
-    vk::SubmitInfo submitInfo{};
+    vk::SubmitInfo submitInfo {};
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
@@ -1058,7 +1029,7 @@ void CVulkanRenderer::CreateTextureImageView(vk::Format format) {
 }
 
 void CVulkanRenderer::CreateTextureSampler() {
-    vk::SamplerCreateInfo samplerInfo{};
+    vk::SamplerCreateInfo samplerInfo {};
     samplerInfo.magFilter = vk::Filter::eLinear;
     samplerInfo.minFilter = vk::Filter::eLinear;
     samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
