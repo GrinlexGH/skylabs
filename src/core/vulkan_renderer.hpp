@@ -36,7 +36,7 @@ struct CVertex {
 
         attributeDescriptions[1].binding = 0;
         attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = vk::Format::eR32G32Sfloat;
+        attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
         attributeDescriptions[1].offset = offsetof(CVertex, color);
 
         attributeDescriptions[2].binding = 0;
@@ -99,9 +99,9 @@ private:
     };
 
     struct CUniformBufferObject {
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 proj;
+        alignas(16) glm::mat4 model;
+        alignas(16) glm::mat4 view;
+        alignas(16) glm::mat4 proj;
     };
 
     void CreateAllocator();
@@ -133,7 +133,6 @@ private:
     void CreateRenderPass();
 
     vk::DescriptorSetLayout CreateDescriptorSetLayout();
-    void CreatePipelineLayout(vk::DescriptorSetLayout descriptorSetLayout);
     vk::ShaderModule CreateShaderModule(const std::vector<char>& byteCode);
     void CreatePipeline();
 
