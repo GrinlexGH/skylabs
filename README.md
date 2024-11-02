@@ -10,6 +10,21 @@ For other libraries cmake uses `build_dependencies` script. **You must install a
 
 Discord: grinlex
 
+## Cloning
+This repository contains submodules for external dependencies, so when doing a fresh clone you need to clone recursively:
+
+```
+git clone --recursive https://github.com/SaschaWillems/Vulkan.git
+```
+
+Existing repositories can be updated manually:
+
+```
+git submodule init
+git submodule update
+```
+
+
 ## Style guide
 
 ### General
