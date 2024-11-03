@@ -56,5 +56,6 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     glm::glm
     GPUOpen::VulkanMemoryAllocator
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
+    tinyobjloader::tinyobjloader
     #GLFW3::GLFW3
 )
