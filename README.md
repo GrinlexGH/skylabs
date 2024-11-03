@@ -8,7 +8,7 @@ Requirements for build:
 
 For other libraries cmake uses `build_dependencies` script. **You must install all dependencies to build these libraries manually.**
 
-Discord: grinlex
+Discord: [grinlex](https://discord.gg/WX9HSAmPDF)
 
 ## Cloning
 This repository contains submodules for external dependencies, so when doing a fresh clone you need to clone recursively:
