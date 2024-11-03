@@ -6,6 +6,8 @@
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #include <vulkan/vulkan.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 #include <glm/glm.hpp>
 #include <vk_mem_alloc.hpp>
 
@@ -13,7 +15,7 @@
 #include <optional>
 
 struct CVertex {
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 color;
     glm::vec2 texCoord;
 
@@ -31,7 +33,7 @@ struct CVertex {
 
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
+        attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
         attributeDescriptions[0].offset = offsetof(CVertex, pos);
 
         attributeDescriptions[1].binding = 0;
@@ -46,7 +48,21 @@ struct CVertex {
 
         return attributeDescriptions;
     }
+
+    bool operator==(const CVertex& other) const {
+        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    }
 };
+
+namespace std {
+    template<> struct hash<CVertex> {
+        size_t operator()(CVertex const& vertex) const {
+            return ((hash<glm::vec3>()(vertex.pos) ^
+                   (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+                   (hash<glm::vec2>()(vertex.texCoord) << 1);
+        }
+    };
+}
 
 class CVulkanRenderer final : public IRenderer {
 public:
@@ -127,7 +143,7 @@ private:
         vk::Extent2D extent
     );
 
-    vk::ImageView CreateImageView(vk::Image image, vk::Format format);
+    vk::ImageView CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
     void CreateImageViews(const std::vector<vk::Image>& images, vk::Format format);
 
     void CreateRenderPass();
@@ -135,6 +151,11 @@ private:
     vk::DescriptorSetLayout CreateDescriptorSetLayout();
     vk::ShaderModule CreateShaderModule(const std::vector<char>& byteCode);
     void CreatePipeline();
+
+    vk::Format GetSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
+    vk::Format GetDepthFormat();
+    bool HasStencilComponent(vk::Format format);
+    void CreateDepthResources();
 
     void CreateFramebuffers();
 
@@ -152,6 +173,8 @@ private:
     void EndSingleTimeCommands(vk::CommandBuffer commandBuffer);
 
     void CopyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
+
+    void LoadModel();
 
     void CreateVertexBuffer();
     void CreateIndexBuffer();
@@ -224,6 +247,8 @@ private:
     std::vector<vk::Semaphore> m_renderFinishedSemaphores {};
     std::vector<vk::Fence> m_inFlightFences {};
 
+    std::vector<CVertex> vertices;
+    std::vector<uint32_t> indices;
     CBuffer m_vertexBuffer {};
     CBuffer m_indexBuffer {};
 
@@ -231,6 +256,9 @@ private:
 
     vk::DescriptorPool m_descriptorPool {};
     std::vector<vk::DescriptorSet> m_descriptorSets {};
+
+    CImage m_depthImage {};
+    vk::ImageView m_depthImageView {};
 
     CImage m_textureImage {};
     vk::ImageView m_textureImageView {};

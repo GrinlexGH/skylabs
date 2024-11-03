@@ -6,12 +6,14 @@
 #include "resourceloader.hpp"
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <tiny_obj_loader.h>
 
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-#include "vk_mem_alloc.hpp"
+#include <vk_mem_alloc.hpp>
 
 #include "stb_image.h"
 
@@ -29,16 +31,8 @@ bool g_enableValidationLayers = true;
 
 constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 1;
 
-const std::vector<CVertex> g_vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> g_indices = {
-    0, 1, 2, 2, 3, 0
-};
+const std::string MODEL_PATH = "chalet.obj";
+const std::string TEXTURE_PATH = "chalet.jpg";
 
 //============
 // CVulkanRenderer
@@ -73,10 +67,14 @@ CVulkanRenderer::CVulkanRenderer(IWindow* window) {
     m_descriptorSetLayout = CreateDescriptorSetLayout();
     CreatePipeline();
 
+    CreateDepthResources();
+
     CreateFramebuffers();
 
     CreateCommandPool();
     CreateCommandBuffers();
+
+    LoadModel();
 
     CreateVertexBuffer();
     CreateIndexBuffer();
@@ -398,12 +396,12 @@ void CVulkanRenderer::CreateSwapChain(
     m_swapChain = m_device.createSwapchainKHR(swapChainInfo);
 }
 
-vk::ImageView CVulkanRenderer::CreateImageView(vk::Image image, vk::Format format) {
+vk::ImageView CVulkanRenderer::CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) {
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = image;
     imageViewInfo.viewType = vk::ImageViewType::e2D;
     imageViewInfo.format = format;
-    imageViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+    imageViewInfo.subresourceRange.aspectMask = aspectFlags;
     imageViewInfo.subresourceRange.baseMipLevel = 0;
     imageViewInfo.subresourceRange.levelCount = 1;
     imageViewInfo.subresourceRange.baseArrayLayer = 0;
@@ -416,7 +414,7 @@ void CVulkanRenderer::CreateImageViews(const std::vector<vk::Image>& images, vk:
     m_imageViews.resize(images.size());
 
     for (std::size_t i = 0; i < images.size(); ++i) {
-        m_imageViews[i] = CreateImageView(images[i], format);
+        m_imageViews[i] = CreateImageView(images[i], format, vk::ImageAspectFlagBits::eColor);
     }
 }
 
@@ -431,26 +429,42 @@ void CVulkanRenderer::CreateRenderPass() {
     colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
     colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
+    vk::AttachmentDescription depthAttachment {};
+    depthAttachment.format = GetDepthFormat();
+    depthAttachment.samples = vk::SampleCountFlagBits::e1;
+    depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+    depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+    depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
     vk::AttachmentReference colorAttachmentRef {};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+    vk::AttachmentReference depthAttachmentRef {};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
     vk::SubpassDescription subpassDesc {};
     subpassDesc.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.pColorAttachments = &colorAttachmentRef;
+    subpassDesc.pDepthStencilAttachment = &depthAttachmentRef;
 
     vk::SubpassDependency dependency {};
     dependency.srcSubpass = vk::SubpassExternal;
     dependency.dstSubpass = 0;
-    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
     dependency.srcAccessMask = vk::AccessFlagBits::eNone;
-    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
+    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 
+    std::array<vk::AttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
     vk::RenderPassCreateInfo renderPassInfo {};
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpassDesc;
     renderPassInfo.dependencyCount = 1;
@@ -521,7 +535,7 @@ void CVulkanRenderer::CreatePipeline() {
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -551,6 +565,20 @@ void CVulkanRenderer::CreatePipeline() {
     dynamicState.pDynamicStates = dynamicStates.data();
 
     pipelineInfo.pDynamicState = &dynamicState;
+
+    //==========
+    vk::PipelineDepthStencilStateCreateInfo depthStencil {};
+    depthStencil.depthTestEnable = vk::True;
+    depthStencil.depthWriteEnable = vk::True;
+    depthStencil.depthCompareOp = vk::CompareOp::eLess;
+    depthStencil.depthBoundsTestEnable = vk::False;
+    depthStencil.minDepthBounds = 0.0f; // Optional
+    depthStencil.maxDepthBounds = 1.0f; // Optional
+    depthStencil.stencilTestEnable = vk::False;
+    depthStencil.front = vk::StencilOpState {}; // Optional
+    depthStencil.back = vk::StencilOpState {}; // Optional
+
+    pipelineInfo.pDepthStencilState = &depthStencil;
 
     //==========
     vk::PipelineRasterizationStateCreateInfo rasterizer {};
@@ -618,17 +646,61 @@ void CVulkanRenderer::CreatePipeline() {
     m_device.destroyShaderModule(vertexShader);
 }
 
+
+vk::Format CVulkanRenderer::GetSupportedFormat(
+    const std::vector<vk::Format>& candidates,
+    vk::ImageTiling tiling,
+    vk::FormatFeatureFlags features
+) {
+    for (vk::Format format : candidates) {
+        vk::FormatProperties props = m_physicalDevice.getFormatProperties(format);
+        if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+            return format;
+        } else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("Failed to find supported format!");
+}
+
+vk::Format CVulkanRenderer::GetDepthFormat() {
+    return GetSupportedFormat(
+        { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
+        vk::ImageTiling::eOptimal,
+        vk::FormatFeatureFlagBits::eDepthStencilAttachment
+    );
+}
+
+bool CVulkanRenderer::HasStencilComponent(vk::Format format) {
+    return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
+}
+
+void CVulkanRenderer::CreateDepthResources() {
+    vk::Format depthFormat = GetDepthFormat();
+    m_depthImage = CreateImage(
+        m_swapChainExtent.width,
+        m_swapChainExtent.height,
+        depthFormat,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    );
+    m_depthImageView = CreateImageView(m_depthImage.image, depthFormat, vk::ImageAspectFlagBits::eDepth);
+}
+
 void CVulkanRenderer::CreateFramebuffers() {
     m_frameBuffers.resize(m_imageViews.size());
 
     for (std::size_t i = 0; i < m_imageViews.size(); i++) {
-        vk::ImageView attachments[] = {
-            m_imageViews[i]
+        std::array<vk::ImageView, 2> attachments = {
+            m_imageViews[i],
+            m_depthImageView
         };
         vk::FramebufferCreateInfo frameBufferInfo {};
         frameBufferInfo.renderPass = m_renderPass;
-        frameBufferInfo.attachmentCount = 1;
-        frameBufferInfo.pAttachments = attachments;
+        frameBufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        frameBufferInfo.pAttachments = attachments.data();
         frameBufferInfo.width = m_swapChainExtent.width;
         frameBufferInfo.height = m_swapChainExtent.height;
         frameBufferInfo.layers = 1;
@@ -723,8 +795,47 @@ void CVulkanRenderer::CopyBuffer(
     EndSingleTimeCommands(commandBuffer);
 }
 
+void CVulkanRenderer::LoadModel() {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+        throw std::runtime_error(warn + err);
+    }
+
+    std::unordered_map<CVertex, uint32_t> uniqueVertices {};
+
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            CVertex vertex {};
+
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = {1.0f, 1.0f, 1.0f};
+
+            if (uniqueVertices.count(vertex) == 0) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(vertex);
+            }
+
+            indices.push_back(uniqueVertices[vertex]);
+        }
+    }
+}
+
 void CVulkanRenderer::CreateVertexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(g_vertices[0]) * g_vertices.size();
+    vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     CBuffer stagingBuffer = CreateBuffer(
         bufferSize,
@@ -734,7 +845,7 @@ void CVulkanRenderer::CreateVertexBuffer() {
     );
 
     stagingBuffer.mapped = m_allocator.mapMemory(stagingBuffer.allocation);
-        memcpy(stagingBuffer.mapped, g_vertices.data(), (std::size_t)bufferSize);
+        memcpy(stagingBuffer.mapped, vertices.data(), (std::size_t)bufferSize);
     m_allocator.unmapMemory(stagingBuffer.allocation);
 
     m_vertexBuffer = CreateBuffer(
@@ -750,7 +861,7 @@ void CVulkanRenderer::CreateVertexBuffer() {
 }
 
 void CVulkanRenderer::CreateIndexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(g_indices[0]) * g_indices.size();
+    vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     CBuffer stagingBuffer = CreateBuffer(
         bufferSize,
@@ -760,7 +871,7 @@ void CVulkanRenderer::CreateIndexBuffer() {
     );
 
     stagingBuffer.mapped = m_allocator.mapMemory(stagingBuffer.allocation);
-        memcpy(stagingBuffer.mapped, g_indices.data(), (std::size_t)bufferSize);
+        memcpy(stagingBuffer.mapped, indices.data(), (std::size_t)bufferSize);
     m_allocator.unmapMemory(stagingBuffer.allocation);
 
     m_indexBuffer = CreateBuffer(
@@ -971,7 +1082,7 @@ void CVulkanRenderer::CopyBufferToImage(
 
 void CVulkanRenderer::CreateTextureImage() {
     int texWidth = 0, texHeight = 0, texChannels = 0;
-    stbi_uc* pixels = stbi_load("texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
         throw std::runtime_error("failed to load texture image!");
     }
@@ -1025,7 +1136,7 @@ void CVulkanRenderer::CreateTextureImage() {
 }
 
 void CVulkanRenderer::CreateTextureImageView(vk::Format format) {
-    m_textureImageView = CreateImageView(m_textureImage.image, format);
+    m_textureImageView = CreateImageView(m_textureImage.image, format, vk::ImageAspectFlagBits::eColor);
 }
 
 void CVulkanRenderer::CreateTextureSampler() {
@@ -1081,17 +1192,26 @@ void CVulkanRenderer::Draw() {
     renderPassInfo.framebuffer = m_frameBuffers[imageIndex];
     renderPassInfo.renderArea.offset = vk::Offset2D { 0, 0 };
     renderPassInfo.renderArea.extent = m_swapChainExtent;
+
     vk::ClearValue clearColor {};
     clearColor.color = std::array<float, 4> { 0.0f, 0.0f, 0.005f, 1.0f };
+
+    std::array<vk::ClearValue, 2> clearValues {};
+    clearValues[0].color = vk::ClearColorValue {0.0f, 0.0f, 0.0f, 1.0f};
+    clearValues[1].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
+
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+
     m_commandBuffers[m_currentFrame].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
     m_commandBuffers[m_currentFrame].bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
 
     vk::Buffer vertexBuffers[] = { m_vertexBuffer.buffer };
     VkDeviceSize offsets[] = { 0 };
     m_commandBuffers[m_currentFrame].bindVertexBuffers(0, 1, vertexBuffers, offsets);
-    m_commandBuffers[m_currentFrame].bindIndexBuffer(m_indexBuffer.buffer, 0, vk::IndexType::eUint16);
+    m_commandBuffers[m_currentFrame].bindIndexBuffer(m_indexBuffer.buffer, 0, vk::IndexType::eUint32);
 
     vk::Viewport viewport {};
     viewport.x = 0.0f;
@@ -1117,7 +1237,7 @@ void CVulkanRenderer::Draw() {
         nullptr
     );
     m_commandBuffers[m_currentFrame].drawIndexed(
-        static_cast<uint32_t>(g_indices.size()),
+        static_cast<uint32_t>(indices.size()),
         1, 0, 0, 0
     );
 
@@ -1171,6 +1291,7 @@ void CVulkanRenderer::RecreateSwapChain() {
 
     m_images = m_device.getSwapchainImagesKHR(m_swapChain);
     CreateImageViews(m_images, m_surfaceFormat.format);
+    CreateDepthResources();
     CreateFramebuffers();
 }
 
@@ -1189,6 +1310,9 @@ void CVulkanRenderer::UpdateUniformBuffer(uint32_t currentImage, vk::Extent2D sw
 }
 
 void CVulkanRenderer::CleanupSwapChain() {
+    m_device.destroyImageView(m_depthImageView);
+    m_allocator.destroyImage(m_depthImage.image, m_depthImage.allocation);
+
     for (size_t i = 0; i < m_frameBuffers.size(); ++i) {
         m_device.destroyFramebuffer(m_frameBuffers[i]);
     }

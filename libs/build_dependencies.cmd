@@ -69,4 +69,20 @@ if not exist "..\bin\windows\VulkanMemoryAllocator-Hpp" (
     cd ..
 )
 
+if not exist "..\bin\windows\tinyobjloader" (
+    echo Compiling tinyobjloader
+    cd tinyobjloader
+    if exist build (
+        rmdir /s /q build
+    )
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="..\..\..\bin\windows\tinyobjloader" %* .. || exit /b 1
+    cmake --build . --config Release --parallel || exit /b 1
+    cmake --install . --config Release || exit /b 1
+    cd ..\
+    rmdir /s /q build
+    cd ..
+)
+
 echo Done.

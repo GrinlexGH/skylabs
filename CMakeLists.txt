@@ -29,6 +29,7 @@ else()
     message(FATAL_ERROR "${PROJECT_NAME} Compiles only on gcc, clang, apple clang or msvc!")
 endif()
 
+# TODO: options for building dependencies
 if(MSVC)
     if(CMAKE_GENERATOR_PLATFORM)
         set(CMAKE_OPTIONS
@@ -71,6 +72,7 @@ find_package(SDL3 REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
+find_package(tinyobjloader REQUIRED)
 #find_package(GLFW3 REQUIRED)
 
 set(PUBLIC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/public)
