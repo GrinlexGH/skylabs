@@ -10,3 +10,6 @@
 [submodule "libs/sources/VulkanMemoryAllocator-Hpp"]
 	path = libs/sources/VulkanMemoryAllocator-Hpp
 	url = https://github.com/YaaZ/VulkanMemoryAllocator-Hpp.git
+[submodule "libs/sources/tinyobjloader"]
+	path = libs/sources/tinyobjloader
+	url = https://github.com/tinyobjloader/tinyobjloader.git

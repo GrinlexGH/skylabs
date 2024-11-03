@@ -68,4 +68,20 @@ if [ ! -d "../bin/linux/VulkanMemoryAllocator-Hpp" ]; then
     cd ../
 fi
 
+if [ ! -d "../bin/linux/tinyobjloader" ]; then
+    echo "Compiling tinyobjloader"
+    cd tinyobjloader
+    if [ -d "build" ]; then
+        rm -rf build
+    fi
+    mkdir -p build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../../bin/linux/tinyobjloader" $* ..
+    cmake --build . --config Release --parallel
+    cmake --install . --config Release
+    cd ../
+    rm -rf build
+    cd ../
+fi
+
 echo "Done."
