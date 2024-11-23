@@ -3,27 +3,27 @@
 #include "platform.hpp"
 #include "console.hpp"
 #include "unicode.hpp"
-#include "SDL.hpp"
+#include "SDL/SDL.hpp"
 
 #include <vector>
 
 #ifdef PLATFORM_WINDOWS
     #include <windows.h>
+    #include <stdio.h>
     #include <iostream>
 
     #include "stc.hpp"
 
-BOOL CtrlHandler(DWORD fdwCtrlType) {
-    UNUSED(fdwCtrlType);
+BOOL CtrlHandler(DWORD /*fdwCtrlType*/) {
     return FALSE;
 }
 
-void SetupConsole() {
-    FILE* fDummy;
+static void SetupConsole() {
+    FILE* dummy;
     ::AllocConsole();
-    freopen_s(&fDummy, "CONOUT$", "w", stdout);
-    freopen_s(&fDummy, "CONOUT$", "w", stderr);
-    freopen_s(&fDummy, "CONIN$", "r", stdin);
+    freopen_s(&dummy, "CONOUT$", "w", stdout);
+    freopen_s(&dummy, "CONOUT$", "w", stderr);
+    freopen_s(&dummy, "CONIN$", "r", stdin);
     std::cout.clear();
     std::clog.clear();
     std::cerr.clear();
@@ -43,44 +43,29 @@ void SetupConsole() {
     std::cout << stc::true_color;
 }
 
-DLL_EXPORT int CoreInit(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
+DLL_EXPORT int CoreInit(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int /*nShowCmd*/) {
 #else
 DLL_EXPORT int CoreInit(int argc, char** argv) {
 #endif
-    try {
 #ifdef PLATFORM_WINDOWS
-        UNUSED(hInstance);
-        UNUSED(hPrevInstance);
-        UNUSED(lpCmdLine);
-        UNUSED(nShowCmd);
-        {
-            int argc;
-            wchar_t** wchar_arg_list = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
-            std::vector<std::string> char_arg_list(argc);
-            for (int i = 0; i < argc; ++i) {
-                char_arg_list[i] = narrow(wchar_arg_list[i]);
-            }
-            CommandLine()->CreateCmdLine(char_arg_list);
-            LocalFree(wchar_arg_list);
+    {
+        int argc = 0;
+        wchar_t** wcharArgList = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
+        std::vector<std::string> charArgList(argc);
+        for (int i = 0; i < argc; ++i) {
+            charArgList[i] = narrow(wcharArgList[i]);
         }
-
-        SetupConsole();
-#else
-        CommandLine()->CreateCmdLine(
-            std::vector<std::string>(argv, argv + argc)
-        );
-#endif
-        CLauncher launcher;
-        launcher.Run();
-        return 0;
-    } catch (const std::exception& e) {
-        // todo: get rid of ifdefs
-#ifdef PLATFORM_WINDOWS
-        ::MessageBeep(MB_ICONERROR);
-        ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!", MB_OK | MB_ICONERROR);
-#else
-        Error << e.what() << '\n';
-#endif
-        return 1;
+        CommandLine()->CreateCmdLine(charArgList);
+        LocalFree(wcharArgList);
     }
+
+    SetupConsole();
+#else
+    CommandLine()->CreateCmdLine(
+        std::vector<std::string>(argv, argv + argc)
+    );
+#endif
+    CLauncher launcher;
+    launcher.Run();
+    return 0;
 }

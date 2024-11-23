@@ -1,7 +1,7 @@
 #include "console.hpp"
 #include "vulkan_renderer.hpp"
-#include "SDL.hpp"
-#include "SDL_Vulkan.hpp"
+#include "../SDL/SDL.hpp"
+#include "../SDL/SDL_vulkan.hpp"
 #include "unicode.hpp"
 #include "resourceloader.hpp"
 
@@ -15,7 +15,8 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include <vk_mem_alloc.hpp>
 
-#include "stb_image.h"
+#include "../stb_image.h"
+#include "../camera.hpp"
 
 #include <fstream>
 #include <filesystem>
@@ -23,80 +24,93 @@
 #include <cassert>
 #include <set>
 
-#ifdef NDEBUG
-bool g_enableValidationLayers = false;
-#else
-bool g_enableValidationLayers = true;
-#endif
+constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 2;
 
-constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 1;
-
-const std::string MODEL_PATH = "chalet.obj";
-const std::string TEXTURE_PATH = "chalet.jpg";
+const std::string MODEL_PATH = "viking_room.obj";
+const std::string TEXTURE_PATH = "viking_room.png";
 
 //============
 // CVulkanRenderer
 
-CVulkanRenderer::CVulkanRenderer(IWindow* window) {
-    m_context.Initialize(window);
-
-    RegisterRequestedDeviceExtensions();
-    m_physicalDevice = PickPhysicalDevice();
-
-    m_queueFamilies = GetQueueFamilies(m_physicalDevice);
-    InitializeDeviceExtensions(m_physicalDevice, m_enabledDeviceExtensions);
-
-    InitializeLogicalDevice();
-
-    CreateAllocator();
-
-    m_graphicsQueue = m_device.getQueue(m_queueFamilies.m_graphicsFamily.value(), 0);
-    m_presentQueue = m_device.getQueue(m_queueFamilies.m_presentFamily.value(), 0);
-
-    m_swapChainInfo = GetSwapChainInfo(m_physicalDevice);
-    m_surfaceFormat = ChoosetSurfaceFormat(m_swapChainInfo.m_formats);
-    m_presentMode = ChoosePresentMode(m_swapChainInfo.m_presentModes);
-    m_swapChainExtent = ChooseSwapChainExtent(m_swapChainInfo.m_capabilities);
-    CreateSwapChain(m_surfaceFormat, m_presentMode, m_swapChainExtent);
-
-    m_images = m_device.getSwapchainImagesKHR(m_swapChain);
-    CreateImageViews(m_images, m_surfaceFormat.format);
-
-    CreateRenderPass();
-
-    m_descriptorSetLayout = CreateDescriptorSetLayout();
-    CreatePipeline();
-
-    CreateDepthResources();
-
-    CreateFramebuffers();
-
-    CreateCommandPool();
-    CreateCommandBuffers();
-
-    LoadModel();
-
-    CreateVertexBuffer();
-    CreateIndexBuffer();
-
-    CreateUniformBuffers();
-
-    CreateTextureImage();
-    CreateTextureImageView(m_surfaceFormat.format);
-    CreateTextureSampler();
-
-    CreateDescriptorPool();
-    CreateDescriptorSets();
-
-    m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-    for (std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        m_imageAvailableSemaphores[i] = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
-        m_renderFinishedSemaphores[i] = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
-        m_inFlightFences[i] = m_device.createFence(vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled });
+bool CVulkanRenderer::Initialize(IWindow* window) {
+    if (window == nullptr) {
+        throw std::runtime_error("Cannot initialize vulkan renderer. Window is null!\n");
     }
+    m_window = dynamic_cast<IVulkanWindow*>(window);
+
+    try {
+        VULKAN_HPP_DEFAULT_DISPATCHER.init();
+
+        _InitializeInstanceExtensions();
+        _InitializeInstance();
+
+        _SetRequiredDeviceExtensions();
+        m_window->CreateSurface(m_instance);
+        _PickPhysicalDevice();
+        m_queueFamiliesIndices = _FindQueueFamilies(m_physicalDevice);
+
+        _InitializeDeviceExtensions();
+        _initializeDevice();
+
+        _CreateAllocator();
+
+        m_graphicsQueue = m_device.getQueue(*m_queueFamiliesIndices.m_graphics, 0);
+        m_presentQueue = m_device.getQueue(*m_queueFamiliesIndices.m_present, 0);
+
+        m_surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR(m_window->GetSurface());
+        m_currentSwapchainExtent = _ChooseSwapChainExtent();
+
+        std::vector<vk::SurfaceFormatKHR> surfaceFormats = m_physicalDevice.getSurfaceFormatsKHR(m_window->GetSurface());
+        m_currentSurfaceFormat = _ChooseSurfaceFormat(surfaceFormats);
+
+        std::vector<vk::PresentModeKHR> presentModes = m_physicalDevice.getSurfacePresentModesKHR(m_window->GetSurface());
+        m_currentPresentMode = _ChoosePresentMode(presentModes);
+
+        _CreateSwapchain();
+        m_images = m_device.getSwapchainImagesKHR(m_swapChain);
+        _CreateImageViews(m_currentSurfaceFormat.format);
+
+        _CreateRenderPass();
+
+        _CreateDescriptorSetLayout();
+        _CreatePipeline();
+
+        _CreateDepthResources();
+
+        _CreateFramebuffers();
+
+        _CreateCommandPool();
+        _CreateCommandBuffers();
+
+        LoadModel();
+
+        _CreateVertexBuffer();
+        _CreateIndexBuffer();
+
+        _CreateUniformBuffers();
+
+        _CreateTextureImage();
+        _CreateTextureImageView(m_currentSurfaceFormat.format);
+        _CreateTextureSampler();
+
+        _CreateDescriptorPool();
+        _CreateDescriptorSets();
+
+        m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+        for (std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+            m_imageAvailableSemaphores[i] = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
+            m_renderFinishedSemaphores[i] = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
+            m_inFlightFences[i] = m_device.createFence(vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled });
+        }
+    } catch (const std::exception& e) {
+        Error << e.what() << '\n';
+        return false;
+    }
+
+    return true;
 }
 
 CVulkanRenderer::~CVulkanRenderer() {
@@ -121,9 +135,9 @@ CVulkanRenderer::~CVulkanRenderer() {
     m_allocator.destroyBuffer(m_indexBuffer.buffer, m_indexBuffer.allocation);
     m_allocator.destroyBuffer(m_vertexBuffer.buffer, m_vertexBuffer.allocation);
 
-    CleanupSwapChain();
+    _CleanupSwapchain();
 
-    m_context.GetInstance().destroySurfaceKHR(m_context.GetSurface());
+    m_instance.destroySurfaceKHR(m_window->GetSurface());
 
     m_device.destroyCommandPool(m_commandPool);
 
@@ -132,140 +146,344 @@ CVulkanRenderer::~CVulkanRenderer() {
 
     m_device.destroyRenderPass(m_renderPass);
 
-    vmaDestroyAllocator(m_allocator);
+    m_allocator.destroy();
     m_device.destroy();
 
-    if (g_enableValidationLayers) {
-        m_context.GetInstance().destroyDebugUtilsMessengerEXT(m_context.GetDebugMessenger());
+    if (m_enableValidationLayer) {
+        m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger);
     }
 
-    m_context.GetInstance().destroy();
+    m_instance.destroy();
 }
 
-void CVulkanRenderer::CreateAllocator() {
-    vma::AllocatorCreateInfo allocatorInfo = {};
-    allocatorInfo.flags = vma::AllocatorCreateFlagBits::eExtMemoryBudget;
-    allocatorInfo.vulkanApiVersion = vk::ApiVersion13;
-    allocatorInfo.physicalDevice = m_physicalDevice;
-    allocatorInfo.device = m_device;
-    allocatorInfo.instance = m_context.GetInstance();
+//==========
+// Instance
+//==========
 
-    vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher();
-    allocatorInfo.pVulkanFunctions = &vulkanFunctions;
-
-    m_allocator = vma::createAllocator(allocatorInfo);
-}
-
-CVulkanRenderer::CQueueFamilyIndices CVulkanRenderer::GetQueueFamilies(vk::PhysicalDevice physicalDevice) {
-    std::vector<vk::QueueFamilyProperties> queueFamiliesProperties = physicalDevice.getQueueFamilyProperties();
-
-    CQueueFamilyIndices queueFamilies {};
-
-    for (std::size_t i = 0; i < queueFamiliesProperties.size(); ++i) {
-        if (queueFamiliesProperties[i].queueFlags & vk::QueueFlagBits::eGraphics) {
-            queueFamilies.m_graphicsFamily = static_cast<uint32_t>(i);
-        }
-        if (physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), m_context.GetSurface())) {
-            queueFamilies.m_presentFamily = static_cast<uint32_t>(i);
-        }
-        if (queueFamilies.isComplete()) {
-            break;
-        }
-    }
-
-    return queueFamilies;
-}
-
-void CVulkanRenderer::RegisterRequestedDeviceExtensions() {
-    m_requestedDeviceExtensions[VK_KHR_SWAPCHAIN_EXTENSION_NAME] = true;
-    m_requestedDeviceExtensions[VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME] = true;
-}
-
-bool CVulkanRenderer::InitializeDeviceExtensions(
-    vk::PhysicalDevice physicalDevice,
-    std::unordered_set<std::string>& enabledExtensions
+VKAPI_ATTR vk::Bool32 VKAPI_CALL CVulkanRenderer::DebugCallback(
+    vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    vk::DebugUtilsMessageTypeFlagBitsEXT messageType,
+    const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData
 ) {
-    // Enable all requested extensions that are supported
-    std::vector<vk::ExtensionProperties> deviceExtensions = physicalDevice.enumerateDeviceExtensionProperties();
-    for (uint32_t i = 0; i < deviceExtensions.size(); ++i) {
-        if (m_requestedDeviceExtensions.contains(deviceExtensions[i].extensionName)) {
-            enabledExtensions.insert(deviceExtensions[i].extensionName);
+    (void)(messageType);
+    (void)(pUserData);
+
+    if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eError) {
+        std::cerr << std::format("\n\nERROR: {}\n\n", pCallbackData->pMessage) << std::endl;
+    } else if (messageSeverity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
+        std::cerr << std::format("\nWarning: {}\n", pCallbackData->pMessage) << std::endl;
+    } else {
+        std::cout << std::format("info: {}", pCallbackData->pMessage) << std::endl;
+    }
+    return VK_FALSE;
+}
+
+void CVulkanRenderer::_InitializeInstanceExtensions() {
+    // Setup all instance extensions
+    for (const auto& ext : m_window->GetRequiredInstanceExtensions()) {
+        m_instanceExtensions[ext] = true;
+    }
+    if (m_enableValidationLayer) {
+        m_instanceExtensions[VK_EXT_DEBUG_UTILS_EXTENSION_NAME] = false;
+    }
+
+    // Find extensions that device supports
+    std::vector<vk::ExtensionProperties> availableExtensions = vk::enumerateInstanceExtensionProperties();
+    for (const auto& ext : m_instanceExtensions) {
+        if (std::find_if(
+            availableExtensions.begin(),
+            availableExtensions.end(),
+            [&](vk::ExtensionProperties availableExt){ return ext.first == availableExt.extensionName; }
+        ) != availableExtensions.end()) {
+            m_enabledInstanceExtensions.insert(ext.first.data());
         }
     }
 
     // Check for required extensions
-    // .first is extension name, .second is required or not
-    bool allReqExtsFound = true;
-    for (const std::pair<const std::string, bool>& reqExt : m_requestedDeviceExtensions) {
-        if (std::ranges::find(enabledExtensions, reqExt.first.c_str()) == enabledExtensions.end()) {
-            if (reqExt.second) {
-                Error("Required instance extension \"%s\" not found.\n", reqExt.first.c_str());
-                allReqExtsFound = false;
+    bool reqExtNotFound = false;
+    for (const auto& ext : m_instanceExtensions) {
+        if (!m_enabledInstanceExtensions.contains(ext.first)) {
+            if (ext.second) {   // if required
+                std::cerr << std::format("Required extension not found: {}\n", ext.first);
+                reqExtNotFound = true;
             } else {
-                Msg("Optional instance extension \"%s\" not found.\n", reqExt.first.c_str());
+                std::cerr << std::format("Optional extension not found: {}\n", ext.first);
             }
         }
     }
 
-    return allReqExtsFound;
+    if (reqExtNotFound) {
+        throw std::runtime_error("Cannot find required instance extensions!");
+    }
 }
 
-CVulkanRenderer::CSwapChainInfo CVulkanRenderer::GetSwapChainInfo(vk::PhysicalDevice physicalDevice) {
-    CSwapChainInfo swapChainInfo {};
+static bool _IsValidationLayerFound() {
+    std::vector<vk::LayerProperties> availableLayers = vk::enumerateInstanceLayerProperties();
 
-    swapChainInfo.m_capabilities = physicalDevice.getSurfaceCapabilitiesKHR(m_context.GetSurface());
-    swapChainInfo.m_formats = physicalDevice.getSurfaceFormatsKHR(m_context.GetSurface());
-    swapChainInfo.m_presentModes = physicalDevice.getSurfacePresentModesKHR(m_context.GetSurface());
+    for (const auto& layer : availableLayers) {
+        if (strcmp("VK_LAYER_KHRONOS_validation", layer.layerName) == 0) {
+            return true;
+        }
+    }
 
-    return swapChainInfo;
+    return false;
 }
 
-bool CVulkanRenderer::isDeviceSuitable(vk::PhysicalDevice physicalDevice) {
-    if (!GetQueueFamilies(physicalDevice).isComplete())
-        return false;
+void CVulkanRenderer::_InitializeInstance() {
+    std::vector<const char*> enabledExtensions {};
+    for (const auto& ext : m_enabledInstanceExtensions) {
+        enabledExtensions.push_back(ext.c_str());
+    }
 
-    std::unordered_set<std::string> stub;
-    if (!InitializeDeviceExtensions(physicalDevice, stub))
-        return false;
+    if (m_enableValidationLayer &&
+        (!_IsValidationLayerFound() || !m_enabledInstanceExtensions.contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+    ) {
+        std::cerr << "Validation layer disabled.\n";
+        m_enableValidationLayer = false;
+    }
 
-    CSwapChainInfo swapChainInfo = GetSwapChainInfo(physicalDevice);
-    if (swapChainInfo.m_formats.empty() || swapChainInfo.m_presentModes.empty())
-        return false;
+    std::vector<const char*> enabledLayers {};
+    if (m_enableValidationLayer) {
+        enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
+    }
 
-    vk::PhysicalDeviceFeatures supportedFeatures = physicalDevice.getFeatures();;
-    if (!supportedFeatures.fillModeNonSolid || !supportedFeatures.samplerAnisotropy)
+    vk::InstanceCreateInfo instanceInfo {};
+
+    vk::ApplicationInfo appInfo {};
+    appInfo.pApplicationName = "Hotline Miami";
+    appInfo.applicationVersion = vk::makeApiVersion(0, 0, 0, 0);
+    appInfo.pEngineName = "Skylabs";
+    appInfo.engineVersion = vk::makeApiVersion(0, 0, 0, 0);
+    appInfo.apiVersion = vk::ApiVersion13;
+
+    instanceInfo.pApplicationInfo = &appInfo;
+    instanceInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
+    instanceInfo.ppEnabledLayerNames = enabledLayers.data();
+    instanceInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    instanceInfo.ppEnabledExtensionNames = enabledExtensions.data();
+
+    vk::DebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo {};
+    if (m_enableValidationLayer) {
+        debugMessengerCreateInfo.messageSeverity =
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
+
+        debugMessengerCreateInfo.messageType =
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
+
+        debugMessengerCreateInfo.pfnUserCallback =
+            reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(DebugCallback);
+
+        instanceInfo.pNext = &debugMessengerCreateInfo;
+    }
+
+    m_instance = vk::createInstance(instanceInfo);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance);
+
+    m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(debugMessengerCreateInfo);
+}
+
+//==========
+// Physical device
+//==========
+
+void CVulkanRenderer::_SetRequiredDeviceExtensions() {
+    m_deviceExtensions[VK_KHR_SWAPCHAIN_EXTENSION_NAME] = true;
+    m_deviceExtensions[VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME] = true;
+}
+
+static std::string _GetDeviceVendorName(const CVulkanRenderer::DeviceVendor deviceVendor) {
+    switch (deviceVendor) {
+        case CVulkanRenderer::DeviceVendor::eAMD:
+            return "AMD";
+        case CVulkanRenderer::DeviceVendor::eImgTec:
+            return "ImgTec";
+        case CVulkanRenderer::DeviceVendor::eApple:
+            return "Apple";
+        case CVulkanRenderer::DeviceVendor::eNVIDIA:
+            return "NVIDIA";
+        case CVulkanRenderer::DeviceVendor::eARM:
+            return "ARM";
+        case CVulkanRenderer::DeviceVendor::eMicrosoft:
+            return "Microsoft";
+        case CVulkanRenderer::DeviceVendor::eQualcomm:
+            return "Qualcomm";
+        case CVulkanRenderer::DeviceVendor::eIntel:
+            return "Intel";
+        default:
+            return "Unknown";
+    }
+}
+
+static std::string _GetDeviceTypeName(vk::PhysicalDeviceType deviceType) {
+    switch (deviceType) {
+        case vk::PhysicalDeviceType::eDiscreteGpu:
+            return "Discrete";
+        case vk::PhysicalDeviceType::eIntegratedGpu:
+            return "Integrated";
+        case vk::PhysicalDeviceType::eVirtualGpu:
+            return "Virtual";
+        case vk::PhysicalDeviceType::eCpu:
+            return "CPU";
+        case vk::PhysicalDeviceType::eOther:
+        default:
+            return "Other";
+    }
+}
+
+static bool _CheckExtensionSupport(vk::PhysicalDevice physicalDevice, const std::unordered_map<std::string, bool>& deviceExtensions) {
+    std::unordered_set<std::string> enabledDeviceExtensions {};
+
+    // Find extensions that device supports
+    std::vector<vk::ExtensionProperties> availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
+    for (const auto& ext : deviceExtensions) {
+        if (std::find_if(
+            availableExtensions.begin(),
+            availableExtensions.end(),
+            [&](vk::ExtensionProperties availableExt){ return ext.first == availableExt.extensionName; }
+        ) != availableExtensions.end()) {
+            enabledDeviceExtensions.insert(ext.first.data());
+        }
+    }
+
+    // Check for required extensions
+    bool reqExtNotFound = false;
+    for (const auto& ext : deviceExtensions) {
+        if (!enabledDeviceExtensions.contains(ext.first)) {
+            if (ext.second) {   // if required
+                std::cerr << std::format("Required extension not found: {}\n", ext.first);
+                reqExtNotFound = true;
+            } else {
+                std::cerr << std::format("Optional extension not found: {}\n", ext.first);
+            }
+        }
+    }
+
+    if (reqExtNotFound) {
         return false;
+    }
 
     return true;
 }
 
-vk::PhysicalDevice CVulkanRenderer::PickPhysicalDevice() {
-    std::vector<vk::PhysicalDevice> devices = m_context.GetInstance().enumeratePhysicalDevices();
-    if (devices.size() == 0) {
-        throw std::runtime_error("Failed to find GPUs with Vulkan support!\n");
+CVulkanRenderer::CQueueFamilyIndices CVulkanRenderer::_FindQueueFamilies(vk::PhysicalDevice physicalDevice) {
+    CQueueFamilyIndices indices {};
+    std::vector<vk::QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
+
+    int i = 0;
+    for (const auto& queueFamily : queueFamilies) {
+        if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
+            indices.m_graphics = i;
+        }
+
+        if (physicalDevice.getSurfaceSupportKHR(i, m_window->GetSurface())) {
+            indices.m_present = i;
+        }
+
+        if (indices.isComplete()) {
+            break;
+        }
+
+        i++;
     }
 
-    // Choose the device
-    vk::PhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    for (const vk::PhysicalDevice& device : devices) {
-        if (isDeviceSuitable(device))
-            physicalDevice = device;
-    }
-
-    if (physicalDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("Failed to find a suitable GPU!\n");
-    }
-
-    m_physicslDeviceProps = physicalDevice.getProperties();
-
-    return physicalDevice;
+    return indices;
 }
 
-void CVulkanRenderer::InitializeLogicalDevice() {
+bool CVulkanRenderer::_IsDeviceSuitable(vk::PhysicalDevice physicalDevice) {
+    if (!_CheckExtensionSupport(physicalDevice, m_deviceExtensions)) {
+        return false;
+    }
+
+    if (!_FindQueueFamilies(physicalDevice).isComplete()) {
+        return false;
+    }
+
+    vk::PhysicalDeviceFeatures features = physicalDevice.getFeatures();
+    if (!features.samplerAnisotropy &&
+        !features.wideLines
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
+static uint32_t _GetDeviceTypeScore(vk::PhysicalDeviceType deviceType) {
+    switch (deviceType) {
+        case vk::PhysicalDeviceType::eDiscreteGpu:
+            return 5;
+        case vk::PhysicalDeviceType::eIntegratedGpu:
+            return 4;
+        case vk::PhysicalDeviceType::eVirtualGpu:
+            return 3;
+        case vk::PhysicalDeviceType::eCpu:
+            return 2;
+        case vk::PhysicalDeviceType::eOther:
+        default:
+            return 1;
+    }
+}
+
+void CVulkanRenderer::_PickPhysicalDevice() {
+    std::vector<vk::PhysicalDevice> physicalDevices = m_instance.enumeratePhysicalDevices();
+
+    std::cout << "Devices:\n";
+
+    uint32_t deviceTypeScore = 0;
+    for (std::size_t i = 0; i < physicalDevices.size(); i++) {
+        vk::PhysicalDeviceProperties properties = physicalDevices[i].getProperties();
+
+        std::string name = properties.deviceName;
+        std::string vendor = _GetDeviceVendorName(DeviceVendor(properties.vendorID));
+        std::string type = _GetDeviceTypeName(properties.deviceType);
+        std::cout << std::format("#{}: {} {} - {}:\n", i, vendor, name, type);
+
+        if (_IsDeviceSuitable(physicalDevices[i])) {
+            uint32_t optionScore = _GetDeviceTypeScore(properties.deviceType);
+            if (optionScore > deviceTypeScore) {
+                m_physicalDevice = physicalDevices[i];
+                deviceTypeScore = optionScore;
+            }
+        }
+    }
+
+    if (m_physicalDevice == nullptr) {
+        throw std::runtime_error("No suitable gpu found!");
+    }
+
+    std::cout << "Device picked!\n";
+}
+
+//==========
+// Logical device
+//==========
+
+void CVulkanRenderer::_InitializeDeviceExtensions() {
+    // Find extensions that device supports
+    std::vector<vk::ExtensionProperties> availableExtensions = m_physicalDevice.enumerateDeviceExtensionProperties();
+    for (const auto& ext : m_deviceExtensions) {
+        if (std::find_if(
+            availableExtensions.begin(),
+            availableExtensions.end(),
+            [&](vk::ExtensionProperties availableExt){ return ext.first == availableExt.extensionName; }
+        ) != availableExtensions.end()) {
+            m_enabledDeviceExtensions.insert(ext.first.data());
+        }
+    }
+}
+
+void CVulkanRenderer::_initializeDevice() {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos {};
     std::set<uint32_t> uniqueQueueFamilies = {
-        m_queueFamilies.m_graphicsFamily.value(),
-        m_queueFamilies.m_presentFamily.value()
+        m_queueFamiliesIndices.m_graphics.value(),
+        m_queueFamiliesIndices.m_present.value()
     };
 
     float queuePriority = 1.0f;
@@ -283,20 +501,43 @@ void CVulkanRenderer::InitializeLogicalDevice() {
         enabledExtensions.push_back(extension_name.c_str());
     }
 
-    m_requestedDeviceFeatures.samplerAnisotropy = true;
+    vk::PhysicalDeviceFeatures requestedDeviceFeatures {};
+    requestedDeviceFeatures.samplerAnisotropy = true;
 
     vk::DeviceCreateInfo deviceInfo {};
     deviceInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceInfo.pEnabledFeatures = &m_requestedDeviceFeatures;
+    deviceInfo.pEnabledFeatures = &requestedDeviceFeatures;
     deviceInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     deviceInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
     m_device = m_physicalDevice.createDevice(deviceInfo);
 }
 
-vk::SurfaceFormatKHR CVulkanRenderer::ChoosetSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& formats) {
-    for (const auto& availableFormat : m_swapChainInfo.m_formats) {
+//==========
+// Other
+//==========
+
+void CVulkanRenderer::_CreateAllocator() {
+    vma::AllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.flags = vma::AllocatorCreateFlagBits::eExtMemoryBudget;
+    allocatorInfo.vulkanApiVersion = vk::ApiVersion13;
+    allocatorInfo.physicalDevice = m_physicalDevice;
+    allocatorInfo.device = m_device;
+    allocatorInfo.instance = m_instance;
+
+    vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher();
+    allocatorInfo.pVulkanFunctions = &vulkanFunctions;
+
+    m_allocator = vma::createAllocator(allocatorInfo);
+}
+
+//==========
+// Swapchain
+//==========
+
+vk::SurfaceFormatKHR CVulkanRenderer::_ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& formats) {
+    for (const auto& availableFormat : formats) {
         if (availableFormat.format == vk::Format::eR8G8B8A8Srgb &&
             availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear
         ) {
@@ -304,36 +545,27 @@ vk::SurfaceFormatKHR CVulkanRenderer::ChoosetSurfaceFormat(const std::vector<vk:
         }
     }
 
-    Error << "Surface format was not selected!\n";
+    std::cerr << "Surface format was not selected!\n";
     return formats[0];
 }
 
-vk::PresentModeKHR CVulkanRenderer::ChoosePresentMode(const std::vector<vk::PresentModeKHR>& presentModes) {
-    for (const auto& availablePresentMode : presentModes) {
-        // VSYNC
+vk::PresentModeKHR CVulkanRenderer::_ChoosePresentMode(const std::vector<vk::PresentModeKHR>& presentModes) {
+    for (const auto& availablePresentMode : presentModes) { // VSYNC
         if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
             return availablePresentMode;
         }
     }
 
-    Error << "Correct present mode was not selected!\n";
+    std::cerr << "Correct present mode was not selected!\n";
     return presentModes[0];
 }
 
-vk::Extent2D CVulkanRenderer::ChooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        return capabilities.currentExtent;
+vk::Extent2D CVulkanRenderer::_ChooseSwapChainExtent() {
+    if (m_surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        return m_surfaceCapabilities.currentExtent;
     } else {
         int width = 0, height = 0;
-        if (m_context.GetWindow()->GetVendor() == WindowVendor::eSDL) {    // TODO: make special vulkan window
-            SDL::Vulkan::GetDrawableSize(
-                static_cast<SDL_Window*>(m_context.GetWindow()->GetHandle()),
-                &width,
-                &height
-            );
-        } else {
-            assert(false);
-        }
+        m_window->GetDrawableSize(&width, &height);
 
         vk::Extent2D actualExtent = {
             static_cast<uint32_t>(width),
@@ -342,45 +574,41 @@ vk::Extent2D CVulkanRenderer::ChooseSwapChainExtent(const vk::SurfaceCapabilitie
 
         actualExtent.width = std::clamp(
             actualExtent.width,
-            m_swapChainInfo.m_capabilities.minImageExtent.width,
-            m_swapChainInfo.m_capabilities.maxImageExtent.width
+            m_surfaceCapabilities.minImageExtent.width,
+            m_surfaceCapabilities.maxImageExtent.width
         );
         actualExtent.height = std::clamp(
             actualExtent.height,
-            m_swapChainInfo.m_capabilities.minImageExtent.height,
-            m_swapChainInfo.m_capabilities.maxImageExtent.height
+            m_surfaceCapabilities.minImageExtent.height,
+            m_surfaceCapabilities.maxImageExtent.height
         );
 
         return actualExtent;
     }
 }
 
-void CVulkanRenderer::CreateSwapChain(
-    vk::SurfaceFormatKHR surfaceFormat,
-    vk::PresentModeKHR presentMode,
-    vk::Extent2D extent
-) {
-    uint32_t imageCount = m_swapChainInfo.m_capabilities.minImageCount;
+void CVulkanRenderer::_CreateSwapchain() {
+    uint32_t imageCount = m_surfaceCapabilities.minImageCount + 1;
 
-    if (m_swapChainInfo.m_capabilities.maxImageCount > 0 && imageCount > m_swapChainInfo.m_capabilities.maxImageCount) {
-        imageCount = m_swapChainInfo.m_capabilities.maxImageCount;
+    if (m_surfaceCapabilities.maxImageCount > 0 && imageCount > m_surfaceCapabilities.maxImageCount) {
+        imageCount = m_surfaceCapabilities.maxImageCount;
     }
 
     vk::SwapchainCreateInfoKHR swapChainInfo {};
-    swapChainInfo.surface = m_context.GetSurface();
+    swapChainInfo.surface = m_window->GetSurface();
     swapChainInfo.minImageCount = imageCount;
-    swapChainInfo.imageFormat = surfaceFormat.format;
-    swapChainInfo.imageColorSpace = surfaceFormat.colorSpace;
-    swapChainInfo.imageExtent = extent;
+    swapChainInfo.imageFormat = m_currentSurfaceFormat.format;
+    swapChainInfo.imageColorSpace = m_currentSurfaceFormat.colorSpace;
+    swapChainInfo.imageExtent = m_currentSwapchainExtent;
     swapChainInfo.imageArrayLayers = 1;
     swapChainInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
     uint32_t queueFamilyIndices[] = {
-        m_queueFamilies.m_graphicsFamily.value(),
-        m_queueFamilies.m_presentFamily.value()
+        m_queueFamiliesIndices.m_graphics.value(),
+        m_queueFamiliesIndices.m_present.value()
     };
 
-    if (m_queueFamilies.m_graphicsFamily != m_queueFamilies.m_presentFamily) {
+    if (m_queueFamiliesIndices.m_graphics != m_queueFamiliesIndices.m_present) {
         swapChainInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         swapChainInfo.queueFamilyIndexCount = 2;
         swapChainInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -388,15 +616,52 @@ void CVulkanRenderer::CreateSwapChain(
         swapChainInfo.imageSharingMode = vk::SharingMode::eExclusive;
     }
 
-    swapChainInfo.preTransform = m_swapChainInfo.m_capabilities.currentTransform;
+    swapChainInfo.preTransform = m_surfaceCapabilities.currentTransform;
     swapChainInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    swapChainInfo.presentMode = presentMode;
+    swapChainInfo.presentMode = m_currentPresentMode;
     swapChainInfo.clipped = vk::False;
 
     m_swapChain = m_device.createSwapchainKHR(swapChainInfo);
 }
 
-vk::ImageView CVulkanRenderer::CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) {
+void CVulkanRenderer::_CleanupSwapchain() {
+    m_device.destroyImageView(m_depthImageView);
+    m_allocator.destroyImage(m_depthImage.image, m_depthImage.allocation);
+
+    for (size_t i = 0; i < m_frameBuffers.size(); ++i) {
+        m_device.destroyFramebuffer(m_frameBuffers[i]);
+    }
+
+    for (size_t i = 0; i < m_imageViews.size(); ++i) {
+        m_device.destroyImageView(m_imageViews[i]);
+    }
+
+    m_device.destroySwapchainKHR(m_swapChain);
+}
+
+void CVulkanRenderer::_RecreateSwapchain() {
+    m_device.waitIdle();
+
+    _CleanupSwapchain();
+// todo: implicitly define dependencies
+    m_surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR(m_window->GetSurface());
+    m_currentSwapchainExtent = _ChooseSwapChainExtent();
+
+    std::vector<vk::SurfaceFormatKHR> surfaceFormats = m_physicalDevice.getSurfaceFormatsKHR(m_window->GetSurface());
+    m_currentSurfaceFormat = _ChooseSurfaceFormat(surfaceFormats);
+
+    std::vector<vk::PresentModeKHR> presentModes = m_physicalDevice.getSurfacePresentModesKHR(m_window->GetSurface());
+    m_currentPresentMode = _ChoosePresentMode(presentModes);
+
+    _CreateSwapchain();
+
+    m_images = m_device.getSwapchainImagesKHR(m_swapChain);
+    _CreateImageViews(m_currentSurfaceFormat.format);
+    _CreateDepthResources();
+    _CreateFramebuffers();
+}
+
+vk::ImageView CVulkanRenderer::_CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) {
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = image;
     imageViewInfo.viewType = vk::ImageViewType::e2D;
@@ -410,17 +675,17 @@ vk::ImageView CVulkanRenderer::CreateImageView(vk::Image image, vk::Format forma
     return m_device.createImageView(imageViewInfo);
 }
 
-void CVulkanRenderer::CreateImageViews(const std::vector<vk::Image>& images, vk::Format format) {
-    m_imageViews.resize(images.size());
+void CVulkanRenderer::_CreateImageViews(vk::Format format) {
+    m_imageViews.resize(m_images.size());
 
-    for (std::size_t i = 0; i < images.size(); ++i) {
-        m_imageViews[i] = CreateImageView(images[i], format, vk::ImageAspectFlagBits::eColor);
+    for (std::size_t i = 0; i < m_images.size(); ++i) {
+        m_imageViews[i] = _CreateImageView(m_images[i], format, vk::ImageAspectFlagBits::eColor);
     }
 }
 
-void CVulkanRenderer::CreateRenderPass() {
+void CVulkanRenderer::_CreateRenderPass() {
     vk::AttachmentDescription colorAttachment {};
-    colorAttachment.format = m_surfaceFormat.format;
+    colorAttachment.format = m_currentSurfaceFormat.format;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
     colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -430,7 +695,7 @@ void CVulkanRenderer::CreateRenderPass() {
     colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
     vk::AttachmentDescription depthAttachment {};
-    depthAttachment.format = GetDepthFormat();
+    depthAttachment.format = _GetDepthFormat();
     depthAttachment.samples = vk::SampleCountFlagBits::e1;
     depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
     depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
@@ -473,7 +738,7 @@ void CVulkanRenderer::CreateRenderPass() {
     m_renderPass = m_device.createRenderPass(renderPassInfo);
 }
 
-vk::DescriptorSetLayout CVulkanRenderer::CreateDescriptorSetLayout() {
+void CVulkanRenderer::_CreateDescriptorSetLayout() {
     vk::DescriptorSetLayoutBinding uboLayoutBinding {};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -493,10 +758,10 @@ vk::DescriptorSetLayout CVulkanRenderer::CreateDescriptorSetLayout() {
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    return m_device.createDescriptorSetLayout(layoutInfo);
+    m_descriptorSetLayout = m_device.createDescriptorSetLayout(layoutInfo);
 }
 
-vk::ShaderModule CVulkanRenderer::CreateShaderModule(const std::vector<char>& byteCode) {
+vk::ShaderModule CVulkanRenderer::_CreateShaderModule(const std::vector<char>& byteCode) {
     vk::ShaderModuleCreateInfo shaderModuleInfo {};
     shaderModuleInfo.codeSize = byteCode.size();
     shaderModuleInfo.pCode = reinterpret_cast<const uint32_t*>(byteCode.data());
@@ -505,14 +770,14 @@ vk::ShaderModule CVulkanRenderer::CreateShaderModule(const std::vector<char>& by
     return shaderModule;
 }
 
-void CVulkanRenderer::CreatePipeline() {
+void CVulkanRenderer::_CreatePipeline() {
     vk::GraphicsPipelineCreateInfo pipelineInfo {};
 
     auto vertShaderCode = resource_loader::ReadFile("shaders/vert.spv");
     auto fragShaderCode = resource_loader::ReadFile("shaders/frag.spv");
 
-    vk::ShaderModule vertexShader = CreateShaderModule(vertShaderCode);
-    vk::ShaderModule fragmentShader = CreateShaderModule(fragShaderCode);
+    vk::ShaderModule vertexShader = _CreateShaderModule(vertShaderCode);
+    vk::ShaderModule fragmentShader = _CreateShaderModule(fragShaderCode);
 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo {};
     vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
@@ -572,11 +837,11 @@ void CVulkanRenderer::CreatePipeline() {
     depthStencil.depthWriteEnable = vk::True;
     depthStencil.depthCompareOp = vk::CompareOp::eLess;
     depthStencil.depthBoundsTestEnable = vk::False;
-    depthStencil.minDepthBounds = 0.0f; // Optional
-    depthStencil.maxDepthBounds = 1.0f; // Optional
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 1.0f;
     depthStencil.stencilTestEnable = vk::False;
-    depthStencil.front = vk::StencilOpState {}; // Optional
-    depthStencil.back = vk::StencilOpState {}; // Optional
+    depthStencil.front = vk::StencilOpState {};
+    depthStencil.back = vk::StencilOpState {};
 
     pipelineInfo.pDepthStencilState = &depthStencil;
 
@@ -586,7 +851,7 @@ void CVulkanRenderer::CreatePipeline() {
     rasterizer.rasterizerDiscardEnable = vk::False;
     rasterizer.polygonMode = vk::PolygonMode::eFill;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = vk::CullModeFlagBits::eBack;
+    rasterizer.cullMode = vk::CullModeFlagBits::eNone;
     rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
     rasterizer.depthBiasEnable = vk::False;
 
@@ -646,8 +911,7 @@ void CVulkanRenderer::CreatePipeline() {
     m_device.destroyShaderModule(vertexShader);
 }
 
-
-vk::Format CVulkanRenderer::GetSupportedFormat(
+vk::Format CVulkanRenderer::_GetSupportedFormat(
     const std::vector<vk::Format>& candidates,
     vk::ImageTiling tiling,
     vk::FormatFeatureFlags features
@@ -664,32 +928,28 @@ vk::Format CVulkanRenderer::GetSupportedFormat(
     throw std::runtime_error("Failed to find supported format!");
 }
 
-vk::Format CVulkanRenderer::GetDepthFormat() {
-    return GetSupportedFormat(
+vk::Format CVulkanRenderer::_GetDepthFormat() {
+    return _GetSupportedFormat(
         { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
         vk::ImageTiling::eOptimal,
         vk::FormatFeatureFlagBits::eDepthStencilAttachment
     );
 }
 
-bool CVulkanRenderer::HasStencilComponent(vk::Format format) {
-    return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
-}
-
-void CVulkanRenderer::CreateDepthResources() {
-    vk::Format depthFormat = GetDepthFormat();
-    m_depthImage = CreateImage(
-        m_swapChainExtent.width,
-        m_swapChainExtent.height,
+void CVulkanRenderer::_CreateDepthResources() {
+    vk::Format depthFormat = _GetDepthFormat();
+    m_depthImage = _CreateImage(
+        m_currentSwapchainExtent.width,
+        m_currentSwapchainExtent.height,
         depthFormat,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
-    m_depthImageView = CreateImageView(m_depthImage.image, depthFormat, vk::ImageAspectFlagBits::eDepth);
+    m_depthImageView = _CreateImageView(m_depthImage.image, depthFormat, vk::ImageAspectFlagBits::eDepth);
 }
 
-void CVulkanRenderer::CreateFramebuffers() {
+void CVulkanRenderer::_CreateFramebuffers() {
     m_frameBuffers.resize(m_imageViews.size());
 
     for (std::size_t i = 0; i < m_imageViews.size(); i++) {
@@ -701,23 +961,23 @@ void CVulkanRenderer::CreateFramebuffers() {
         frameBufferInfo.renderPass = m_renderPass;
         frameBufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         frameBufferInfo.pAttachments = attachments.data();
-        frameBufferInfo.width = m_swapChainExtent.width;
-        frameBufferInfo.height = m_swapChainExtent.height;
+        frameBufferInfo.width = m_currentSwapchainExtent.width;
+        frameBufferInfo.height = m_currentSwapchainExtent.height;
         frameBufferInfo.layers = 1;
 
         m_frameBuffers[i] = m_device.createFramebuffer(frameBufferInfo);
     }
 }
 
-void CVulkanRenderer::CreateCommandPool() {
+void CVulkanRenderer::_CreateCommandPool() {
     vk::CommandPoolCreateInfo commandPoolInfo {};
     commandPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    commandPoolInfo.queueFamilyIndex = m_queueFamilies.m_graphicsFamily.value();
+    commandPoolInfo.queueFamilyIndex = m_queueFamiliesIndices.m_graphics.value();
 
     m_commandPool = m_device.createCommandPool(commandPoolInfo);
 }
 
-void CVulkanRenderer::CreateCommandBuffers() {
+void CVulkanRenderer::_CreateCommandBuffers() {
     m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     vk::CommandBufferAllocateInfo cmdBufferAllocInfo {};
@@ -728,7 +988,7 @@ void CVulkanRenderer::CreateCommandBuffers() {
     m_commandBuffers = m_device.allocateCommandBuffers(cmdBufferAllocInfo);
 }
 
-CVulkanRenderer::CBuffer CVulkanRenderer::CreateBuffer(
+CVulkanRenderer::CBuffer CVulkanRenderer::_CreateBuffer(
     vk::DeviceSize size,
     vk::BufferUsageFlags usage,
     vk::MemoryPropertyFlags properties,
@@ -753,7 +1013,7 @@ CVulkanRenderer::CBuffer CVulkanRenderer::CreateBuffer(
     return result;
 }
 
-vk::CommandBuffer CVulkanRenderer::BeginSingleTimeCommands() {
+vk::CommandBuffer CVulkanRenderer::_BeginSingleTimeCommands() {
     vk::CommandBufferAllocateInfo allocInfo {};
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
     allocInfo.commandPool = m_commandPool;
@@ -768,7 +1028,7 @@ vk::CommandBuffer CVulkanRenderer::BeginSingleTimeCommands() {
     return commandBuffer;
 }
 
-void CVulkanRenderer::EndSingleTimeCommands(vk::CommandBuffer commandBuffer) {
+void CVulkanRenderer::_EndSingleTimeCommands(vk::CommandBuffer commandBuffer) {
     commandBuffer.end();
 
     vk::SubmitInfo submitInfo {};
@@ -781,18 +1041,18 @@ void CVulkanRenderer::EndSingleTimeCommands(vk::CommandBuffer commandBuffer) {
     m_device.freeCommandBuffers(m_commandPool, commandBuffer);
 }
 
-void CVulkanRenderer::CopyBuffer(
+void CVulkanRenderer::_CopyBuffer(
     vk::Buffer srcBuffer,
     vk::Buffer dstBuffer,
     vk::DeviceSize size
 ) {
-    vk::CommandBuffer commandBuffer = BeginSingleTimeCommands();
+    vk::CommandBuffer commandBuffer = _BeginSingleTimeCommands();
 
     vk::BufferCopy copyRegion {};
     copyRegion.size = size;
     commandBuffer.copyBuffer(srcBuffer, dstBuffer, copyRegion);
 
-    EndSingleTimeCommands(commandBuffer);
+    _EndSingleTimeCommands(commandBuffer);
 }
 
 void CVulkanRenderer::LoadModel() {
@@ -825,83 +1085,84 @@ void CVulkanRenderer::LoadModel() {
             vertex.color = {1.0f, 1.0f, 1.0f};
 
             if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
+                uniqueVertices[vertex] = static_cast<uint32_t>(m_vertices.size());
+                m_vertices.push_back(vertex);
             }
 
-            indices.push_back(uniqueVertices[vertex]);
+            m_indices.push_back(uniqueVertices[vertex]);
         }
     }
 }
 
-void CVulkanRenderer::CreateVertexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+void CVulkanRenderer::_CreateVertexBuffer() {
+    vk::DeviceSize bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
 
-    CBuffer stagingBuffer = CreateBuffer(
+    CBuffer stagingBuffer = _CreateBuffer(
         bufferSize,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
         vma::AllocationCreateFlagBits::eHostAccessRandom
     );
 
-    stagingBuffer.mapped = m_allocator.mapMemory(stagingBuffer.allocation);
-        memcpy(stagingBuffer.mapped, vertices.data(), (std::size_t)bufferSize);
+    void* data = m_allocator.mapMemory(stagingBuffer.allocation);
+        memcpy(data, m_vertices.data(), (std::size_t)bufferSize);
     m_allocator.unmapMemory(stagingBuffer.allocation);
 
-    m_vertexBuffer = CreateBuffer(
+    m_vertexBuffer = _CreateBuffer(
         bufferSize,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         {}
     );
 
-    CopyBuffer(stagingBuffer.buffer, m_vertexBuffer.buffer, bufferSize);
+    _CopyBuffer(stagingBuffer.buffer, m_vertexBuffer.buffer, bufferSize);
 
     m_allocator.destroyBuffer(stagingBuffer.buffer, stagingBuffer.allocation);
 }
 
-void CVulkanRenderer::CreateIndexBuffer() {
-    vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+void CVulkanRenderer::_CreateIndexBuffer() {
+    vk::DeviceSize bufferSize = sizeof(m_indices[0]) * m_indices.size();
 
-    CBuffer stagingBuffer = CreateBuffer(
+    CBuffer stagingBuffer = _CreateBuffer(
         bufferSize,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
         vma::AllocationCreateFlagBits::eHostAccessRandom
     );
 
-    stagingBuffer.mapped = m_allocator.mapMemory(stagingBuffer.allocation);
-        memcpy(stagingBuffer.mapped, indices.data(), (std::size_t)bufferSize);
+    void* data = m_allocator.mapMemory(stagingBuffer.allocation);
+        memcpy(data, m_indices.data(), (std::size_t)bufferSize);
     m_allocator.unmapMemory(stagingBuffer.allocation);
 
-    m_indexBuffer = CreateBuffer(
+    m_indexBuffer = _CreateBuffer(
         bufferSize,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         {}
     );
 
-    CopyBuffer(stagingBuffer.buffer, m_indexBuffer.buffer, bufferSize);
+    _CopyBuffer(stagingBuffer.buffer, m_indexBuffer.buffer, bufferSize);
 
     m_allocator.destroyBuffer(stagingBuffer.buffer, stagingBuffer.allocation);
 }
 
-void CVulkanRenderer::CreateUniformBuffers() {
+void CVulkanRenderer::_CreateUniformBuffers() {
     vk::DeviceSize bufferSize = sizeof(CUniformBufferObject);
 
     m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    m_uniformBuffersData.resize(MAX_FRAMES_IN_FLIGHT);
     for (std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        m_uniformBuffers[i] = CreateBuffer(
+        m_uniformBuffers[i] = _CreateBuffer(
             bufferSize,
             vk::BufferUsageFlagBits::eUniformBuffer,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             vma::AllocationCreateFlagBits::eHostAccessRandom
         );
-        m_uniformBuffers[i].mapped = m_allocator.mapMemory(m_uniformBuffers[i].allocation);
+        m_uniformBuffersData[i] = m_allocator.mapMemory(m_uniformBuffers[i].allocation);
     }
 }
 
-void CVulkanRenderer::CreateDescriptorPool() {
+void CVulkanRenderer::_CreateDescriptorPool() {
     std::array<vk::DescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
@@ -916,7 +1177,7 @@ void CVulkanRenderer::CreateDescriptorPool() {
     m_descriptorPool = m_device.createDescriptorPool(poolInfo);
 }
 
-void CVulkanRenderer::CreateDescriptorSets() {
+void CVulkanRenderer::_CreateDescriptorSets() {
     std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayout);
 
     vk::DescriptorSetAllocateInfo allocInfo {};
@@ -958,7 +1219,7 @@ void CVulkanRenderer::CreateDescriptorSets() {
     }
 }
 
-CVulkanRenderer::CImage CVulkanRenderer::CreateImage(
+CVulkanRenderer::CImage CVulkanRenderer::_CreateImage(
     uint32_t width,
     uint32_t height,
     vk::Format format,
@@ -993,14 +1254,14 @@ CVulkanRenderer::CImage CVulkanRenderer::CreateImage(
     return result;
 }
 
-void CVulkanRenderer::TransitionImageLayout(
+void CVulkanRenderer::_TransitionImageLayout(
     vk::Image image,
     vk::Format format,
     vk::ImageLayout oldLayout,
     vk::ImageLayout newLayout
 ) {
     (void)format;
-    vk::CommandBuffer commandBuffer = BeginSingleTimeCommands();
+    vk::CommandBuffer commandBuffer = _BeginSingleTimeCommands();
 
     vk::ImageMemoryBarrier barrier {};
     barrier.oldLayout = oldLayout;
@@ -1047,16 +1308,16 @@ void CVulkanRenderer::TransitionImageLayout(
         1, &barrier
     );
 
-    EndSingleTimeCommands(commandBuffer);
+    _EndSingleTimeCommands(commandBuffer);
 }
 
-void CVulkanRenderer::CopyBufferToImage(
+void CVulkanRenderer::_CopyBufferToImage(
     vk::Buffer buffer,
     vk::Image image,
     uint32_t width,
     uint32_t height
 ) {
-    vk::CommandBuffer commandBuffer = BeginSingleTimeCommands();
+    vk::CommandBuffer commandBuffer = _BeginSingleTimeCommands();
 
     vk::BufferImageCopy region {};
     region.bufferOffset = 0;
@@ -1077,10 +1338,10 @@ void CVulkanRenderer::CopyBufferToImage(
 
     commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, 1, &region);
 
-    EndSingleTimeCommands(commandBuffer);
+    _EndSingleTimeCommands(commandBuffer);
 }
 
-void CVulkanRenderer::CreateTextureImage() {
+void CVulkanRenderer::_CreateTextureImage() {
     int texWidth = 0, texHeight = 0, texChannels = 0;
     stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (!pixels) {
@@ -1089,20 +1350,20 @@ void CVulkanRenderer::CreateTextureImage() {
 
     vk::DeviceSize imageSize = texWidth * texHeight * 4;
 
-    CBuffer stagingBuffer = CreateBuffer(
+    CBuffer stagingBuffer = _CreateBuffer(
         imageSize,
         vk::BufferUsageFlagBits::eTransferSrc,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
         vma::AllocationCreateFlagBits::eHostAccessRandom
     );
 
-    stagingBuffer.mapped = m_allocator.mapMemory(stagingBuffer.allocation);
-        memcpy(stagingBuffer.mapped, pixels, static_cast<size_t>(imageSize));
+    void* data = m_allocator.mapMemory(stagingBuffer.allocation);
+        memcpy(data, pixels, static_cast<size_t>(imageSize));
     m_allocator.unmapMemory(stagingBuffer.allocation);
 
     stbi_image_free(pixels);
 
-    m_textureImage = CreateImage(
+    m_textureImage = _CreateImage(
         texWidth,
         texHeight,
         vk::Format::eR8G8B8A8Srgb,
@@ -1111,21 +1372,21 @@ void CVulkanRenderer::CreateTextureImage() {
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    TransitionImageLayout(
+    _TransitionImageLayout(
         m_textureImage.image,
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eTransferDstOptimal
     );
 
-    CopyBufferToImage(
+    _CopyBufferToImage(
         stagingBuffer.buffer,
         m_textureImage.image,
         static_cast<uint32_t>(texWidth),
         static_cast<uint32_t>(texHeight)
     );
 
-    TransitionImageLayout(
+    _TransitionImageLayout(
         m_textureImage.image,
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageLayout::eTransferDstOptimal,
@@ -1135,19 +1396,19 @@ void CVulkanRenderer::CreateTextureImage() {
     m_allocator.destroyBuffer(stagingBuffer.buffer, stagingBuffer.allocation);
 }
 
-void CVulkanRenderer::CreateTextureImageView(vk::Format format) {
-    m_textureImageView = CreateImageView(m_textureImage.image, format, vk::ImageAspectFlagBits::eColor);
+void CVulkanRenderer::_CreateTextureImageView(vk::Format format) {
+    m_textureImageView = _CreateImageView(m_textureImage.image, format, vk::ImageAspectFlagBits::eColor);
 }
 
-void CVulkanRenderer::CreateTextureSampler() {
+void CVulkanRenderer::_CreateTextureSampler() {
     vk::SamplerCreateInfo samplerInfo {};
-    samplerInfo.magFilter = vk::Filter::eLinear;
-    samplerInfo.minFilter = vk::Filter::eLinear;
+    samplerInfo.magFilter = vk::Filter::eNearest;
+    samplerInfo.minFilter = vk::Filter::eNearest;
     samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
     samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
     samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
     samplerInfo.anisotropyEnable = vk::True;
-    samplerInfo.maxAnisotropy = m_physicslDeviceProps.limits.maxSamplerAnisotropy;
+    samplerInfo.maxAnisotropy = m_physicalDevice.getProperties().limits.maxSamplerAnisotropy;
     samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
     samplerInfo.unnormalizedCoordinates = vk::False;
     samplerInfo.compareEnable = vk::False;
@@ -1173,11 +1434,11 @@ void CVulkanRenderer::Draw() {
     );
 
     if (res == vk::Result::eErrorOutOfDateKHR) {
-        RecreateSwapChain();
+        _RecreateSwapchain();
         return;
     }
 
-    UpdateUniformBuffer(m_currentFrame, m_swapChainExtent);
+    UpdateUniformBuffer(m_currentFrame, m_currentSwapchainExtent);
 
     m_device.resetFences(m_inFlightFences[m_currentFrame]);
 
@@ -1191,17 +1452,12 @@ void CVulkanRenderer::Draw() {
     renderPassInfo.renderPass = m_renderPass;
     renderPassInfo.framebuffer = m_frameBuffers[imageIndex];
     renderPassInfo.renderArea.offset = vk::Offset2D { 0, 0 };
-    renderPassInfo.renderArea.extent = m_swapChainExtent;
-
-    vk::ClearValue clearColor {};
-    clearColor.color = std::array<float, 4> { 0.0f, 0.0f, 0.005f, 1.0f };
+    renderPassInfo.renderArea.extent = m_currentSwapchainExtent;
 
     std::array<vk::ClearValue, 2> clearValues {};
-    clearValues[0].color = vk::ClearColorValue {0.0f, 0.0f, 0.0f, 1.0f};
+    clearValues[0].color = vk::ClearColorValue {0.0f, 0.0f, 0.005f, 1.0f};
     clearValues[1].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
 
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
@@ -1216,15 +1472,15 @@ void CVulkanRenderer::Draw() {
     vk::Viewport viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapChainExtent.width);
-    viewport.height = static_cast<float>(m_swapChainExtent.height);
+    viewport.width = static_cast<float>(m_currentSwapchainExtent.width);
+    viewport.height = static_cast<float>(m_currentSwapchainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     m_commandBuffers[m_currentFrame].setViewport(0, viewport);
 
     vk::Rect2D scissor {};
     scissor.offset = vk::Offset2D { 0, 0 };
-    scissor.extent = m_swapChainExtent;
+    scissor.extent = m_currentSwapchainExtent;
     m_commandBuffers[m_currentFrame].setScissor(0, scissor);
 
     m_commandBuffers[m_currentFrame].bindDescriptorSets(
@@ -1237,7 +1493,7 @@ void CVulkanRenderer::Draw() {
         nullptr
     );
     m_commandBuffers[m_currentFrame].drawIndexed(
-        static_cast<uint32_t>(indices.size()),
+        static_cast<uint32_t>(m_indices.size()),
         1, 0, 0, 0
     );
 
@@ -1270,56 +1526,17 @@ void CVulkanRenderer::Draw() {
     res = m_presentQueue.presentKHR(&presentInfo);
     if (res == vk::Result::eErrorOutOfDateKHR || res == vk::Result::eSuboptimalKHR || m_frameBufferResized) {
         m_frameBufferResized = false;
-        RecreateSwapChain();
+        _RecreateSwapchain();
     }
     m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     m_device.waitIdle();
 }
 
-void CVulkanRenderer::RecreateSwapChain() {
-    m_device.waitIdle();
-
-    CleanupSwapChain();
-
-    m_swapChainInfo = GetSwapChainInfo(m_physicalDevice);
-
-    m_surfaceFormat = ChoosetSurfaceFormat(m_swapChainInfo.m_formats);
-    m_presentMode = ChoosePresentMode(m_swapChainInfo.m_presentModes);
-    m_swapChainExtent = ChooseSwapChainExtent(m_swapChainInfo.m_capabilities);
-
-    CreateSwapChain(m_surfaceFormat, m_presentMode, m_swapChainExtent);
-
-    m_images = m_device.getSwapchainImagesKHR(m_swapChain);
-    CreateImageViews(m_images, m_surfaceFormat.format);
-    CreateDepthResources();
-    CreateFramebuffers();
-}
-
 void CVulkanRenderer::UpdateUniformBuffer(uint32_t currentImage, vk::Extent2D swapChainExtent) {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
     CUniformBufferObject ubo {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(40.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+    ubo.model = glm::mat4(1.0f);
+    ubo.view = g_camera.GetViewMatrix();
+    ubo.proj = glm::perspective(glm::radians(g_camera.m_fov), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
-    memcpy(m_uniformBuffers[currentImage].mapped, &ubo, sizeof(ubo));
-}
-
-void CVulkanRenderer::CleanupSwapChain() {
-    m_device.destroyImageView(m_depthImageView);
-    m_allocator.destroyImage(m_depthImage.image, m_depthImage.allocation);
-
-    for (size_t i = 0; i < m_frameBuffers.size(); ++i) {
-        m_device.destroyFramebuffer(m_frameBuffers[i]);
-    }
-
-    for (size_t i = 0; i < m_imageViews.size(); ++i) {
-        m_device.destroyImageView(m_imageViews[i]);
-    }
-
-    m_device.destroySwapchainKHR(m_swapChain);
+    memcpy(m_uniformBuffersData[currentImage], &ubo, sizeof(ubo));
 }

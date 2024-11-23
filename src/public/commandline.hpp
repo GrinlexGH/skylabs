@@ -10,6 +10,8 @@ public:
     virtual ~ICommandLine() = default;
 
     virtual void CreateCmdLine(const std::vector<std::string>& argv) = 0;
+
+    // Returns index of found parameter. 0 if not found.
     virtual int FindParam(std::string_view param) = 0;
 
 protected:
