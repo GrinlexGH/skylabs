@@ -137,8 +137,6 @@ CVulkanRenderer::~CVulkanRenderer() {
 
     _CleanupSwapchain();
 
-    m_instance.destroySurfaceKHR(m_window->GetSurface());
-
     m_device.destroyCommandPool(m_commandPool);
 
     m_device.destroyPipeline(m_pipeline);
@@ -149,11 +147,11 @@ CVulkanRenderer::~CVulkanRenderer() {
     m_allocator.destroy();
     m_device.destroy();
 
+    m_window->DestroySurface(m_instance);
+
     if (m_enableValidationLayer) {
         m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger);
     }
-
-    m_window->DestroySurface(m_instance);
 
     m_instance.destroy();
 }
