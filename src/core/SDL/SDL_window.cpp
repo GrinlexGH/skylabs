@@ -23,10 +23,6 @@ CVulkanWindow::CVulkanWindow(const char* title, int w, int h, SDL_WindowFlags fl
 
 CVulkanWindow::~CVulkanWindow() {
     SDL_DestroyWindow(m_window);
-
-    if (m_surface && m_instance) {
-        SDL::Vulkan::DestroySurface(*m_instance, m_surface);
-    }
 }
 
 std::vector<const char*> CVulkanWindow::GetRequiredInstanceExtensions() {
@@ -37,9 +33,12 @@ bool CVulkanWindow::GetPresentationSupport(vk::Instance instance, vk::PhysicalDe
     return SDL::Vulkan::GetPresentationSupport(instance, physicalDevice, queueFamilyIndex);
 }
 
-void CVulkanWindow::CreateSurface(vk::Instance& instance) {
-    m_instance = &instance;
+void CVulkanWindow::CreateSurface(vk::Instance instance) {
     m_surface = SDL::Vulkan::CreateSurface(m_window, instance);
+}
+
+void CVulkanWindow::DestroySurface(vk::Instance instance) {
+    SDL::Vulkan::DestroySurface(instance, m_surface);
 }
 
 void CVulkanWindow::GetDrawableSize(int* w, int* h) {

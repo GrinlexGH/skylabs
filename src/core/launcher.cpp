@@ -34,6 +34,9 @@ void MainLoop(CVulkanRenderer& renderer) {
         if (keyState[SDL_SCANCODE_D]) {
             g_camera.ProcessKeyboard(RIGHT, deltaTime);
         }
+        if (keyState[SDL_SCANCODE_ESCAPE]) {
+            quit = true;
+        }
 
         SDL_Event e;
         SDL_PollEvent(&e);
