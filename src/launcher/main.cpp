@@ -49,8 +49,9 @@ static std::wstring widen(const std::string_view str) {
 static std::string getWinapiErrorMessage() {
     wchar_t* errorMsg = nullptr;
     ::FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-            FORMAT_MESSAGE_IGNORE_INSERTS,
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR)&errorMsg, 0, nullptr
     );
@@ -110,10 +111,12 @@ int main(int argc, char** argv) {
     try {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();
+
         void* lib = dlopen((rootDir.string() + "/bin/libcore.so").c_str(), RTLD_NOW);
         if (!lib) {
             throw std::runtime_error(std::string("failed open library: ") + dlerror() + "!\n");
         }
+
         auto main = (CoreMain_t)dlsym(lib, "CoreInit");
         if (!main) {
             throw std::runtime_error(
@@ -121,6 +124,7 @@ int main(int argc, char** argv) {
                 dlerror()
             );
         }
+
         int ret = main(argc, argv);
         dlclose(lib);
         return ret;

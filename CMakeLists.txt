@@ -15,10 +15,6 @@ message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     add_compile_options(
-        "$<$<CONFIG:Release>:-O2>"
-        "$<$<CONFIG:RelWithDebInfo>:-O2;-g>"
-        "$<$<CONFIG:MinSizeRel>:-Os>"
-        "$<$<CONFIG:Debug>:-g;-g3;-Og>"
         "-Wall" "-Wextra" "-Wpedantic" "-Werror"
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
