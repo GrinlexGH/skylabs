@@ -22,7 +22,7 @@ class CDefaultConsoleMessage final : IConsoleMessage {
 public:
     PLATFORM_CLASS virtual void operator()(std::string_view format, ...);
 
-protected:
+private:
     PLATFORM_CLASS friend CDefaultConsoleMessage&
     operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ostream&));
 
@@ -42,21 +42,13 @@ protected:
 class CColorfulConsoleMessage final : public IConsoleMessage {
 public:
     using rgb_t = std::array<std::uint8_t, 3>;
-
-    CColorfulConsoleMessage() = default;
     CColorfulConsoleMessage(rgb_t color) : m_color(color) { }
-    CColorfulConsoleMessage(const CColorfulConsoleMessage&) = default;
-    CColorfulConsoleMessage(CColorfulConsoleMessage&&) = default;
-    CColorfulConsoleMessage& operator=(const CColorfulConsoleMessage&) = default;
-    CColorfulConsoleMessage& operator=(CColorfulConsoleMessage&&) = default;
-    virtual ~CColorfulConsoleMessage() = default;
 
     PLATFORM_CLASS virtual void operator()(std::string_view format, ...);
 
-protected:
+private:
     rgb_t m_color { 255, 255, 255 };
 
-protected:
     PLATFORM_CLASS friend CColorfulConsoleMessage&
     operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&));
 

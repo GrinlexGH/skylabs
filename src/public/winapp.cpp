@@ -6,6 +6,7 @@
     #include <string_view>
     #include <filesystem>
     #include <fstream>
+    #include <string>
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 

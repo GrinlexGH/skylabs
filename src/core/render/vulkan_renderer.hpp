@@ -1,10 +1,9 @@
 #pragma once
 
 #include "renderer.hpp"
-#include "vulkan_renderer_context.hpp"
 
-#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
-#include <vulkan/vulkan.hpp>
+#include "../vulkan.hpp"
+#include "../vulkan_window.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -12,6 +11,7 @@
 #include <vk_mem_alloc.hpp>
 
 #include <unordered_map>
+#include <unordered_set>
 #include <optional>
 
 struct CVertex {
@@ -66,52 +66,55 @@ namespace std {
 
 class CVulkanRenderer final : public IRenderer {
 public:
-    CVulkanRenderer() = delete;
-    explicit CVulkanRenderer(IWindow* window);
-    CVulkanRenderer(const CVulkanRenderer&) = default;
+    CVulkanRenderer() = default;
+    CVulkanRenderer(const CVulkanRenderer&) = delete;
     CVulkanRenderer(CVulkanRenderer&&) = default;
-    CVulkanRenderer& operator=(const CVulkanRenderer&) = default;
+    CVulkanRenderer& operator=(const CVulkanRenderer&) = delete;
     CVulkanRenderer& operator=(CVulkanRenderer&&) = default;
     ~CVulkanRenderer();
 
+    bool Initialize(IWindow* window) override;
     void Draw() override;
+
+    enum class DeviceVendor
+    {
+        eUnknown = 0x0,
+        eAMD = 0x1002,
+        eImgTec = 0x1010,
+        eApple = 0x106B,
+        eNVIDIA = 0x10DE,
+        eARM = 0x13B5,
+        eMicrosoft = 0x1414,
+        eQualcomm = 0x5143,
+        eIntel = 0x8086
+    };
 
     bool m_frameBufferResized = false;
 
 private:
-    void RecreateSwapChain();
-    void CleanupSwapChain();
     void UpdateUniformBuffer(uint32_t currentImage, vk::Extent2D swapChainExtent);
+    void LoadModel();
 
     struct CQueueFamilyIndices
     {
-        std::optional<uint32_t> m_graphicsFamily;
-        std::optional<uint32_t> m_presentFamily;
+        std::optional<uint32_t> m_graphics;
+        std::optional<uint32_t> m_present;
 
         bool isComplete() const {
-            return m_graphicsFamily.has_value() && m_presentFamily.has_value();
+            return m_graphics.has_value() && m_present.has_value();
         }
-    };
-
-    struct CSwapChainInfo
-    {
-        vk::SurfaceCapabilitiesKHR m_capabilities;
-        std::vector<vk::SurfaceFormatKHR> m_formats;
-        std::vector<vk::PresentModeKHR> m_presentModes;
     };
 
     struct CBuffer
     {
         vk::Buffer buffer {};
         vma::Allocation allocation {};
-        void* mapped = nullptr;
     };
 
     struct CImage
     {
         vk::Image image {};
         vma::Allocation allocation {};
-        void* mapped = nullptr;
     };
 
     struct CUniformBufferObject {
@@ -120,71 +123,72 @@ private:
         alignas(16) glm::mat4 proj;
     };
 
-    void CreateAllocator();
-
-    CQueueFamilyIndices GetQueueFamilies(vk::PhysicalDevice physicalDevice);
-    void RegisterRequestedDeviceExtensions();
-    bool InitializeDeviceExtensions(
-        vk::PhysicalDevice physicalDevice,
-        std::unordered_set<std::string>& enabledExtensions
-    );
-    CSwapChainInfo GetSwapChainInfo(vk::PhysicalDevice physicalDevice);
-    bool isDeviceSuitable(vk::PhysicalDevice physicalDevice);
-    vk::PhysicalDevice PickPhysicalDevice();
-
-    void InitializeLogicalDevice();
-
-    vk::SurfaceFormatKHR ChoosetSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& formats);
-    vk::PresentModeKHR ChoosePresentMode(const std::vector<vk::PresentModeKHR>& presentModes);
-    vk::Extent2D ChooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
-    void CreateSwapChain(
-        vk::SurfaceFormatKHR surfaceFormat,
-        vk::PresentModeKHR presentMode,
-        vk::Extent2D extent
+    static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
+        vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        vk::DebugUtilsMessageTypeFlagBitsEXT messageType,
+        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* pUserData
     );
 
-    vk::ImageView CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
-    void CreateImageViews(const std::vector<vk::Image>& images, vk::Format format);
+    void _InitializeInstanceExtensions();
+    void _InitializeInstance();
 
-    void CreateRenderPass();
+    void _SetRequiredDeviceExtensions();
+    CQueueFamilyIndices _FindQueueFamilies(vk::PhysicalDevice physicalDevice);
+    bool _IsDeviceSuitable(vk::PhysicalDevice physicalDevice);
+    void _PickPhysicalDevice();
 
-    vk::DescriptorSetLayout CreateDescriptorSetLayout();
-    vk::ShaderModule CreateShaderModule(const std::vector<char>& byteCode);
-    void CreatePipeline();
+    void _InitializeDeviceExtensions();
+    void _initializeDevice();
 
-    vk::Format GetSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
-    vk::Format GetDepthFormat();
-    bool HasStencilComponent(vk::Format format);
-    void CreateDepthResources();
+    void _CreateAllocator();
 
-    void CreateFramebuffers();
+    vk::SurfaceFormatKHR _ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& formats);
+    vk::PresentModeKHR _ChoosePresentMode(const std::vector<vk::PresentModeKHR>& presentModes);
+    vk::Extent2D _ChooseSwapChainExtent();
 
-    void CreateCommandPool();
-    void CreateCommandBuffers();
+    void _CreateSwapchain();
+    void _CleanupSwapchain();
+    void _RecreateSwapchain();
+    vk::ImageView _CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
+    void _CreateImageViews(vk::Format format);
 
-    CBuffer CreateBuffer(
+    void _CreateRenderPass();
+
+    void _CreateDescriptorSetLayout();
+    vk::ShaderModule _CreateShaderModule(const std::vector<char>& byteCode);
+    void _CreatePipeline();
+
+    vk::Format _GetSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
+    vk::Format _GetDepthFormat();
+    void _CreateDepthResources();
+
+    void _CreateFramebuffers();
+
+    void _CreateCommandPool();
+    void _CreateCommandBuffers();
+
+    CBuffer _CreateBuffer(
         vk::DeviceSize size,
         vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags properties,
         vma::AllocationCreateFlags flags
     );
 
-    vk::CommandBuffer BeginSingleTimeCommands();
-    void EndSingleTimeCommands(vk::CommandBuffer commandBuffer);
+    vk::CommandBuffer _BeginSingleTimeCommands();
+    void _EndSingleTimeCommands(vk::CommandBuffer commandBuffer);
 
-    void CopyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
+    void _CopyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
 
-    void LoadModel();
+    void _CreateVertexBuffer();
+    void _CreateIndexBuffer();
 
-    void CreateVertexBuffer();
-    void CreateIndexBuffer();
+    void _CreateUniformBuffers();
 
-    void CreateUniformBuffers();
+    void _CreateDescriptorPool();
+    void _CreateDescriptorSets();
 
-    void CreateDescriptorPool();
-    void CreateDescriptorSets();
-
-    CImage CreateImage(
+    CImage _CreateImage(
         uint32_t width,
         uint32_t height,
         vk::Format format,
@@ -192,77 +196,90 @@ private:
         vk::ImageUsageFlags usage,
         vk::MemoryPropertyFlags properties
     );
-    void TransitionImageLayout(
+    void _TransitionImageLayout(
         vk::Image image,
         vk::Format format,
         vk::ImageLayout oldLayout,
         vk::ImageLayout newLayout
     );
-    void CopyBufferToImage(
+    void _CopyBufferToImage(
         vk::Buffer buffer,
         vk::Image image,
         uint32_t width,
         uint32_t height
     );
-    void CreateTextureImage();
-    void CreateTextureImageView(vk::Format format);
+    void _CreateTextureImage();
+    void _CreateTextureImageView(vk::Format format);
 
-    void CreateTextureSampler();
+    void _CreateTextureSampler();
 
-    CVulkanRendererContext m_context {};
+    #ifndef NDEBUG
+    bool m_enableValidationLayer = true;
+    #else
+    bool m_enableValidationLayer = false;
+    #endif
+
+    IVulkanWindow* m_window = nullptr;
+
     vma::Allocator m_allocator {};
 
-    vk::PhysicalDevice m_physicalDevice {};
-    vk::PhysicalDeviceProperties m_physicslDeviceProps {};
-    std::unordered_map<std::string, bool> m_requestedDeviceExtensions {};
-    std::unordered_set<std::string> m_enabledDeviceExtensions {};
-    vk::PhysicalDeviceFeatures m_requestedDeviceFeatures {};
+    std::unordered_map<std::string, bool> m_instanceExtensions {}; // bool is a value that means whether extension is required or not
+    std::unordered_set<std::string> m_enabledInstanceExtensions {};
+    vk::Instance m_instance {};
 
-    CQueueFamilyIndices m_queueFamilies {};
-    CSwapChainInfo m_swapChainInfo {};
+    vk::DebugUtilsMessengerEXT m_debugMessenger {};
+
+    vk::PhysicalDevice m_physicalDevice {};
+    CQueueFamilyIndices m_queueFamiliesIndices {};
 
     vk::Device m_device {};
+    std::unordered_map<std::string, bool> m_deviceExtensions {};
+    std::unordered_set<std::string> m_enabledDeviceExtensions {};
 
     vk::Queue m_graphicsQueue {};
     vk::Queue m_presentQueue {};
 
-    vk::SwapchainKHR m_swapChain {};
-    vk::SurfaceFormatKHR m_surfaceFormat {};
-    vk::PresentModeKHR m_presentMode {};
-    vk::Extent2D m_swapChainExtent {};
+    vk::SurfaceCapabilitiesKHR m_surfaceCapabilities {};
+    vk::SurfaceFormatKHR m_currentSurfaceFormat {};
+    vk::PresentModeKHR m_currentPresentMode {};
+    vk::Extent2D m_currentSwapchainExtent {};
 
+    vk::SwapchainKHR m_swapChain {};
     std::vector<vk::Image> m_images {};
     std::vector<vk::ImageView> m_imageViews {};
+
     vk::RenderPass m_renderPass {};
 
     vk::DescriptorSetLayout m_descriptorSetLayout {};
     vk::PipelineLayout m_pipelineLayout {};
     vk::Pipeline m_pipeline {};
 
+    CImage m_depthImage {};
+    vk::ImageView m_depthImageView {};
+
     std::vector<vk::Framebuffer> m_frameBuffers {};
 
     vk::CommandPool m_commandPool {};
     std::vector<vk::CommandBuffer> m_commandBuffers {};
-    std::vector<vk::Semaphore> m_imageAvailableSemaphores {};
-    std::vector<vk::Semaphore> m_renderFinishedSemaphores {};
-    std::vector<vk::Fence> m_inFlightFences {};
 
-    std::vector<CVertex> vertices;
-    std::vector<uint32_t> indices;
+    std::vector<CVertex> m_vertices;
+    std::vector<uint32_t> m_indices;
     CBuffer m_vertexBuffer {};
     CBuffer m_indexBuffer {};
 
     std::vector<CBuffer> m_uniformBuffers {};
+    std::vector<void*> m_uniformBuffersData {};
 
     vk::DescriptorPool m_descriptorPool {};
     std::vector<vk::DescriptorSet> m_descriptorSets {};
 
-    CImage m_depthImage {};
-    vk::ImageView m_depthImageView {};
-
     CImage m_textureImage {};
     vk::ImageView m_textureImageView {};
     vk::Sampler m_textureSampler {};
+
+    std::vector<vk::Semaphore> m_imageAvailableSemaphores {};
+    std::vector<vk::Semaphore> m_renderFinishedSemaphores {};
+    std::vector<vk::Fence> m_inFlightFences {};
 
     uint32_t m_currentFrame = 0;
 };

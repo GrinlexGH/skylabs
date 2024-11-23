@@ -12,6 +12,8 @@ set(SOURCES
     unicode.hpp
     platform.hpp
     stc.hpp
+    window.hpp
+    version.hpp
 )
 
 if(WIN32)
@@ -30,12 +32,10 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
 
-foreach(FILE ${SOURCES})
-    get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
-    string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "" GROUP "${PARENT_DIR}")
-    string(REPLACE "/" "\\" GROUP "${GROUP}")
-    set(GROUP "Source Files${GROUP}")
-    source_group("${GROUP}" FILES "${FILE}")
+foreach(FILE IN LISTS SOURCES)
+    get_filename_component(SOURCE_PATH "${FILE}" PATH)
+    string(REPLACE "/" "\\" SOURCE_PATH_GROUP "${SOURCE_PATH}")
+    source_group("Source Files\\${SOURCE_PATH_GROUP}" FILES "${FILE}")
 endforeach()
 
 set_target_properties(${CURRENT_TARGET_NAME}

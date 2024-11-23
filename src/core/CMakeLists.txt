@@ -5,17 +5,21 @@ set(SOURCES
     coremain.cpp
     launcher.hpp
     launcher.cpp
-    renderer.hpp
-    vulkan_renderer.hpp
-    vulkan_renderer.cpp
-    vulkan_renderer_context.hpp
-    vulkan_renderer_context.cpp
-    window.hpp
-    SDL.hpp
-    SDL_Vulkan.hpp
-    SDL.cpp
-    headerfactory.cpp
+    render/renderer.hpp
+    render/vulkan_renderer.hpp
+    render/vulkan_renderer.cpp
+    header_factory.cpp
     stb_image.h
+    vulkan.hpp
+    vulkan_window.hpp
+    SDL/SDL_context.cpp
+    SDL/SDL_context.hpp
+    SDL/SDL_vulkan.hpp
+    SDL/SDL_window.cpp
+    SDL/SDL_window.hpp
+    SDL/SDL_video.hpp
+    SDL/SDL.hpp
+    camera.hpp
 )
 
 if(WIN32)
@@ -32,12 +36,10 @@ endif()
 
 add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
 
-foreach(FILE ${SOURCES})
-    get_filename_component(PARENT_DIR "${FILE}" DIRECTORY)
-    string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "" GROUP "${PARENT_DIR}")
-    string(REPLACE "/" "\\" GROUP "${GROUP}")
-    set(GROUP "Source Files${GROUP}")
-    source_group("${GROUP}" FILES "${FILE}")
+foreach(FILE IN LISTS SOURCES)
+    get_filename_component(SOURCE_PATH "${FILE}" PATH)
+    string(REPLACE "/" "\\" SOURCE_PATH_GROUP "${SOURCE_PATH}")
+    source_group("Source Files\\${SOURCE_PATH_GROUP}" FILES "${FILE}")
 endforeach()
 
 set_target_properties(${CURRENT_TARGET_NAME}
