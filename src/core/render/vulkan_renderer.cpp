@@ -153,6 +153,8 @@ CVulkanRenderer::~CVulkanRenderer() {
         m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger);
     }
 
+    m_window->DestroySurface(m_instance);
+
     m_instance.destroy();
 }
 
@@ -851,7 +853,7 @@ void CVulkanRenderer::_CreatePipeline() {
     rasterizer.rasterizerDiscardEnable = vk::False;
     rasterizer.polygonMode = vk::PolygonMode::eFill;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = vk::CullModeFlagBits::eNone;
+    rasterizer.cullMode = vk::CullModeFlagBits::eBack;
     rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
     rasterizer.depthBiasEnable = vk::False;
 
