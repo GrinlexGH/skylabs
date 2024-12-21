@@ -45,8 +45,10 @@ option(SKYLABS_BUILD_DEPENDENCIES "Should you build all dependencies from the li
 if (SKYLABS_BUILD_DEPENDENCIES)
     if(WIN32)
         set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
+        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
     else()
         set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
+        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
     endif()
 
     execute_process(
@@ -55,12 +57,6 @@ if (SKYLABS_BUILD_DEPENDENCIES)
     )
 
     list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
-
-    if(WIN32)
-        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
-    elseif(UNIX)
-        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
-    endif()
 endif()
 
 find_package(glm REQUIRED)

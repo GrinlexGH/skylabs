@@ -37,6 +37,11 @@ void MainLoop(CVulkanRenderer& renderer) {
         if (keyState[SDL_SCANCODE_ESCAPE]) {
             quit = true;
         }
+        if (keyState[SDL_SCANCODE_LSHIFT]) {
+            g_camera.MoveFaster();
+        } else {
+            g_camera.ResetSpeed();
+        }
 
         SDL_Event e;
         SDL_PollEvent(&e);
