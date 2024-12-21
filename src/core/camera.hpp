@@ -86,13 +86,22 @@ public:
         m_fov -= (float)yoffset;
         if (m_fov < 1.0f)
             m_fov = 1.0f;
-        if (m_fov > 45.0f)
-            m_fov = 45.0f;
+        if (m_fov > 120.0f)
+            m_fov = 120.0f;
+    }
+
+    void MoveFaster() {
+        if (m_movementSpeed <= SPEED)
+            m_movementSpeed += 0.002f;
+    }
+
+    void ResetSpeed() {
+        m_movementSpeed = SPEED;
     }
 
 private:
     void updateCameraVectors() {
-        glm::vec3 front;
+        glm::vec3 front {};
         front.x = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
         front.y = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
         front.z = sin(glm::radians(m_pitch));
