@@ -97,11 +97,11 @@ private:
 
     struct CQueueFamilyIndices
     {
-        std::optional<uint32_t> m_graphics;
+        std::optional<uint32_t> m_graphicsAndCompute;
         std::optional<uint32_t> m_present;
 
         bool isComplete() const {
-            return m_graphics.has_value() && m_present.has_value();
+            return m_graphicsAndCompute.has_value() && m_present.has_value();
         }
     };
 
@@ -150,7 +150,7 @@ private:
     void _CreateSwapchain();
     void _CleanupSwapchain();
     void _RecreateSwapchain();
-    vk::ImageView _CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
+    vk::ImageView _CreateImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags, uint32_t mipLevels);
     void _CreateImageViews(vk::Format format);
 
     void _CreateRenderPass();
@@ -158,6 +158,8 @@ private:
     void _CreateDescriptorSetLayout();
     vk::ShaderModule _CreateShaderModule(const std::vector<char>& byteCode);
     void _CreatePipeline();
+
+    void _CreateColorResources();
 
     vk::Format _GetSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
     vk::Format _GetDepthFormat();
@@ -191,6 +193,8 @@ private:
     CImage _CreateImage(
         uint32_t width,
         uint32_t height,
+        uint32_t mipLevels,
+        vk::SampleCountFlagBits numSamples,
         vk::Format format,
         vk::ImageTiling tiling,
         vk::ImageUsageFlags usage,
@@ -200,7 +204,8 @@ private:
         vk::Image image,
         vk::Format format,
         vk::ImageLayout oldLayout,
-        vk::ImageLayout newLayout
+        vk::ImageLayout newLayout,
+        uint32_t mipLevels
     );
     void _CopyBufferToImage(
         vk::Buffer buffer,
@@ -208,10 +213,13 @@ private:
         uint32_t width,
         uint32_t height
     );
+    void _GenerateMipMaps(vk::Image image, vk::Format format, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
     void _CreateTextureImage();
     void _CreateTextureImageView(vk::Format format);
 
     void _CreateTextureSampler();
+
+    void _CreateSyncObjects();
 
     #ifndef NDEBUG
     bool m_enableValidationLayer = true;
@@ -248,6 +256,9 @@ private:
     std::vector<vk::Image> m_images {};
     std::vector<vk::ImageView> m_imageViews {};
 
+    CImage m_colorImage {};
+    vk::ImageView m_colorImageView {};
+
     vk::RenderPass m_renderPass {};
 
     vk::DescriptorSetLayout m_descriptorSetLayout {};
@@ -273,9 +284,12 @@ private:
     vk::DescriptorPool m_descriptorPool {};
     std::vector<vk::DescriptorSet> m_descriptorSets {};
 
+    uint32_t m_mipLevels = 0;
     CImage m_textureImage {};
     vk::ImageView m_textureImageView {};
     vk::Sampler m_textureSampler {};
+
+    vk::SampleCountFlagBits m_msaaSamples = vk::SampleCountFlagBits::e1;
 
     std::vector<vk::Semaphore> m_imageAvailableSemaphores {};
     std::vector<vk::Semaphore> m_renderFinishedSemaphores {};
