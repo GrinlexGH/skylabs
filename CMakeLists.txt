@@ -5,6 +5,7 @@ set(PROJECT_NAME "Skylabs")
 project(${PROJECT_NAME} VERSION 0.0.0.0 LANGUAGES CXX C)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_COLOR_DIAGNOSTICS ON)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -22,42 +23,33 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         "/WX" "/W4" "/utf-8" "/Zc:__cplusplus"
     )
 else()
-    message(FATAL_ERROR "${PROJECT_NAME} Compiles only on gcc, clang, apple clang or msvc!")
+    message(WARNING "${PROJECT_NAME} compiles only on gcc, clang, apple clang or msvc! I have no idea if everything is going to be okay")
 endif()
 
-# TODO: options for building dependencies
-if(MSVC)
-    if(CMAKE_GENERATOR_PLATFORM)
-        set(CMAKE_OPTIONS
-            -A ${CMAKE_GENERATOR_PLATFORM}
-        )
-    endif()
-    if(CMAKE_GENERATOR_TOOLSET)
-        set(CMAKE_OPTIONS
-            ${CMAKE_OPTIONS}
-            -T ${CMAKE_GENERATOR_TOOLSET}
-        )
-    endif()
+set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
+set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
+set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
+
+# If you want to compile dependencies with default options, just configure this project.
+# If you want to compile dependencies with custom options, run build_dependencies.cmd(.sh)
+# with cmake options as arguments and after that configure this project.
+# If you want to use your own libraries, then put them into libs/bin/*platform*/*lib name* folder
+if(WIN32)
+    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
+    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/windows)
+else()
+    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
+    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/linux)
 endif()
 
-option(SKYLABS_BUILD_DEPENDENCIES "Should you build all dependencies from the libs folder." ON)
+execute_process(
+    COMMAND ${BUILD_SCRIPT_CMD}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs/
+)
 
-if (SKYLABS_BUILD_DEPENDENCIES)
-    if(WIN32)
-        set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
-        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
-    else()
-        set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
-        set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
-    endif()
-
-    execute_process(
-        COMMAND ${BUILD_SCRIPT_CMD}
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs/
-    )
-
-    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
-endif()
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
 find_package(glm REQUIRED)
 find_package(SDL3 REQUIRED)
@@ -65,8 +57,5 @@ find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 find_package(tinyobjloader REQUIRED)
-#find_package(GLFW3 REQUIRED)
 
-set(PUBLIC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/public)
-
-add_subdirectory(${PROJECT_SOURCE_DIR}/src)
+add_subdirectory(src)

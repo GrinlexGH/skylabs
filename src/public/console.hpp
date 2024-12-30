@@ -1,26 +1,22 @@
 #pragma once
-#include "platform.hpp"
+#include "publicapi.hpp"
 #include "stc.hpp"
 
 #include <iostream>
-#include <string_view>
 #include <array>
-#include <cstdint>
+#include <format>
 
 template <typename T>
 concept Printable = requires(std::ostream& os, T a) { os << a; };
 
-class IConsoleMessage {
+class CDefaultConsoleMessage {
 public:
-    virtual ~IConsoleMessage() = default;
-
-    // Printing to console in same format as printf()
-    PLATFORM_CLASS virtual void operator()(std::string_view format, ...) = 0;
-};
-
-class CDefaultConsoleMessage final : IConsoleMessage {
-public:
-    PLATFORM_CLASS virtual void operator()(std::string_view format, ...);
+    template <typename... Args>
+    void operator()(const std::format_string<Args...> fmt, Args&&... args) {
+        std::cout
+            << stc::reset_fg
+            << std::format(fmt, std::forward<Args>(args)...);
+    }
 
 private:
     PLATFORM_CLASS friend CDefaultConsoleMessage&
@@ -39,15 +35,21 @@ private:
     }
 };
 
-class CColorfulConsoleMessage final : public IConsoleMessage {
+class CColorfulConsoleMessage {
 public:
-    using rgb_t = std::array<std::uint8_t, 3>;
-    CColorfulConsoleMessage(rgb_t color) : m_color(color) { }
+    using RGB_t = std::array<std::uint8_t, 3>;
+    explicit CColorfulConsoleMessage(const RGB_t& color) : m_color(color) { }
 
-    PLATFORM_CLASS virtual void operator()(std::string_view format, ...);
+    template <typename... Args>
+    void operator()(const std::format_string<Args...> fmt, Args&&... args) {
+        std::cout
+            << stc::rgb_fg(m_color[0], m_color[1], m_color[2])
+            << std::format(fmt, std::forward<Args>(args)...)
+            << stc::reset_fg;
+    }
 
 private:
-    rgb_t m_color { 255, 255, 255 };
+    RGB_t m_color { 255, 255, 255 };
 
     PLATFORM_CLASS friend CColorfulConsoleMessage&
     operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&));
@@ -65,6 +67,6 @@ private:
     }
 };
 
-PLATFORM_OVERLOAD CDefaultConsoleMessage Msg;
-PLATFORM_OVERLOAD CColorfulConsoleMessage Warning;
-PLATFORM_OVERLOAD CColorfulConsoleMessage Error;
+PLATFORM_GLOBAL CDefaultConsoleMessage Msg;
+PLATFORM_GLOBAL CColorfulConsoleMessage Warning;
+PLATFORM_GLOBAL CColorfulConsoleMessage Error;

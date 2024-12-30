@@ -1,18 +1,6 @@
 #include "console.hpp"
 
-#include "platform.hpp"
-#include "stc.hpp"
-
-#include <cstdarg>
-
-void CDefaultConsoleMessage::operator()(std::string_view format, ...) {
-    std::cout << stc::reset_fg;
-    std::va_list argList;
-    va_start(argList, format);
-    vprintf(format.data(), argList);
-    va_end(argList);
-    std::cout << '\n';
-}
+#include "publicapi.hpp"
 
 CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ostream&)) {
     f(std::cout);
@@ -29,14 +17,6 @@ CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)
     return s;
 }
 
-void CColorfulConsoleMessage::operator()(std::string_view format, ...) {
-    std::cout << stc::rgb_fg(m_color[0], m_color[1], m_color[2]);
-    std::va_list argList;
-    va_start(argList, format);
-    vprintf(format.data(), argList);
-    va_end(argList);
-    std::cout << '\n' << stc::reset_fg;
-}
 
 CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&)) {
     f(std::cout);

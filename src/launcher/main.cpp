@@ -1,6 +1,6 @@
 ﻿#ifdef PLATFORM_WINDOWS
     #include <windows.h>
-#elif defined(PLATFORM_POSIX)
+#elif defined(PLATFORM_LINUX)
     #include <dlfcn.h>
     #include <iostream>
 #else
@@ -12,70 +12,74 @@
 #include <stdexcept>
 #include <string>
 
-#ifdef PLATFORM_WINDOWS
-using CoreMain_t = int (*)(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd);
-#elif defined(PLATFORM_POSIX)
-using CoreMain_t = int (*)(int argc, char** argv);
-#endif
+using main_t = int (*)(int argc, char* argv[]);
 
 #ifdef PLATFORM_WINDOWS
 
-static std::string narrow(const std::wstring_view wstr) {
-    if (wstr.empty()) {
+namespace {
+std::string Narrow(const std::wstring_view wideStr) {
+    if (wideStr.empty()) {
         return {};
     }
-    int len = ::WideCharToMultiByte(
-        CP_UTF8, 0, &wstr[0], (int)wstr.size(),
+    const int len = WideCharToMultiByte(
+        CP_UTF8, 0, wideStr.data(), static_cast<int>(wideStr.size()),
         nullptr, 0, nullptr, nullptr
     );
     std::string out(len, 0);
-    ::WideCharToMultiByte(
-        CP_UTF8, 0, &wstr[0], (int)wstr.size(),
-        &out[0], len, nullptr, nullptr
+    WideCharToMultiByte(
+        CP_UTF8, 0, wideStr.data(), static_cast<int>(wideStr.size()),
+        out.data(), len, nullptr, nullptr
     );
     return out;
 }
 
-static std::wstring widen(const std::string_view str) {
-    if (str.empty()) {
+std::wstring Widen(const std::string_view narrowStr) {
+    if (narrowStr.empty()) {
         return {};
     }
-    int len = ::MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), nullptr, 0);
+    const int len = MultiByteToWideChar(
+        CP_UTF8, 0, narrowStr.data(), static_cast<int>(narrowStr.size()),
+        nullptr, 0
+    );
     std::wstring out(len, 0);
-    ::MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &out[0], len);
+    MultiByteToWideChar(
+        CP_UTF8, 0, narrowStr.data(), static_cast<int>(narrowStr.size()),
+        out.data(), len
+    );
     return out;
 }
 
-static std::string getWinapiErrorMessage() {
+std::string GetWinApiErrorMessage() {
     wchar_t* errorMsg = nullptr;
-    ::FormatMessageW(
+    FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
+            FORMAT_MESSAGE_FROM_SYSTEM |
+            FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR)&errorMsg, 0, nullptr
+        reinterpret_cast<LPWSTR>(&errorMsg), 0, nullptr
     );
-    std::string finalMsg = narrow(errorMsg);
-    ::LocalFree(errorMsg);
+    std::string finalMsg = Narrow(errorMsg);
+    LocalFree(errorMsg);
     return finalMsg;
+}
 }
 
 int WINAPI wWinMain(
-    _In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR lpCmdLine,
-    _In_ int nShowCmd
+    _In_ HINSTANCE /*hInstance*/,
+    _In_opt_ HINSTANCE /*hPrevInstance*/,
+    _In_ LPWSTR /*lpCmdLine*/,
+    _In_ int /*nShowCmd*/
 ) {
     try {
         std::filesystem::path rootDir;
         {
-            wchar_t buffer[MAX_PATH] = { 0 };
-            ::GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+            wchar_t buffer[MAX_PATH] = { };
+            GetModuleFileNameW(nullptr, buffer, MAX_PATH);
             rootDir = buffer;
         }
         rootDir.remove_filename();
 
-        auto core = ::LoadLibraryExW(
+        const auto core = LoadLibraryExW(
             (rootDir.wstring() + L"\\bin\\core.dll").c_str(),
             nullptr,
             LOAD_WITH_ALTERED_SEARCH_PATH
@@ -83,29 +87,47 @@ int WINAPI wWinMain(
         if (!core) {
             throw std::runtime_error(
                 "Failed to load core library: " +
-                getWinapiErrorMessage()
+                GetWinApiErrorMessage()
             );
         }
 
-        auto main = (CoreMain_t)(void*)GetProcAddress(core, "CoreInit");
+        const auto main = reinterpret_cast<main_t>(GetProcAddress(core, "CoreInit"));
         if (!main) {
             throw std::runtime_error(
                 "Failed to load the core entry proc: " +
-                getWinapiErrorMessage()
+                GetWinApiErrorMessage()
             );
         }
 
-        int ret = main(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
-        ::FreeLibrary(core);
+        // converts wide argv to narrow argv
+        int argc = 0;
+        wchar_t** wArgv = CommandLineToArgvW(GetCommandLineW(), &argc);
+        const auto argv = new char*[argc];
+        for (int i = 0; i < argc; ++i) {
+            std::string narrowStr = Narrow(wArgv[i]);
+            const std::size_t argSize = narrowStr.size() + 1;
+            argv[i] = new char[argSize];
+            strcpy_s(argv[i], argSize, narrowStr.c_str());
+        }
+        LocalFree(wArgv);
+
+        // call real main with normal arguments, not schizophrenia from windows
+        const int ret = main(argc, argv);
+
+        for (int i = 0; i < argc; ++i)
+            delete[] argv[i];
+        delete[] argv;
+
+        FreeLibrary(core);
         return ret;
     } catch (const std::exception& e) {
-        ::MessageBeep(MB_ICONERROR);
-        ::MessageBoxW(nullptr, widen(e.what()).c_str(), L"Error!", MB_OK | MB_ICONERROR);
+        MessageBeep(MB_ICONERROR);
+        MessageBoxW(nullptr, Widen(e.what()).c_str(), L"Error!", MB_OK | MB_ICONERROR);
         return 1;
     }
 }
 
-#elif defined(PLATFORM_POSIX)
+#elif defined(PLATFORM_LINUX)
 
 int main(int argc, char** argv) {
     try {

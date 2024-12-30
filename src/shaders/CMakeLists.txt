@@ -16,7 +16,7 @@ endforeach()
 # Validate that source files have been passed
 list(LENGTH SHADER_SOURCE_FILES FILE_COUNT)
 if(FILE_COUNT EQUAL 0)
-    message(FATAL_ERROR "Cannot create a shaders target without any source files")
+    message(FATAL_ERROR "Cannot create a shaders target without any source files!")
 endif()
 
 set(SHADER_COMMAND)
@@ -36,7 +36,6 @@ foreach(SHADER_SOURCE IN LISTS SHADER_SOURCE_FILES)
 
     # Add product
     list(APPEND SHADER_PRODUCTS "${ROOT_OUTPUT_DIRECTORY}/shaders/${SHADER_NAME}.spv")
-
 endforeach()
 
 add_custom_target(
