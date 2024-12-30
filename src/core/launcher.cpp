@@ -15,11 +15,10 @@ bool firstMouse = true;
 
 void MainLoop(CVulkanRenderer& renderer) {
     bool quit = false;
-    bool minimized = false;
     while (!quit) {
-        Uint64 currentFrame = SDL_GetTicks();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = (float)currentFrame;
+        const Uint64 currentFrame = SDL_GetTicks();
+        deltaTime = static_cast<float>(currentFrame) - lastFrame;
+        lastFrame = static_cast<float>(currentFrame);
 
         const bool* keyState = SDL_GetKeyboardState(nullptr);
         if (keyState[SDL_SCANCODE_W]) {
@@ -45,6 +44,7 @@ void MainLoop(CVulkanRenderer& renderer) {
 
         SDL_Event e;
         SDL_PollEvent(&e);
+        bool minimized = false;
         switch (e.type) {
             case SDL_EVENT_QUIT:
                 quit = true;
@@ -56,7 +56,7 @@ void MainLoop(CVulkanRenderer& renderer) {
                 minimized = false;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                renderer.m_frameBufferResized = true;
+                //renderer.m_frameBufferResized = true;
                 break;
             case SDL_EVENT_MOUSE_MOTION:
                 g_camera.ProcessMouseMovement(e.motion.xrel, -e.motion.yrel);
@@ -64,7 +64,9 @@ void MainLoop(CVulkanRenderer& renderer) {
             case SDL_EVENT_MOUSE_WHEEL:
                 g_camera.ProcessMouseScroll(e.wheel.y);
                 break;
+            default: break;
         }
+
         if(!minimized) {
             renderer.Draw();
         }

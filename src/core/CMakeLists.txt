@@ -2,16 +2,19 @@
 set(CURRENT_TARGET_NAME core)
 
 set(SOURCES
-    coremain.cpp
+    main.cpp
     launcher.hpp
     launcher.cpp
+    header_factory.cpp
+    vulkan.hpp
+    window.hpp
+    vulkan_window.hpp
+    camera.hpp
     render/renderer.hpp
     render/vulkan_renderer.hpp
     render/vulkan_renderer.cpp
-    header_factory.cpp
-    stb_image.h
-    vulkan.hpp
-    vulkan_window.hpp
+    render/instance.hpp
+    render/instance.cpp
     SDL/SDL_context.cpp
     SDL/SDL_context.hpp
     SDL/SDL_vulkan.hpp
@@ -19,20 +22,7 @@ set(SOURCES
     SDL/SDL_window.hpp
     SDL/SDL_video.hpp
     SDL/SDL.hpp
-    camera.hpp
 )
-
-if(WIN32)
-    set(SOURCES
-        ${SOURCES}
-        winapp.cpp
-    )
-elseif(UNIX)
-    set(SOURCES
-        ${SOURCES}
-        posixapp.cpp
-    )
-endif()
 
 add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
 

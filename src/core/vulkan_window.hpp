@@ -8,8 +8,14 @@
 class IVulkanWindow : public IWindow
 {
 public:
-    virtual ~IVulkanWindow() = default;
+    IVulkanWindow() = default;
+    IVulkanWindow(const IVulkanWindow&) = default;
+    IVulkanWindow(IVulkanWindow&&) = default;
+    IVulkanWindow& operator=(const IVulkanWindow&) = default;
+    IVulkanWindow& operator=(IVulkanWindow&&) = default;
+    ~IVulkanWindow() override = default;
 
+    // todo: windows class shouldn't be responsible for these things...
     virtual std::vector<const char*> GetRequiredInstanceExtensions() = 0;
     virtual bool GetPresentationSupport(vk::Instance instance, vk::PhysicalDevice physicalDevice, uint32_t queueFamilyIndex) = 0;
     virtual void GetDrawableSize(int* w, int* h) = 0;

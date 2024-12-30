@@ -3,9 +3,11 @@
 .PVS-Studio/
 .vscode/*
 !.vscode/launch.json
+.vs/
 
 # Build folders
 build/*
+out
 
 # Third party compiled libs
 libs/bin/linux/*

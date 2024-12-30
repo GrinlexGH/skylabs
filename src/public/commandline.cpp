@@ -10,7 +10,7 @@ public:
     int FindParam(std::string_view param) override;
 };
 
-static CCommandLine g_cmdLine;
+namespace { CCommandLine g_cmdLine; }
 PLATFORM_INTERFACE ICommandLine* CommandLine() { return &g_cmdLine; }
 
 void CCommandLine::CreateCmdLine(const std::vector<std::string>& argv) {

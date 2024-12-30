@@ -17,22 +17,22 @@ inline std::vector<const char*> GetInstanceExtensions() {
     Uint32 extCount = 0;
     SDL_Vulkan_GetInstanceExtensions(&extCount);
     const char* const* extensions = SDL_Vulkan_GetInstanceExtensions(&extCount);
-    return std::vector<const char*>(extensions, extensions + extCount);
+    return std::vector(extensions, extensions + extCount);
 }
 
-inline bool GetPresentationSupport(vk::Instance instance, vk::PhysicalDevice physicalDevice, Uint32 queueFamilyIndex) {
+inline bool GetPresentationSupport(const vk::Instance instance, const vk::PhysicalDevice physicalDevice, const Uint32 queueFamilyIndex) {
     return SDL_Vulkan_GetPresentationSupport(instance, physicalDevice, queueFamilyIndex);
 }
 
-inline vk::SurfaceKHR CreateSurface(SDL_Window* window, vk::Instance instance) {
+inline vk::SurfaceKHR CreateSurface(SDL_Window* window, const vk::Instance instance) {
     VkSurfaceKHR surface {};
     if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface)) {
         throw std::runtime_error(std::format("Failed to create vulkan surface via SDL: {}!", SDL_GetError()));
     }
-    return vk::SurfaceKHR(surface);
+    return surface;
 }
 
-inline void DestroySurface(vk::Instance instance, vk::SurfaceKHR surface) {
+inline void DestroySurface(const vk::Instance instance, const vk::SurfaceKHR surface) {
     SDL_Vulkan_DestroySurface(instance, surface, nullptr);
 }
 

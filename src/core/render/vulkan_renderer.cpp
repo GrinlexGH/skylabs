@@ -1,3 +1,18 @@
+#include "vulkan_renderer.hpp"
+
+bool CVulkanRenderer::Initialize(IWindow* window) {
+    if (window == nullptr) {
+        throw std::runtime_error("Cannot initialize vulkan renderer. Window is null!\n");
+    }
+    m_window = dynamic_cast<IVulkanWindow*>(window);
+
+    m_instance.Create(m_window);
+    return true;
+}
+
+
+
+#if 0
 #include "console.hpp"
 #include "vulkan_renderer.hpp"
 #include "../SDL/SDL.hpp"
@@ -15,7 +30,7 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include <vk_mem_alloc.hpp>
 
-#include "../stb_image.h"
+#include <stb/stb_image.h>
 #include "../camera.hpp"
 
 #include <fstream>
@@ -23,6 +38,7 @@
 #include <chrono>
 #include <cassert>
 #include <set>
+#include <random>
 
 constexpr std::size_t MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -56,6 +72,7 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
 
         m_graphicsQueue = m_device.getQueue(*m_queueFamiliesIndices.m_graphicsAndCompute, 0);
         m_presentQueue = m_device.getQueue(*m_queueFamiliesIndices.m_present, 0);
+        m_computeQueue = m_device.getQueue(*m_queueFamiliesIndices.m_graphicsAndCompute, 0);
 
         m_surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR(m_window->GetSurface());
         m_currentSwapchainExtent = _ChooseSwapChainExtent();
@@ -74,6 +91,8 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
 
         _CreateDescriptorSetLayout();
         _CreatePipeline();
+        _CreateComputeDescriptorSetLayout();
+        _CreateComputePipeline();
 
         _CreateColorResources();
         _CreateDepthResources();
@@ -88,6 +107,7 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
         _CreateVertexBuffer();
         _CreateIndexBuffer();
 
+        _CreateShaderStorageBuffers();
         _CreateUniformBuffers();
 
         _CreateTextureImage();
@@ -95,7 +115,9 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
         _CreateTextureSampler();
 
         _CreateDescriptorPool();
-        _CreateDescriptorSets();
+        //_CreateDescriptorSets();
+        _CreateComputeDescriptorSets();
+        _CreateComputeCommandBuffers();
 
         _CreateSyncObjects();
     } catch (const std::exception& e) {
@@ -285,45 +307,6 @@ void CVulkanRenderer::_SetRequiredDeviceExtensions() {
     m_deviceExtensions[VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME] = true;
 }
 
-static std::string _GetDeviceVendorName(const CVulkanRenderer::DeviceVendor deviceVendor) {
-    switch (deviceVendor) {
-        case CVulkanRenderer::DeviceVendor::eAMD:
-            return "AMD";
-        case CVulkanRenderer::DeviceVendor::eImgTec:
-            return "ImgTec";
-        case CVulkanRenderer::DeviceVendor::eApple:
-            return "Apple";
-        case CVulkanRenderer::DeviceVendor::eNVIDIA:
-            return "NVIDIA";
-        case CVulkanRenderer::DeviceVendor::eARM:
-            return "ARM";
-        case CVulkanRenderer::DeviceVendor::eMicrosoft:
-            return "Microsoft";
-        case CVulkanRenderer::DeviceVendor::eQualcomm:
-            return "Qualcomm";
-        case CVulkanRenderer::DeviceVendor::eIntel:
-            return "Intel";
-        default:
-            return "Unknown";
-    }
-}
-
-static std::string _GetDeviceTypeName(vk::PhysicalDeviceType deviceType) {
-    switch (deviceType) {
-        case vk::PhysicalDeviceType::eDiscreteGpu:
-            return "Discrete";
-        case vk::PhysicalDeviceType::eIntegratedGpu:
-            return "Integrated";
-        case vk::PhysicalDeviceType::eVirtualGpu:
-            return "Virtual";
-        case vk::PhysicalDeviceType::eCpu:
-            return "CPU";
-        case vk::PhysicalDeviceType::eOther:
-        default:
-            return "Other";
-    }
-}
-
 static bool _CheckExtensionSupport(vk::PhysicalDevice physicalDevice, const std::unordered_map<std::string, bool>& deviceExtensions) {
     std::unordered_set<std::string> enabledDeviceExtensions {};
 
@@ -457,9 +440,7 @@ void CVulkanRenderer::_PickPhysicalDevice() {
         vk::PhysicalDeviceProperties properties = physicalDevices[i].getProperties();
 
         std::string name = properties.deviceName;
-        std::string vendor = _GetDeviceVendorName(DeviceVendor(properties.vendorID));
-        std::string type = _GetDeviceTypeName(properties.deviceType);
-        std::cout << std::format("#{}: {} {} - {}:\n", i, vendor, name, type);
+        std::cout << std::format("Device found: #{} {}\n", i, name);
 
         if (_IsDeviceSuitable(physicalDevices[i])) {
             uint32_t optionScore = _GetDeviceTypeScore(properties.deviceType);
@@ -811,11 +792,9 @@ void CVulkanRenderer::_CreatePipeline() {
 
     auto vertShaderCode = resource_loader::ReadFile("shaders/vert.spv");
     auto fragShaderCode = resource_loader::ReadFile("shaders/frag.spv");
-    auto computeShaderCode = resource_loader::ReadFile("shaders/compute.spv");
 
     vk::ShaderModule vertexShader = _CreateShaderModule(vertShaderCode);
     vk::ShaderModule fragmentShader = _CreateShaderModule(fragShaderCode);
-    vk::ShaderModule computeShaderModule = _CreateShaderModule(computeShaderCode);
 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo {};
     vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
@@ -825,10 +804,6 @@ void CVulkanRenderer::_CreatePipeline() {
     fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
     fragShaderStageInfo.module = fragmentShader;
     fragShaderStageInfo.pName = "main";
-    vk::PipelineShaderStageCreateInfo computeShaderStageInfo {};
-    computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
-    computeShaderStageInfo.module = computeShaderModule;
-    computeShaderStageInfo.pName = "main";
 
     vk::PipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
@@ -1222,15 +1197,198 @@ void CVulkanRenderer::_CreateUniformBuffers() {
     }
 }
 
+void CVulkanRenderer::_CreateShaderStorageBuffers() {
+    m_shaderStorageBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
+    // Initialize particles
+    std::default_random_engine rndEngine((unsigned)time(nullptr));
+    std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
+
+    // Initial particle positions on a circle
+    std::vector<Particle> particles(/*PARTICLE_COUNT*/800);
+    for (auto& particle : particles) {
+        float r = 0.25f * sqrt(rndDist(rndEngine));
+        float theta = static_cast<float>(rndDist(rndEngine) * 2 * 3.14159265358979323846);
+        float x = r * cos(theta) * /*HEIGHT*/ 640 / 480 /*WIDTH*/;
+        float y = r * sin(theta);
+        particle.position = glm::vec2(x, y);
+        particle.velocity = glm::normalize(glm::vec2(x,y)) * 0.00025f;
+        particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
+    }
+
+    vk::DeviceSize bufferSize = sizeof(Particle) * /*PARTICLE_COUNT*/ 800;
+
+    CBuffer stagingBuffer = _CreateBuffer(
+        bufferSize,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+        vma::AllocationCreateFlagBits::eHostAccessRandom
+    );
+
+    void* data = m_allocator.mapMemory(stagingBuffer.allocation);
+        memcpy(data, particles.data(), static_cast<size_t>(bufferSize));
+    m_allocator.unmapMemory(stagingBuffer.allocation);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        m_shaderStorageBuffers[i] = _CreateBuffer(
+            bufferSize,
+            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            {}
+        );
+        // Copy data from the staging buffer (host) to the shader storage buffer (GPU)
+        _CopyBuffer(stagingBuffer.buffer, m_shaderStorageBuffers[i].buffer, bufferSize);
+    }
+
+    m_allocator.destroyBuffer(stagingBuffer.buffer, stagingBuffer.allocation);
+}
+
+void CVulkanRenderer::_CreateComputeDescriptorSetLayout() {
+    std::array<vk::DescriptorSetLayoutBinding, 3> layoutBindings {};
+    layoutBindings[0].binding = 0;
+    layoutBindings[0].descriptorCount = 1;
+    layoutBindings[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+    layoutBindings[0].pImmutableSamplers = nullptr;
+    layoutBindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+    layoutBindings[1].binding = 1;
+    layoutBindings[1].descriptorCount = 1;
+    layoutBindings[1].descriptorType = vk::DescriptorType::eStorageBuffer;
+    layoutBindings[1].pImmutableSamplers = nullptr;
+    layoutBindings[1].stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+    layoutBindings[2].binding = 2;
+    layoutBindings[2].descriptorCount = 1;
+    layoutBindings[2].descriptorType = vk::DescriptorType::eStorageBuffer;
+    layoutBindings[2].pImmutableSamplers = nullptr;
+    layoutBindings[2].stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+    vk::DescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.bindingCount = 3;
+    layoutInfo.pBindings = layoutBindings.data();
+
+    m_computeDescriptorSetLayout = m_device.createDescriptorSetLayout(layoutInfo, nullptr);
+}
+
+void CVulkanRenderer::_CreateComputeDescriptorSets() {
+    std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_computeDescriptorSetLayout);
+    vk::DescriptorSetAllocateInfo allocInfo {};
+    allocInfo.descriptorPool = m_descriptorPool;
+    allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    allocInfo.pSetLayouts = layouts.data();
+
+    m_computeDescriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+    m_computeDescriptorSets = m_device.allocateDescriptorSets(allocInfo);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vk::DescriptorBufferInfo uniformBufferInfo {};
+        uniformBufferInfo.buffer = m_uniformBuffers[i].buffer;
+        uniformBufferInfo.offset = 0;
+        uniformBufferInfo.range = sizeof(CUniformBufferObject);
+
+        std::array<vk::WriteDescriptorSet, 3> descriptorWrites {};
+        descriptorWrites[0].dstSet = m_computeDescriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
+
+        vk::DescriptorBufferInfo storageBufferInfoLastFrame {};
+        storageBufferInfoLastFrame.buffer = m_shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT].buffer;
+        storageBufferInfoLastFrame.offset = 0;
+        storageBufferInfoLastFrame.range = sizeof(Particle) * 800 /*PARTICLE_COUNT*/;
+
+        descriptorWrites[1].dstSet = m_computeDescriptorSets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eStorageBuffer;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &storageBufferInfoLastFrame;
+
+        vk::DescriptorBufferInfo storageBufferInfoCurrentFrame {};
+        storageBufferInfoCurrentFrame.buffer = m_shaderStorageBuffers[i].buffer;
+        storageBufferInfoCurrentFrame.offset = 0;
+        storageBufferInfoCurrentFrame.range = sizeof(Particle) * 800 /*PARTICLE_COUNT*/;
+
+        descriptorWrites[2].dstSet = m_computeDescriptorSets[i];
+        descriptorWrites[2].dstBinding = 2;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = vk::DescriptorType::eStorageBuffer;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pBufferInfo = &storageBufferInfoCurrentFrame;
+
+        m_device.updateDescriptorSets(3, descriptorWrites.data(), 0, nullptr);
+    }
+}
+
+void CVulkanRenderer::_CreateComputePipeline() {
+    auto computeShaderCode = resource_loader::ReadFile("shaders/comp.spv");
+
+    vk::ShaderModule computeShaderModule = _CreateShaderModule(computeShaderCode);
+
+    vk::PipelineShaderStageCreateInfo computeShaderStageInfo {};
+    computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
+    computeShaderStageInfo.module = computeShaderModule;
+    computeShaderStageInfo.pName = "main";
+
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &m_computeDescriptorSetLayout;
+
+    m_computePipelineLayout = m_device.createPipelineLayout(pipelineLayoutInfo);
+
+    vk::ComputePipelineCreateInfo pipelineInfo {};
+    pipelineInfo.layout = m_computePipelineLayout;
+    pipelineInfo.stage = computeShaderStageInfo;
+
+    m_computePipeline = m_device.createComputePipeline(VK_NULL_HANDLE, pipelineInfo).value;
+
+    m_device.destroyShaderModule(computeShaderModule);
+}
+
+void CVulkanRenderer::_RecordComputeCommandBuffer(vk::CommandBuffer commandBuffer) {
+    vk::CommandBufferBeginInfo beginInfo {};
+
+    commandBuffer.begin(beginInfo);
+
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
+
+    commandBuffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eCompute,
+        m_computePipelineLayout,
+        0,
+        1,
+        &m_computeDescriptorSets[m_currentFrame],
+        0,
+        nullptr
+    );
+
+    commandBuffer.dispatch(/*PARTICLE_COUNT*/ 800 / 256, 1, 1);
+
+    commandBuffer.end();
+}
+
+void CVulkanRenderer::_CreateComputeCommandBuffers() {
+    m_computeCommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
+    vk::CommandBufferAllocateInfo allocInfo {};
+    allocInfo.commandPool = m_commandPool;
+    allocInfo.level = vk::CommandBufferLevel::ePrimary;
+    allocInfo.commandBufferCount = (uint32_t)m_computeCommandBuffers.size();
+
+    m_computeCommandBuffers = m_device.allocateCommandBuffers(allocInfo);
+}
+
 void CVulkanRenderer::_CreateDescriptorPool() {
     std::array<vk::DescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].type = vk::DescriptorType::eStorageBuffer;
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2;
 
     vk::DescriptorPoolCreateInfo poolInfo {};
-    poolInfo.poolSizeCount = 1;
+    poolInfo.poolSizeCount = 2;
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -1582,15 +1740,38 @@ void CVulkanRenderer::_CreateSyncObjects() {
     m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    m_computeInFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    m_computeFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 
     for (std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         m_imageAvailableSemaphores[i] = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
         m_renderFinishedSemaphores[i] = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
         m_inFlightFences[i] = m_device.createFence(vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled });
+        m_computeFinishedSemaphores[i] = m_device.createSemaphore(vk::SemaphoreCreateInfo {});
+        m_computeInFlightFences[i] = m_device.createFence(vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled });
     }
 }
 
 void CVulkanRenderer::Draw() {
+    vk::SubmitInfo submitInfo{};
+
+    // Compute submission
+    std::ignore = m_device.waitForFences(m_computeInFlightFences[m_currentFrame], vk::True, UINT64_MAX);
+
+    UpdateUniformBuffer(m_currentFrame, m_currentSwapchainExtent);
+
+    m_device.resetFences(m_computeInFlightFences[m_currentFrame]);
+
+    m_computeCommandBuffers[m_currentFrame].reset();
+    _RecordComputeCommandBuffer(m_computeCommandBuffers[m_currentFrame]);
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_computeCommandBuffers[m_currentFrame];
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &m_computeFinishedSemaphores[m_currentFrame];
+
+    m_computeQueue.submit(submitInfo, m_computeInFlightFences[m_currentFrame]);
+
     std::ignore = m_device.waitForFences(m_inFlightFences[m_currentFrame], vk::True, std::numeric_limits<unsigned int>::max());
 
     uint32_t imageIndex;
@@ -1606,8 +1787,6 @@ void CVulkanRenderer::Draw() {
         _RecreateSwapchain();
         return;
     }
-
-    UpdateUniformBuffer(m_currentFrame, m_currentSwapchainExtent);
 
     m_device.resetFences(m_inFlightFences[m_currentFrame]);
 
@@ -1652,15 +1831,15 @@ void CVulkanRenderer::Draw() {
     scissor.extent = m_currentSwapchainExtent;
     m_commandBuffers[m_currentFrame].setScissor(0, scissor);
 
-    m_commandBuffers[m_currentFrame].bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics,
+    /*m_commandBuffers[m_currentFrame].bindDescriptorSets(
+        vk::PipelineBindPoint::eCompute,
         m_pipelineLayout,
         0,
         1,
-        &m_descriptorSets[m_currentFrame],
+        &m_computeDescriptorSets[m_currentFrame],
         0,
         nullptr
-    );
+    );*/
     m_commandBuffers[m_currentFrame].drawIndexed(
         static_cast<uint32_t>(m_indices.size()),
         1, 0, 0, 0
@@ -1669,23 +1848,31 @@ void CVulkanRenderer::Draw() {
     m_commandBuffers[m_currentFrame].endRenderPass();
     m_commandBuffers[m_currentFrame].end();
 
-    vk::SubmitInfo submitInfo {};
+    m_device.resetFences(m_inFlightFences[m_currentFrame]);
 
-    vk::Semaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-    vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-    submitInfo.waitSemaphoreCount = 1;
+    submitInfo = 0;
+
+    vk::Semaphore waitSemaphores[] = {
+        m_computeFinishedSemaphores[m_currentFrame],
+        m_imageAvailableSemaphores[m_currentFrame]
+    };
+    vk::PipelineStageFlags waitStages[] = {
+        vk::PipelineStageFlagBits::eVertexInput,
+        vk::PipelineStageFlagBits::eColorAttachmentOutput
+    };
+    submitInfo.waitSemaphoreCount = 2;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
-    vk::Semaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.pSignalSemaphores = &m_renderFinishedSemaphores[m_currentFrame];
+
     m_graphicsQueue.submit(submitInfo, m_inFlightFences[m_currentFrame]);
 
     vk::PresentInfoKHR presentInfo {};
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = &m_renderFinishedSemaphores[m_currentFrame];
 
     vk::SwapchainKHR swapChains[] = { m_swapChain };
     presentInfo.swapchainCount = 1;
@@ -1698,7 +1885,6 @@ void CVulkanRenderer::Draw() {
         _RecreateSwapchain();
     }
     m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-    m_device.waitIdle();
 }
 
 void CVulkanRenderer::UpdateUniformBuffer(uint32_t currentImage, vk::Extent2D swapChainExtent) {
@@ -1709,3 +1895,4 @@ void CVulkanRenderer::UpdateUniformBuffer(uint32_t currentImage, vk::Extent2D sw
     ubo.proj[1][1] *= -1;
     memcpy(m_uniformBuffersData[currentImage], &ubo, sizeof(ubo));
 }
+#endif
