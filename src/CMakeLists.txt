@@ -1,46 +1,62 @@
 # src
-set(projects
+set(PROJECTS
     launcher
     core
     public
 )
 
-set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
-set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
-set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
+add_compile_definitions(NOMINMAX)
+
+if(WIN32)
+    add_compile_definitions(PLATFORM_WINDOWS UNICODE _UNICODE)
+endif()
+
+if(LINUX)
+    add_compile_definitions(PLATFORM_LINUX)
+endif()
+
+if(CYGWIN)
+    add_compile_definitions(PLATFORM_CYGWIN)
+endif()
+
+if(ANDROID)
+    add_compile_definitions(PLATFORM_ANDROID)
+endif()
+
+if(IOS)
+    add_compile_definitions(PLATFORM_IOS)
+endif()
+
+if(APPLE)
+    add_compile_definitions(PLATFORM_APPLE)
+endif()
+
+
+# For the future: there is a CMAKE_SYSTEM_NAME if
+# there is no special definition for the platform
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    add_compile_definitions(ARCH_64)
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    add_compile_definitions(ARCH_32)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    add_compile_definitions(COMPILER_MSVC)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    add_compile_definitions(COMPILER_GCC)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
+        add_compile_definitions(COMPILER_CLANG)
+    endif()
+endif()
 
 add_subdirectory("shaders")
-foreach(SUBDIR ${projects})
-    add_subdirectory("${SUBDIR}")
+foreach(PROJECT ${PROJECTS})
+    add_subdirectory("${PROJECT}")
 endforeach()
 
-set(CMAKE_COLOR_DIAGNOSTICS ON)
-
-foreach(project ${projects})
-    target_compile_definitions(${project} PRIVATE NOMINMAX)
-
-    if(CYGWIN)
-        target_compile_definitions(${project} PRIVATE PLATFORM_CYGWIN)
-    endif()
-
-    if(UNIX)
-        target_compile_definitions(${project} PRIVATE PLATFORM_POSIX)
-    endif()
-
-    if(WIN32)
-        target_compile_definitions(${project} PRIVATE PLATFORM_WINDOWS UNICODE _UNICODE)
-    endif()
-
-    if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-            target_compile_definitions(${project} PRIVATE COMPILER_MSVC64)
-        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-            target_compile_definitions(${project} PRIVATE COMPILER_MSVC32)
-        endif()
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-        target_compile_definitions(${project} PRIVATE COMPILER_GCC)
-        if(WIN32)
-            set_target_properties(${project} PROPERTIES PREFIX "")
-        endif()
-    endif()
-endforeach()
+if(WIN32)
+    foreach(PROJECT ${PROJECTS})
+        set_target_properties(${PROJECT} PROPERTIES PREFIX "")
+    endforeach()
+endif()

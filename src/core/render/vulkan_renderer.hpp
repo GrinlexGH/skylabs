@@ -2,6 +2,25 @@
 
 #include "renderer.hpp"
 
+#include "instance.hpp"
+#include "../vulkan_window.hpp"
+
+class CVulkanRenderer final : public IRenderer
+{
+public:
+    bool Initialize(IWindow* window) override;
+    void Draw() override {}
+
+private:
+    IVulkanWindow* m_window = nullptr;
+
+    CVulkanInstance m_instance;
+};
+
+
+#if 0
+#include "renderer.hpp"
+
 #include "../vulkan.hpp"
 #include "../vulkan_window.hpp"
 
@@ -64,6 +83,37 @@ namespace std {
     };
 }
 
+struct Particle {
+    glm::vec2 position;
+    glm::vec2 velocity;
+    glm::vec4 color;
+
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(Particle);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(Particle, position);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(Particle, color);
+
+        return attributeDescriptions;
+    }
+};
+
 class CVulkanRenderer final : public IRenderer {
 public:
     CVulkanRenderer() = default;
@@ -75,19 +125,6 @@ public:
 
     bool Initialize(IWindow* window) override;
     void Draw() override;
-
-    enum class DeviceVendor
-    {
-        eUnknown = 0x0,
-        eAMD = 0x1002,
-        eImgTec = 0x1010,
-        eApple = 0x106B,
-        eNVIDIA = 0x10DE,
-        eARM = 0x13B5,
-        eMicrosoft = 0x1414,
-        eQualcomm = 0x5143,
-        eIntel = 0x8086
-    };
 
     bool m_frameBufferResized = false;
 
@@ -158,6 +195,7 @@ private:
     void _CreateDescriptorSetLayout();
     vk::ShaderModule _CreateShaderModule(const std::vector<char>& byteCode);
     void _CreatePipeline();
+    void _CreateComputePipeline();
 
     void _CreateColorResources();
 
@@ -186,9 +224,14 @@ private:
     void _CreateIndexBuffer();
 
     void _CreateUniformBuffers();
+    void _CreateShaderStorageBuffers();
+
+    void _CreateComputeDescriptorSetLayout();
 
     void _CreateDescriptorPool();
     void _CreateDescriptorSets();
+
+    void _CreateComputeDescriptorSets();
 
     CImage _CreateImage(
         uint32_t width,
@@ -221,6 +264,9 @@ private:
 
     void _CreateSyncObjects();
 
+    void _RecordComputeCommandBuffer(vk::CommandBuffer commandBuffer);
+    void _CreateComputeCommandBuffers();
+
     #ifndef NDEBUG
     bool m_enableValidationLayer = true;
     #else
@@ -246,6 +292,7 @@ private:
 
     vk::Queue m_graphicsQueue {};
     vk::Queue m_presentQueue {};
+    vk::Queue m_computeQueue {};
 
     vk::SurfaceCapabilitiesKHR m_surfaceCapabilities {};
     vk::SurfaceFormatKHR m_currentSurfaceFormat {};
@@ -272,6 +319,7 @@ private:
 
     vk::CommandPool m_commandPool {};
     std::vector<vk::CommandBuffer> m_commandBuffers {};
+    std::vector<vk::CommandBuffer> m_computeCommandBuffers {};
 
     std::vector<CVertex> m_vertices;
     std::vector<uint32_t> m_indices;
@@ -281,8 +329,15 @@ private:
     std::vector<CBuffer> m_uniformBuffers {};
     std::vector<void*> m_uniformBuffersData {};
 
+    vk::DescriptorSetLayout m_computeDescriptorSetLayout {};
+    std::vector<CBuffer> m_shaderStorageBuffers {};
+
+    vk::PipelineLayout m_computePipelineLayout {};
+    vk::Pipeline m_computePipeline {};
+
     vk::DescriptorPool m_descriptorPool {};
     std::vector<vk::DescriptorSet> m_descriptorSets {};
+    std::vector<vk::DescriptorSet> m_computeDescriptorSets {};
 
     uint32_t m_mipLevels = 0;
     CImage m_textureImage {};
@@ -294,6 +349,9 @@ private:
     std::vector<vk::Semaphore> m_imageAvailableSemaphores {};
     std::vector<vk::Semaphore> m_renderFinishedSemaphores {};
     std::vector<vk::Fence> m_inFlightFences {};
+    std::vector<vk::Fence> m_computeInFlightFences;
+    std::vector<vk::Semaphore> m_computeFinishedSemaphores;
 
     uint32_t m_currentFrame = 0;
 };
+#endif

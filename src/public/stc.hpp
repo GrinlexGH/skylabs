@@ -26,7 +26,6 @@ SOFTWARE.
 #include <ostream>
 #include <algorithm>
 #include <limits>
-#include "platform.hpp"
 
 namespace stc {
 
@@ -45,9 +44,9 @@ namespace stc {
     public:
         unsigned int r : 8, g : 8, b : 8, code : 8;
         constexpr _color_data(int r, int g, int b, int code)
-            : r(r), g(g), b(b), code(code) {};
+            : r(r), g(g), b(b), code(code) {}
         constexpr _color_data(unsigned int r, unsigned int g, unsigned int b, unsigned int code)
-            : r(r), g(g), b(b), code(code) {};
+            : r(r), g(g), b(b), code(code) {}
     };
 
     template <bool IS_FOREGROUND>
@@ -339,10 +338,10 @@ namespace stc {
     constexpr float _color_distance(int r, int g, int b, _color_data color) {
         // approximate color distance using redmean
         // (https://en.wikipedia.org/wiki/Color_difference)
-        const auto red_difference = (float)(color.r - r);
-        const auto green_difference = (float)(color.g - g);
-        const auto blue_difference = (float)(color.b - b);
-        const float red_average = (float)(r + color.r) / 2.0F;
+        const auto red_difference = static_cast<float>(color.r - r);
+        const auto green_difference = static_cast<float>(color.g - g);
+        const auto blue_difference = static_cast<float>(color.b - b);
+        const float red_average = static_cast<float>(r + color.r) / 2.0F;
         return ((2 + (red_average / 256)) * (red_difference * red_difference)) +
                (4 * (green_difference * green_difference)) +
                ((2 + ((255 - red_average) / 256)) *
@@ -367,12 +366,12 @@ namespace stc {
 
     constexpr void _hsl_to_rgb(float h, float s, float l, int& r, int& g, int& b) {
         auto fmod = [](float number, int divisor) {
-            const int i = (int)number;
-            return (float)(i % divisor) + (number - (float)i);
+            const int i = static_cast<int>(number);
+            return static_cast<float>(i % divisor) + (number - static_cast<float>(i));
         };
         auto round = [](float number) {
-            const int i = (int)number;
-            if (number - (float)i >= 0.5)
+            const int i = static_cast<int>(number);
+            if (number - static_cast<float>(i) >= 0.5)
                 return i + 1;
             return i;
         };

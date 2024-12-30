@@ -13,3 +13,6 @@
 [submodule "libs/sources/tinyobjloader"]
 	path = libs/sources/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "libs/sources/stb"]
+	path = libs/sources/stb
+	url = https://github.com/nothings/stb.git

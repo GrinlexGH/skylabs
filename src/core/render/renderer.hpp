@@ -1,6 +1,6 @@
 #pragma once
 
-#include "window.hpp"
+#include "../window.hpp"
 
 class IRenderer {
 public:

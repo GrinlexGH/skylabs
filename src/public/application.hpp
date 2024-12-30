@@ -1,9 +1,14 @@
 #pragma once
 
-#include "platform.hpp"
+#include "publicapi.hpp"
 
 class PLATFORM_CLASS IApplication {
 public:
+    IApplication() = default;
+    IApplication(const IApplication&) = default;
+    IApplication(IApplication&&) = default;
+    IApplication& operator=(const IApplication&) = default;
+    IApplication& operator=(IApplication&&) = default;
     virtual ~IApplication() = default;
 
     virtual void Create() = 0;
@@ -14,13 +19,13 @@ public:
 class PLATFORM_CLASS CBaseApplication : public IApplication {
 public:
     virtual void PreCreate() { }
-    virtual void Create() { }
+    void Create() override { }
     virtual void PostCreate() { }
 
     virtual void Run();
-    virtual void Main() { }
+    void Main() override { }
 
     virtual void PreDestroy() { }
-    virtual void Destroy() { }
+    void Destroy() override { }
     virtual void PostDestroy() { }
 };

@@ -3,8 +3,9 @@ This is my own game engine and I plan to include all the best that other game en
 
 Requirements for build:
 * CMake
-* Vulkan SDK
+* Ninja
 * MSVC, g++/clang++
+* Vulkan SDK
 
 For other libraries cmake uses `build_dependencies` script. **You must install all dependencies to build these libraries manually.**
 
@@ -27,3 +28,4 @@ git submodule update
 ---
 Useful links:
 - https://utf8everywhere.org/
+- https://github.com/boostorg/dll/blob/e7ad58bfb91bd8a79e0ba274f80ae6a8da9fc59e/include/boost/dll/detail/posix/program_location_impl.hpp#L25

@@ -9,24 +9,11 @@ set(SOURCES
     commandline.hpp
     commandline.cpp
     resourceloader.hpp
-    unicode.hpp
-    platform.hpp
+    publicapi.hpp
     stc.hpp
-    window.hpp
-    version.hpp
+    os.hpp
+    os.cpp
 )
-
-if(WIN32)
-    set(SOURCES
-        ${SOURCES}
-        winapp.cpp
-    )
-elseif(UNIX)
-    set(SOURCES
-        ${SOURCES}
-        posixapp.cpp
-    )
-endif()
 
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
@@ -48,6 +35,6 @@ set_target_properties(${CURRENT_TARGET_NAME}
 target_compile_definitions(${CURRENT_TARGET_NAME} PRIVATE PUBLIC_DLL_EXPORT)
 
 target_include_directories(${CURRENT_TARGET_NAME} INTERFACE
-    $<BUILD_INTERFACE:${PUBLIC_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
 )

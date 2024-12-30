@@ -15,7 +15,7 @@ public:
     CVulkanWindow(CVulkanWindow&&) = default;
     CVulkanWindow& operator=(const CVulkanWindow&) = default;
     CVulkanWindow& operator=(CVulkanWindow&&) = default;
-    ~CVulkanWindow();
+    ~CVulkanWindow() override;
 
     std::vector<const char*> GetRequiredInstanceExtensions() override;
     bool GetPresentationSupport(vk::Instance instance, vk::PhysicalDevice physicalDevice, uint32_t queueFamilyIndex) override;
