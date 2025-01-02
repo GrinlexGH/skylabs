@@ -2,7 +2,8 @@
 
 #include "../window.hpp"
 
-class IRenderer {
+class IRenderer
+{
 public:
     IRenderer() = default;
     IRenderer(const IRenderer&) = delete;

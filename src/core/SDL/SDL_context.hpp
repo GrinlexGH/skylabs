@@ -4,7 +4,6 @@
 
 namespace SDL
 {
-
 class CContext
 {
 public:
@@ -16,5 +15,4 @@ public:
     CContext& operator=(CContext&&) = delete;
     ~CContext();
 };
-
 }

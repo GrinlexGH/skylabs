@@ -9,13 +9,15 @@
 template <typename T>
 concept Printable = requires(std::ostream& os, T a) { os << a; };
 
-class CDefaultConsoleMessage {
+class CDefaultConsoleMessage
+{
 public:
     template <typename... Args>
     void operator()(const std::format_string<Args...> fmt, Args&&... args) {
         std::cout
             << stc::reset_fg
-            << std::format(fmt, std::forward<Args>(args)...);
+            << std::format(fmt, std::forward<Args>(args)...)
+            << '\n';
     }
 
 private:
@@ -30,22 +32,23 @@ private:
 
     template <Printable T>
     friend CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, const T& message) {
-        std::cout << stc::reset_fg << message;
+        std::cout << stc::reset_fg << message << '\n';
         return s;
     }
 };
 
-class CColorfulConsoleMessage {
+class CColorfulConsoleMessage
+{
 public:
     using RGB_t = std::array<std::uint8_t, 3>;
-    explicit CColorfulConsoleMessage(const RGB_t& color) : m_color(color) { }
+    explicit CColorfulConsoleMessage(const RGB_t& color) : m_color(color) {}
 
     template <typename... Args>
     void operator()(const std::format_string<Args...> fmt, Args&&... args) {
         std::cout
             << stc::rgb_fg(m_color[0], m_color[1], m_color[2])
             << std::format(fmt, std::forward<Args>(args)...)
-            << stc::reset_fg;
+            << '\n' << stc::reset_fg;
     }
 
 private:
@@ -62,7 +65,7 @@ private:
 
     template <Printable T>
     friend CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, const T& message) {
-        std::cout << stc::rgb_fg(s.m_color[0], s.m_color[1], s.m_color[2]) << message << stc::reset_fg;
+        std::cout << stc::rgb_fg(s.m_color[0], s.m_color[1], s.m_color[2]) << message << '\n' << stc::reset_fg;
         return s;
     }
 };
