@@ -1,11 +1,11 @@
 #include "launcher.hpp"
 
-#include "render/vulkan_renderer.hpp"
 #include "SDL/SDL.hpp"
 #include "console.hpp"
 #include "camera.hpp"
+#include "render/vulkan/vulkan_renderer.hpp"
 
-CCamera g_camera {glm::vec3(0.0f, 0.0f, 0.0f)};
+CCamera g_camera { glm::vec3(0.0f, 0.0f, 0.0f) };
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -67,7 +67,7 @@ void MainLoop(CVulkanRenderer& renderer) {
             default: break;
         }
 
-        if(!minimized) {
+        if (!minimized) {
             renderer.Draw();
         }
     }

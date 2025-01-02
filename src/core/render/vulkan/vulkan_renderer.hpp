@@ -1,9 +1,9 @@
 #pragma once
 
-#include "renderer.hpp"
+#include "../renderer.hpp"
 
 #include "instance.hpp"
-#include "../vulkan_window.hpp"
+#include "vulkan_window.hpp"
 
 class CVulkanRenderer final : public IRenderer
 {
@@ -14,7 +14,7 @@ public:
 private:
     IVulkanWindow* m_window = nullptr;
 
-    CVulkanInstance m_instance;
+    Vulkan::CInstance m_instance;
 };
 
 
@@ -267,11 +267,11 @@ private:
     void _RecordComputeCommandBuffer(vk::CommandBuffer commandBuffer);
     void _CreateComputeCommandBuffers();
 
-    #ifndef NDEBUG
+#ifndef NDEBUG
     bool m_enableValidationLayer = true;
-    #else
+#else
     bool m_enableValidationLayer = false;
-    #endif
+#endif
 
     IVulkanWindow* m_window = nullptr;
 

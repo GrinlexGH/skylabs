@@ -6,15 +6,18 @@ set(SOURCES
     launcher.hpp
     launcher.cpp
     header_factory.cpp
-    vulkan.hpp
     window.hpp
-    vulkan_window.hpp
     camera.hpp
     render/renderer.hpp
-    render/vulkan_renderer.hpp
-    render/vulkan_renderer.cpp
-    render/instance.hpp
-    render/instance.cpp
+    render/vulkan/vulkan.hpp
+    render/vulkan/vulkan_window.hpp
+    render/vulkan/vulkan_renderer.hpp
+    render/vulkan/vulkan_renderer.cpp
+    render/vulkan/instance.hpp
+    render/vulkan/instance.cpp
+    render/vulkan/extensions/extension_manager.hpp
+    render/vulkan/extensions/debug_messenger.hpp
+    render/vulkan/extensions/debug_messenger.cpp
     SDL/SDL_context.cpp
     SDL/SDL_context.hpp
     SDL/SDL_vulkan.hpp

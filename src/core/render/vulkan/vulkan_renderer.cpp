@@ -11,7 +11,6 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
 }
 
 
-
 #if 0
 #include "console.hpp"
 #include "vulkan_renderer.hpp"

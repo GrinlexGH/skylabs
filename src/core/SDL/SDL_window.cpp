@@ -8,8 +8,7 @@
 
 namespace SDL
 {
-
-CVulkanWindow::CVulkanWindow(const char* title, int w, int h, SDL_WindowFlags flags) {
+CVulkanWindow::CVulkanWindow(const char* title, const int w, const int h, SDL_WindowFlags flags) {
     if (!SDL_WasInit(SDL_INIT_VIDEO)) {
         throw std::runtime_error("Failed to create SDL window. SDL_Video is not initialized!");
     }
@@ -31,7 +30,11 @@ std::vector<const char*> CVulkanWindow::GetRequiredInstanceExtensions() {
     return Vulkan::GetInstanceExtensions();
 }
 
-bool CVulkanWindow::GetPresentationSupport(const vk::Instance instance, const vk::PhysicalDevice physicalDevice, const uint32_t queueFamilyIndex) {
+bool CVulkanWindow::GetQueuePresentSupport(
+    const vk::Instance instance,
+    const vk::PhysicalDevice physicalDevice,
+    const uint32_t queueFamilyIndex
+) {
     return Vulkan::GetPresentationSupport(instance, physicalDevice, queueFamilyIndex);
 }
 
@@ -46,5 +49,4 @@ void CVulkanWindow::DestroySurface(const vk::Instance instance) {
 void CVulkanWindow::GetDrawableSize(int* w, int* h) {
     GetWindowSizeInPixels(m_window, w, h);
 }
-
 }

@@ -9,4 +9,6 @@ public:
     IWindow& operator=(const IWindow&) = default;
     IWindow& operator=(IWindow&&) = default;
     virtual ~IWindow() = default;
+
+    virtual void GetDrawableSize(int* w, int* h) = 0;
 };
