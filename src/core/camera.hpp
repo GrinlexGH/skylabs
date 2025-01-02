@@ -5,18 +5,19 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-enum CameraMovement {
+enum CameraMovement
+{
     FORWARD,
     BACKWARD,
     LEFT,
     RIGHT
 };
 
-constexpr float YAW         = -90.0f;
-constexpr float PITCH       =  0.0f;
-constexpr float SPEED       =  0.001f;
-constexpr float SENSITIVITY =  0.1f;
-constexpr float FOV         =  45.0f;
+constexpr float YAW = -90.0f;
+constexpr float PITCH = 0.0f;
+constexpr float SPEED = 0.001f;
+constexpr float SENSITIVITY = 0.1f;
+constexpr float FOV = 45.0f;
 
 class CCamera
 {
@@ -39,8 +40,7 @@ public:
         glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f),
         float yaw = YAW,
         float pitch = PITCH
-    ) : m_front(glm::vec3(1.0f, 0.0f, 0.0f)), m_movementSpeed(SPEED), m_mouseSensitivity(SENSITIVITY), m_fov(FOV)
-    {
+    ) : m_front(glm::vec3(1.0f, 0.0f, 0.0f)), m_movementSpeed(SPEED), m_mouseSensitivity(SENSITIVITY), m_fov(FOV) {
         m_position = position;
         m_worldUp = up;
         m_yaw = yaw;
@@ -49,12 +49,15 @@ public:
     }
 
     CCamera(
-        float posX, float posY, float posZ,
-        float upX, float upY, float upZ,
+        float posX,
+        float posY,
+        float posZ,
+        float upX,
+        float upY,
+        float upZ,
         float yaw,
         float pitch
-    ) : m_front(glm::vec3(1.0f, 0.0f, 0.0f)), m_movementSpeed(SPEED), m_mouseSensitivity(SENSITIVITY), m_fov(FOV)
-    {
+    ) : m_front(glm::vec3(1.0f, 0.0f, 0.0f)), m_movementSpeed(SPEED), m_mouseSensitivity(SENSITIVITY), m_fov(FOV) {
         m_position = glm::vec3(posX, posY, posZ);
         m_worldUp = glm::vec3(upX, upY, upZ);
         m_yaw = yaw;
@@ -115,8 +118,8 @@ private:
         front.z = sin(glm::radians(m_pitch));
 
         m_front = normalize(front);
-        m_right = normalize(glm::cross(m_front, m_worldUp));
-        m_up    = normalize(glm::cross(m_right, m_front));
+        m_right = normalize(cross(m_front, m_worldUp));
+        m_up = normalize(cross(m_right, m_front));
     }
 };
 

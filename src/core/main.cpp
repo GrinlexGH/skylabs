@@ -5,17 +5,18 @@
 #include "SDL/SDL.hpp"
 
 #ifdef PLATFORM_WINDOWS
-    #include <windows.h>
-    #include <cstdio>
-    #include <iostream>
+#include <windows.h>
+#include <cstdio>
+#include <iostream>
 
-    #include <stc.hpp>
+#include <stc.hpp>
 
-BOOL CtrlHandler(DWORD /*fdwCtrlType*/) {
+BOOL CtrlHandler([[maybe_unused]] DWORD fdwCtrlType) {
     return FALSE;
 }
 
-namespace {
+namespace
+{
 void SetupConsole() {
     AllocConsole();
     std::FILE* dummy;
@@ -31,11 +32,11 @@ void SetupConsole() {
     SetConsoleOutputCP(CP_UTF8);
 
     // Making allow ansi escape
-    DWORD dwMode = 0;
-    HANDLE cmdOutputHandle = ::GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleMode(cmdOutputHandle, &dwMode);
-    dwMode |= ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(cmdOutputHandle, dwMode);
+    DWORD mode = 0;
+    const HANDLE cmdOutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleMode(cmdOutputHandle, &mode);
+    mode |= ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(cmdOutputHandle, mode);
     SetConsoleCtrlHandler(CtrlHandler, TRUE);
 
     std::cout << stc::true_color;

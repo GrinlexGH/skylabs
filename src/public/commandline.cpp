@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-class CCommandLine final : public ICommandLine {
+class CCommandLine final : public ICommandLine
+{
 public:
     void CreateCmdLine(const std::vector<std::string>& argv) override;
     int FindParam(std::string_view param) override;

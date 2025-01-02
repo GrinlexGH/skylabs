@@ -2,7 +2,8 @@
 
 #include "publicapi.hpp"
 
-class PLATFORM_CLASS IApplication {
+class PLATFORM_CLASS IApplication
+{
 public:
     IApplication() = default;
     IApplication(const IApplication&) = default;
@@ -16,16 +17,17 @@ public:
     virtual void Destroy() = 0;
 };
 
-class PLATFORM_CLASS CBaseApplication : public IApplication {
+class PLATFORM_CLASS CBaseApplication : public IApplication
+{
 public:
-    virtual void PreCreate() { }
-    void Create() override { }
-    virtual void PostCreate() { }
+    virtual void PreCreate() {}
+    void Create() override {}
+    virtual void PostCreate() {}
 
     virtual void Run();
-    void Main() override { }
+    void Main() override {}
 
-    virtual void PreDestroy() { }
-    void Destroy() override { }
-    virtual void PostDestroy() { }
+    virtual void PreDestroy() {}
+    void Destroy() override {}
+    virtual void PostDestroy() {}
 };

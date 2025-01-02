@@ -2,7 +2,8 @@
 
 #include "application.hpp"
 
-class CLauncher final : public CBaseApplication {
+class CLauncher final : public CBaseApplication
+{
 public:
     void Main() override;
 };
