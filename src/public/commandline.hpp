@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 
-class ICommandLine {
+class ICommandLine
+{
 public:
     ICommandLine() = default;
     ICommandLine(const ICommandLine&) = default;
