@@ -10,6 +10,8 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
         m_window = dynamic_cast<IVulkanWindow*>(window);
 
         m_instance.Create(m_window);
+
+        m_physicalDevice.Pick(m_instance.GetHandle());
     } catch (const std::exception& e) {
         Error("Error: cannot initialize vulkan renderer. {}", e.what());
         return false;

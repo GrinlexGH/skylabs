@@ -35,14 +35,9 @@ void CInstance::Create(IVulkanWindow* window) {
     std::vector<const char*> missingExtensions;
 
     for (auto extension : window->GetRequiredInstanceExtensions()) {
-        bool isExtFound = false;
-
         if (HasExtension(availableExtensions, extension)) {
-            isExtFound = true;
             enabledExtensions.push_back(extension);
-        }
-
-        if (!isExtFound) {
+        } else {
             missingExtensions.push_back(extension);
         }
     }

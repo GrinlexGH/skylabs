@@ -18,6 +18,8 @@ set(SOURCES
     render/vulkan/extensions/extension_manager.hpp
     render/vulkan/extensions/debug_messenger.hpp
     render/vulkan/extensions/debug_messenger.cpp
+    render/vulkan/physical_device.hpp
+    render/vulkan/physical_device.cpp
     SDL/SDL_context.cpp
     SDL/SDL_context.hpp
     SDL/SDL_vulkan.hpp

@@ -3,6 +3,7 @@
 #include "../renderer.hpp"
 
 #include "instance.hpp"
+#include "physical_device.hpp"
 #include "vulkan_window.hpp"
 
 class CVulkanRenderer final : public IRenderer
@@ -14,6 +15,7 @@ public:
 private:
     IVulkanWindow* m_window = nullptr;
 
+    Vulkan::CPhysicalDevice m_physicalDevice;
     Vulkan::CInstance m_instance;
 };
 
