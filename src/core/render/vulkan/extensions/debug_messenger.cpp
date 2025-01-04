@@ -29,11 +29,11 @@ vk::Bool32 DebugCallback(
 }
 
 bool PrepareDebugUtilsExtension(
-    vk::DebugUtilsMessengerCreateInfoEXT& debugUtilsMessengerCreateInfo,
-    std::vector<const char*>& enabledExtensions,
-    std::vector<const char*>& enabledLayers,
+    const std::vector<vk::LayerProperties>& availableLayers,
     const std::vector<vk::ExtensionProperties>& availableExtensions,
-    const std::vector<vk::LayerProperties>& availableLayers
+    std::vector<const char*>& enabledLayers,
+    std::vector<const char*>& enabledExtensions,
+    vk::DebugUtilsMessengerCreateInfoEXT& debugUtilsMessengerCreateInfo
 ) {
     if (!HasLayer(availableLayers, "VK_LAYER_KHRONOS_validation") &&
         !HasExtension(availableExtensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {

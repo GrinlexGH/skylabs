@@ -29,23 +29,21 @@ void CInstance::Create(IVulkanWindow* window) {
     applicationInfo.apiVersion = instanceVersion;
 
     //====================
-    std::vector<const char*> enabledExtensions;
-
     const std::vector<vk::ExtensionProperties> availableExtensions = vk::enumerateInstanceExtensionProperties();
-    const std::vector<const char*> requiredExtensions = window->GetRequiredInstanceExtensions();
 
+    std::vector<const char*> enabledExtensions;
     std::vector<const char*> missingExtensions;
 
-    for (auto requiredExtension : requiredExtensions) {
+    for (auto extension : window->GetRequiredInstanceExtensions()) {
         bool isExtFound = false;
 
-        if (HasExtension(availableExtensions, requiredExtension)) {
+        if (HasExtension(availableExtensions, extension)) {
             isExtFound = true;
-            enabledExtensions.push_back(requiredExtension);
+            enabledExtensions.push_back(extension);
         }
 
         if (!isExtFound) {
-            missingExtensions.push_back(requiredExtension);
+            missingExtensions.push_back(extension);
         }
     }
 
@@ -65,20 +63,22 @@ void CInstance::Create(IVulkanWindow* window) {
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo;
 
     const bool debugMessengerAvailable = PrepareDebugUtilsExtension(
-        debugUtilsMessengerCreateInfo,
-        enabledExtensions,
-        enabledLayers,
+        vk::enumerateInstanceLayerProperties(),
         availableExtensions,
-        vk::enumerateInstanceLayerProperties()
+        enabledLayers,
+        enabledExtensions,
+        debugUtilsMessengerCreateInfo
     );
 #endif
 
     //====================
-    const void* instancePNextChain = nullptr;
+    const void* pNextChain = nullptr;
 
+#ifdef _DEBUG
     if (debugMessengerAvailable) {
-        instancePNextChain = &debugUtilsMessengerCreateInfo;
+        pNextChain = &debugUtilsMessengerCreateInfo;
     }
+#endif
 
     //====================
     vk::InstanceCreateInfo instanceCreateInfo;
@@ -87,7 +87,7 @@ void CInstance::Create(IVulkanWindow* window) {
     instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
     instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
     instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
-    instanceCreateInfo.pNext = instancePNextChain;
+    instanceCreateInfo.pNext = pNextChain;
 
     m_handle = createInstance(instanceCreateInfo);
     VULKAN_HPP_DEFAULT_DISPATCHER.init(m_handle);
