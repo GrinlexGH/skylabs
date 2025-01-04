@@ -23,7 +23,7 @@ Existing repositories can be updated manually:
 
 ```
 git submodule init
-git submodule update
+git submodule update --recursive
 ```
 
 ---
