@@ -11,6 +11,10 @@ if(WIN32)
     add_compile_definitions(PLATFORM_WINDOWS UNICODE _UNICODE)
 endif()
 
+if(UNIX)
+    add_compile_definitions(PLATFORM_UNIX)
+endif()
+
 if(LINUX)
     add_compile_definitions(PLATFORM_LINUX)
 endif()

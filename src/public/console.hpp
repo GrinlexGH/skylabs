@@ -5,6 +5,7 @@
 #include <iostream>
 #include <array>
 #include <format>
+#include <cstdint>
 
 template <typename T>
 concept Printable = requires(std::ostream& os, T a) { os << a; };
