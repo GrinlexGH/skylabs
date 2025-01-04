@@ -1,6 +1,6 @@
-﻿#ifdef PLATFORM_WINDOWS
+﻿#if defined(PLATFORM_WINDOWS)
 #include <windows.h>
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_UNIX)
 #include <dlfcn.h>
 #include <iostream>
 #else
@@ -169,7 +169,7 @@ int WINAPI wWinMain(
     }
 }
 
-#elif defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_UNIX)
 
 int main(int argc, char** argv) {
     try {
@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
             throw std::runtime_error(std::string("failed open library: ") + dlerror() + "!\n");
         }
 
-        auto main = (CoreMain_t)dlsym(lib, "CoreInit");
+        auto main = (main_t)dlsym(lib, "CoreInit");
         if (!main) {
             throw std::runtime_error(
                 std::string("Failed to load the launcher entry proc: ") +

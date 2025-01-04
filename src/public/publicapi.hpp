@@ -8,7 +8,7 @@
     #define DLL_GLOBAL_EXPORT extern __declspec(dllexport)
     #define DLL_GLOBAL_IMPORT extern __declspec(dllimport)
 #elif defined(COMPILER_GCC)
-    #ifdef PLATFORM_LINUX
+    #ifdef PLATFORM_UNIX
         #define DLL_EXPORT_ATTRIBUTE __attribute__((visibility("default")))
         #define DLL_IMPORT_ATTRIBUTE
     #else
