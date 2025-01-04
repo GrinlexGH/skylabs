@@ -8,6 +8,11 @@ namespace Vulkan
 class CInstance
 {
 public:
+    CInstance() = default;
+    CInstance(const CInstance&) = default;
+    CInstance(CInstance&&) = default;
+    CInstance& operator=(const CInstance&) = default;
+    CInstance& operator=(CInstance&&) = default;
     ~CInstance();
 
     void Create(IVulkanWindow* window);

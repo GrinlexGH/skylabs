@@ -1,12 +1,19 @@
 #include "vulkan_renderer.hpp"
 
-bool CVulkanRenderer::Initialize(IWindow* window) {
-    if (window == nullptr) {
-        throw std::runtime_error("Cannot initialize vulkan renderer. Window is null!\n");
-    }
-    m_window = dynamic_cast<IVulkanWindow*>(window);
+#include "console.hpp"
 
-    m_instance.Create(m_window);
+bool CVulkanRenderer::Initialize(IWindow* window) {
+    try {
+        if (window == nullptr) {
+            throw std::runtime_error("Window is null!\n");
+        }
+        m_window = dynamic_cast<IVulkanWindow*>(window);
+
+        m_instance.Create(m_window);
+    } catch (const std::exception& e) {
+        Error("Error: cannot initialize vulkan renderer. {}", e.what());
+        return false;
+    }
     return true;
 }
 
