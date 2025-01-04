@@ -12,7 +12,7 @@ if [ ! -d "../bin/linux/SDL3" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/linux/SDL3" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/linux/SDL3" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
@@ -28,7 +28,7 @@ if [ ! -d "../bin/linux/glm" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="../../../bin/linux/glm" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="../../../bin/linux/glm" $* ..
     cmake --build . -- all
     cmake --build . -- install
     cd ../
@@ -44,7 +44,7 @@ if [ ! -d "../bin/linux/VulkanMemoryAllocator" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/linux/VulkanMemoryAllocator" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/linux/VulkanMemoryAllocator" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
@@ -60,7 +60,7 @@ if [ ! -d "../bin/linux/VulkanMemoryAllocator-Hpp" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DVMA_HPP_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX="../../../bin/linux/VulkanMemoryAllocator-Hpp" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_HPP_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX="../../../bin/linux/VulkanMemoryAllocator-Hpp" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
@@ -76,12 +76,21 @@ if [ ! -d "../bin/linux/tinyobjloader" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../../bin/linux/tinyobjloader" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../../bin/linux/tinyobjloader" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
     rm -rf build
     cd ../
 fi
+
+if [ ! -d "../bin/linux/stb" ]; then
+    echo "Copying stb files"
+    cd stb
+    mkdir -p "../../bin/linux/stb"
+    cp "./stb_image.h" "../../bin/linux/stb/"
+    cd ../
+fi
+
 
 echo "Done."
