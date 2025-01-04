@@ -8,6 +8,7 @@ Requirements for build:
 * Vulkan SDK
 
 For other libraries cmake uses `build_dependencies` script. **You must install all dependencies to build these libraries manually.**
+You will compile all the dependencies only once, so the first build will be long, but all subsequent builds will be fast if you don't delete the `libs/bin/*platform*` folder.
 
 Discord: [grinlex](https://discord.gg/WX9HSAmPDF)
 
