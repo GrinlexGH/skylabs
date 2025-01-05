@@ -76,6 +76,79 @@ std::wstring Widen(const std::string_view narrowStr) {
     return out;
 }
 
+class CArgFix
+{
+public:
+    CArgFix(int& argc, char**& argv) :
+        m_oldArgc(argc), m_oldArgv(argv), m_oldArgcPtr(&argc), m_oldArgvPtr(&argv) {
+        FixArgs(argc, argv);
+    }
+
+    CArgFix(const CArgFix&) = delete;
+    CArgFix(CArgFix&& other) = delete;
+    CArgFix& operator=(const CArgFix&) = delete;
+    CArgFix& operator=(CArgFix&& other) = delete;
+    ~CArgFix() {
+        if (m_oldArgcPtr)
+            *m_oldArgcPtr = m_oldArgc;
+        if (m_oldArgvPtr)
+            *m_oldArgvPtr = m_oldArgv;
+    }
+
+private:
+    class CWArgv
+    {
+    public:
+        CWArgv() { m_ptr = CommandLineToArgvW(GetCommandLineW(), &m_argc); }
+
+        ~CWArgv() {
+            if (m_ptr) {
+                LocalFree(m_ptr);
+            }
+        }
+
+        CWArgv(const CWArgv&) = delete;
+        CWArgv(CWArgv&& other) = delete;
+        CWArgv& operator=(const CWArgv&) = delete;
+        CWArgv& operator=(CWArgv&& other) = delete;
+
+        [[nodiscard]] int size() const { return m_argc; }
+        explicit operator bool() const { return m_ptr != nullptr; }
+        const wchar_t* operator[](const std::size_t i) const { return m_ptr[i]; }
+
+    private:
+        wchar_t** m_ptr;
+        int m_argc;
+    };
+
+    void FixArgs(int& argc, char**& argv) {
+        const CWArgv wArgv;
+        if (!wArgv) {
+            throw std::runtime_error("Could not get command line!");
+        }
+
+        m_args.resize(wArgv.size() + 1, nullptr);
+        m_argValues.resize(wArgv.size());
+
+        for (int i = 0; i < wArgv.size(); i++) {
+            m_argValues[i] = Narrow(wArgv[i]);
+            m_args[i] = m_argValues[i].data();
+        }
+
+        argc = wArgv.size();
+        argv = m_args.data();
+    }
+
+    std::vector<char*> m_args;
+    std::vector<std::string> m_argValues;
+
+    int m_oldArgc;
+    char** m_oldArgv;
+
+    int* m_oldArgcPtr;
+    char*** m_oldArgvPtr;
+};
+
 std::string GetWinApiErrorMessage() {
     wchar_t* errorMsg = nullptr;
     FormatMessageW(
@@ -135,25 +208,11 @@ int WINAPI wWinMain(
 
         // converts wide argv to narrow argv
         int argc = 0;
-        wchar_t** wArgv = CommandLineToArgvW(GetCommandLineW(), &argc);
-
-        const auto argv = new char*[argc];
-        for (int i = 0; i < argc; ++i) {
-            std::string narrowStr = Narrow(wArgv[i]);
-            const std::size_t argSize = narrowStr.size() + 1;
-
-            argv[i] = new char[argSize];
-            strcpy_s(argv[i], argSize, narrowStr.c_str());
-        }
-        LocalFree(wArgv);
+        char** argv = nullptr;
+        CArgFix fix(argc, argv);
 
         // call real main with normal arguments, not schizophrenia from windows
         const int ret = main(argc, argv);
-
-        for (int i = 0; i < argc; ++i) {
-            delete[] argv[i];
-        }
-        delete[] argv;
 
         FreeLibrary(core);
         return ret;
