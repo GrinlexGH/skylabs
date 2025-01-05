@@ -2,10 +2,13 @@
 
 #include "../vulkan.hpp"
 
-bool PrepareDebugUtilsExtension(
+class CInstanceExtensionsCreateInfo;
+
+void AddDebugUtilsLayer(
     const std::vector<vk::LayerProperties>& availableLayers,
     const std::vector<vk::ExtensionProperties>& availableExtensions,
+    CInstanceExtensionsCreateInfo& createInfos,
     std::vector<const char*>& enabledLayers,
     std::vector<const char*>& enabledExtensions,
-    vk::DebugUtilsMessengerCreateInfoEXT& debugUtilsMessengerCreateInfo
+    void*& pNextChain
 );

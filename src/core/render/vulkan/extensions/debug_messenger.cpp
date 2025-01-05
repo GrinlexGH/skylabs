@@ -28,32 +28,36 @@ vk::Bool32 DebugCallback(
 }
 }
 
-bool PrepareDebugUtilsExtension(
+void AddDebugUtilsLayer(
     const std::vector<vk::LayerProperties>& availableLayers,
     const std::vector<vk::ExtensionProperties>& availableExtensions,
+    CInstanceExtensionsCreateInfo& createInfos,
     std::vector<const char*>& enabledLayers,
     std::vector<const char*>& enabledExtensions,
-    vk::DebugUtilsMessengerCreateInfoEXT& debugUtilsMessengerCreateInfo
+    void*& pNextChain
 ) {
     if (!HasLayer(availableLayers, "VK_LAYER_KHRONOS_validation") &&
         !HasExtension(availableExtensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
-        return false;
+        return;
     }
 
     enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
     enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
-    debugUtilsMessengerCreateInfo.messageSeverity =
+    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo;
+
+    debugUtilsCreateInfo.messageSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
 
-    debugUtilsMessengerCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+    debugUtilsCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
                                                 vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
                                                 vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
                                                 vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
 
-    debugUtilsMessengerCreateInfo.pfnUserCallback =
+    debugUtilsCreateInfo.pfnUserCallback =
         reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(DebugCallback);
 
-    return true;
+    createInfos.m_debugUtilsMessengerCreateInfo = debugUtilsCreateInfo;
+    pNextChain = AppendToPNextChain(pNextChain, &createInfos.m_debugUtilsMessengerCreateInfo);
 }
