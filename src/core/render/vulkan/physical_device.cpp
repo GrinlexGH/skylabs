@@ -28,7 +28,8 @@ bool CheckExtensionSupport(
     const vk::PhysicalDevice physicalDevice,
     const std::vector<const char*>& requiredExtensions
 ) {
-    const std::vector<vk::ExtensionProperties> availableExtensions = physicalDevice.enumerateDeviceExtensionProperties();
+    const std::vector<vk::ExtensionProperties> availableExtensions =
+        physicalDevice.enumerateDeviceExtensionProperties();
 
     std::vector<const char*> missingExtensions;
 
@@ -58,7 +59,7 @@ bool CheckQueueSupport(
     const vk::PhysicalDevice physicalDevice,
     const IVulkanWindow* window
 ) {
-    if (!Vulkan::FindQueueFamilies(instance, physicalDevice, window).IsComplete()) {
+    if (!Vulkan::CQueueFamilies::Find(instance, physicalDevice, window).IsComplete()) {
         return false;
     }
 
@@ -99,9 +100,9 @@ void CPhysicalDevice::Pick(
         const vk::PhysicalDeviceProperties deviceProperties = physicalDevice.getProperties();
         Msg("Found device: {}", static_cast<const char*>(deviceProperties.deviceName));
 
+        // Prefer discrete gpu
+        const int optionScore = GetDeviceTypeScore(deviceProperties.deviceType);
         if (IsDeviceSuitable(instance, physicalDevice, requiredExtensions, window)) {
-            const int optionScore = GetDeviceTypeScore(deviceProperties.deviceType);
-
             if (optionScore > deviceTypeScore) {
                 m_handle = physicalDevice;
                 deviceTypeScore = optionScore;

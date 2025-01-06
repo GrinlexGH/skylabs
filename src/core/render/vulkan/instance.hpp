@@ -1,5 +1,4 @@
 #pragma once
-
 #include "vulkan.hpp"
 #include "vulkan_window.hpp"
 

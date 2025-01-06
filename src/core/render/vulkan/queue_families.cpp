@@ -4,7 +4,7 @@
 
 namespace Vulkan
 {
-CQueueFamilies FindQueueFamilies(
+CQueueFamilies CQueueFamilies::Find(
     const vk::Instance instance,
     const vk::PhysicalDevice physicalDevice,
     const IVulkanWindow* window

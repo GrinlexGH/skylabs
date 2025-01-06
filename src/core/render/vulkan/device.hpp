@@ -1,5 +1,4 @@
 #pragma once
-
 #include "vulkan.hpp"
 
 namespace Vulkan

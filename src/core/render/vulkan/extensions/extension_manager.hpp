@@ -1,5 +1,4 @@
 #pragma once
-
 #include "../vulkan.hpp"
 
 inline bool HasExtension(const std::vector<vk::ExtensionProperties>& set, const char* target) {

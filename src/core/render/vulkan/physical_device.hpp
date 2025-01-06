@@ -1,7 +1,6 @@
 #pragma once
 #include "vulkan.hpp"
-
-class IVulkanWindow;
+#include "vulkan_window.hpp"
 
 namespace Vulkan
 {
