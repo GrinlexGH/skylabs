@@ -48,7 +48,7 @@ void SetupExtensions(
 void SetupLayers(
     const std::vector<vk::LayerProperties>& availableLayers,
     const std::vector<vk::ExtensionProperties>& availableExtensions,
-    CInstanceExtensionsCreateInfo& createInfos,
+    CInstanceExtensionsCreateInfos& createInfos,
     std::vector<const char*>& enabledLayers,
     std::vector<const char*>& enabledExtensions,
     void*& pNextChain
@@ -66,7 +66,7 @@ void SetupLayers(
 
 namespace Vulkan
 {
-void CInstance::Create(IVulkanWindow* window) {
+void CInstance::Create(const IVulkanWindow* window) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
     uint32_t instanceVersion = vk::ApiVersion10;
@@ -93,7 +93,7 @@ void CInstance::Create(IVulkanWindow* window) {
     std::vector<const char*> enabledLayers;
     void* pNextChain = nullptr;
 
-    CInstanceExtensionsCreateInfo createInfos;
+    CInstanceExtensionsCreateInfos createInfos;
 
     const std::vector<vk::ExtensionProperties> availableExtensions = vk::enumerateInstanceExtensionProperties();
 

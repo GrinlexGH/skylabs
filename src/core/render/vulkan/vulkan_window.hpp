@@ -16,13 +16,13 @@ public:
     ~IVulkanWindow() override = default;
 
     // Required instance extensions to create surface
-    [[nodiscard]] virtual std::vector<const char*> GetRequiredInstanceExtensions() = 0;
+    [[nodiscard]] virtual std::vector<const char*> GetRequiredInstanceExtensions() const = 0;
 
     [[nodiscard]] virtual bool GetQueuePresentSupport(
         vk::Instance instance,
         vk::PhysicalDevice physicalDevice,
         uint32_t queueFamilyIndex
-    ) = 0;
+    ) const = 0;
 
     virtual void CreateSurface(vk::Instance instance) = 0;
     virtual void DestroySurface(vk::Instance instance) = 0;

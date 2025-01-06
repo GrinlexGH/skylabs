@@ -11,13 +11,27 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
 
         m_instance.Create(m_window);
 
-        m_physicalDevice.Pick(m_instance.GetHandle());
+        m_window->CreateSurface(m_instance.GetHandle());
+
+        constexpr std::vector requiredDeviceExtensions {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
+        };
+
+        m_physicalDevice.Pick(m_instance.GetHandle(), requiredDeviceExtensions, m_window);
     } catch (const std::exception& e) {
         Error("Error: cannot initialize vulkan renderer. {}", e.what());
         return false;
     }
     return true;
 }
+
+CVulkanRenderer::~CVulkanRenderer() {
+    if (m_window->GetSurface()) {
+        m_window->DestroySurface(m_instance.GetHandle());
+    }
+}
+
 
 
 #if 0

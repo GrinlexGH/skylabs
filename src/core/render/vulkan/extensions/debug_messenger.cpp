@@ -31,7 +31,7 @@ vk::Bool32 DebugCallback(
 void AddDebugUtilsLayer(
     const std::vector<vk::LayerProperties>& availableLayers,
     const std::vector<vk::ExtensionProperties>& availableExtensions,
-    CInstanceExtensionsCreateInfo& createInfos,
+    CInstanceExtensionsCreateInfos& createInfos,
     std::vector<const char*>& enabledLayers,
     std::vector<const char*>& enabledExtensions,
     void*& pNextChain
@@ -51,9 +51,9 @@ void AddDebugUtilsLayer(
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
 
     debugUtilsCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-                                                vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
+                                       vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                                       vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+                                       vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
 
     debugUtilsCreateInfo.pfnUserCallback =
         reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(DebugCallback);

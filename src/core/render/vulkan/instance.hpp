@@ -15,7 +15,7 @@ public:
     CInstance& operator=(CInstance&&) = default;
     ~CInstance();
 
-    void Create(IVulkanWindow* window);
+    void Create(const IVulkanWindow* window);
     [[nodiscard]] vk::Instance GetHandle() const { return m_handle; }
 
 private:
