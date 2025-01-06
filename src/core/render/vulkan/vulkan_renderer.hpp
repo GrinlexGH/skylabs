@@ -3,18 +3,22 @@
 #include "../renderer.hpp"
 
 #include "instance.hpp"
+#include "device.hpp"
 #include "physical_device.hpp"
 #include "vulkan_window.hpp"
 
 class CVulkanRenderer final : public IRenderer
 {
 public:
+    ~CVulkanRenderer() override;
+
     bool Initialize(IWindow* window) override;
     void Draw() override {}
 
 private:
     IVulkanWindow* m_window = nullptr;
 
+    Vulkan::CDevice m_device;
     Vulkan::CPhysicalDevice m_physicalDevice;
     Vulkan::CInstance m_instance;
 };

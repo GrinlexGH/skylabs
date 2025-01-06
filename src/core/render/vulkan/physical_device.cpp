@@ -1,6 +1,8 @@
 #include "physical_device.hpp"
 
 #include "console.hpp"
+#include "queue_families.hpp"
+#include "vulkan_window.hpp"
 #include "extensions/extension_manager.hpp"
 
 namespace
@@ -51,11 +53,31 @@ bool CheckExtensionSupport(
     return true;
 }
 
-bool IsDeviceSuitable(
+bool CheckQueueSupport(
+    const vk::Instance instance,
     const vk::PhysicalDevice physicalDevice,
-    const std::vector<const char*>& requiredExtensions
+    const IVulkanWindow* window
+) {
+    if (!Vulkan::FindQueueFamilies(instance, physicalDevice, window).IsComplete()) {
+        return false;
+    }
+
+    Msg << "Device has all required queue families!";
+
+    return true;
+}
+
+bool IsDeviceSuitable(
+    const vk::Instance instance,
+    const vk::PhysicalDevice physicalDevice,
+    const std::vector<const char*>& requiredExtensions,
+    const IVulkanWindow* window
 ) {
     if (!CheckExtensionSupport(physicalDevice, requiredExtensions)) {
+        return false;
+    }
+
+    if (!CheckQueueSupport(instance, physicalDevice, window)) {
         return false;
     }
 
@@ -66,16 +88,18 @@ bool IsDeviceSuitable(
 namespace Vulkan
 {
 void CPhysicalDevice::Pick(
-    vk::Instance instance,
-    const std::vector<const char*>& requiredExtensions
+    const vk::Instance instance,
+    const std::vector<const char*>& requiredExtensions,
+    const IVulkanWindow* window
 ) {
     const std::vector<vk::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 
     int deviceTypeScore = 0;
     for (vk::PhysicalDevice physicalDevice : physicalDevices) {
         const vk::PhysicalDeviceProperties deviceProperties = physicalDevice.getProperties();
+        Msg("Found device: {}", static_cast<const char*>(deviceProperties.deviceName));
 
-        if (IsDeviceSuitable(physicalDevice, requiredExtensions)) {
+        if (IsDeviceSuitable(instance, physicalDevice, requiredExtensions, window)) {
             const int optionScore = GetDeviceTypeScore(deviceProperties.deviceType);
 
             if (optionScore > deviceTypeScore) {

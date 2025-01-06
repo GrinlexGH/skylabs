@@ -17,13 +17,13 @@ public:
     CVulkanWindow& operator=(CVulkanWindow&&) = default;
     ~CVulkanWindow() override;
 
-    std::vector<const char*> GetRequiredInstanceExtensions() override;
+    [[nodiscard]] std::vector<const char*> GetRequiredInstanceExtensions() const override;
 
-    bool GetQueuePresentSupport(
+    [[nodiscard]] bool GetQueuePresentSupport(
         vk::Instance instance,
         vk::PhysicalDevice physicalDevice,
         uint32_t queueFamilyIndex
-    ) override;
+    ) const override;
 
     void CreateSurface(vk::Instance instance) override;
     void DestroySurface(vk::Instance instance) override;

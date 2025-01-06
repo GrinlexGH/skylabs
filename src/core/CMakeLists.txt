@@ -20,6 +20,8 @@ set(SOURCES
     render/vulkan/extensions/debug_messenger.cpp
     render/vulkan/physical_device.hpp
     render/vulkan/physical_device.cpp
+    render/vulkan/queue_families.hpp
+    render/vulkan/queue_families.cpp
     SDL/SDL_context.cpp
     SDL/SDL_context.hpp
     SDL/SDL_vulkan.hpp
