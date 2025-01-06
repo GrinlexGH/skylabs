@@ -1,5 +1,4 @@
 #pragma once
-
 #include "../window.hpp"
 
 class IRenderer

@@ -1,10 +1,9 @@
 #pragma once
-
 #include "../renderer.hpp"
 
 #include "instance.hpp"
-#include "device.hpp"
 #include "physical_device.hpp"
+#include "device.hpp"
 #include "vulkan_window.hpp"
 
 class CVulkanRenderer final : public IRenderer

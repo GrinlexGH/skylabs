@@ -1,8 +1,6 @@
 #pragma once
-
 #include "../vulkan.hpp"
-
-class CInstanceExtensionsCreateInfos;
+#include "extension_manager.hpp"
 
 void AddDebugUtilsLayer(
     const std::vector<vk::LayerProperties>& availableLayers,

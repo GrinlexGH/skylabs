@@ -1,5 +1,4 @@
 #pragma once
-
 #include "../render/vulkan/vulkan_window.hpp"
 
 #include <SDL3/SDL.h>
