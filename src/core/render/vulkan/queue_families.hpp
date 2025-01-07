@@ -9,15 +9,15 @@ namespace Vulkan
 class CQueueFamilies
 {
 public:
-    [[nodiscard]] bool IsComplete() const {
-        return m_graphics.has_value() && m_present.has_value() && m_transfer.has_value() && m_compute.has_value();
-    }
-
     void Init(
         vk::Instance instance,
         vk::PhysicalDevice physicalDevice,
         const IVulkanWindow* window
     );
+
+    [[nodiscard]] bool IsComplete() const {
+        return m_graphics.has_value() && m_present.has_value() && m_transfer.has_value() && m_compute.has_value();
+    }
 
     std::optional<unsigned int> m_graphics;
     std::optional<unsigned int> m_present;

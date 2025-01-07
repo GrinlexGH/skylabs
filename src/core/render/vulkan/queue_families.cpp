@@ -23,7 +23,7 @@ void CQueueFamilies::Init(
             m_compute = i;
         }
 
-        if (window->GetQueuePresentSupport(instance, physicalDevice, i)) {
+        if (window->CheckQueuePresentSupport(instance, physicalDevice, i)) {
             m_present = i;
         }
 

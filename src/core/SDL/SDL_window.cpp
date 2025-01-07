@@ -30,7 +30,7 @@ std::vector<const char*> CVulkanWindow::GetRequiredInstanceExtensions() const {
     return Vulkan::GetInstanceExtensions();
 }
 
-bool CVulkanWindow::GetQueuePresentSupport(
+bool CVulkanWindow::CheckQueuePresentSupport(
     const vk::Instance instance,
     const vk::PhysicalDevice physicalDevice,
     const uint32_t queueFamilyIndex

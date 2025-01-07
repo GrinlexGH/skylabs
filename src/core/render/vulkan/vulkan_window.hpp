@@ -14,10 +14,9 @@ public:
     IVulkanWindow& operator=(IVulkanWindow&&) = default;
     ~IVulkanWindow() override = default;
 
-    // Required instance extensions to create surface
     [[nodiscard]] virtual std::vector<const char*> GetRequiredInstanceExtensions() const = 0;
 
-    [[nodiscard]] virtual bool GetQueuePresentSupport(
+    [[nodiscard]] virtual bool CheckQueuePresentSupport(
         vk::Instance instance,
         vk::PhysicalDevice physicalDevice,
         uint32_t queueFamilyIndex
