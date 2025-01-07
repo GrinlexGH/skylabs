@@ -9,6 +9,11 @@
 class CVulkanRenderer final : public IRenderer
 {
 public:
+    CVulkanRenderer() = default;
+    CVulkanRenderer(const CVulkanRenderer&) = delete;
+    CVulkanRenderer(CVulkanRenderer&& other) = default;
+    CVulkanRenderer& operator=(const CVulkanRenderer&) = delete;
+    CVulkanRenderer& operator=(CVulkanRenderer&& other) = default;
     ~CVulkanRenderer() override;
 
     bool Initialize(IWindow* window) override;

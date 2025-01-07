@@ -18,7 +18,7 @@ public:
 
     [[nodiscard]] std::vector<const char*> GetRequiredInstanceExtensions() const override;
 
-    [[nodiscard]] bool GetQueuePresentSupport(
+    [[nodiscard]] bool CheckQueuePresentSupport(
         vk::Instance instance,
         vk::PhysicalDevice physicalDevice,
         uint32_t queueFamilyIndex
