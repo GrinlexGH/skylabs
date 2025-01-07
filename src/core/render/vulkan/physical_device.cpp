@@ -59,7 +59,23 @@ bool CheckQueueSupport(
     const vk::PhysicalDevice physicalDevice,
     const IVulkanWindow* window
 ) {
-    if (!Vulkan::CQueueFamilies::Find(instance, physicalDevice, window).IsComplete()) {
+    Vulkan::CQueueFamilies indices;
+    indices.Init(instance, physicalDevice, window);
+
+    if (!indices.IsComplete()) {
+        if (!indices.m_transfer) {
+            Msg << "Device doesn't have transfer queue";
+        }
+        if (!indices.m_graphics) {
+            Msg << "Device doesn't have graphics queue";
+        }
+        if (!indices.m_compute) {
+            Msg << "Device doesn't have compute queue";
+        }
+        if (!indices.m_present) {
+            Msg << "Device doesn't have queue with present support";
+        }
+
         return false;
     }
 
