@@ -12,6 +12,7 @@ public:
         const std::vector<const char*>& requiredExtensions,
         const IVulkanWindow* window
     );
+    [[nodiscard]] vk::PhysicalDevice GetHandle() const { return m_handle; }
 
 private:
     vk::PhysicalDevice m_handle;
