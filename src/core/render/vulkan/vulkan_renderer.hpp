@@ -17,9 +17,9 @@ public:
 private:
     IVulkanWindow* m_window = nullptr;
 
-    Vulkan::CDevice m_device;
-    Vulkan::CPhysicalDevice m_physicalDevice;
     Vulkan::CInstance m_instance;
+    Vulkan::CPhysicalDevice m_physicalDevice;
+    Vulkan::CDevice m_device;
 };
 
 
