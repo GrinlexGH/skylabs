@@ -106,8 +106,8 @@ namespace Vulkan
 {
 void CPhysicalDevice::Pick(
     const vk::Instance instance,
-    const std::vector<const char*>& requiredExtensions,
-    const IVulkanWindow* window
+    const IVulkanWindow* window,
+    const std::vector<const char*>& requiredExtensions
 ) {
     const std::vector<vk::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 

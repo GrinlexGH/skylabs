@@ -13,19 +13,7 @@ bool CVulkanRenderer::Initialize(IWindow* window) {
 
         m_window->CreateSurface(m_instance.GetHandle());
 
-        const std::vector requiredDeviceExtensions {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
-        };
-
-        m_physicalDevice.Pick(m_instance.GetHandle(), requiredDeviceExtensions, m_window);
-
-        m_device.Create(
-            m_instance.GetHandle(),
-            m_physicalDevice.GetHandle(),
-            requiredDeviceExtensions,
-            m_window
-        );
+        m_device.Initialize(m_instance.GetHandle(), m_window);
     } catch (const std::exception& e) {
         Error("Error: cannot initialize vulkan renderer. {}", e.what());
         return false;

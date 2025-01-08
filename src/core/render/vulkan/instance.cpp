@@ -69,10 +69,11 @@ namespace Vulkan
 void CInstance::Create(const IVulkanWindow* window) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    uint32_t instanceVersion = vk::ApiVersion10;
-    if (VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceVersion) {
-        instanceVersion = vk::enumerateInstanceVersion();
+    if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceVersion) {
+        throw std::runtime_error("Engine doesn't support vulkan 1.0");
     }
+
+    const uint32_t instanceVersion = vk::enumerateInstanceVersion();
     Msg(
         "Vulkan version: {}.{}.{}.{}",
         vk::apiVersionVariant(instanceVersion),
