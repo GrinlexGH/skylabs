@@ -16,11 +16,9 @@ void CDevice::Initialize(
     };
 
     m_physicalDevice.Pick(instance, window, requiredExtensions);
-
     m_queueFamilies.Init(instance, m_physicalDevice.GetHandle(), window);
-
     Create(requiredExtensions);
-
+    m_queues.Init(m_handle, m_queueFamilies);
     CreateAllocator(instance);
 }
 
@@ -35,10 +33,10 @@ void CDevice::Create(
 ) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies {
-        m_queueFamilies.m_graphics.value(),
-        m_queueFamilies.m_present.value(),
-        m_queueFamilies.m_transfer.value(),
-        m_queueFamilies.m_compute.value()
+        *m_queueFamilies.m_graphics,
+        *m_queueFamilies.m_present,
+        *m_queueFamilies.m_transfer,
+        *m_queueFamilies.m_compute
     };
 
     float queuePriority = 1.0f;
