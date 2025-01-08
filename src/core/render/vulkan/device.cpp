@@ -19,7 +19,7 @@ void CDevice::Initialize(
     m_queueFamilies.Init(instance, m_physicalDevice.GetHandle(), window);
     Create(requiredExtensions);
     m_queues.Init(m_handle, m_queueFamilies);
-    CreateAllocator(instance);
+    m_allocator.Create(instance, m_physicalDevice.GetHandle(), m_handle);
 }
 
 CDevice::~CDevice() {
@@ -65,21 +65,5 @@ void CDevice::Create(
     deviceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
     m_handle = m_physicalDevice.GetHandle().createDevice(deviceCreateInfo);
-}
-
-void CDevice::CreateAllocator(
-    const vk::Instance instance
-) {
-    vma::AllocatorCreateInfo allocatorCreateInfo;
-    allocatorCreateInfo.flags = vma::AllocatorCreateFlagBits::eExtMemoryBudget;
-    allocatorCreateInfo.vulkanApiVersion = vk::ApiVersion13;
-    allocatorCreateInfo.physicalDevice = m_physicalDevice.GetHandle();
-    allocatorCreateInfo.device = m_handle;
-    allocatorCreateInfo.instance = instance;
-
-    const vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher();
-    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-
-    m_allocator = createAllocator(allocatorCreateInfo);
 }
 }
