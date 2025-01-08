@@ -26,6 +26,8 @@ set(SOURCES
     render/vulkan/queue_families.cpp
     render/vulkan/queues.hpp
     render/vulkan/queues.cpp
+    render/vulkan/allocator.hpp
+    render/vulkan/allocator.cpp
     SDL/SDL_context.cpp
     SDL/SDL_context.hpp
     SDL/SDL_vulkan.hpp
