@@ -6,14 +6,33 @@
 
 namespace Vulkan
 {
-void CDevice::Create(
+void CDevice::Initialize(
     const vk::Instance instance,
-    const vk::PhysicalDevice physicalDevice,
-    const std::vector<const char*>& requiredExtensions,
     const IVulkanWindow* window
 ) {
-    m_queueFamilies.Init(instance, physicalDevice, window);
+    const std::vector requiredExtensions {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_EXT_MEMORY_BUDGET_EXTENSION_NAME
+    };
 
+    m_physicalDevice.Pick(instance, window, requiredExtensions);
+
+    m_queueFamilies.Init(instance, m_physicalDevice.GetHandle(), window);
+
+    Create(requiredExtensions);
+
+    CreateAllocator(instance);
+}
+
+CDevice::~CDevice() {
+    if (m_handle) {
+        m_handle.destroy();
+    }
+}
+
+void CDevice::Create(
+    const std::vector<const char*>& requiredExtensions
+) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies {
         m_queueFamilies.m_graphics.value(),
@@ -31,19 +50,15 @@ void CDevice::Create(
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    //==========
-    // assume when picking physical device, all required extensions are pesent
     std::vector<const char*> enabledExtensions;
     enabledExtensions.reserve(requiredExtensions.size());
     for (const char* extension : requiredExtensions) {
         enabledExtensions.push_back(extension);
     }
 
-    //==========
     vk::PhysicalDeviceFeatures requestedDeviceFeatures {};
     requestedDeviceFeatures.samplerAnisotropy = true;
 
-    //==========
     vk::DeviceCreateInfo deviceCreateInfo;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
@@ -51,12 +66,22 @@ void CDevice::Create(
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
-    m_handle = physicalDevice.createDevice(deviceCreateInfo);
+    m_handle = m_physicalDevice.GetHandle().createDevice(deviceCreateInfo);
 }
 
-CDevice::~CDevice() {
-    if (m_handle) {
-        m_handle.destroy();
-    }
+void CDevice::CreateAllocator(
+    const vk::Instance instance
+) {
+    vma::AllocatorCreateInfo allocatorCreateInfo;
+    allocatorCreateInfo.flags = vma::AllocatorCreateFlagBits::eExtMemoryBudget;
+    allocatorCreateInfo.vulkanApiVersion = vk::ApiVersion13;
+    allocatorCreateInfo.physicalDevice = m_physicalDevice.GetHandle();
+    allocatorCreateInfo.device = m_handle;
+    allocatorCreateInfo.instance = instance;
+
+    const vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher();
+    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+    m_allocator = createAllocator(allocatorCreateInfo);
 }
 }

@@ -9,8 +9,8 @@ class CPhysicalDevice
 public:
     void Pick(
         vk::Instance instance,
-        const std::vector<const char*>& requiredExtensions,
-        const IVulkanWindow* window
+        const IVulkanWindow* window,
+        const std::vector<const char*>& requiredExtensions
     );
     [[nodiscard]] vk::PhysicalDevice GetHandle() const { return m_handle; }
 
