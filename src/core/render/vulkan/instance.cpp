@@ -70,7 +70,7 @@ void CInstance::Create(const IVulkanWindow* window) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
     if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceVersion) {
-        throw std::runtime_error("Engine doesn't support vulkan 1.0");
+        throw std::runtime_error("Engine doesn't support vulkan below 1.3");
     }
 
     const uint32_t instanceVersion = vk::enumerateInstanceVersion();
@@ -81,6 +81,10 @@ void CInstance::Create(const IVulkanWindow* window) {
         vk::apiVersionMinor(instanceVersion),
         vk::apiVersionPatch(instanceVersion)
     );
+
+    if (instanceVersion < vk::ApiVersion13) {
+        throw std::runtime_error("Engine doesn't support vulkan below 1.3");
+    }
 
     vk::ApplicationInfo applicationInfo;
     applicationInfo.pApplicationName = "Hotline miami 4";
