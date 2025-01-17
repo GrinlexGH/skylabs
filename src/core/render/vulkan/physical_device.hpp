@@ -2,16 +2,11 @@
 #include "vulkan.hpp"
 #include "vulkan_window.hpp"
 
-namespace Vulkan
-{
+namespace Vulkan {
 class CPhysicalDevice
 {
 public:
-    void Pick(
-        vk::Instance instance,
-        const IVulkanWindow* window,
-        const std::vector<const char*>& requiredExtensions
-    );
+    void Pick(vk::Instance instance, const IVulkanWindow* window, const std::vector<const char*>& requiredExtensions);
     [[nodiscard]] vk::PhysicalDevice GetHandle() const { return m_handle; }
 
 private:

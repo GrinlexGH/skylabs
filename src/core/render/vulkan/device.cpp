@@ -4,21 +4,23 @@
 
 #include <set>
 
-namespace Vulkan
-{
-void CDevice::Initialize(
-    const vk::Instance instance,
-    const IVulkanWindow* window
-) {
+namespace Vulkan {
+void CDevice::Initialize(const vk::Instance instance, const IVulkanWindow* window) {
     const std::vector requiredExtensions {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_EXT_MEMORY_BUDGET_EXTENSION_NAME
     };
 
     m_physicalDevice.Pick(instance, window, requiredExtensions);
+
     m_queueFamilies.Init(instance, m_physicalDevice.GetHandle(), window);
+
     Create(requiredExtensions);
+
     m_queues.Init(m_handle, m_queueFamilies);
+
+    m_swapchain.Init(m_physicalDevice.GetHandle(), m_handle, window->GetSurface());
+
     m_allocator.Create(instance, m_physicalDevice.GetHandle(), m_handle);
 }
 
@@ -28,9 +30,7 @@ CDevice::~CDevice() {
     }
 }
 
-void CDevice::Create(
-    const std::vector<const char*>& requiredExtensions
-) {
+void CDevice::Create(const std::vector<const char*>& requiredExtensions) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies {
         *m_queueFamilies.m_graphics,

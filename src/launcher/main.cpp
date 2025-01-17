@@ -16,8 +16,7 @@ using main_t = int (*)(int argc, char* argv[]);
 
 #ifdef PLATFORM_WINDOWS
 
-namespace
-{
+namespace {
 std::string Narrow(const std::wstring_view wideStr) {
     if (wideStr.empty()) {
         return {};
@@ -80,7 +79,7 @@ class CArgFix
 {
 public:
     CArgFix(int& argc, char**& argv) :
-        m_oldArgc(argc), m_oldArgv(argv), m_oldArgcPtr(&argc), m_oldArgvPtr(&argv) {
+    m_oldArgc(argc), m_oldArgv(argv), m_oldArgcPtr(&argc), m_oldArgvPtr(&argv) {
         FixArgs(argc, argv);
     }
 
@@ -88,6 +87,7 @@ public:
     CArgFix(CArgFix&& other) = delete;
     CArgFix& operator=(const CArgFix&) = delete;
     CArgFix& operator=(CArgFix&& other) = delete;
+
     ~CArgFix() {
         if (m_oldArgcPtr)
             *m_oldArgcPtr = m_oldArgc;
@@ -178,9 +178,10 @@ int WINAPI wWinMain(
     [[maybe_unused]] _In_ int nShowCmd
 ) {
     try {
+        // Get exe directory for loading \\bin\\core.dll
         std::filesystem::path rootDir;
         {
-            wchar_t buffer[MAX_PATH] = {};
+            wchar_t buffer[MAX_PATH] {};
             GetModuleFileNameW(nullptr, buffer, MAX_PATH);
             rootDir = buffer;
         }

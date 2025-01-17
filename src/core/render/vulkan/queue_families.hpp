@@ -4,16 +4,11 @@
 
 #include <optional>
 
-namespace Vulkan
-{
+namespace Vulkan {
 class CQueueFamilies
 {
 public:
-    void Init(
-        vk::Instance instance,
-        vk::PhysicalDevice physicalDevice,
-        const IVulkanWindow* window
-    );
+    void Init(vk::Instance instance, vk::PhysicalDevice physicalDevice, const IVulkanWindow* window);
 
     [[nodiscard]] bool IsComplete() const {
         return m_graphics.has_value() && m_present.has_value() && m_transfer.has_value() && m_compute.has_value();

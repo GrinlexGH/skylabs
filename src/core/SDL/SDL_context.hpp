@@ -1,8 +1,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 
-namespace SDL
-{
+namespace SDL {
 class CContext
 {
 public:

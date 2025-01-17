@@ -2,13 +2,8 @@
 
 #include "vulkan_window.hpp"
 
-namespace Vulkan
-{
-void CQueueFamilies::Init(
-    const vk::Instance instance,
-    const vk::PhysicalDevice physicalDevice,
-    const IVulkanWindow* window
-) {
+namespace Vulkan {
+void CQueueFamilies::Init(const vk::Instance instance, const vk::PhysicalDevice physicalDevice, const IVulkanWindow* window) {
     int i = 0;
     for (const auto& queueFamily : physicalDevice.getQueueFamilyProperties()) {
         if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {

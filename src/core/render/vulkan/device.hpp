@@ -4,9 +4,9 @@
 #include "physical_device.hpp"
 #include "queues.hpp"
 #include "allocator.hpp"
+#include "swapchain.hpp"
 
-namespace Vulkan
-{
+namespace Vulkan {
 class CDevice
 {
 public:
@@ -17,16 +17,15 @@ public:
     CDevice& operator=(CDevice&&) = default;
     ~CDevice();
 
-    void Initialize(
-        vk::Instance instance,
-        const IVulkanWindow* window
-    );
+    void Initialize(vk::Instance instance, const IVulkanWindow* window);
+
     [[nodiscard]] vk::Device GetHandle() const { return m_handle; }
 
 private:
     void Create(const std::vector<const char*>& requiredExtensions);
 
     CAllocator m_allocator;
+    CSwapchain m_swapchain;
     CQueues m_queues;
     CQueueFamilies m_queueFamilies;
     CPhysicalDevice m_physicalDevice;

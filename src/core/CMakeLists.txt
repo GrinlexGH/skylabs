@@ -28,6 +28,8 @@ set(SOURCES
     render/vulkan/queues.cpp
     render/vulkan/allocator.hpp
     render/vulkan/allocator.cpp
+    render/vulkan/swapchain.hpp
+    render/vulkan/swapchain.cpp
     SDL/SDL_context.cpp
     SDL/SDL_context.hpp
     SDL/SDL_vulkan.hpp

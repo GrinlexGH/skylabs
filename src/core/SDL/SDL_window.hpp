@@ -3,8 +3,7 @@
 
 #include <SDL3/SDL.h>
 
-namespace SDL
-{
+namespace SDL {
 class CVulkanWindow final : public IVulkanWindow
 {
 public:
@@ -17,15 +16,11 @@ public:
     ~CVulkanWindow() override;
 
     [[nodiscard]] std::vector<const char*> GetRequiredInstanceExtensions() const override;
-
-    [[nodiscard]] bool CheckQueuePresentSupport(
-        vk::Instance instance,
-        vk::PhysicalDevice physicalDevice,
-        uint32_t queueFamilyIndex
-    ) const override;
+    [[nodiscard]] bool CheckQueuePresentSupport(vk::Instance instance, vk::PhysicalDevice physicalDevice, uint32_t queueFamilyIndex) const override;
 
     void CreateSurface(vk::Instance instance) override;
     void DestroySurface(vk::Instance instance) override;
+
     void GetDrawableSize(int* w, int* h) override;
 
     SDL_Window* m_window = nullptr;
