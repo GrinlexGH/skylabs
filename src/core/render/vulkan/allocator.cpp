@@ -1,7 +1,6 @@
 #include "allocator.hpp"
 
-namespace Vulkan
-{
+namespace Vulkan {
 void CAllocator::Create(
     const vk::Instance instance,
     const vk::PhysicalDevice physicalDevice,

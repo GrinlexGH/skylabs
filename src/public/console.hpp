@@ -16,19 +16,19 @@ public:
     template <typename... Args>
     void operator()(const std::format_string<Args...> fmt, Args&&... args) {
         std::cout
-            << stc::reset_fg
-            << std::format(fmt, std::forward<Args>(args)...)
-            << '\n';
+                << stc::reset_fg
+                << std::format(fmt, std::forward<Args>(args)...)
+                << '\n';
     }
 
 private:
-    PLATFORM_CLASS friend CDefaultConsoleMessage&
+    PUBLIC_CLASS friend CDefaultConsoleMessage&
     operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ostream&));
 
-    PLATFORM_CLASS friend CDefaultConsoleMessage&
+    PUBLIC_CLASS friend CDefaultConsoleMessage&
     operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios&));
 
-    PLATFORM_CLASS friend CDefaultConsoleMessage&
+    PUBLIC_CLASS friend CDefaultConsoleMessage&
     operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios_base&));
 
     template <Printable T>
@@ -47,21 +47,21 @@ public:
     template <typename... Args>
     void operator()(const std::format_string<Args...> fmt, Args&&... args) {
         std::cout
-            << stc::rgb_fg(m_color[0], m_color[1], m_color[2])
-            << std::format(fmt, std::forward<Args>(args)...)
-            << '\n' << stc::reset_fg;
+                << stc::rgb_fg(m_color[0], m_color[1], m_color[2])
+                << std::format(fmt, std::forward<Args>(args)...)
+                << '\n' << stc::reset_fg;
     }
 
 private:
     RGB_t m_color { 255, 255, 255 };
 
-    PLATFORM_CLASS friend CColorfulConsoleMessage&
+    PUBLIC_CLASS friend CColorfulConsoleMessage&
     operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&));
 
-    PLATFORM_CLASS friend CColorfulConsoleMessage&
+    PUBLIC_CLASS friend CColorfulConsoleMessage&
     operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios&));
 
-    PLATFORM_CLASS friend CColorfulConsoleMessage&
+    PUBLIC_CLASS friend CColorfulConsoleMessage&
     operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios_base&));
 
     template <Printable T>
@@ -71,6 +71,6 @@ private:
     }
 };
 
-PLATFORM_GLOBAL CDefaultConsoleMessage Msg;
-PLATFORM_GLOBAL CColorfulConsoleMessage Warning;
-PLATFORM_GLOBAL CColorfulConsoleMessage Error;
+PUBLIC_GLOBAL CDefaultConsoleMessage Msg;
+PUBLIC_GLOBAL CColorfulConsoleMessage Warning;
+PUBLIC_GLOBAL CColorfulConsoleMessage Error;

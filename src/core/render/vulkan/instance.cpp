@@ -4,13 +4,8 @@
 #include "extensions/debug_messenger.hpp"
 #include "extensions/extension_manager.hpp"
 
-namespace
-{
-void SetupRequiredExtensions(
-    const std::vector<vk::ExtensionProperties>& availableExtensions,
-    const std::vector<const char*>& requiredExtensions,
-    std::vector<const char*>& enabledExtensions
-) {
+namespace {
+void SetupRequiredExtensions(const std::vector<vk::ExtensionProperties>& availableExtensions, const std::vector<const char*>& requiredExtensions, std::vector<const char*>& enabledExtensions) {
     enabledExtensions.reserve(requiredExtensions.size());
 
     std::vector<const char*> missingExtensions;
@@ -43,6 +38,8 @@ void SetupExtensions(
         requiredExtensions,
         enabledExtensions
     );
+
+    // you can add unnecessary extensions here
 }
 
 void SetupLayers(
@@ -64,8 +61,7 @@ void SetupLayers(
 }
 }
 
-namespace Vulkan
-{
+namespace Vulkan {
 void CInstance::Create(const IVulkanWindow* window) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 

@@ -2,8 +2,7 @@
 #include "vulkan.hpp"
 #include "queue_families.hpp"
 
-namespace Vulkan
-{
+namespace Vulkan {
 class CQueues
 {
 public:

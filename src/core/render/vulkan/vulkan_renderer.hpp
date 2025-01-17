@@ -2,7 +2,6 @@
 #include "../renderer.hpp"
 
 #include "instance.hpp"
-#include "physical_device.hpp"
 #include "device.hpp"
 #include "vulkan_window.hpp"
 
@@ -23,7 +22,6 @@ private:
     IVulkanWindow* m_window = nullptr;
 
     Vulkan::CInstance m_instance;
-    Vulkan::CPhysicalDevice m_physicalDevice;
     Vulkan::CDevice m_device;
 };
 

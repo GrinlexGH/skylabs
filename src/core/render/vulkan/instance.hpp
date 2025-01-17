@@ -2,8 +2,7 @@
 #include "vulkan.hpp"
 #include "vulkan_window.hpp"
 
-namespace Vulkan
-{
+namespace Vulkan {
 class CInstance
 {
 public:
@@ -16,6 +15,8 @@ public:
 
     void Create(const IVulkanWindow* window);
     [[nodiscard]] vk::Instance GetHandle() const { return m_handle; }
+
+    explicit operator vk::Instance() const { return m_handle; }
 
 private:
     vk::Instance m_handle;

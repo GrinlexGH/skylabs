@@ -5,8 +5,7 @@
 #include "vulkan_window.hpp"
 #include "extensions/extension_manager.hpp"
 
-namespace
-{
+namespace {
 int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
     switch (type) {
         case vk::PhysicalDeviceType::eDiscreteGpu:
@@ -29,7 +28,7 @@ bool CheckExtensionSupport(
     const std::vector<const char*>& requiredExtensions
 ) {
     const std::vector<vk::ExtensionProperties> availableExtensions =
-        physicalDevice.enumerateDeviceExtensionProperties();
+            physicalDevice.enumerateDeviceExtensionProperties();
 
     std::vector<const char*> missingExtensions;
 
@@ -102,8 +101,7 @@ bool IsDeviceSuitable(
 }
 }
 
-namespace Vulkan
-{
+namespace Vulkan {
 void CPhysicalDevice::Pick(
     const vk::Instance instance,
     const IVulkanWindow* window,

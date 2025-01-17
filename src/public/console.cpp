@@ -33,6 +33,6 @@ CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, std::ostream& (*
     return s;
 }
 
-PLATFORM_CLASS CDefaultConsoleMessage Msg;
-PLATFORM_CLASS CColorfulConsoleMessage Warning { { 215, 135, 0 } };
-PLATFORM_CLASS CColorfulConsoleMessage Error { { 175, 0, 0 } };
+PUBLIC_CLASS CDefaultConsoleMessage Msg;
+PUBLIC_CLASS CColorfulConsoleMessage Warning { { 215, 135, 0 } };
+PUBLIC_CLASS CColorfulConsoleMessage Error { { 175, 0, 0 } };

@@ -1,8 +1,7 @@
 #pragma once
 #include "vulkan.hpp"
 
-namespace Vulkan
-{
+namespace Vulkan {
 class CAllocator
 {
 public:

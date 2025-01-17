@@ -2,7 +2,6 @@
 #include "launcher.hpp"
 #include "publicapi.hpp"
 #include "console.hpp"
-#include "SDL/SDL.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
@@ -15,8 +14,7 @@ BOOL CtrlHandler([[maybe_unused]] DWORD fdwCtrlType) {
     return FALSE;
 }
 
-namespace
-{
+namespace {
 void SetupConsole() {
     AllocConsole();
     std::FILE* dummy;
@@ -44,7 +42,7 @@ void SetupConsole() {
 }
 #endif
 
-DLL_EXPORT int CoreInit(const int argc, char* argv[]) {
+extern "C" DLL_EXPORT int CoreInit(const int argc, char* argv[]) {
     CommandLine()->CreateCmdLine(
         std::vector<std::string>(argv, argv + argc)
     );

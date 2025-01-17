@@ -1,8 +1,7 @@
 #pragma once
-
 #include "publicapi.hpp"
 
-class PLATFORM_CLASS IApplication
+class PUBLIC_CLASS IApplication
 {
 public:
     IApplication() = default;
@@ -17,7 +16,7 @@ public:
     virtual void Destroy() = 0;
 };
 
-class PLATFORM_CLASS CBaseApplication : public IApplication
+class PUBLIC_CLASS CBaseApplication : public IApplication
 {
 public:
     virtual void PreCreate() {}

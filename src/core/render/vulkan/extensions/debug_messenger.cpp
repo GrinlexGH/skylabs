@@ -3,8 +3,7 @@
 #include "extension_manager.hpp"
 #include "console.hpp"
 
-namespace
-{
+namespace {
 vk::Bool32 DebugCallback(
     vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     [[maybe_unused]] vk::DebugUtilsMessageTypeFlagsEXT messageTypes,
@@ -47,16 +46,16 @@ void AddDebugUtilsLayer(
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo;
 
     debugUtilsCreateInfo.messageSeverity =
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
 
     debugUtilsCreateInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                       vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                       vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-                                       vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding;
 
     debugUtilsCreateInfo.pfnUserCallback =
-        reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(DebugCallback);
+            reinterpret_cast<vk::PFN_DebugUtilsMessengerCallbackEXT>(DebugCallback);
 
     createInfos.m_debugUtilsMessengerCreateInfo = debugUtilsCreateInfo;
     pNextChain = AppendToPNextChain(pNextChain, &createInfos.m_debugUtilsMessengerCreateInfo);

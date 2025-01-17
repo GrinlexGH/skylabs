@@ -5,8 +5,7 @@
 
 #include <vector>
 
-namespace SDL::Vulkan
-{
+namespace SDL::Vulkan {
 inline std::vector<const char*> GetInstanceExtensions() {
     Uint32 extCount = 0;
     SDL_Vulkan_GetInstanceExtensions(&extCount);
@@ -14,11 +13,7 @@ inline std::vector<const char*> GetInstanceExtensions() {
     return std::vector(extensions, extensions + extCount);
 }
 
-inline bool GetPresentationSupport(
-    const vk::Instance instance,
-    const vk::PhysicalDevice physicalDevice,
-    const Uint32 queueFamilyIndex
-) {
+inline bool GetPresentationSupport(const vk::Instance instance, const vk::PhysicalDevice physicalDevice, const Uint32 queueFamilyIndex) {
     return SDL_Vulkan_GetPresentationSupport(instance, physicalDevice, queueFamilyIndex);
 }
 
