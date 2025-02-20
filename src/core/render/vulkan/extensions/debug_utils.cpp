@@ -1,6 +1,5 @@
-#include "debug_messenger.hpp"
+#include "debug_utils.hpp"
 
-#include "extension_manager.hpp"
 #include "console.hpp"
 
 namespace {
@@ -27,23 +26,13 @@ vk::Bool32 DebugCallback(
 }
 }
 
-void AddDebugUtilsLayer(
-    const std::vector<vk::LayerProperties>& availableLayers,
-    const std::vector<vk::ExtensionProperties>& availableExtensions,
-    CInstanceExtensionsCreateInfos& createInfos,
-    std::vector<const char*>& enabledLayers,
-    std::vector<const char*>& enabledExtensions,
-    void*& pNextChain
-) {
-    if (!HasLayer(availableLayers, "VK_LAYER_KHRONOS_validation") &&
-        !HasExtension(availableExtensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
-        return;
-    }
+namespace Vulkan {
+CDebugUtils::CDebugUtils(const vk::Instance& instance) {
+    m_messenger = instance.createDebugUtilsMessengerEXT(CreateInfo());
+}
 
-    enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
-    enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo;
+vk::DebugUtilsMessengerCreateInfoEXT& CDebugUtils::CreateInfo() {
+    static vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {};
 
     debugUtilsCreateInfo.messageSeverity =
             vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
@@ -57,6 +46,6 @@ void AddDebugUtilsLayer(
     debugUtilsCreateInfo.pfnUserCallback =
             reinterpret_cast<vk::PFN_DebugUtilsMessengerCallbackEXT>(DebugCallback);
 
-    createInfos.m_debugUtilsMessengerCreateInfo = debugUtilsCreateInfo;
-    pNextChain = AppendToPNextChain(pNextChain, &createInfos.m_debugUtilsMessengerCreateInfo);
+    return debugUtilsCreateInfo;
+}
 }

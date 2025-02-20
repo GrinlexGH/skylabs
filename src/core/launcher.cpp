@@ -13,7 +13,7 @@ float lastX = 640 / 2.0f;
 float lastY = 480 / 2.0f;
 bool firstMouse = true;
 
-void MainLoop(CVulkanRenderer& renderer) {
+void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
     bool quit = false;
     while (!quit) {
         const Uint64 currentFrame = SDL_GetTicks();
@@ -68,19 +68,19 @@ void MainLoop(CVulkanRenderer& renderer) {
         }
 
         if (!minimized) {
-            renderer.Draw();
+            renderer->Draw();
         }
     }
 }
 
 void CLauncher::Main() {
     SDL::CContext context(SDL_INIT_VIDEO);
-    SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
-    SDL_SetWindowRelativeMouseMode(window.m_window, true);
+    auto window = std::make_shared<SDL::CVulkanWindow>("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
+    SDL_SetWindowRelativeMouseMode(window->m_ptr, true);
 
-    CVulkanRenderer vulkan;
-    if (!vulkan.Initialize(&window)) {
+    const std::unique_ptr<IRenderer> renderer = CVulkanRenderer::TryToCreate(window);
+    if (!renderer) {
         throw std::runtime_error("Cannot initialize vulkan!\n");
     }
-    MainLoop(vulkan);
+    MainLoop(renderer);
 }

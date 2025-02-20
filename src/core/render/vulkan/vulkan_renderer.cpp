@@ -2,29 +2,34 @@
 
 #include "console.hpp"
 
-bool CVulkanRenderer::Initialize(IWindow* window) {
+CVulkanRenderer::CVulkanRenderer(const std::shared_ptr<IVulkanWindow>& window) :
+    m_window(window)
+{
+    m_instance = std::make_unique<Vulkan::CInstance>(
+        Vulkan::CInstance::Config {
+            "Hotline Miami 3",
+            "Skylabs",
+            0,
+            0
+        }
+    );
+}
+
+std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const std::shared_ptr<IVulkanWindow>& window) {
     try {
         if (window == nullptr) {
-            throw std::runtime_error("Window is null!\n");
+            Error("Cannot initialize vulkan renderer. Window is nullptr");
+            return nullptr;
         }
-        m_window = dynamic_cast<IVulkanWindow*>(window);
-
-        m_instance.Create(m_window);
-
-        m_window->CreateSurface(m_instance.GetHandle());
-
-        m_device.Initialize(m_instance.GetHandle(), m_window);
-    } catch (const std::exception& e) {
-        Error("Error: cannot initialize vulkan renderer. {}", e.what());
-        return false;
+        return std::make_unique<CVulkanRenderer>(window);
     }
-    return true;
+    catch (const std::exception& e) {
+        Error("Cannot initialize vulkan renderer. {}", e.what());
+        return nullptr;
+    }
 }
 
 CVulkanRenderer::~CVulkanRenderer() {
-    if (m_window->GetSurface()) {
-        m_window->DestroySurface(m_instance.GetHandle());
-    }
 }
 
 

@@ -6,7 +6,7 @@ namespace Vulkan {
 class CQueues
 {
 public:
-    void Init(vk::Device device, const CQueueFamilies& families);
+    void Init(const vk::Device& device, const CQueueFamilies& families);
 
     vk::Queue m_graphics;
     vk::Queue m_present;
