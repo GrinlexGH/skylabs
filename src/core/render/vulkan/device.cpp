@@ -1,11 +1,9 @@
 #include "device.hpp"
 
-#include "extensions/extension_manager.hpp"
-
 #include <set>
 
 namespace Vulkan {
-void CDevice::Initialize(const vk::Instance instance, const IVulkanWindow* window) {
+CDevice::CDevice(const vk::Instance& instance, const IVulkanWindow* window) {
     const std::vector requiredExtensions {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_EXT_MEMORY_BUDGET_EXTENSION_NAME

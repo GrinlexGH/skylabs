@@ -10,17 +10,17 @@
 
 #include <stc.hpp>
 
+namespace {
 BOOL CtrlHandler([[maybe_unused]] DWORD fdwCtrlType) {
     return FALSE;
 }
 
-namespace {
 void SetupConsole() {
     AllocConsole();
     std::FILE* dummy;
-    if (freopen_s(&dummy, "CONOUT$", "w", stdout)) {}
-    if (freopen_s(&dummy, "CONOUT$", "w", stderr)) {}
-    if (freopen_s(&dummy, "CONIN$", "r", stdin)) {}
+    if (freopen_s(&dummy, "CONOUT$", "w", stdout)) { OutputDebugStringA("Cannot open CONOUT$ for write!"); }
+    if (freopen_s(&dummy, "CONOUT$", "w", stderr)) { OutputDebugStringA("Cannot open CONOUT$ for write!"); }
+    if (freopen_s(&dummy, "CONIN$", "r", stdin)) { OutputDebugStringA("Cannot open CONIN$ for read!"); }
     std::cout.clear();
     std::clog.clear();
     std::cerr.clear();

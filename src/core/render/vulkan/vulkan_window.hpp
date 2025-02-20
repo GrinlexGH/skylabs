@@ -9,17 +9,17 @@ class IVulkanWindow : public IWindow
 {
 public:
     IVulkanWindow() = default;
-    IVulkanWindow(const IVulkanWindow&) = default;
+    IVulkanWindow(const IVulkanWindow&) = delete;
     IVulkanWindow(IVulkanWindow&&) = default;
-    IVulkanWindow& operator=(const IVulkanWindow&) = default;
+    IVulkanWindow& operator=(const IVulkanWindow&) = delete;
     IVulkanWindow& operator=(IVulkanWindow&&) = default;
     ~IVulkanWindow() override = default;
 
     [[nodiscard]] virtual std::vector<const char*> GetRequiredInstanceExtensions() const = 0;
-    [[nodiscard]] virtual bool CheckQueuePresentSupport(vk::Instance instance, vk::PhysicalDevice physicalDevice, uint32_t queueFamilyIndex) const = 0;
+    [[nodiscard]] virtual bool CheckQueuePresentSupport(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, uint32_t queueFamilyIndex) const = 0;
 
-    virtual void CreateSurface(vk::Instance instance) = 0;
-    virtual void DestroySurface(vk::Instance instance) = 0;
+    virtual void CreateSurface(const vk::Instance& instance) = 0;
+    virtual void DestroySurface(const vk::Instance& instance) = 0;
     [[nodiscard]] vk::SurfaceKHR GetSurface() const { return m_surface; }
 
 protected:

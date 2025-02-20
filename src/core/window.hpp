@@ -4,9 +4,9 @@ class IWindow
 {
 public:
     IWindow() = default;
-    IWindow(const IWindow&) = default;
+    IWindow(const IWindow&) = delete;
     IWindow(IWindow&&) = default;
-    IWindow& operator=(const IWindow&) = default;
+    IWindow& operator=(const IWindow&) = delete;
     IWindow& operator=(IWindow&&) = default;
     virtual ~IWindow() = default;
 

@@ -8,21 +8,20 @@
 class CVulkanRenderer final : public IRenderer
 {
 public:
-    CVulkanRenderer() = default;
+    explicit CVulkanRenderer(const std::shared_ptr<IVulkanWindow>& window);
     CVulkanRenderer(const CVulkanRenderer&) = delete;
-    CVulkanRenderer(CVulkanRenderer&& other) = default;
+    CVulkanRenderer(CVulkanRenderer&&) noexcept = default;
     CVulkanRenderer& operator=(const CVulkanRenderer&) = delete;
-    CVulkanRenderer& operator=(CVulkanRenderer&& other) = default;
+    CVulkanRenderer& operator=(CVulkanRenderer&&) noexcept = default;
     ~CVulkanRenderer() override;
 
-    bool Initialize(IWindow* window) override;
+    static std::unique_ptr<CVulkanRenderer> TryToCreate(const std::shared_ptr<IVulkanWindow>& window);
     void Draw() override {}
 
 private:
-    IVulkanWindow* m_window = nullptr;
+    std::shared_ptr<IVulkanWindow> m_window;
 
-    Vulkan::CInstance m_instance;
-    Vulkan::CDevice m_device;
+    std::unique_ptr<Vulkan::CInstance> m_instance;
 };
 
 

@@ -2,9 +2,9 @@
 
 namespace Vulkan {
 void CAllocator::Create(
-    const vk::Instance instance,
-    const vk::PhysicalDevice physicalDevice,
-    const vk::Device device
+    const vk::Instance& instance,
+    const vk::PhysicalDevice& physicalDevice,
+    const vk::Device& device
 ) {
     vma::AllocatorCreateInfo allocatorCreateInfo;
     allocatorCreateInfo.flags = vma::AllocatorCreateFlagBits::eExtMemoryBudget;

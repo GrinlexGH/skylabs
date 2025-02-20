@@ -3,7 +3,6 @@
 #include "console.hpp"
 #include "queue_families.hpp"
 #include "vulkan_window.hpp"
-#include "extensions/extension_manager.hpp"
 
 namespace {
 int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
@@ -18,13 +17,19 @@ int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
             return 2;
         case vk::PhysicalDeviceType::eOther:
             return 1;
+        default: return 0;
     }
+}
 
-    return 0;
+bool HasExtension(const std::vector<vk::ExtensionProperties>& set, const std::string_view target) {
+    return std::ranges::any_of(
+        set,
+        [&](const vk::ExtensionProperties& extension) { return extension.extensionName == target; }
+    );
 }
 
 bool CheckExtensionSupport(
-    const vk::PhysicalDevice physicalDevice,
+    const vk::PhysicalDevice& physicalDevice,
     const std::vector<const char*>& requiredExtensions
 ) {
     const std::vector<vk::ExtensionProperties> availableExtensions =
@@ -54,8 +59,8 @@ bool CheckExtensionSupport(
 }
 
 bool CheckQueueSupport(
-    const vk::Instance instance,
-    const vk::PhysicalDevice physicalDevice,
+    const vk::Instance& instance,
+    const vk::PhysicalDevice& physicalDevice,
     const IVulkanWindow* window
 ) {
     Vulkan::CQueueFamilies indices;
@@ -84,8 +89,8 @@ bool CheckQueueSupport(
 }
 
 bool IsDeviceSuitable(
-    const vk::Instance instance,
-    const vk::PhysicalDevice physicalDevice,
+    const vk::Instance& instance,
+    const vk::PhysicalDevice& physicalDevice,
     const std::vector<const char*>& requiredExtensions,
     const IVulkanWindow* window
 ) {
@@ -103,7 +108,7 @@ bool IsDeviceSuitable(
 
 namespace Vulkan {
 void CPhysicalDevice::Pick(
-    const vk::Instance instance,
+    const vk::Instance& instance,
     const IVulkanWindow* window,
     const std::vector<const char*>& requiredExtensions
 ) {

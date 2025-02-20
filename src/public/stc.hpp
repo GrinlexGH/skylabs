@@ -29,7 +29,7 @@ SOFTWARE.
 
 namespace stc {
 
-    enum _color_modes {
+    enum _color_modes : std::uint8_t {
         COLOR_256 = 0,
         TRUE_COLOR = 1,
         NO_COLOR = 2

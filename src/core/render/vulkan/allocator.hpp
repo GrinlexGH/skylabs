@@ -12,7 +12,7 @@ public:
     CAllocator& operator=(CAllocator&&) = default;
     ~CAllocator();
 
-    void Create(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
+    void Create(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, const vk::Device& device);
     [[nodiscard]] vma::Allocator GetHandle() const { return m_handle; }
 
 private:
