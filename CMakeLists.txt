@@ -16,11 +16,13 @@ message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     add_compile_options(
-        "-Wall" "-Wextra" "-Wpedantic" "-Werror"
+        "-Wall" "-Wextra" "-Wpedantic"
+        "$<$<CONFIG:Release>:-Werror>"
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
-        "/WX" "/W4" "/utf-8" "/Zc:__cplusplus"
+        "/W4" "/utf-8" "/Zc:__cplusplus"
+        "$<$<CONFIG:Release>:/WX>"
     )
 else()
     message(WARNING "${PROJECT_NAME} compiles only on gcc, clang, apple clang or msvc! I have no idea if everything is going to be okay")
