@@ -1,48 +1,37 @@
 # shaders
 set(CURRENT_TARGET_NAME shaders)
 
-set(SHADER_SOURCE_FILES
-    shader.frag
-    shader.vert
-    shader.comp
+set(SHADERS
+    shader.frag.glsl
+    shader.vert.glsl
+    shader.comp.glsl
 )
 
-foreach(FILE IN LISTS SHADER_SOURCE_FILES)
+set(SHADER_BINARY_DIR ${ROOT_OUTPUT_DIRECTORY}/shaders)
+
+add_custom_command(
+    MAIN_DEPENDENCY ${SHADER_BINARY_DIR}
+    OUTPUT ${SHADER_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_BINARY_DIR}
+    VERBATIM
+)
+
+foreach(SHADER ${SHADERS})
+    get_filename_component(SHADER_NAME ${SHADER} NAME)
+    set(SHADER_OUT_NAME "${SHADER_BINARY_DIR}/${SHADER_NAME}.spv")
+    list(APPEND SHADER_OUT_NAMES ${SHADER_OUT_NAME})
+    add_custom_command(
+        MAIN_DEPENDENCY ${SHADER}
+        OUTPUT ${SHADER_OUT_NAME}
+        COMMAND Vulkan::glslc ${SHADER} "-o" ${SHADER_OUT_NAME}
+        VERBATIM
+    )
+endforeach()
+
+add_custom_target(${CURRENT_TARGET_NAME} DEPENDS ${SHADER_OUT_NAMES})
+
+foreach(FILE IN LISTS SHADERS)
     get_filename_component(SOURCE_PATH "${FILE}" PATH)
     string(REPLACE "/" "\\" SOURCE_PATH_GROUP "${SOURCE_PATH}")
     source_group("Source Files\\${SOURCE_PATH_GROUP}" FILES "${FILE}")
 endforeach()
-
-# Validate that source files have been passed
-list(LENGTH SHADER_SOURCE_FILES FILE_COUNT)
-if(FILE_COUNT EQUAL 0)
-    message(FATAL_ERROR "Cannot create a shaders target without any source files!")
-endif()
-
-set(SHADER_COMMAND)
-set(SHADER_PRODUCTS)
-
-foreach(SHADER_SOURCE IN LISTS SHADER_SOURCE_FILES)
-    cmake_path(ABSOLUTE_PATH SHADER_SOURCE NORMALIZE)
-    cmake_path(GET SHADER_SOURCE EXTENSION LAST_ONLY SHADER_NAME)
-    string(SUBSTRING "${SHADER_NAME}" 1 -1 SHADER_NAME)
-
-    # Build command
-    list(APPEND SHADER_COMMAND COMMAND)
-    list(APPEND SHADER_COMMAND Vulkan::glslc)
-    list(APPEND SHADER_COMMAND "${SHADER_SOURCE}")
-    list(APPEND SHADER_COMMAND "-o")
-    list(APPEND SHADER_COMMAND "${ROOT_OUTPUT_DIRECTORY}/shaders/${SHADER_NAME}.spv")
-
-    # Add product
-    list(APPEND SHADER_PRODUCTS "${ROOT_OUTPUT_DIRECTORY}/shaders/${SHADER_NAME}.spv")
-endforeach()
-
-add_custom_target(
-    ${CURRENT_TARGET_NAME} ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${ROOT_OUTPUT_DIRECTORY}/shaders/
-    COMMAND ${SHADER_COMMAND}
-    COMMENT "Compiling Shaders..."
-    SOURCES ${SHADER_SOURCE_FILES}
-    BYPRODUCTS ${SHADER_PRODUCTS}
-)

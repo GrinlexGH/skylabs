@@ -49,8 +49,3 @@ if(MSVC AND($<CONFIG:Debug> OR $<CONFIG:RelWithDebInfo>))
         COMMENT "Copying SDL3::SDL3 pdb"
     )
 endif()
-
-set_target_properties(${CURRENT_TARGET_NAME}
-    PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${ROOT_OUTPUT_DIRECTORY}/
-)

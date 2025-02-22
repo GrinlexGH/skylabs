@@ -63,7 +63,7 @@ bool EnableLayer(const char* name, std::vector<const char*>& enabledLayers) {
     return true;
 }
 
-void AppendToPNextChain(void*& currentChain, void* newExtension) {
+[[maybe_unused]] void AppendToPNextChain(void*& currentChain, void* newExtension) {
     if (currentChain == nullptr) {
         currentChain = newExtension;
         return;
@@ -110,7 +110,7 @@ CInstance::CInstance(
     //====================
     std::vector<const char*> enabledExtensions {};
 
-#if _DEBUG
+#ifdef DEBUG
     const bool isDebugUtilsAvailable = EnableExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, enabledExtensions);
 #endif
 
@@ -133,7 +133,7 @@ CInstance::CInstance(
 
     //====================
     std::vector<const char*> enabledLayers;
-#if _DEBUG
+#ifdef DEBUG
     EnableLayer("VK_LAYER_KHRONOS_validation", enabledLayers);
 #endif
 
@@ -144,7 +144,7 @@ CInstance::CInstance(
     //====================
     void* pNext = nullptr;
 
-#if _DEBUG
+#ifdef DEBUG
     if (isDebugUtilsAvailable) {
         AppendToPNextChain(pNext, &CDebugUtils::CreateInfo());
     }
@@ -163,7 +163,7 @@ CInstance::CInstance(
     VULKAN_HPP_DEFAULT_DISPATCHER.init(m_handle);
 
     //====================
-#if _DEBUG
+#ifdef DEBUG
     if (isDebugUtilsAvailable) {
         m_debugUtils = std::make_unique<CDebugUtils>(m_handle);
     }
