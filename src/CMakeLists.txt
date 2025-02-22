@@ -5,7 +5,11 @@ set(PROJECTS
     public
 )
 
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+
 add_compile_definitions(NOMINMAX)
+add_compile_definitions($<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>)
 
 if(WIN32)
     add_compile_definitions(PLATFORM_WINDOWS UNICODE _UNICODE)
@@ -34,7 +38,6 @@ endif()
 if(APPLE)
     add_compile_definitions(PLATFORM_APPLE)
 endif()
-
 
 # For the future: there is a CMAKE_SYSTEM_NAME if
 # there is no special definition for the platform

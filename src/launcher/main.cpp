@@ -199,7 +199,7 @@ int WINAPI wWinMain(
             );
         }
 
-        const auto main = reinterpret_cast<main_t>(GetProcAddress(core, "CoreInit"));
+        const auto main = reinterpret_cast<main_t>(reinterpret_cast<void*>(GetProcAddress(core, "CoreInit")));
         if (!main) {
             throw std::runtime_error(
                 "Failed to load the core entry proc: " +
