@@ -31,6 +31,11 @@ CDebugUtils::CDebugUtils(const vk::Instance& instance) {
     m_messenger = instance.createDebugUtilsMessengerEXT(CreateInfo());
 }
 
+void CDebugUtils::Destroy(const vk::Instance& instance) {
+    instance.destroyDebugUtilsMessengerEXT(m_messenger);
+    m_messenger = nullptr;
+}
+
 vk::DebugUtilsMessengerCreateInfoEXT& CDebugUtils::CreateInfo() {
     static vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {};
 

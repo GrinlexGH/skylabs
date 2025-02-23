@@ -22,6 +22,7 @@ private:
     std::shared_ptr<IVulkanWindow> m_window;
 
     std::unique_ptr<Vulkan::CInstance> m_instance;
+    std::unique_ptr<Vulkan::CDevice> m_device;
 };
 
 

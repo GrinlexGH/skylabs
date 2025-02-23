@@ -21,107 +21,37 @@ int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
     }
 }
 
-bool HasExtension(const std::vector<vk::ExtensionProperties>& set, const std::string_view target) {
-    return std::ranges::any_of(
-        set,
-        [&](const vk::ExtensionProperties& extension) { return extension.extensionName == target; }
-    );
-}
-
-bool CheckExtensionSupport(
-    const vk::PhysicalDevice& physicalDevice,
-    const std::vector<const char*>& requiredExtensions
-) {
-    const std::vector<vk::ExtensionProperties> availableExtensions =
-            physicalDevice.enumerateDeviceExtensionProperties();
-
-    std::vector<const char*> missingExtensions;
-
-    for (const auto extension : requiredExtensions) {
-        if (!HasExtension(availableExtensions, extension)) {
-            missingExtensions.push_back(extension);
-        }
-    }
-
-    if (!missingExtensions.empty()) {
-        std::string message = "Required vulkan extensions not found:\n";
-        for (const auto ext : missingExtensions) {
-            message.append(ext);
-            message.append("\n");
-        }
-        Msg << message;
-        return false;
-    }
-
-    Msg << "All required vulkan extensions for this device were found!";
-
-    return true;
-}
-
-bool CheckQueueSupport(
-    const vk::Instance& instance,
-    const vk::PhysicalDevice& physicalDevice,
-    const IVulkanWindow* window
-) {
-    Vulkan::CQueueFamilies indices;
-    indices.Init(instance, physicalDevice, window);
-
-    if (!indices.IsComplete()) {
-        if (!indices.m_transfer) {
-            Msg << "Device doesn't have transfer queue";
-        }
-        if (!indices.m_graphics) {
-            Msg << "Device doesn't have graphics queue";
-        }
-        if (!indices.m_compute) {
-            Msg << "Device doesn't have compute queue";
-        }
-        if (!indices.m_present) {
-            Msg << "Device doesn't have queue with present support";
-        }
-
-        return false;
-    }
-
-    Msg << "Device has all required queue families!";
-
-    return true;
-}
-
 bool IsDeviceSuitable(
     const vk::Instance& instance,
     const vk::PhysicalDevice& physicalDevice,
-    const std::vector<const char*>& requiredExtensions,
     const IVulkanWindow* window
 ) {
-    if (!CheckExtensionSupport(physicalDevice, requiredExtensions)) {
-        return false;
+    for (int i = 0; i < physicalDevice.getQueueFamilyProperties().size(); ++i) {
+        if (window->CheckQueuePresentSupport(instance, physicalDevice, i)) {
+            return true;
+        }
     }
 
-    if (!CheckQueueSupport(instance, physicalDevice, window)) {
-        return false;
-    }
-
-    return true;
+    return false;
 }
 }
 
 namespace Vulkan {
 void CPhysicalDevice::Pick(
-    const vk::Instance& instance,
-    const IVulkanWindow* window,
-    const std::vector<const char*>& requiredExtensions
+    const CInstance& instance,
+    const IVulkanWindow* window
 ) {
-    const std::vector<vk::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
+    static const std::vector<vk::PhysicalDevice> physicalDevices = instance.GetHandle().enumeratePhysicalDevices();
 
     int deviceTypeScore = 0;
     for (vk::PhysicalDevice physicalDevice : physicalDevices) {
         const vk::PhysicalDeviceProperties deviceProperties = physicalDevice.getProperties();
+
         Msg("Found device: {}", static_cast<const char*>(deviceProperties.deviceName));
 
         // Prefer discrete gpu
         const int optionScore = GetDeviceTypeScore(deviceProperties.deviceType);
-        if (IsDeviceSuitable(instance, physicalDevice, requiredExtensions, window)) {
+        if (IsDeviceSuitable(instance.GetHandle(), physicalDevice, window)) {
             if (optionScore > deviceTypeScore) {
                 m_handle = physicalDevice;
                 deviceTypeScore = optionScore;
@@ -132,5 +62,14 @@ void CPhysicalDevice::Pick(
     if (m_handle == VK_NULL_HANDLE) {
         throw std::runtime_error("No suitable GPU was found!");
     }
+
+    Set(m_handle);
+}
+
+void CPhysicalDevice::Set(const vk::PhysicalDevice& physicalDevice) {
+    m_handle = physicalDevice;
+    m_properties = m_handle.getProperties();
+    m_features = m_handle.getFeatures();
+    m_queueFamilyProperties = m_handle.getQueueFamilyProperties();
 }
 }

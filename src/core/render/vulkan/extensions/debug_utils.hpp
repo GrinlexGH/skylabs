@@ -6,6 +6,7 @@ class CDebugUtils
 {
 public:
     explicit CDebugUtils(const vk::Instance& instance);
+    void Destroy(const vk::Instance& instance);
 
     static vk::DebugUtilsMessengerCreateInfoEXT& CreateInfo();
     [[nodiscard]] vk::DebugUtilsMessengerEXT GetMessenger() const { return m_messenger; }
