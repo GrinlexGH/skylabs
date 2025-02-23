@@ -1,25 +1,12 @@
 #include "instance.hpp"
 
 #include "console.hpp"
+#include "extensions/extensions.hpp"
 #include "extensions/debug_utils.hpp"
 
 #include <sstream>
 
 namespace {
-bool HasExtension(const std::vector<const char*>& set, const std::string_view target) {
-    return std::ranges::any_of(
-        set,
-        [&](const char* extension) { return extension == target; }
-    );
-}
-
-bool HasExtension(const std::vector<vk::ExtensionProperties>& set, const std::string_view target) {
-    return std::ranges::any_of(
-        set,
-        [&](const vk::ExtensionProperties& extension) { return extension.extensionName == target; }
-    );
-}
-
 bool EnableExtension(const char* name, std::vector<const char*>& enabledExtensions) {
     static std::vector<vk::ExtensionProperties> availableExtensions = vk::enumerateInstanceExtensionProperties();
 
@@ -32,20 +19,6 @@ bool EnableExtension(const char* name, std::vector<const char*>& enabledExtensio
     }
 
     return true;
-}
-
-bool HasLayer(const std::vector<const char*>& set, const std::string_view target) {
-    return std::ranges::any_of(
-        set,
-        [&](const char* layer) { return layer == target; }
-    );
-}
-
-bool HasLayer(const std::vector<vk::LayerProperties>& set, const std::string_view target) {
-    return std::ranges::any_of(
-        set,
-        [&](const vk::LayerProperties& layer) { return layer.layerName == target; }
-    );
 }
 
 bool EnableLayer(const char* name, std::vector<const char*>& enabledLayers) {
@@ -62,20 +35,6 @@ bool EnableLayer(const char* name, std::vector<const char*>& enabledLayers) {
 
     return true;
 }
-
-[[maybe_unused]] void AppendToPNextChain(void*& currentChain, void* newExtension) {
-    if (currentChain == nullptr) {
-        currentChain = newExtension;
-        return;
-    }
-
-    auto* current = static_cast<vk::BaseOutStructure*>(currentChain);
-    while (current->pNext != nullptr) {
-        current = current->pNext;
-    }
-
-    current->pNext = static_cast<vk::BaseOutStructure*>(newExtension);
-}
 }
 
 namespace Vulkan {
@@ -86,38 +45,36 @@ CInstance::CInstance(
 ) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    std::uint32_t apiVersion = vk::ApiVersion10;
+    m_apiVersion = vk::ApiVersion10;
 
     if (VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceVersion) {
-        apiVersion = std::max(vk::enumerateInstanceVersion(), apiVersion);
+        m_apiVersion = std::max(vk::enumerateInstanceVersion(), m_apiVersion);
     }
 
     Msg("Vulkan version: {}.{}.{}.{}",
-        vk::apiVersionVariant(apiVersion),
-        vk::apiVersionMajor(apiVersion),
-        vk::apiVersionMinor(apiVersion),
-        vk::apiVersionPatch(apiVersion)
+        vk::apiVersionVariant(m_apiVersion),
+        vk::apiVersionMajor(m_apiVersion),
+        vk::apiVersionMinor(m_apiVersion),
+        vk::apiVersionPatch(m_apiVersion)
     );
 
     //====================
     vk::ApplicationInfo appInfo {};
-    appInfo.pApplicationName = config.gameName;
+    appInfo.pApplicationName = config.m_gameName;
     appInfo.applicationVersion = config.m_gameVersion;
-    appInfo.pEngineName = config.engineName;
+    appInfo.pEngineName = config.m_engineName;
     appInfo.engineVersion = config.m_engineBuild;
-    appInfo.apiVersion = apiVersion;
+    appInfo.apiVersion = m_apiVersion;
 
     //====================
-    std::vector<const char*> enabledExtensions {};
-
 #ifdef DEBUG
-    const bool isDebugUtilsAvailable = EnableExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, enabledExtensions);
+    const bool isDebugUtilsAvailable = EnableExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, m_enabledExtensions);
 #endif
 
-    // if required extension is missing, generate error message
+    // if required extension is missing, put it into error message
     std::vector<const char*> missingExtensions {};
     for (const auto& [name, required] : extensions) {
-        if (const bool isAvailable = EnableExtension(name, enabledExtensions); required && !isAvailable) {
+        if (const bool isAvailable = EnableExtension(name, m_enabledExtensions); required && !isAvailable) {
             missingExtensions.push_back(name);
         }
     }
@@ -153,8 +110,8 @@ CInstance::CInstance(
     //====================
     vk::InstanceCreateInfo instanceCreateInfo;
     instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-    instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
+    instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(m_enabledExtensions.size());
+    instanceCreateInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
     instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
     instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
     instanceCreateInfo.pNext = pNext;
@@ -174,6 +131,8 @@ CInstance::~CInstance() {
     if (!m_handle) {
         return;
     }
+
+    m_debugUtils->Destroy(m_handle);
 
     m_handle.destroy();
 }

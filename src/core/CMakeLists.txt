@@ -15,6 +15,7 @@ set(SOURCES
     render/vulkan/vulkan_renderer.cpp
     render/vulkan/instance.hpp
     render/vulkan/instance.cpp
+    render/vulkan/extensions/extensions.hpp
     render/vulkan/extensions/debug_utils.hpp
     render/vulkan/extensions/debug_utils.cpp
     render/vulkan/physical_device.hpp

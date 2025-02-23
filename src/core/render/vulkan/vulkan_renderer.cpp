@@ -5,13 +5,25 @@
 CVulkanRenderer::CVulkanRenderer(const std::shared_ptr<IVulkanWindow>& window) :
     m_window(window)
 {
+    std::unordered_map<const char*, bool> instanceExtensions;
+
+    for (const auto& extension : window->GetRequiredInstanceExtensions()) {
+        instanceExtensions[extension] = true;
+    }
+
     m_instance = std::make_unique<Vulkan::CInstance>(
         Vulkan::CInstance::Config {
-            "Hotline Miami 3",
-            "Skylabs",
-            0,
-            0
-        }
+            .m_gameName = "Hotline Miami 3",
+            .m_engineName = "Skylabs",
+            .m_gameVersion = 0,
+            .m_engineBuild = 0
+        },
+        instanceExtensions
+    );
+
+    m_device = std::make_unique<Vulkan::CDevice>(
+        *m_instance,
+        m_window.get()
     );
 }
 

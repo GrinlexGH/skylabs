@@ -1,5 +1,6 @@
 #pragma once
 #include "vulkan.hpp"
+#include "instance.hpp"
 #include "queue_families.hpp"
 #include "physical_device.hpp"
 #include "queues.hpp"
@@ -10,14 +11,16 @@ namespace Vulkan {
 class CDevice
 {
 public:
-    explicit CDevice(const vk::Instance& instance, const IVulkanWindow* window);
-    CDevice(const CDevice&) = default;
+    explicit CDevice(const CInstance& instance, const IVulkanWindow* window);
+    CDevice(const CDevice&) = delete;
     CDevice(CDevice&&) = default;
-    CDevice& operator=(const CDevice&) = default;
+    CDevice& operator=(const CDevice&) = delete;
     CDevice& operator=(CDevice&&) = default;
     ~CDevice();
 
     [[nodiscard]] vk::Device GetHandle() const { return m_handle; }
+
+    explicit operator vk::Device() const { return m_handle; }
 
 private:
     void Create(const std::vector<const char*>& requiredExtensions);
