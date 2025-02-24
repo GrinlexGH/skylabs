@@ -17,8 +17,8 @@ public:
     [[nodiscard]] std::vector<const char*> GetRequiredInstanceExtensions() const override;
     [[nodiscard]] bool CheckQueuePresentSupport(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, uint32_t queueFamilyIndex) const override;
 
-    void CreateSurface(const vk::Instance& instance) override;
-    void DestroySurface(const vk::Instance& instance) override;
+    vk::SurfaceKHR CreateSurface(const vk::Instance& instance) override;
+    void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) override;
 
     void GetDrawableSize(int* w, int* h) override;
 

@@ -3,6 +3,7 @@
 #include "vulkan_window.hpp"
 #include "extensions/debug_utils.hpp"
 #include "extensions/extensions.hpp"
+#include "physical_device.hpp"
 
 #include <unordered_map>
 
@@ -24,23 +25,26 @@ public:
         const std::vector<const char*>& layers = {}
     );
     CInstance(const CInstance&) = delete;
-    CInstance(CInstance&&) noexcept = default;
+    CInstance(CInstance&&) = delete;
     CInstance& operator=(const CInstance&) = delete;
-    CInstance& operator=(CInstance&&) noexcept = default;
+    CInstance& operator=(CInstance&&) = delete;
     ~CInstance();
 
     [[nodiscard]] vk::Instance GetHandle() const { return m_handle; }
-    [[nodiscard]] std::uint32_t GetApiVersion() const { return m_apiVersion; }
+
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return HasExtension(m_enabledExtensions, name); }
+
+    CPhysicalDevice& GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
 
     explicit operator vk::Instance() const { return m_handle; }
 
 private:
     vk::Instance m_handle;
 
-    std::uint32_t m_apiVersion;
     std::vector<const char*> m_enabledExtensions;
 
     std::unique_ptr<CDebugUtils> m_debugUtils;
+
+    std::vector<std::unique_ptr<CPhysicalDevice>> m_physicalDevices;
 };
 }

@@ -21,9 +21,11 @@ CVulkanRenderer::CVulkanRenderer(const std::shared_ptr<IVulkanWindow>& window) :
         instanceExtensions
     );
 
+    m_surface = window->CreateSurface(m_instance->GetHandle());
+
     m_device = std::make_unique<Vulkan::CDevice>(
-        *m_instance,
-        m_window.get()
+        m_instance->GetSuitablePhysicalDevice(window.get()),
+        m_surface
     );
 }
 
@@ -42,6 +44,11 @@ std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const std::shared_
 }
 
 CVulkanRenderer::~CVulkanRenderer() {
+    if (const auto window = m_window.lock()) {
+        window->DestroySurface(m_instance->GetHandle(), m_surface);
+    } else {
+        Error("Window is expired!");
+    }
 }
 
 

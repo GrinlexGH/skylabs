@@ -16,12 +16,8 @@ public:
     ~IVulkanWindow() override = default;
 
     [[nodiscard]] virtual std::vector<const char*> GetRequiredInstanceExtensions() const = 0;
-    [[nodiscard]] virtual bool CheckQueuePresentSupport(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, uint32_t queueFamilyIndex) const = 0;
+    [[nodiscard]] virtual bool CheckQueuePresentSupport(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, std::uint32_t queueFamilyIndex) const = 0;
 
-    virtual void CreateSurface(const vk::Instance& instance) = 0;
-    virtual void DestroySurface(const vk::Instance& instance) = 0;
-    [[nodiscard]] vk::SurfaceKHR GetSurface() const { return m_surface; }
-
-protected:
-    vk::SurfaceKHR m_surface;
+    virtual vk::SurfaceKHR CreateSurface(const vk::Instance& instance) = 0;
+    virtual void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) = 0;
 };

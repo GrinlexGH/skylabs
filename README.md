@@ -30,3 +30,4 @@ git submodule update --recursive
 Useful links:
 - https://utf8everywhere.org/
 - https://github.com/boostorg/dll/blob/e7ad58bfb91bd8a79e0ba274f80ae6a8da9fc59e/include/boost/dll/detail/posix/program_location_impl.hpp#L25
+- https://github.com/KhronosGroup/Vulkan-Samples/tree/main

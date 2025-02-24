@@ -4,10 +4,10 @@
 
 namespace Vulkan {
 CDevice::CDevice(
-    const CInstance& instance,
-    const IVulkanWindow* window
-) {
-    m_physicalDevice.Pick(instance, window);
+    const CPhysicalDevice& physicalDevice,
+    const vk::SurfaceKHR& surface
+) : m_physicalDevice(physicalDevice) {
+    //m_physicalDevice.Pick(instance, window);
 
     //m_queueFamilies.Init(instance, m_physicalDevice.GetHandle(), window);
 
@@ -29,10 +29,10 @@ CDevice::~CDevice() {
 void CDevice::Create(const std::vector<const char*>& requiredExtensions) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies {
-        *m_queueFamilies.m_graphics,
-        *m_queueFamilies.m_present,
-        *m_queueFamilies.m_transfer,
-        *m_queueFamilies.m_compute
+    //    *m_queueFamilies.m_graphics,
+    //    *m_queueFamilies.m_present,
+    //    *m_queueFamilies.m_transfer,
+    //    *m_queueFamilies.m_compute
     };
 
     float queuePriority = 1.0f;
