@@ -22,10 +22,6 @@ CVulkanWindow::CVulkanWindow(const char* title, const int w, const int h, SDL_Wi
 }
 
 CVulkanWindow::~CVulkanWindow() {
-    if (m_surface) {
-        Warning("Window was deleted before surface was deleted.");
-    }
-
     if (m_ptr) {
         SDL_DestroyWindow(m_ptr);
     }
@@ -39,12 +35,13 @@ bool CVulkanWindow::CheckQueuePresentSupport(const vk::Instance& instance, const
     return Vulkan::GetPresentationSupport(instance, physicalDevice, queueFamilyIndex);
 }
 
-void CVulkanWindow::CreateSurface(const vk::Instance& instance) {
-    m_surface = Vulkan::CreateSurface(m_ptr, instance);
+vk::SurfaceKHR CVulkanWindow::CreateSurface(const vk::Instance& instance) {
+    return Vulkan::CreateSurface(m_ptr, instance);
 }
 
-void CVulkanWindow::DestroySurface(const vk::Instance& instance) {
-    Vulkan::DestroySurface(instance, m_surface);
+void CVulkanWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) {
+    Vulkan::DestroySurface(instance, surface);
+    surface = VK_NULL_HANDLE;
 }
 
 void CVulkanWindow::GetDrawableSize(int* w, int* h) {

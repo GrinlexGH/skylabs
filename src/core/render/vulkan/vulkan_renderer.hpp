@@ -19,7 +19,8 @@ public:
     void Draw() override {}
 
 private:
-    std::shared_ptr<IVulkanWindow> m_window;
+    std::weak_ptr<IVulkanWindow> m_window;
+    vk::SurfaceKHR m_surface;
 
     std::unique_ptr<Vulkan::CInstance> m_instance;
     std::unique_ptr<Vulkan::CDevice> m_device;

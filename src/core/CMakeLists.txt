@@ -24,8 +24,8 @@ set(SOURCES
     render/vulkan/device.cpp
     render/vulkan/queue_families.hpp
     render/vulkan/queue_families.cpp
-    render/vulkan/queues.hpp
-    render/vulkan/queues.cpp
+    render/vulkan/queue.hpp
+    render/vulkan/queue.cpp
     render/vulkan/allocator.hpp
     render/vulkan/allocator.cpp
     render/vulkan/swapchain.hpp
