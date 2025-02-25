@@ -5,7 +5,6 @@ set(SOURCES
     application.hpp
     application.cpp
     console.hpp
-    console.cpp
     commandline.hpp
     commandline.cpp
     resourceloader.hpp

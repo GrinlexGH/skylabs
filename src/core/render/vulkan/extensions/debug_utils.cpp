@@ -12,7 +12,7 @@ vk::Bool32 DebugCallback(
     switch (messageSeverity) {
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-            Msg << pCallbackData->pMessage;
+            Msg("{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
             Warning("\n{}", pCallbackData->pMessage);
