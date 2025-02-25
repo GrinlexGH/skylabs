@@ -1,76 +1,33 @@
 #pragma once
-#include "publicapi.hpp"
 #include "stc.hpp"
 
 #include <iostream>
-#include <array>
 #include <format>
-#include <cstdint>
 
-template <typename T>
-concept Printable = requires(std::ostream& os, T a) { os << a; };
-
-class CDefaultConsoleMessage
+enum CLogType : std::uint8_t
 {
-public:
-    template <typename... Args>
-    void operator()(const std::format_string<Args...> fmt, Args&&... args) {
-        std::cout
-                << stc::reset_fg
-                << std::format(fmt, std::forward<Args>(args)...)
-                << '\n';
-    }
-
-private:
-    PUBLIC_CLASS friend CDefaultConsoleMessage&
-    operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ostream&));
-
-    PUBLIC_CLASS friend CDefaultConsoleMessage&
-    operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios&));
-
-    PUBLIC_CLASS friend CDefaultConsoleMessage&
-    operator<<(CDefaultConsoleMessage& s, std::ostream& (*f)(std::ios_base&));
-
-    template <Printable T>
-    friend CDefaultConsoleMessage& operator<<(CDefaultConsoleMessage& s, const T& message) {
-        std::cout << stc::reset_fg << message << '\n';
-        return s;
-    }
+    Info = 0,
+    Warn,
+    Err
 };
 
-class CColorfulConsoleMessage
-{
-public:
-    using RGB_t = std::array<std::uint8_t, 3>;
-    explicit CColorfulConsoleMessage(const RGB_t& color) : m_color(color) {}
-
-    template <typename... Args>
-    void operator()(const std::format_string<Args...> fmt, Args&&... args) {
-        std::cout
-                << stc::rgb_fg(m_color[0], m_color[1], m_color[2])
-                << std::format(fmt, std::forward<Args>(args)...)
-                << '\n' << stc::reset_fg;
+template <typename... Args>
+void Log(const CLogType type, const std::format_string<Args...> fmt, Args&&... args) {
+    std::cout << '[';
+    switch (type) {
+        case Info: {
+            std::cout << stc::rgb_fg(114, 159, 207) << "Info" << stc::reset_fg << "] ";
+        } break;
+        case Warn: {
+            std::cout << stc::rgb_fg(196, 160, 0) << "Warning" << stc::reset_fg << "] ";
+        } break;
+        case Err: {
+            std::cout << stc::rgb_fg(204, 0, 0) << "Error" << stc::reset_fg << "] ";
+        } break;
     }
-
-private:
-    RGB_t m_color { 255, 255, 255 };
-
-    PUBLIC_CLASS friend CColorfulConsoleMessage&
-    operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ostream&));
-
-    PUBLIC_CLASS friend CColorfulConsoleMessage&
-    operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios&));
-
-    PUBLIC_CLASS friend CColorfulConsoleMessage&
-    operator<<(CColorfulConsoleMessage& s, std::ostream& (*f)(std::ios_base&));
-
-    template <Printable T>
-    friend CColorfulConsoleMessage& operator<<(CColorfulConsoleMessage& s, const T& message) {
-        std::cout << stc::rgb_fg(s.m_color[0], s.m_color[1], s.m_color[2]) << message << '\n' << stc::reset_fg;
-        return s;
-    }
+    std::cout << std::format(fmt, std::forward<Args>(args)...) << '\n';
 };
 
-PUBLIC_GLOBAL CDefaultConsoleMessage Msg;
-PUBLIC_GLOBAL CColorfulConsoleMessage Warning;
-PUBLIC_GLOBAL CColorfulConsoleMessage Error;
+#define Msg(...) Log(CLogType::Info, __VA_ARGS__);
+#define Warning(...) Log(CLogType::Warn, __VA_ARGS__);
+#define Error(...) Log(CLogType::Err, __VA_ARGS__);

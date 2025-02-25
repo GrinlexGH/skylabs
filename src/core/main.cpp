@@ -54,7 +54,7 @@ extern "C" DLL_EXPORT int CoreInit(const int argc, char* argv[]) {
     CLauncher launcher;
     launcher.Run();
 
-    Msg << "Press Enter to exit.";
+    Msg("Press Enter to exit.");
     std::cin.ignore();
 
     return 0;
