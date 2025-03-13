@@ -75,10 +75,10 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
 
 void CLauncher::Main() {
     SDL::CContext context(SDL_INIT_VIDEO);
-    auto window = std::make_shared<SDL::CVulkanWindow>("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
-    SDL_SetWindowRelativeMouseMode(window->m_ptr, true);
+    const SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
+    SDL_SetWindowRelativeMouseMode(window.m_ptr, true);
 
-    const std::unique_ptr<IRenderer> renderer = CVulkanRenderer::TryToCreate(window);
+    const std::unique_ptr<IRenderer> renderer = CVulkanRenderer::TryToCreate(&window);
     if (!renderer) {
         throw std::runtime_error("Cannot initialize vulkan!\n");
     }

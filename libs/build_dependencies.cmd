@@ -19,7 +19,7 @@ if not exist "..\bin\windows\SDL3" (
     cmake --install . --config Release || exit /b 1
     cd ..\
     rmdir /s /q build
-    cd ..
+    cd ..\
 )
 
 if not exist "..\bin\windows\glm" (
@@ -36,7 +36,7 @@ if not exist "..\bin\windows\glm" (
     cmake --install . --config Release || exit /b 1
     cd ..\
     rmdir /s /q build
-    cd ..
+    cd ..\
 )
 
 if not exist "..\bin\windows\VulkanMemoryAllocator" (
@@ -52,7 +52,7 @@ if not exist "..\bin\windows\VulkanMemoryAllocator" (
     cmake --install . --config Release || exit /b 1
     cd ..\
     rmdir /s /q build
-    cd ..
+    cd ..\
 )
 
 if not exist "..\bin\windows\VulkanMemoryAllocator-Hpp" (
@@ -68,7 +68,7 @@ if not exist "..\bin\windows\VulkanMemoryAllocator-Hpp" (
     cmake --install . --config Release || exit /b 1
     cd ..\
     rmdir /s /q build
-    cd ..
+    cd ..\
 )
 
 if not exist "..\bin\windows\tinyobjloader" (
@@ -85,14 +85,14 @@ if not exist "..\bin\windows\tinyobjloader" (
     cmake --install . --config Release || exit /b 1
     cd ..\
     rmdir /s /q build
-    cd ..
+    cd ..\
 )
 
 if not exist "..\bin\windows\stb" (
     echo Copying stb files
     cd stb
     robocopy . "..\..\bin\windows\stb" stb_image.h /mt /z || exit /b 1
-    cd ..
+    cd ..\
 )
 
 

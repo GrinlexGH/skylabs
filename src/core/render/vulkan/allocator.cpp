@@ -13,7 +13,7 @@ void CAllocator::Create(
     allocatorCreateInfo.device = device;
     allocatorCreateInfo.instance = instance;
 
-    const vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher();
+    const vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher(VULKAN_HPP_DEFAULT_DISPATCHER);
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
     m_handle = createAllocator(allocatorCreateInfo);

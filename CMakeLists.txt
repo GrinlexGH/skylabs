@@ -37,13 +37,23 @@ set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
 # with cmake options as arguments and after that configure this project.
 # If you want to use your own libraries, then put them into libs/bin/*platform*/*lib name* folder
 if(WIN32)
+    add_custom_command(
+        OUTPUT ${PROJECT_SOURCE_DIR}/libs/bin/windows
+        COMMAND ${CMAKE_COMMAND} make_directory ${PROJECT_SOURCE_DIR}/libs/bin/windows
+        VERBATIM
+    )
     set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
     set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
     include_directories(${PROJECT_SOURCE_DIR}/libs/bin/windows)
 else()
+    add_custom_command(
+        OUTPUT ${PROJECT_SOURCE_DIR}/libs/bin/posix
+        COMMAND ${CMAKE_COMMAND} make_directory ${PROJECT_SOURCE_DIR}/libs/bin/posix
+        VERBATIM
+    )
     set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/linux)
-    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/linux)
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/posix)
+    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/posix)
 endif()
 
 execute_process(

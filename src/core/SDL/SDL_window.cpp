@@ -35,11 +35,11 @@ bool CVulkanWindow::CheckQueuePresentSupport(const vk::Instance& instance, const
     return Vulkan::GetPresentationSupport(instance, physicalDevice, queueFamilyIndex);
 }
 
-vk::SurfaceKHR CVulkanWindow::CreateSurface(const vk::Instance& instance) {
+vk::SurfaceKHR CVulkanWindow::CreateSurface(const vk::Instance& instance) const {
     return Vulkan::CreateSurface(m_ptr, instance);
 }
 
-void CVulkanWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) {
+void CVulkanWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const {
     Vulkan::DestroySurface(instance, surface);
     surface = VK_NULL_HANDLE;
 }
