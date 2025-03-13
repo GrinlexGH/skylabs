@@ -2,7 +2,7 @@
 
 #include "console.hpp"
 
-CVulkanRenderer::CVulkanRenderer(const std::shared_ptr<IVulkanWindow>& window) :
+CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) :
     m_window(window)
 {
     std::unordered_map<const char*, bool> instanceExtensions;
@@ -12,42 +12,37 @@ CVulkanRenderer::CVulkanRenderer(const std::shared_ptr<IVulkanWindow>& window) :
     }
 
     m_instance = std::make_unique<Vulkan::CInstance>(
-        Vulkan::CInstance::Config {
-            .m_gameName = "Hotline Miami 3",
-            .m_engineName = "Skylabs",
-            .m_gameVersion = 0,
-            .m_engineBuild = 0
-        },
+        "Half-life 3",
         instanceExtensions
     );
 
     m_surface = window->CreateSurface(m_instance->GetHandle());
 
     m_device = std::make_unique<Vulkan::CDevice>(
-        m_instance->GetSuitablePhysicalDevice(window.get()),
-        m_surface
+        *m_instance,
+        m_instance->GetSuitablePhysicalDevice(window),
+        window
     );
 }
 
-std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const std::shared_ptr<IVulkanWindow>& window) {
+std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindow* const window) {
     try {
         if (window == nullptr) {
-            Error("Cannot initialize vulkan renderer. Window is nullptr");
+            MsgE("Cannot initialize vulkan renderer. Window is nullptr");
             return nullptr;
         }
         return std::make_unique<CVulkanRenderer>(window);
-    }
-    catch (const std::exception& e) {
-        Error("Cannot initialize vulkan renderer. {}", e.what());
+    } catch (const std::exception& e) {
+        MsgE("Cannot initialize vulkan renderer. {}", e.what());
         return nullptr;
     }
 }
 
 CVulkanRenderer::~CVulkanRenderer() {
-    if (const auto window = m_window.lock()) {
-        window->DestroySurface(m_instance->GetHandle(), m_surface);
+    if (m_window) {
+        m_window->DestroySurface(m_instance->GetHandle(), m_surface);
     } else {
-        Error("Window is expired!");
+        MsgE("Window is expired!");
     }
 }
 

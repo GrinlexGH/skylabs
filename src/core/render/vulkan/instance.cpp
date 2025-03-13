@@ -2,13 +2,12 @@
 
 #include "console.hpp"
 #include "extensions/extensions.hpp"
-#include "extensions/debug_utils.hpp"
 
 #include <sstream>
 
 namespace {
 bool EnableExtension(const char* name, std::vector<const char*>& enabledExtensions) {
-    static std::vector<vk::ExtensionProperties> availableExtensions = vk::enumerateInstanceExtensionProperties();
+    static const std::vector<vk::ExtensionProperties>& availableExtensions = vk::enumerateInstanceExtensionProperties();
 
     if (HasExtension(availableExtensions, name)) {
         if (!HasExtension(enabledExtensions, name)) {
@@ -58,44 +57,83 @@ bool IsDeviceSuitable(
     const vk::PhysicalDevice& physicalDevice,
     const IVulkanWindow* const window
 ) {
-    for (std::size_t i = 0; i < physicalDevice.getQueueFamilyProperties().size(); ++i) {
-        if (window->CheckQueuePresentSupport(instance, physicalDevice, static_cast<std::uint32_t>(i))) {
+    bool hasPresentQueue = false;
+    bool hasGraphicsQueue = false;
+    bool hasTransferQueue = false;
+
+    for (std::uint32_t i = 0; const auto& queue : physicalDevice.getQueueFamilyProperties()) {
+        if (window->CheckQueuePresentSupport(instance, physicalDevice, i)) {
+            hasPresentQueue = true;
+        }
+
+        if (queue.queueFlags & vk::QueueFlagBits::eGraphics) {
+            hasGraphicsQueue = true;
+        }
+
+        if (queue.queueFlags & vk::QueueFlagBits::eTransfer) {
+            hasTransferQueue = true;
+        }
+
+        if (hasPresentQueue && hasGraphicsQueue && hasTransferQueue) {
             return true;
         }
+        ++i;
     }
 
     return false;
+}
+
+vk::Bool32 DebugCallback(
+    const vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
+    const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* /*pUserData*/
+) {
+    switch (messageSeverity) {
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
+            Msg("{}", pCallbackData->pMessage);
+            break;
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
+            MsgD("\n{}", pCallbackData->pMessage);
+            break;
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
+            MsgE("\n{}\n", pCallbackData->pMessage);
+            break;
+    }
+
+    return vk::False;
 }
 }
 
 namespace Vulkan {
 CInstance::CInstance(
-    const Config& config,
+    const char* gameName,
     const std::unordered_map<const char*, bool>& extensions,
     const std::vector<const char*>& layers
 ) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    std::uint32_t apiVersion = vk::ApiVersion10;
+    m_apiVersion = vk::ApiVersion10;
 
     if (VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceVersion) {
-        apiVersion = std::max(vk::enumerateInstanceVersion(), apiVersion);
+        m_apiVersion = vk::enumerateInstanceVersion();
     }
 
     Msg("Vulkan version: {}.{}.{}.{}",
-        vk::apiVersionVariant(apiVersion),
-        vk::apiVersionMajor(apiVersion),
-        vk::apiVersionMinor(apiVersion),
-        vk::apiVersionPatch(apiVersion)
+        vk::apiVersionVariant(m_apiVersion),
+        vk::apiVersionMajor(m_apiVersion),
+        vk::apiVersionMinor(m_apiVersion),
+        vk::apiVersionPatch(m_apiVersion)
     );
 
     //====================
     vk::ApplicationInfo appInfo {};
-    appInfo.pApplicationName = config.m_gameName;
-    appInfo.applicationVersion = config.m_gameVersion;
-    appInfo.pEngineName = config.m_engineName;
-    appInfo.engineVersion = config.m_engineBuild;
-    appInfo.apiVersion = apiVersion;
+    appInfo.pApplicationName = gameName;
+    appInfo.applicationVersion = 0;
+    appInfo.pEngineName = "Skylabs";
+    appInfo.engineVersion = 0;
+    appInfo.apiVersion = m_apiVersion;
 
     //====================
 #ifdef DEBUG
@@ -104,8 +142,11 @@ CInstance::CInstance(
 
     // if required extension is missing, put it into error message
     std::vector<const char*> missingExtensions {};
+    missingExtensions.reserve(extensions.size());
+    m_enabledExtensions.reserve(extensions.size());
+
     for (const auto& [name, required] : extensions) {
-        if (const bool isAvailable = EnableExtension(name, m_enabledExtensions); required && !isAvailable) {
+        if (required && !EnableExtension(name, m_enabledExtensions)) {
             missingExtensions.push_back(name);
         }
     }
@@ -114,27 +155,59 @@ CInstance::CInstance(
         std::ostringstream error;
         error << "System doesn't have required instance extensions:\n";
         for (const auto name : missingExtensions) {
-            error << name << '\n';
+            error << '\t' << name << '\n';
         }
         throw std::runtime_error(error.str());
     }
 
     //====================
     std::vector<const char*> enabledLayers;
+    enabledLayers.reserve(layers.size());
+    std::vector<const char*> missingLayers;
+    missingLayers.reserve(layers.size());
+
 #ifdef DEBUG
-    EnableLayer("VK_LAYER_KHRONOS_validation", enabledLayers);
+    if (!EnableLayer("VK_LAYER_KHRONOS_validation", enabledLayers)) {
+        missingLayers.push_back("VK_LAYER_KHRONOS_validation");
+    }
 #endif
 
     for (const auto& name : layers) {
-        EnableLayer(name, enabledLayers);
+        if (!EnableLayer(name, enabledLayers)) {
+            missingLayers.push_back(name);
+        }
+    }
+
+    if (!missingLayers.empty()) {
+        std::ostringstream error;
+        error << "System doesn't have vulkan layers:\n";
+        for (const auto name : missingLayers) {
+            error << '\t' << name << '\n';
+        }
+        MsgD("{}", error.str());
     }
 
     //====================
     void* pNext = nullptr;
 
 #ifdef DEBUG
+    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
+        {},
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding,
+
+        DebugCallback
+    };
+
     if (isDebugUtilsAvailable) {
-        AppendToPNextChain(pNext, &CDebugUtils::CreateInfo());
+        AppendToPNextChain(pNext, &debugUtilsCreateInfo);
     }
 #endif
 
@@ -153,13 +226,17 @@ CInstance::CInstance(
     //====================
 #ifdef DEBUG
     if (isDebugUtilsAvailable) {
-        m_debugUtils = std::make_unique<CDebugUtils>(m_handle);
+        m_debugUtilsMessenger = m_handle.createDebugUtilsMessengerEXT(debugUtilsCreateInfo);
     }
 #endif
 
+    QueryPhysicalDevices();
+}
+
+void CInstance::QueryPhysicalDevices() {
     std::vector<vk::PhysicalDevice> physical_devices = m_handle.enumeratePhysicalDevices();
     if (physical_devices.empty()) {
-        throw std::runtime_error("Couldn't find a physical device that supports Vulkan.");
+        throw std::runtime_error("Couldn't find a physical device that supports Vulkan!");
     }
 
     for (auto& physical_device : physical_devices) {
@@ -167,14 +244,11 @@ CInstance::CInstance(
     }
 }
 
-CPhysicalDevice& CInstance::GetSuitablePhysicalDevice(const IVulkanWindow* const window) const {
-    CPhysicalDevice* selectedDevice = VK_NULL_HANDLE;
+const CPhysicalDevice& CInstance::GetSuitablePhysicalDevice(const IVulkanWindow* const window) const {
+    const CPhysicalDevice* selectedDevice = VK_NULL_HANDLE;
 
     int deviceTypeScore = 0;
     for (const auto& physicalDevice : m_physicalDevices) {
-
-        Msg("Found device: {}", static_cast<const char*>(physicalDevice->GetProperties().deviceName));
-
         const int optionScore = GetDeviceTypeScore(physicalDevice->GetProperties().deviceType);
         if (IsDeviceSuitable(m_handle, physicalDevice->GetHandle(), window)) {
             if (optionScore > deviceTypeScore) {
@@ -185,7 +259,7 @@ CPhysicalDevice& CInstance::GetSuitablePhysicalDevice(const IVulkanWindow* const
     }
 
     if (selectedDevice == VK_NULL_HANDLE) {
-        Warning("No suitable GPU was found! Picking default GPU.");
+        MsgW("No suitable GPU was found! Picking default GPU: {}", *m_physicalDevices[0]->GetProperties().deviceName);
         return *m_physicalDevices[0];
     }
 
@@ -197,7 +271,11 @@ CInstance::~CInstance() {
         return;
     }
 
-    m_debugUtils->Destroy(m_handle);
+#ifdef DEBUG
+    if (m_debugUtilsMessenger != VK_NULL_HANDLE) {
+        m_handle.destroyDebugUtilsMessengerEXT(m_debugUtilsMessenger);
+    }
+#endif
 
     m_handle.destroy();
 }

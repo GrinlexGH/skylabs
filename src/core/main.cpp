@@ -42,7 +42,7 @@ void SetupConsole() {
 }
 #endif
 
-extern "C" DLL_EXPORT int CoreInit(const int argc, char* argv[]) {
+PUBLIC_INTERFACE int CoreInit(const int argc, char* argv[]) {
     CommandLine()->CreateCmdLine(
         std::vector<std::string>(argv, argv + argc)
     );

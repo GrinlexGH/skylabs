@@ -6,28 +6,33 @@
 
 enum CLogType : std::uint8_t
 {
-    Info = 0,
-    Warn,
-    Err
+    eDebug = 0,
+    eInfo,
+    eWarn,
+    eErr
 };
 
 template <typename... Args>
 void Log(const CLogType type, const std::format_string<Args...> fmt, Args&&... args) {
     std::cout << '[';
     switch (type) {
-        case Info: {
+        case eDebug: {
+            std::cout << stc::rgb_fg(168, 228, 160) << "Debug" << stc::reset_fg << "] ";
+        } break;
+        case eInfo: {
             std::cout << stc::rgb_fg(114, 159, 207) << "Info" << stc::reset_fg << "] ";
         } break;
-        case Warn: {
+        case eWarn: {
             std::cout << stc::rgb_fg(196, 160, 0) << "Warning" << stc::reset_fg << "] ";
         } break;
-        case Err: {
+        case eErr: {
             std::cout << stc::rgb_fg(204, 0, 0) << "Error" << stc::reset_fg << "] ";
         } break;
     }
     std::cout << std::format(fmt, std::forward<Args>(args)...) << '\n';
 };
 
-#define Msg(...) Log(CLogType::Info, __VA_ARGS__);
-#define Warning(...) Log(CLogType::Warn, __VA_ARGS__);
-#define Error(...) Log(CLogType::Err, __VA_ARGS__);
+#define MsgD(...) Log(CLogType::eDebug, __VA_ARGS__)
+#define Msg(...) Log(CLogType::eInfo, __VA_ARGS__)
+#define MsgW(...) Log(CLogType::eWarn, __VA_ARGS__)
+#define MsgE(...) Log(CLogType::eErr, __VA_ARGS__)

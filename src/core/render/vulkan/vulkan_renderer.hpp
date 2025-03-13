@@ -8,18 +8,18 @@
 class CVulkanRenderer final : public IRenderer
 {
 public:
-    explicit CVulkanRenderer(const std::shared_ptr<IVulkanWindow>& window);
+    explicit CVulkanRenderer(const IVulkanWindow* window);
     CVulkanRenderer(const CVulkanRenderer&) = delete;
     CVulkanRenderer(CVulkanRenderer&&) noexcept = default;
     CVulkanRenderer& operator=(const CVulkanRenderer&) = delete;
     CVulkanRenderer& operator=(CVulkanRenderer&&) noexcept = default;
     ~CVulkanRenderer() override;
 
-    static std::unique_ptr<CVulkanRenderer> TryToCreate(const std::shared_ptr<IVulkanWindow>& window);
+    static std::unique_ptr<CVulkanRenderer> TryToCreate(const IVulkanWindow* window);
     void Draw() override {}
 
 private:
-    std::weak_ptr<IVulkanWindow> m_window;
+    const IVulkanWindow* m_window;
     vk::SurfaceKHR m_surface;
 
     std::unique_ptr<Vulkan::CInstance> m_instance;

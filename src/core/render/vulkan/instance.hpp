@@ -1,7 +1,6 @@
 #pragma once
 #include "vulkan.hpp"
 #include "vulkan_window.hpp"
-#include "extensions/debug_utils.hpp"
 #include "extensions/extensions.hpp"
 #include "physical_device.hpp"
 
@@ -11,16 +10,8 @@ namespace Vulkan {
 class CInstance
 {
 public:
-    struct Config
-    {
-        const char* m_gameName { "Game" };
-        const char* m_engineName { "Skylabs" };
-        std::uint32_t m_gameVersion = 0; // todo: version defines in cmake
-        std::uint32_t m_engineBuild = 0;
-    };
-
     explicit CInstance(
-        const Config& config,
+        const char* gameName,
         const std::unordered_map<const char*, bool>& extensions,
         const std::vector<const char*>& layers = {}
     );
@@ -33,17 +24,23 @@ public:
     [[nodiscard]] vk::Instance GetHandle() const { return m_handle; }
 
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return HasExtension(m_enabledExtensions, name); }
+    [[nodiscard]] std::uint32_t ApiVersion() const { return m_apiVersion; }
 
-    CPhysicalDevice& GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
+    const CPhysicalDevice& GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
 
     explicit operator vk::Instance() const { return m_handle; }
 
 private:
+    void QueryPhysicalDevices();
+
     vk::Instance m_handle;
 
     std::vector<const char*> m_enabledExtensions;
+    std::uint32_t m_apiVersion;
 
-    std::unique_ptr<CDebugUtils> m_debugUtils;
+#ifdef DEBUG
+    vk::DebugUtilsMessengerEXT m_debugUtilsMessenger = VK_NULL_HANDLE;
+#endif
 
     std::vector<std::unique_ptr<CPhysicalDevice>> m_physicalDevices;
 };

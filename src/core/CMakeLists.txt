@@ -16,14 +16,10 @@ set(SOURCES
     render/vulkan/instance.hpp
     render/vulkan/instance.cpp
     render/vulkan/extensions/extensions.hpp
-    render/vulkan/extensions/debug_utils.hpp
-    render/vulkan/extensions/debug_utils.cpp
     render/vulkan/physical_device.hpp
     render/vulkan/physical_device.cpp
     render/vulkan/device.hpp
     render/vulkan/device.cpp
-    render/vulkan/queue_families.hpp
-    render/vulkan/queue_families.cpp
     render/vulkan/queue.hpp
     render/vulkan/queue.cpp
     render/vulkan/allocator.hpp
