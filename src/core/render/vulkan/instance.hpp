@@ -1,10 +1,11 @@
 #pragma once
+#include <unordered_map>
+#include <memory>
+
 #include "vulkan.hpp"
 #include "vulkan_window.hpp"
 #include "extensions/extensions.hpp"
 #include "physical_device.hpp"
-
-#include <unordered_map>
 
 namespace Vulkan {
 class CInstance

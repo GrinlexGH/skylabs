@@ -1,9 +1,10 @@
 #pragma once
 #include "../../window.hpp"
 
-#include "vulkan.hpp"
-
 #include <vector>
+#include <cstdint>
+
+#include "vulkan.hpp"
 
 class IVulkanWindow : public IWindow
 {

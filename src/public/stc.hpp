@@ -26,6 +26,7 @@ SOFTWARE.
 #include <ostream>
 #include <algorithm>
 #include <limits>
+#include <cstdint>
 
 namespace stc {
 
