@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+
 #include "vulkan.hpp"
 
 namespace Vulkan {
