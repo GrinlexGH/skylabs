@@ -4,7 +4,7 @@
 
 cd sources
 
-if [ ! -d "../bin/posix/SDL3" ]; then
+if [ ! -d "../bin/unix/SDL3" ]; then
     echo "Compiling SDL"
     cd SDL
     if [ -d "build" ]; then
@@ -12,7 +12,7 @@ if [ ! -d "../bin/posix/SDL3" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/posix/SDL3" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/unix/SDL3" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
@@ -20,7 +20,7 @@ if [ ! -d "../bin/posix/SDL3" ]; then
     cd ../
 fi
 
-if [ ! -d "../bin/posix/glm" ]; then
+if [ ! -d "../bin/unix/glm" ]; then
     echo "Compiling glm"
     cd glm
     if [ -d "build" ]; then
@@ -28,7 +28,7 @@ if [ ! -d "../bin/posix/glm" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="../../../bin/posix/glm" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="../../../bin/unix/glm" $* ..
     cmake --build . -- all
     cmake --build . -- install
     cd ../
@@ -36,7 +36,7 @@ if [ ! -d "../bin/posix/glm" ]; then
     cd ../
 fi
 
-if [ ! -d "../bin/posix/VulkanMemoryAllocator" ]; then
+if [ ! -d "../bin/unix/VulkanMemoryAllocator" ]; then
     echo "Compiling VulkanMemoryAllocator"
     cd VulkanMemoryAllocator
     if [ -d "build" ]; then
@@ -44,7 +44,7 @@ if [ ! -d "../bin/posix/VulkanMemoryAllocator" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/posix/VulkanMemoryAllocator" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/unix/VulkanMemoryAllocator" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
@@ -52,7 +52,7 @@ if [ ! -d "../bin/posix/VulkanMemoryAllocator" ]; then
     cd ../
 fi
 
-if [ ! -d "../bin/posix/VulkanMemoryAllocator-Hpp" ]; then
+if [ ! -d "../bin/unix/VulkanMemoryAllocator-Hpp" ]; then
     echo "Compiling VulkanMemoryAllocator-Hpp"
     cd VulkanMemoryAllocator-Hpp
     if [ -d "build" ]; then
@@ -60,7 +60,7 @@ if [ ! -d "../bin/posix/VulkanMemoryAllocator-Hpp" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_HPP_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX="../../../bin/posix/VulkanMemoryAllocator-Hpp" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_HPP_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX="../../../bin/unix/VulkanMemoryAllocator-Hpp" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
@@ -68,7 +68,7 @@ if [ ! -d "../bin/posix/VulkanMemoryAllocator-Hpp" ]; then
     cd ../
 fi
 
-if [ ! -d "../bin/posix/tinyobjloader" ]; then
+if [ ! -d "../bin/unix/tinyobjloader" ]; then
     echo "Compiling tinyobjloader"
     cd tinyobjloader
     if [ -d "build" ]; then
@@ -76,7 +76,7 @@ if [ ! -d "../bin/posix/tinyobjloader" ]; then
     fi
     mkdir -p build
     cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../../bin/posix/tinyobjloader" $* ..
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../../bin/unix/tinyobjloader" $* ..
     cmake --build . --config Release --parallel
     cmake --install . --config Release
     cd ../
@@ -84,11 +84,11 @@ if [ ! -d "../bin/posix/tinyobjloader" ]; then
     cd ../
 fi
 
-if [ ! -d "../bin/posix/stb" ]; then
+if [ ! -d "../bin/unix/stb" ]; then
     echo "Copying stb files"
     cd stb
-    mkdir -p "../../bin/posix/stb"
-    cp "./stb_image.h" "../../bin/posix/stb/"
+    mkdir -p "../../bin/unix/stb"
+    cp "./stb_image.h" "../../bin/unix/stb/"
     cd ../
 fi
 

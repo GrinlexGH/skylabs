@@ -47,13 +47,13 @@ if(WIN32)
     include_directories(${PROJECT_SOURCE_DIR}/libs/bin/windows)
 else()
     add_custom_command(
-        OUTPUT ${PROJECT_SOURCE_DIR}/libs/bin/posix
-        COMMAND ${CMAKE_COMMAND} make_directory ${PROJECT_SOURCE_DIR}/libs/bin/posix
+        OUTPUT ${PROJECT_SOURCE_DIR}/libs/bin/unix
+        COMMAND ${CMAKE_COMMAND} make_directory ${PROJECT_SOURCE_DIR}/libs/bin/unix
         VERBATIM
     )
     set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/posix)
-    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/posix)
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/unix)
+    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/unix)
 endif()
 
 execute_process(
