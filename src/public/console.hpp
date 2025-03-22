@@ -1,8 +1,8 @@
 #pragma once
-#include "stc.hpp"
-
-#include <iostream>
 #include <format>
+#include <iostream>
+
+#include "stc.hpp"
 
 enum CLogType : std::uint8_t
 {

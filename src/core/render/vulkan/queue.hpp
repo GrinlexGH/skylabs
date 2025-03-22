@@ -12,8 +12,8 @@ public:
     [[nodiscard]] std::uint32_t GetFamilyIndex() const { return m_familyIndex; }
 
 private:
-    vk::Queue m_handle;
+    vk::Queue m_handle = VK_NULL_HANDLE;
 
-    std::uint32_t m_familyIndex;
+    std::uint32_t m_familyIndex = std::numeric_limits<std::uint32_t>::max();
 };
 }
