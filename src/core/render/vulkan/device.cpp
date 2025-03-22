@@ -1,9 +1,10 @@
 #include "device.hpp"
 
-#include "console.hpp"
 #include <set>
 #include <sstream>
 #include <optional>
+
+#include "physical_device.hpp"
 
 namespace {
 struct CQueueFamilies
@@ -98,10 +99,26 @@ CQueueFamilies::CQueueFamilies(
         throw std::runtime_error(error.str());
     }
 
-    m_graphics = *graphicsQueueIndex;
-    m_present = *presentQueueIndex;
-    m_transfer = *transferQueueIndex;
-    m_compute = *computeQueueIndex;
+    m_graphics = *graphicsQueueIndex;   //-V1007
+    m_present = *presentQueueIndex;     //-V1007
+    m_transfer = *transferQueueIndex;   //-V1007
+    m_compute = *computeQueueIndex;     //-V1007
+}
+
+bool EnableExtension(
+    const std::vector<vk::ExtensionProperties>& availableExtensions,
+    const char* name,
+    std::vector<const char*>& enabledExtensions
+) {
+    if (HasExtension(availableExtensions, name)) {
+        if (!HasExtension(enabledExtensions, name)) {
+            enabledExtensions.push_back(name);
+        }
+    } else {
+        return false;
+    }
+
+    return true;
 }
 }
 
@@ -109,9 +126,10 @@ namespace Vulkan {
 CDevice::CDevice(
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice,
-    const IVulkanWindow* const window
+    const IVulkanWindow* const window,
+    const std::unordered_map<const char*, bool>& extensions
 ) {
-    Msg("Selected device: {}", std::string_view{physicalDevice.GetProperties().deviceName});
+    Msg("Selected device: {}", std::string_view { physicalDevice.GetProperties().deviceName });
 
     //====================
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
@@ -121,12 +139,13 @@ CDevice::CDevice(
     std::set uniqueQueueFamilies {
         queueIndices.m_graphics,
         queueIndices.m_present,
-        queueIndices.m_transfer
+        queueIndices.m_transfer,
+        queueIndices.m_compute
     };
 
     float queuePriority = 0.5f;
     for (std::uint32_t queueFamily : uniqueQueueFamilies) {
-        vk::DeviceQueueCreateInfo queueCreateInfo{};
+        vk::DeviceQueueCreateInfo queueCreateInfo;
         queueCreateInfo.queueFamilyIndex = queueFamily;
         queueCreateInfo.queueCount = 1;
         queueCreateInfo.pQueuePriorities = &queuePriority;
@@ -135,25 +154,49 @@ CDevice::CDevice(
 
     //====================
     std::vector<const char*> enabledExtensions;
+    enabledExtensions.reserve(extensions.size());
+    std::vector<const char*> missingExtensions;
+    missingExtensions.reserve(extensions.size());
 
-    vk::PhysicalDeviceFeatures requestedDeviceFeatures;
+    for (const auto& [name, required] : extensions) {
+        if (!EnableExtension(physicalDevice.GetExtensions(), name, enabledExtensions) && required) {
+            missingExtensions.push_back(name);
+        }
+    }
+
+    if (!missingExtensions.empty()) {
+        std::ostringstream error;
+        error << "System doesn't have required instance extensions:\n";
+        for (const auto name : missingExtensions) {
+            error << '\t' << name << '\n';
+        }
+        throw std::runtime_error(error.str());
+    }
+
+    //====================
+    void* pNext = nullptr;
+    vk::PhysicalDeviceFeatures2 features;
+
+    if (physicalDevice.GetExtensionFeaturePNext()) {
+        features.pNext = physicalDevice.GetExtensionFeaturePNext();
+        features.features = physicalDevice.GetRequiredFeatures();
+        AppendToPNextChain(pNext, &features);
+    }
 
     vk::DeviceCreateInfo deviceCreateInfo;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pEnabledFeatures = &requestedDeviceFeatures;
+    deviceCreateInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext() ? nullptr : &physicalDevice.GetRequiredFeatures();
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
+    deviceCreateInfo.pNext = pNext;
 
     m_handle = physicalDevice.GetHandle().createDevice(deviceCreateInfo);
 
     m_graphicsQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_graphics);
     m_presentQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_present);
     m_transferQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_transfer);
-
-    //Create(requiredExtensions);
-
-    //m_queues.Init(m_handle, m_queueFamilies);
+    m_computeQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_compute);
 
     //m_swapchain.Init(m_physicalDevice.GetHandle(), m_handle, window->GetSurface());
 

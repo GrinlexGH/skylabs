@@ -3,7 +3,6 @@
 
 #include "instance.hpp"
 #include "device.hpp"
-#include "vulkan_window.hpp"
 
 class CVulkanRenderer final : public IRenderer
 {
@@ -20,7 +19,7 @@ public:
 
 private:
     const IVulkanWindow* m_window;
-    vk::SurfaceKHR m_surface;
+    Vulkan::CPhysicalDevice* m_selectedPhysicalDevice;
 
     std::unique_ptr<Vulkan::CInstance> m_instance;
     std::unique_ptr<Vulkan::CDevice> m_device;

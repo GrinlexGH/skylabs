@@ -1,9 +1,8 @@
 #include "instance.hpp"
 
-#include "console.hpp"
-#include "extensions/extensions.hpp"
-
 #include <sstream>
+
+#include "physical_device.hpp"
 
 namespace {
 bool EnableExtension(const char* name, std::vector<const char*>& enabledExtensions) {
@@ -27,8 +26,7 @@ bool EnableLayer(const char* name, std::vector<const char*>& enabledLayers) {
         if (!HasLayer(enabledLayers, name)) {
             enabledLayers.push_back(name);
         }
-    }
-    else {
+    } else {
         return false;
     }
 
@@ -47,9 +45,9 @@ int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
             return 2;
         case vk::PhysicalDeviceType::eOther:
             return 1;
-        default:
-            return 0;
     }
+
+    return 0;
 }
 
 bool IsDeviceSuitable(
@@ -59,7 +57,6 @@ bool IsDeviceSuitable(
 ) {
     bool hasPresentQueue = false;
     bool hasGraphicsQueue = false;
-    bool hasTransferQueue = false;
 
     for (std::uint32_t i = 0; const auto& queue : physicalDevice.getQueueFamilyProperties()) {
         if (window->CheckQueuePresentSupport(instance, physicalDevice, i)) {
@@ -70,13 +67,10 @@ bool IsDeviceSuitable(
             hasGraphicsQueue = true;
         }
 
-        if (queue.queueFlags & vk::QueueFlagBits::eTransfer) {
-            hasTransferQueue = true;
-        }
-
-        if (hasPresentQueue && hasGraphicsQueue && hasTransferQueue) {
+        if (hasPresentQueue && hasGraphicsQueue) {
             return true;
         }
+
         ++i;
     }
 
@@ -108,13 +102,10 @@ vk::Bool32 DebugCallback(
 
 namespace Vulkan {
 CInstance::CInstance(
-    const char* gameName,
     const std::unordered_map<const char*, bool>& extensions,
     const std::vector<const char*>& layers
 ) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
-
-    m_apiVersion = vk::ApiVersion10;
 
     if (VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceVersion) {
         m_apiVersion = vk::enumerateInstanceVersion();
@@ -128,8 +119,8 @@ CInstance::CInstance(
     );
 
     //====================
-    vk::ApplicationInfo appInfo {};
-    appInfo.pApplicationName = gameName;
+    vk::ApplicationInfo appInfo;
+    appInfo.pApplicationName = "Half-Life 3";
     appInfo.applicationVersion = 0;
     appInfo.pEngineName = "Skylabs";
     appInfo.engineVersion = 0;
@@ -141,12 +132,12 @@ CInstance::CInstance(
 #endif
 
     // if required extension is missing, put it into error message
-    std::vector<const char*> missingExtensions {};
+    std::vector<const char*> missingExtensions;
     missingExtensions.reserve(extensions.size());
     m_enabledExtensions.reserve(extensions.size());
 
     for (const auto& [name, required] : extensions) {
-        if (required && !EnableExtension(name, m_enabledExtensions)) {
+        if (!EnableExtension(name, m_enabledExtensions) && required) {
             missingExtensions.push_back(name);
         }
     }
@@ -214,9 +205,9 @@ CInstance::CInstance(
     //====================
     vk::InstanceCreateInfo instanceCreateInfo;
     instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(m_enabledExtensions.size());
+    instanceCreateInfo.enabledExtensionCount = static_cast<std::uint32_t>(m_enabledExtensions.size());
     instanceCreateInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
-    instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
+    instanceCreateInfo.enabledLayerCount = static_cast<std::uint32_t>(enabledLayers.size());
     instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
     instanceCreateInfo.pNext = pNext;
 
@@ -234,24 +225,23 @@ CInstance::CInstance(
 }
 
 void CInstance::QueryPhysicalDevices() {
-    std::vector<vk::PhysicalDevice> physical_devices = m_handle.enumeratePhysicalDevices();
-    if (physical_devices.empty()) {
+    std::vector<vk::PhysicalDevice> physicalDevices = m_handle.enumeratePhysicalDevices();
+    if (physicalDevices.empty()) {
         throw std::runtime_error("Couldn't find a physical device that supports Vulkan!");
     }
 
-    for (auto& physical_device : physical_devices) {
-        m_physicalDevices.push_back(std::make_unique<CPhysicalDevice>(physical_device));
+    for (vk::PhysicalDevice& physicalDevice : physicalDevices) {
+        m_physicalDevices.push_back(std::make_unique<CPhysicalDevice>(physicalDevice, this));
     }
 }
 
-const CPhysicalDevice& CInstance::GetSuitablePhysicalDevice(const IVulkanWindow* const window) const {
-    const CPhysicalDevice* selectedDevice = VK_NULL_HANDLE;
+CPhysicalDevice* CInstance::GetSuitablePhysicalDevice(const IVulkanWindow* const window) const {
+    CPhysicalDevice* selectedDevice = VK_NULL_HANDLE;
 
     int deviceTypeScore = 0;
     for (const auto& physicalDevice : m_physicalDevices) {
-        const int optionScore = GetDeviceTypeScore(physicalDevice->GetProperties().deviceType);
         if (IsDeviceSuitable(m_handle, physicalDevice->GetHandle(), window)) {
-            if (optionScore > deviceTypeScore) {
+            if (const int optionScore = GetDeviceTypeScore(physicalDevice->GetProperties().deviceType); optionScore > deviceTypeScore) {
                 selectedDevice = physicalDevice.get();
                 deviceTypeScore = optionScore;
             }
@@ -260,10 +250,10 @@ const CPhysicalDevice& CInstance::GetSuitablePhysicalDevice(const IVulkanWindow*
 
     if (selectedDevice == VK_NULL_HANDLE) {
         MsgW("No suitable GPU was found! Picking default GPU: {}", *m_physicalDevices[0]->GetProperties().deviceName);
-        return *m_physicalDevices[0];
+        return m_physicalDevices[0].get();
     }
 
-    return *selectedDevice;
+    return selectedDevice;
 }
 
 CInstance::~CInstance() {

@@ -2,17 +2,16 @@
 #include <unordered_map>
 #include <memory>
 
-#include "vulkan.hpp"
 #include "vulkan_window.hpp"
 #include "extensions/extensions.hpp"
-#include "physical_device.hpp"
 
 namespace Vulkan {
+class CPhysicalDevice;
+
 class CInstance
 {
 public:
     explicit CInstance(
-        const char* gameName,
         const std::unordered_map<const char*, bool>& extensions,
         const std::vector<const char*>& layers = {}
     );
@@ -27,17 +26,17 @@ public:
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return HasExtension(m_enabledExtensions, name); }
     [[nodiscard]] std::uint32_t ApiVersion() const { return m_apiVersion; }
 
-    const CPhysicalDevice& GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
+    CPhysicalDevice* GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
 
     explicit operator vk::Instance() const { return m_handle; }
 
 private:
     void QueryPhysicalDevices();
 
-    vk::Instance m_handle;
+    vk::Instance m_handle = VK_NULL_HANDLE;
 
-    std::vector<const char*> m_enabledExtensions;
-    std::uint32_t m_apiVersion;
+    std::vector<const char*> m_enabledExtensions {};
+    std::uint32_t m_apiVersion = vk::ApiVersion10;
 
 #ifdef DEBUG
     vk::DebugUtilsMessengerEXT m_debugUtilsMessenger = VK_NULL_HANDLE;
