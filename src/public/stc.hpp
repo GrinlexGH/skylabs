@@ -28,8 +28,9 @@ SOFTWARE.
 #include <limits>
 #include <cstdint>
 
-namespace stc {
+#include "publicapi.hpp"
 
+namespace stc {
     enum _color_modes : std::uint8_t {
         COLOR_256 = 0,
         TRUE_COLOR = 1,
@@ -37,17 +38,23 @@ namespace stc {
     };
 
     inline int _get_color_mode_index() {
-        static const int i = std::ios_base::xalloc();
-        return i;
+        PUBLIC_GLOBAL const int color_mode_index;
+        return color_mode_index;
     }
 
     class _color_data {
     public:
-        unsigned int r : 8, g : 8, b : 8, code : 8;
-        constexpr _color_data(int r, int g, int b, int code)
-            : r(r), g(g), b(b), code(code) {}
-        constexpr _color_data(unsigned int r, unsigned int g, unsigned int b, unsigned int code)
-            : r(r), g(g), b(b), code(code) {}
+        std::uint8_t r, g, b, code;
+        constexpr _color_data(const int r, const int g, const int b, const int code) :
+            r(static_cast<std::uint8_t>(r)),
+            g(static_cast<std::uint8_t>(g)),
+            b(static_cast<std::uint8_t>(b)),
+            code(static_cast<std::uint8_t>(code)) {}
+        constexpr _color_data(const unsigned int r, const unsigned int g, const unsigned int b, const unsigned int code) :
+            r(static_cast<std::uint8_t>(r)),
+            g(static_cast<std::uint8_t>(g)),
+            b(static_cast<std::uint8_t>(b)),
+            code(static_cast<std::uint8_t>(code)) {}
     };
 
     template <bool IS_FOREGROUND>
@@ -57,27 +64,29 @@ namespace stc {
 
     // foreground
     inline std::ostream& operator<<(std::ostream& os, const _color_code<true>& color_code) {
-        const long mode = os.iword(_get_color_mode_index());
-        if (mode == _color_modes::COLOR_256)
-            os << "\033[38;5;" << color_code.code << 'm';
-        else if (mode == _color_modes::TRUE_COLOR)
-            os << "\033[38;2;" << color_code.r << ';' << color_code.g << ';'
-               << color_code.b << 'm';
+        if (const long mode = os.iword(_get_color_mode_index()); mode == COLOR_256)
+            os << "\033[38;5;" << static_cast<unsigned>(color_code.code) << 'm';
+        else if (mode == TRUE_COLOR)
+            os << "\033[38;2;"
+               << static_cast<unsigned>(color_code.r) << ';'
+               << static_cast<unsigned>(color_code.g) << ';'
+               << static_cast<unsigned>(color_code.b) << 'm';
         return os;
     }
 
     // background
     inline std::ostream& operator<<(std::ostream& os, const _color_code<false>& color_code) {
-        const long mode = os.iword(_get_color_mode_index());
-        if (mode == _color_modes::COLOR_256)
-            os << "\033[48;5;" << color_code.code << 'm';
-        else if (mode == _color_modes::TRUE_COLOR)
-            os << "\033[48;2;" << color_code.r << ';' << color_code.g << ';'
-               << color_code.b << 'm';
+        if (const long mode = os.iword(_get_color_mode_index()); mode == COLOR_256)
+            os << "\033[48;5;" << static_cast<unsigned>(color_code.code) << 'm';
+        else if (mode == TRUE_COLOR)
+            os << "\033[48;2;"
+               << static_cast<unsigned>(color_code.r) << ';'
+               << static_cast<unsigned>(color_code.g) << ';'
+               << static_cast<unsigned>(color_code.b) << 'm';
         return os;
     }
 
-    constexpr const _color_data _256colors[256] = {
+    constexpr _color_data _256colors[256] = {
         _color_data { 0, 0, 0, 0 /*Black(SYSTEM)*/ },
         _color_data { 128, 0, 0, 1 /*Maroon(SYSTEM)*/ },
         _color_data { 0, 128, 0, 2 /*Green(SYSTEM)*/ },
@@ -336,7 +345,7 @@ namespace stc {
         _color_data { 238, 238, 238, 255 /*Grey93*/ }
     };
 
-    constexpr float _color_distance(int r, int g, int b, _color_data color) {
+    constexpr float _color_distance(const int r, const int g, const int b, const _color_data color) {
         // approximate color distance using redmean
         // (https://en.wikipedia.org/wiki/Color_difference)
         const auto red_difference = static_cast<float>(color.r - r);
@@ -349,15 +358,15 @@ namespace stc {
                 (blue_difference * blue_difference));
     }
 
-    constexpr int _find_closest_color_code(int r, int g, int b) {
+    constexpr int _find_closest_color_code(const int r, const int g, const int b) {
         // for dark colors we return black, the cutoff values are arbitrary but
         // prevent artifacting from redmean color distance approximation
         if (r < 20 && g < 15 && b < 15)
             return _256colors[16].code;
         // we start at index 16, because colors 0 - 16 are system colors (terminal
         // emulators often define custom values for these)
-        size_t best_index = 16;
-        for (size_t i = best_index; i < 256; i++) {
+        std::size_t best_index = 16;
+        for (std::size_t i = best_index; i < 256; i++) {
             if (_color_distance(r, g, b, _256colors[i]) <
                 _color_distance(r, g, b, _256colors[best_index]))
                 best_index = i;
@@ -365,12 +374,12 @@ namespace stc {
         return _256colors[best_index].code;
     }
 
-    constexpr void _hsl_to_rgb(float h, float s, float l, int& r, int& g, int& b) {
-        auto fmod = [](float number, int divisor) {
+    constexpr void _hsl_to_rgb(const float h, const float s, const float l, int& r, int& g, int& b) {
+        auto fmod = [](const float number, const int divisor) {
             const int i = static_cast<int>(number);
             return static_cast<float>(i % divisor) + (number - static_cast<float>(i));
         };
-        auto round = [](float number) {
+        auto round = [](const float number) {
             const int i = static_cast<int>(number);
             if (number - static_cast<float>(i) >= 0.5)
                 return i + 1;
@@ -383,7 +392,7 @@ namespace stc {
             return;
         }
         const float alpha = s * std::min(l, 1 - l);
-        auto f = [=](float n) {
+        auto f = [=](const float n) {
             const float k = fmod((n + (h * 12)), 12);
             return l - (alpha * std::max(-1.0F, std::min({ k - 3, 9 - k, 1.0F })));
         };
@@ -392,7 +401,7 @@ namespace stc {
         b = round(f(4) * 255);
     }
 
-    constexpr void _clamp(int& a, int min, int max) {
+    constexpr void _clamp(int& a, const int min, const int max) {
         if (a < min)
             a = min;
         else if (a > max)
@@ -405,23 +414,22 @@ namespace stc {
         _clamp(b, 0, 255);
     }
 
-    inline std::ostream& _print_if_color(std::ostream& os, std::string_view text) {
-        const auto mode = os.iword(_get_color_mode_index());
-        if (mode != _color_modes::NO_COLOR)
+    inline std::ostream& _print_if_color(std::ostream& os, const std::string_view text) {
+        if (os.iword(_get_color_mode_index()) != NO_COLOR)
             return os << text;
         return os;
     }
 
     inline std::ostream& color_256(std::ostream& os) {
-        os.iword(_get_color_mode_index()) = _color_modes::COLOR_256;
+        os.iword(_get_color_mode_index()) = COLOR_256;
         return os;
     }
     inline std::ostream& true_color(std::ostream& os) {
-        os.iword(_get_color_mode_index()) = _color_modes::TRUE_COLOR;
+        os.iword(_get_color_mode_index()) = TRUE_COLOR;
         return os;
     }
     inline std::ostream& no_color(std::ostream& os) {
-        os.iword(_get_color_mode_index()) = _color_modes::NO_COLOR;
+        os.iword(_get_color_mode_index()) = NO_COLOR;
         return os;
     }
 
@@ -463,14 +471,14 @@ namespace stc {
         return { r, g, b, _find_closest_color_code(r, g, b) };
     }
 
-    constexpr _color_code<true> hsl_fg(float h, float s, float l) {
+    constexpr _color_code<true> hsl_fg(const float h, const float s, const float l) {
         int r = 0, g = 0, b = 0;
         _hsl_to_rgb(h, s, l, r, g, b);
         _clamp_rgb(r, g, b);
         return { r, g, b, _find_closest_color_code(r, g, b) };
     }
 
-    constexpr _color_code<false> hsl_bg(float h, float s, float l) {
+    constexpr _color_code<false> hsl_bg(const float h, const float s, const float l) {
         int r = 0, g = 0, b = 0;
         _hsl_to_rgb(h, s, l, r, g, b);
         _clamp_rgb(r, g, b);

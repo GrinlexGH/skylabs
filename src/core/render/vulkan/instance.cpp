@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "../renderer.hpp"
 #include "physical_device.hpp"
 
 namespace {
@@ -77,6 +78,7 @@ bool IsDeviceSuitable(
     return false;
 }
 
+#ifdef DEBUG
 vk::Bool32 DebugCallback(
     const vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
@@ -86,18 +88,19 @@ vk::Bool32 DebugCallback(
     switch (messageSeverity) {
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-            Msg("{}", pCallbackData->pMessage);
+            Log::Info("{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-            MsgD("\n{}", pCallbackData->pMessage);
+            Log::Warning("\n{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-            MsgE("\n{}\n", pCallbackData->pMessage);
+            Log::Error("\n{}\n", pCallbackData->pMessage);
             break;
     }
 
     return vk::False;
 }
+#endif
 }
 
 namespace Vulkan {
@@ -111,7 +114,7 @@ CInstance::CInstance(
         m_apiVersion = vk::enumerateInstanceVersion();
     }
 
-    Msg("Vulkan version: {}.{}.{}.{}",
+    Log::Info("Vulkan version: {}.{}.{}.{}",
         vk::apiVersionVariant(m_apiVersion),
         vk::apiVersionMajor(m_apiVersion),
         vk::apiVersionMinor(m_apiVersion),
@@ -148,7 +151,7 @@ CInstance::CInstance(
         for (const auto name : missingExtensions) {
             error << '\t' << name << '\n';
         }
-        throw std::runtime_error(error.str());
+        throw CRendererInitError(error.str());
     }
 
     //====================
@@ -175,7 +178,7 @@ CInstance::CInstance(
         for (const auto name : missingLayers) {
             error << '\t' << name << '\n';
         }
-        MsgD("{}", error.str());
+        Log::Debug("{}", error.str());
     }
 
     //====================
@@ -227,11 +230,11 @@ CInstance::CInstance(
 void CInstance::QueryPhysicalDevices() {
     std::vector<vk::PhysicalDevice> physicalDevices = m_handle.enumeratePhysicalDevices();
     if (physicalDevices.empty()) {
-        throw std::runtime_error("Couldn't find a physical device that supports Vulkan!");
+        throw CRendererInitError("Couldn't find a physical device that supports Vulkan!");
     }
 
     for (vk::PhysicalDevice& physicalDevice : physicalDevices) {
-        m_physicalDevices.push_back(std::make_unique<CPhysicalDevice>(physicalDevice, this));
+        m_physicalDevices.push_back(std::make_unique<CPhysicalDevice>(physicalDevice));
     }
 }
 
@@ -249,7 +252,7 @@ CPhysicalDevice* CInstance::GetSuitablePhysicalDevice(const IVulkanWindow* const
     }
 
     if (selectedDevice == VK_NULL_HANDLE) {
-        MsgW("No suitable GPU was found! Picking default GPU: {}", *m_physicalDevices[0]->GetProperties().deviceName);
+        Log::Warning("No suitable GPU was found! Picking default GPU: {}", *m_physicalDevices[0]->GetProperties().deviceName);
         return m_physicalDevices[0].get();
     }
 
@@ -262,7 +265,7 @@ CInstance::~CInstance() {
     }
 
 #ifdef DEBUG
-    if (m_debugUtilsMessenger != VK_NULL_HANDLE) {
+    if (m_debugUtilsMessenger) {
         m_handle.destroyDebugUtilsMessengerEXT(m_debugUtilsMessenger);
     }
 #endif

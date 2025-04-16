@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 
+#include "../renderer.hpp"
 #include "instance.hpp"
 #include "console.hpp"
 #include "extensions/extensions.hpp"
@@ -9,7 +10,7 @@ namespace Vulkan {
 class CPhysicalDevice
 {
 public:
-    explicit CPhysicalDevice(const vk::PhysicalDevice& physicalDevice, const CInstance* instance);
+    explicit CPhysicalDevice(const vk::PhysicalDevice& physicalDevice);
     CPhysicalDevice(const CPhysicalDevice&) = delete;
     CPhysicalDevice(CPhysicalDevice&&) = delete;
     CPhysicalDevice& operator=(const CPhysicalDevice&) = delete;
@@ -30,29 +31,12 @@ public:
 
     template <typename FeatureStructureType>
     FeatureStructureType GetExtensionFeatures() {
-        if (!m_instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
-            throw std::runtime_error(
-                std::format(
-                    "Couldn't request feature from device as {} isn't enabled!",
-                    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
-                )
-            );
-        }
-
+        // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME required
         return m_handle.getFeatures2KHR<vk::PhysicalDeviceFeatures2KHR, FeatureStructureType>().template get<FeatureStructureType>();
     }
 
     template <typename FeatureStructureType>
     FeatureStructureType& AddExtensionFeatures() {
-        if (!m_instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
-            throw std::runtime_error(
-                std::format(
-                    "Couldn't request feature from device as {} is not enabled!",
-                    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
-                )
-            );
-        }
-
         auto [it, added] = m_extensionFeatures.try_emplace({ FeatureStructureType::structureType, std::make_shared<FeatureStructureType>() });
         if (added) {
             AppendToPNextChain(m_extensionFeaturePNext, it->second.get());
@@ -66,7 +50,7 @@ public:
         if (GetExtensionFeatures<Feature>().*flag) {
             AddExtensionFeatures<Feature>().*flag = true;
         } else {
-            throw std::runtime_error(
+            throw CRendererInitError(
                 std::format(
                     "Requested required feature <{}::{}> is not supported!",
                     featureName, flagName
@@ -81,7 +65,7 @@ public:
         if (supported) {
             AddExtensionFeatures<Feature>().*flag = true;
         } else {
-            Msg("Requested optional feature <{}::{}> is not supported", featureName, flagName);
+            Log::Info("Requested optional feature <{}::{}> is not supported", featureName, flagName);
         }
 
         return supported;
@@ -91,7 +75,7 @@ public:
         if (m_features.*flag) {
             m_requiredFeatures.*flag = true;
         } else {
-            throw std::runtime_error(
+            throw CRendererInitError(
                 std::format(
                     "Requested required feature \"{}\" is not supported!",
                     flagName
@@ -105,7 +89,7 @@ public:
         if (supported) {
             m_requiredFeatures.*flag = true;
         } else {
-            Msg("Requested optional feature \"{}\" is not supported", flagName);
+            Log::Info("Requested optional feature \"{}\" is not supported", flagName);
         }
 
         return supported;
@@ -113,7 +97,6 @@ public:
 
 private:
     vk::PhysicalDevice m_handle = VK_NULL_HANDLE;
-    const CInstance* m_instance = nullptr;
 
     // properties
     const vk::PhysicalDeviceProperties m_properties {};

@@ -1,64 +1,21 @@
 #include "vulkan_renderer.hpp"
 
 #include "console.hpp"
-#include "physical_device.hpp"
 
-CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) :
-    m_window(window)
-{
+CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     if (window == nullptr) {
-        throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
+        throw CRendererInitError("Cannot initialize vulkan renderer. Window is nullptr");
     }
 
-    //====================
-    std::unordered_map<const char*, bool> instanceExtensions;
+    m_context = std::make_shared<Vulkan::CRenderContext>(window);
 
-    const std::vector<const char*> requiredExtensions = window->GetRequiredInstanceExtensions();
-    instanceExtensions.reserve(requiredExtensions.size() + 1);
+    m_surface = std::make_unique<Vulkan::CSurface>(m_context);
 
-    for (const auto& extension : requiredExtensions) {
-        instanceExtensions[extension] = true;
-    }
-
-    instanceExtensions[VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME] = true;
-
-    m_instance = std::make_unique<Vulkan::CInstance>(
-        instanceExtensions
-    );
-
-    //====================
-    m_selectedPhysicalDevice = m_instance->GetSuitablePhysicalDevice(window);
-
-    REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
-
-    //====================
-    std::unordered_map<const char*, bool> deviceExtensions;
-
-    constexpr std::array vmaExtensions {
-        VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
-        VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
-        VK_KHR_MAINTENANCE_4_EXTENSION_NAME,
-        VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
-        VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
-        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-        VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME,
-        VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME,
-#ifdef PLATFORM_WINDOWS
-        VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
-#endif
-    };
-
-    deviceExtensions.reserve(vmaExtensions.size());
-
-    for (auto extName : vmaExtensions) {
-        deviceExtensions[extName] = false;
-    }
-
-    m_device = std::make_unique<Vulkan::CDevice>(
-        *m_instance,
-        *m_selectedPhysicalDevice,
-        window,
-        deviceExtensions
+    m_swapchain = std::make_unique<Vulkan::CSwapchain>(
+        m_context,
+        m_surface->GetHandle(),
+        2,
+        vk::PresentModeKHR::eImmediate
     );
 }
 
@@ -66,17 +23,13 @@ std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindo
     try {
         return std::make_unique<CVulkanRenderer>(window);
     } catch (const std::exception& e) {
-        MsgE("Cannot initialize vulkan renderer. {}", e.what());
+        Log::Error("Cannot initialize vulkan renderer. {}", e.what());
         return nullptr;
     }
 }
 
 CVulkanRenderer::~CVulkanRenderer() {
-    if (m_window) {
-        //m_window->DestroySurface(m_instance->GetHandle(), m_surface);
-    } else {
-        MsgE("Window is expired!");
-    }
+
 }
 
 

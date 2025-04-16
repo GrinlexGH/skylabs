@@ -1,28 +1,29 @@
 #pragma once
 #include "../renderer.hpp"
 
-#include "instance.hpp"
-#include "device.hpp"
+#include "render_context.hpp"
+#include "surface.hpp"
+#include "swapchain.hpp"
 
 class CVulkanRenderer final : public IRenderer
 {
 public:
+    // window must be valid for the entire lifetime of the renderer
     explicit CVulkanRenderer(const IVulkanWindow* window);
     CVulkanRenderer(const CVulkanRenderer&) = delete;
-    CVulkanRenderer(CVulkanRenderer&&) noexcept = default;
+    CVulkanRenderer(CVulkanRenderer&&) noexcept = delete;
     CVulkanRenderer& operator=(const CVulkanRenderer&) = delete;
-    CVulkanRenderer& operator=(CVulkanRenderer&&) noexcept = default;
+    CVulkanRenderer& operator=(CVulkanRenderer&&) noexcept = delete;
     ~CVulkanRenderer() override;
 
     static std::unique_ptr<CVulkanRenderer> TryToCreate(const IVulkanWindow* window);
     void Draw() override {}
 
 private:
-    const IVulkanWindow* m_window;
-    Vulkan::CPhysicalDevice* m_selectedPhysicalDevice;
+    std::shared_ptr<Vulkan::CRenderContext> m_context;
 
-    std::unique_ptr<Vulkan::CInstance> m_instance;
-    std::unique_ptr<Vulkan::CDevice> m_device;
+    std::unique_ptr<Vulkan::CSurface> m_surface;
+    std::unique_ptr<Vulkan::CSwapchain> m_swapchain;
 };
 
 

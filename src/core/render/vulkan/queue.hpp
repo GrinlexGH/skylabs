@@ -9,11 +9,9 @@ class CQueue
 public:
     explicit CQueue(const vk::Device& device, std::uint32_t familyIndex);
 
-    [[nodiscard]] std::uint32_t GetFamilyIndex() const { return m_familyIndex; }
+    const std::uint32_t m_familyIndex;
 
 private:
     vk::Queue m_handle = VK_NULL_HANDLE;
-
-    std::uint32_t m_familyIndex = std::numeric_limits<std::uint32_t>::max();
 };
 }

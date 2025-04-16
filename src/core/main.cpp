@@ -11,7 +11,7 @@
 #include <stc.hpp>
 
 namespace {
-BOOL CtrlHandler([[maybe_unused]] DWORD fdwCtrlType) {
+BOOL CtrlHandler(DWORD /*fdwCtrlType*/) {
     return FALSE;
 }
 
@@ -35,6 +35,7 @@ void SetupConsole() {
     GetConsoleMode(cmdOutputHandle, &mode);
     mode |= ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(cmdOutputHandle, mode);
+
     SetConsoleCtrlHandler(CtrlHandler, TRUE);
 
     std::cout << stc::true_color;
@@ -42,10 +43,8 @@ void SetupConsole() {
 }
 #endif
 
-extern "C" DLL_EXPORT int CoreInit(const int argc, char* argv[]) {
-    CommandLine()->CreateCmdLine(
-        std::vector<std::string>(argv, argv + argc)
-    );
+extern "C" DLL_EXPORT int CoreMain(const int argc, char* argv[]) {
+    ParseCommandLineArguments(argc, argv);
 
 #ifdef PLATFORM_WINDOWS
     SetupConsole();
@@ -54,7 +53,7 @@ extern "C" DLL_EXPORT int CoreInit(const int argc, char* argv[]) {
     CLauncher launcher;
     launcher.Run();
 
-    Msg("Press Enter to exit.");
+    Log::Info("Press Enter to exit.");
     std::cin.ignore();
 
     return 0;
