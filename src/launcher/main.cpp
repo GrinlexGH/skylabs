@@ -1,4 +1,4 @@
-﻿#if defined(PLATFORM_WINDOWS)
+#if defined(PLATFORM_WINDOWS)
 #include <windows.h>
 #elif defined(PLATFORM_UNIX)
 #include <dlfcn.h>
@@ -7,9 +7,11 @@
 #error
 #endif
 
-#include <filesystem>
-#include <stdexcept>
 #include <string>
+#include <stdexcept>
+#include <format>
+#include <filesystem>
+#include <vector>
 
 using main_t = int (*)(int argc, char* argv[]);
 
@@ -22,26 +24,18 @@ std::string Narrow(const std::wstring_view wideStr) {
     }
 
     const int len = WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        wideStr.data(),
-        static_cast<int>(wideStr.size()),
-        nullptr,
-        0,
-        nullptr,
-        nullptr
+        CP_UTF8, 0,
+        wideStr.data(), static_cast<int>(wideStr.size()),
+        nullptr, 0,
+        nullptr, nullptr
     );
 
     std::string out(len, 0);
     WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        wideStr.data(),
-        static_cast<int>(wideStr.size()),
-        out.data(),
-        len,
-        nullptr,
-        nullptr
+        CP_UTF8, 0,
+        wideStr.data(), static_cast<int>(wideStr.size()),
+        out.data(), len,
+        nullptr, nullptr
     );
 
     return out;
@@ -53,32 +47,89 @@ std::wstring Widen(const std::string_view narrowStr) {
     }
 
     const int len = MultiByteToWideChar(
-        CP_UTF8,
-        0,
-        narrowStr.data(),
-        static_cast<int>(narrowStr.size()),
-        nullptr,
-        0
+        CP_UTF8, 0,
+        narrowStr.data(), static_cast<int>(narrowStr.size()),
+        nullptr, 0
     );
 
     std::wstring out(len, 0);
     MultiByteToWideChar(
-        CP_UTF8,
-        0,
-        narrowStr.data(),
-        static_cast<int>(narrowStr.size()),
-        out.data(),
-        len
+        CP_UTF8, 0,
+        narrowStr.data(), static_cast<int>(narrowStr.size()),
+        out.data(), len
     );
 
     return out;
 }
 
+std::string GetLastErrorMessage() {
+    wchar_t* errorMsg = nullptr;
+    FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPWSTR>(&errorMsg), 0,
+        nullptr
+    );
+
+    std::string finalMsg { Narrow(errorMsg) };
+
+    LocalFree(errorMsg);
+
+    return finalMsg;
+}
+
+std::wstring GetPathToProgram() {
+    std::wstring out(MAX_PATH, L'\0');
+    DWORD size = GetModuleFileNameW(nullptr, out.data(), MAX_PATH);
+
+    while (size == out.size()) {
+        out.resize(out.size() * 2);
+        size = GetModuleFileNameW(nullptr, out.data(), static_cast<DWORD>(out.size()));
+    }
+
+    return out;
+}
+
+class CLibrary
+{
+public:
+    explicit CLibrary(const std::wstring& name) {
+        m_ptr = LoadLibraryExW(name.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if (!m_ptr) {
+            throw std::runtime_error(
+                std::format("Failed to load library \"{}\":\n\n{}", Narrow(name), GetLastErrorMessage())
+            );
+        }
+    }
+
+    ~CLibrary() { FreeLibrary(m_ptr); }
+
+    CLibrary(const CLibrary&) = delete;
+    CLibrary(CLibrary&&) = delete;
+    CLibrary& operator=(const CLibrary&) = delete;
+    CLibrary& operator=(CLibrary&&) = delete;
+
+    [[nodiscard]] void* GetFunctionAddress(const std::string& name) const {
+        const auto function = reinterpret_cast<void*>(GetProcAddress(m_ptr, name.c_str()));
+        if (!function) {
+            throw std::runtime_error(
+                std::format("Failed to load \"{}\" function from dll:\n\n{}", name, GetLastErrorMessage())
+            );
+        }
+        return function;
+    }
+
+private:
+    HMODULE m_ptr = nullptr;
+};
+
 class CArgFix
 {
 public:
-    CArgFix(int& argc, char**& argv) :
-    m_oldArgc(argc), m_oldArgv(argv), m_oldArgcPtr(&argc), m_oldArgvPtr(&argv) {
+    explicit CArgFix(int& argc, char**& argv) {
         FixArgs(argc, argv);
     }
 
@@ -87,18 +138,18 @@ public:
     CArgFix& operator=(const CArgFix&) = delete;
     CArgFix& operator=(CArgFix&&) = delete;
 
-    ~CArgFix() {
-        if (m_oldArgcPtr)
-            *m_oldArgcPtr = m_oldArgc;
-        if (m_oldArgvPtr)
-            *m_oldArgvPtr = m_oldArgv;
-    }
+    ~CArgFix() = default;
 
 private:
     class CWArgv
     {
     public:
-        CWArgv() { m_ptr = CommandLineToArgvW(GetCommandLineW(), &m_argc); }
+        CWArgv() {
+            m_ptr = CommandLineToArgvW(GetCommandLineW(), &m_argc);
+            if (!m_ptr) {
+                throw std::runtime_error("Could not get command line!");
+            }
+        }
 
         ~CWArgv() {
             if (m_ptr) {
@@ -112,7 +163,6 @@ private:
         CWArgv& operator=(CWArgv&& other) = delete;
 
         [[nodiscard]] int size() const { return m_argc; }
-        explicit operator bool() const { return m_ptr != nullptr; }
         const wchar_t* operator[](const std::size_t i) const { return m_ptr[i]; }
 
     private:
@@ -122,9 +172,6 @@ private:
 
     void FixArgs(int& argc, char**& argv) {
         const CWArgv wArgv;
-        if (!wArgv) {
-            throw std::runtime_error("Could not get command line!");
-        }
 
         m_args.resize(wArgv.size() + 1, nullptr);
         m_argValues.resize(wArgv.size());
@@ -140,71 +187,22 @@ private:
 
     std::vector<char*> m_args;
     std::vector<std::string> m_argValues;
-
-    int m_oldArgc;
-    char** m_oldArgv;
-
-    int* m_oldArgcPtr;
-    char*** m_oldArgvPtr;
 };
-
-std::string GetWinApiErrorMessage() {
-    wchar_t* errorMsg = nullptr;
-    FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr,
-        GetLastError(),
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<LPWSTR>(&errorMsg),
-        0,
-        nullptr
-    );
-
-    std::string finalMsg = Narrow(errorMsg);
-
-    LocalFree(errorMsg);
-
-    return finalMsg;
-}
 }
 
-int WINAPI wWinMain(
+int WINAPI WinMain(
     _In_ HINSTANCE /*hInstance*/,
     _In_opt_ HINSTANCE /*hPrevInstance*/,
-    _In_ LPWSTR /*lpCmdLine*/,
+    _In_ LPSTR /*lpCmdLine*/,
     _In_ int /*nShowCmd*/
 ) {
     try {
-        // Get exe directory for loading \\bin\\core.dll
-        std::filesystem::path rootDir;
-        {
-            wchar_t buffer[MAX_PATH] {};
-            GetModuleFileNameW(nullptr, buffer, MAX_PATH);
-            rootDir = buffer;
-        }
+        std::filesystem::path rootDir { GetPathToProgram() };
         rootDir.remove_filename();
 
-        const auto core = LoadLibraryExW(
-            (rootDir.wstring() + L"\\bin\\core.dll").c_str(),
-            nullptr,
-            LOAD_WITH_ALTERED_SEARCH_PATH
-        );
-        if (!core) {
-            throw std::runtime_error(
-                "Failed to load core library: " +
-                GetWinApiErrorMessage()
-            );
-        }
+        const CLibrary core(rootDir / L"bin" / L"core.dll");
 
-        const auto main = reinterpret_cast<main_t>(reinterpret_cast<void*>(GetProcAddress(core, "CoreInit")));
-        if (!main) {
-            throw std::runtime_error(
-                "Failed to load the core entry proc: " +
-                GetWinApiErrorMessage()
-            );
-        }
+        const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         // converts wide argv to narrow argv
         int argc = 0;
@@ -214,10 +212,8 @@ int WINAPI wWinMain(
         // call real main with normal arguments, not schizophrenia from windows
         const int ret = main(argc, argv);
 
-        FreeLibrary(core);
         return ret;
     } catch (const std::exception& e) {
-        MessageBeep(MB_ICONERROR);
         MessageBoxW(
             nullptr,
             Widen(e.what()).c_str(),

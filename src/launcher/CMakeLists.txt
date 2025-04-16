@@ -30,6 +30,7 @@ if(NOT CMKR_VS_STARTUP_PROJECT)
     set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 endif()
 
+# copy all third party libraries here
 add_custom_command(
     TARGET ${CURRENT_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -39,13 +40,3 @@ add_custom_command(
     ${DLLS_OUTPUT_DIRECTORY}
     COMMENT "Copying SDL3::SDL3 dll"
 )
-
-if(MSVC AND($<CONFIG:Debug> OR $<CONFIG:RelWithDebInfo>))
-    add_custom_command(
-        TARGET ${CURRENT_TARGET_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE_DIR:SDL3::SDL3>/SDL3.pdb
-        ${DLLS_OUTPUT_DIRECTORY}
-        COMMENT "Copying SDL3::SDL3 pdb"
-    )
-endif()

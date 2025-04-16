@@ -1,32 +1,60 @@
 #include "commandline.hpp"
 
-#include <algorithm>
-#include <string>
-#include <vector>
-
-class CCommandLine final : public ICommandLine
-{
-public:
-    void CreateCmdLine(const std::vector<std::string>& argv) override;
-    void CreateCmdLine(std::vector<std::string>&& argv) override;
-    int FindParam(std::string_view param) override;
-};
-
-namespace { CCommandLine g_cmdLine; }
-PUBLIC_INTERFACE ICommandLine* CommandLine() { return &g_cmdLine; }
-
-void CCommandLine::CreateCmdLine(const std::vector<std::string>& argv) {
-    m_argv = argv;
-}
-
-void CCommandLine::CreateCmdLine(std::vector<std::string>&& argv) {
-    m_argv = std::move(argv);
-}
-
-int CCommandLine::FindParam(const std::string_view param) {
-    const auto it = std::find(m_argv.begin() + 1, m_argv.end(), param);
-    if (it == m_argv.end()) {
-        return 0;
+PUBLIC_INTERFACE void ParseCommandLineArguments(const int argc, char* /*argv*/[]) {
+    for (int i = 0; i < argc; ++i) {
+        
     }
-    return static_cast<int>(std::distance(m_argv.begin(), it));
 }
+
+// Принципы обработки
+//  Аргументы обрабатываются слева направо.
+//  Каждое вхождение аргумента вызывает соответствующий callback.
+//  Последнее вхождение имеет наивысший приоритет (переопределяет предыдущие).
+//  Ключ имеет префикс `-` или `/` (`--help` исключение), но так же ключом (флагом) может быть:
+//      Путь к существующей папке
+//      Путь на существующий файл с расширением
+//  Ключ и значение разделяются пробелом (например: `-h 800 -w 600`).
+//  Если не найден ключ или значение для ключа недействительно, то выдавать предупреждение в логи.
+//  Регистр для ключей не важен.
+//  Комбинаций ключей (например: `-xvzf`) не поддерживаются.
+//  Некоторые ключи могут стать валидными только при наличии других аргументов.
+
+// Типы аргументов
+//  Опции
+//      Именованные аргументы формата `-option` или `/option`, могут иметь значения
+//
+//      Классификация:
+//          По типу значения:
+//              С обязательным значением (например: `-file README.md`)
+//              С необязательным значением (например: `-color[=auto, never, always]`)
+//                  Если значение не указано, использует задефолченное значение, указанное после `=`
+//
+//          По количеству значений:
+//              Однозначные — принимают ровно 1 значение
+//              Многозначные — принимают несколько значений
+//                  Принимает все значения, пока не дойдёт до следующей опции
+//                  `--` значит, что следующий аргумент, гарантированно будет воспринят как значение, а не как опция
+//
+//  Флаги
+//      Аргумент без значения (например: `-verbose` или `/verbose`)
+//
+//  Алиас
+//      Аргумент, которы является синонимом к опции или флагу (например: `-v` синоним к `-verbose`)
+//
+//  Аргумент не может быть одновременно флагом и опцией
+//  Аргумент всегда переопределяет конфиг программы
+
+//    launcher.exe -game "dddd" \                       (опция с обязательным одним значением)
+//     -vsync \                                         (флаг)
+//     -color \                                         (опция с необязательным значением)
+//     -color never \                                   (опция с необязательным одним значением)
+//     -o "C:\Out\my dir\" "..\" \                      (дойти до следующей известной опции)
+//     -file -- "-vsync" -- "-file" \                   (воспринять аргумент, как значение, а не как опцию)
+//     -AudioLanguage Russian -AudioLanguage English \  (перезаписать значение)
+//     -AudioLanguage English,Russian \                 (ахуеть и выдать варнинг)
+//     "Out\my dir\" \                                  (понять что это всё пути и типа -game)
+//     "C:\Out\my dir\" \
+//     ..\
+//     scene.tsn \                                      (понять что это сцена и сразу запустить сцену)
+//     -tools -particle-editor \                        (понять что particle editor нужно включить)
+//     -particle-editor                                 (без -tools ахуеть)

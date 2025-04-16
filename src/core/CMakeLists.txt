@@ -22,10 +22,14 @@ set(SOURCES
     render/vulkan/device.cpp
     render/vulkan/queue.hpp
     render/vulkan/queue.cpp
-    render/vulkan/allocator.hpp
-    render/vulkan/allocator.cpp
+    render/vulkan/render_context.hpp
+    render/vulkan/render_context.cpp
+    render/vulkan/surface.hpp
+    render/vulkan/surface.cpp
     render/vulkan/swapchain.hpp
     render/vulkan/swapchain.cpp
+    render/vulkan/allocator.hpp
+    render/vulkan/allocator.cpp
     SDL/SDL_context.cpp
     SDL/SDL_context.hpp
     SDL/SDL_vulkan.hpp

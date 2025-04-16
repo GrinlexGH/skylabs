@@ -96,7 +96,7 @@ CQueueFamilies::CQueueFamilies(
         }
         error << "]!";
 
-        throw std::runtime_error(error.str());
+        throw CRendererInitError(error.str());
     }
 
     m_graphics = *graphicsQueueIndex;   //-V1007
@@ -129,9 +129,6 @@ CDevice::CDevice(
     const IVulkanWindow* const window,
     const std::unordered_map<const char*, bool>& extensions
 ) {
-    Msg("Selected device: {}", std::string_view { physicalDevice.GetProperties().deviceName });
-
-    //====================
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
     CQueueFamilies queueIndices(instance.GetHandle(), physicalDevice, window);
@@ -170,7 +167,7 @@ CDevice::CDevice(
         for (const auto name : missingExtensions) {
             error << '\t' << name << '\n';
         }
-        throw std::runtime_error(error.str());
+        throw CRendererInitError(error.str());
     }
 
     //====================
@@ -183,24 +180,20 @@ CDevice::CDevice(
         AppendToPNextChain(pNext, &features);
     }
 
-    vk::DeviceCreateInfo deviceCreateInfo;
-    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext() ? nullptr : &physicalDevice.GetRequiredFeatures();
-    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-    deviceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
-    deviceCreateInfo.pNext = pNext;
+    vk::DeviceCreateInfo createInfo;
+    createInfo.pQueueCreateInfos = queueCreateInfos.data();
+    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    createInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext() ? nullptr : &physicalDevice.GetRequiredFeatures();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
+    createInfo.pNext = pNext;
 
-    m_handle = physicalDevice.GetHandle().createDevice(deviceCreateInfo);
+    m_handle = physicalDevice.GetHandle().createDevice(createInfo);
 
     m_graphicsQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_graphics);
     m_presentQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_present);
     m_transferQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_transfer);
     m_computeQueue = std::make_unique<CQueue>(m_handle, queueIndices.m_compute);
-
-    //m_swapchain.Init(m_physicalDevice.GetHandle(), m_handle, window->GetSurface());
-
-    //m_allocator.Create(instance, m_physicalDevice.GetHandle(), m_handle);
 }
 
 CDevice::~CDevice() {

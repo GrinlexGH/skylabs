@@ -10,8 +10,7 @@ set(SOURCES
     resourceloader.hpp
     publicapi.hpp
     stc.hpp
-    os.hpp
-    os.cpp
+    stc.cpp
 )
 
 add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})

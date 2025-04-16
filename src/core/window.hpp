@@ -5,9 +5,9 @@ class IWindow
 public:
     IWindow() = default;
     IWindow(const IWindow&) = delete;
-    IWindow(IWindow&&) = default;
+    IWindow(IWindow&&) = delete;
     IWindow& operator=(const IWindow&) = delete;
-    IWindow& operator=(IWindow&&) = default;
+    IWindow& operator=(IWindow&&) = delete;
     virtual ~IWindow() = default;
 
     virtual void GetDrawableSize(int* w, int* h) = 0;

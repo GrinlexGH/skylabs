@@ -18,6 +18,11 @@ public:
     CDevice& operator=(CDevice&&) = delete;
     ~CDevice();
 
+    [[nodiscard]] CQueue GetGraphicsQueue() const { return *m_graphicsQueue; }
+    [[nodiscard]] CQueue GetPresentQueue() const { return *m_presentQueue; }
+    [[nodiscard]] CQueue GetTransferQueue() const { return *m_transferQueue; }
+    [[nodiscard]] CQueue GetComputeQueue() const { return *m_computeQueue; }
+
     [[nodiscard]] vk::Device GetHandle() const { return m_handle; }
 
     explicit operator vk::Device() const { return m_handle; }
@@ -25,8 +30,6 @@ public:
 private:
     vk::Device m_handle;
 
-    //CAllocator m_allocator;
-    //CSwapchain m_swapchain;
     std::unique_ptr<CQueue> m_graphicsQueue;
     std::unique_ptr<CQueue> m_presentQueue;
     std::unique_ptr<CQueue> m_transferQueue;
