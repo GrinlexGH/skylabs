@@ -153,7 +153,7 @@ private:
 
         ~CWArgv() {
             if (m_ptr) {
-                LocalFree(m_ptr);
+                LocalFree(static_cast<void*>(m_ptr));
             }
         }
 
@@ -209,10 +209,14 @@ int WINAPI WinMain(
         char** argv = nullptr;
         CArgFix fix(argc, argv);
 
-        // call real main with normal arguments, not schizophrenia from windows
-        const int ret = main(argc, argv);
-
-        return ret;
+        try {
+            // call real main with normal arguments, not schizophrenia from windows
+            const int ret = main(argc, argv);
+            return ret;
+        } catch (const std::exception& e) {
+            // alloc new exception because caught exception becomes invalid due to FreeLibrary(core)
+            std::rethrow_exception(std::make_exception_ptr(e));
+        }
     } catch (const std::exception& e) {
         MessageBoxW(
             nullptr,

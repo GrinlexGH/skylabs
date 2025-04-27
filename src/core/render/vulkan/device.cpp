@@ -96,7 +96,7 @@ CQueueFamilies::CQueueFamilies(
         }
         error << "]!";
 
-        throw CRendererInitError(error.str());
+        throw CRendererError(error.str());
     }
 
     m_graphics = *graphicsQueueIndex;   //-V1007
@@ -167,7 +167,7 @@ CDevice::CDevice(
         for (const auto name : missingExtensions) {
             error << '\t' << name << '\n';
         }
-        throw CRendererInitError(error.str());
+        throw CRendererError(error.str());
     }
 
     //====================

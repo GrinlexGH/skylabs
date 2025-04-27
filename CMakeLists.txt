@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(PROJECT_NAME "Skylabs")
+set(PROJECT_NAME "Skylabs" HOMEPAGE_URL "https://grinlexstudios.ru")
 
 project(${PROJECT_NAME} VERSION 0.0.0.0 LANGUAGES CXX C)
 

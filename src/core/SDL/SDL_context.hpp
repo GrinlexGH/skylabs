@@ -2,15 +2,31 @@
 #include <SDL3/SDL.h>
 
 namespace SDL {
-class CContext
+class CGlobalContext
 {
 public:
-    CContext() = delete;
-    explicit CContext(SDL_InitFlags flags = 0);
-    CContext(const CContext&) = delete;
-    CContext(CContext&&) = delete;
-    CContext& operator=(const CContext&) = delete;
-    CContext& operator=(CContext&&) = delete;
-    ~CContext();
+    CGlobalContext();
+    CGlobalContext(const CGlobalContext&) = delete;
+    CGlobalContext(CGlobalContext&&) = delete;
+    CGlobalContext& operator=(const CGlobalContext&) = delete;
+    CGlobalContext& operator=(CGlobalContext&&) = delete;
+    ~CGlobalContext();
+
+    static int m_refCount;
+};
+
+class CSubSystemContext
+{
+public:
+    CSubSystemContext() = delete;
+    explicit CSubSystemContext(SDL_InitFlags flags);
+    CSubSystemContext(const CSubSystemContext&) = delete;
+    CSubSystemContext(CSubSystemContext&&) = delete;
+    CSubSystemContext& operator=(const CSubSystemContext&) = delete;
+    CSubSystemContext& operator=(CSubSystemContext&&) = delete;
+    ~CSubSystemContext();
+
+private:
+    SDL_InitFlags m_subSystems = 0;
 };
 }

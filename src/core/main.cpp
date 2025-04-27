@@ -1,6 +1,6 @@
 #include "commandline.hpp"
 #include "launcher.hpp"
-#include "publicapi.hpp"
+#include "export.hpp"
 #include "console.hpp"
 
 #ifdef PLATFORM_WINDOWS

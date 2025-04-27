@@ -1,14 +1,20 @@
 # public
 set(CURRENT_TARGET_NAME public)
 
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/app_metadata.hpp.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/app_metadata.hpp
+    @ONLY
+)
+
 set(SOURCES
+    app_metadata.hpp
     application.hpp
     application.cpp
     console.hpp
     commandline.hpp
     commandline.cpp
-    resourceloader.hpp
-    publicapi.hpp
+    export.hpp
     stc.hpp
     stc.cpp
 )

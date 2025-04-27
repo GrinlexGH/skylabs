@@ -1,6 +1,5 @@
 #include "swapchain.hpp"
 
-#include "../renderer.hpp"
 #include "console.hpp"
 #include "render_context.hpp"
 
@@ -27,24 +26,19 @@ vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>
 
 namespace Vulkan {
 CSwapchain::CSwapchain(
-    const std::weak_ptr<CRenderContext>& context,
+    const CRenderContext* context,
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR& vSync,
     const vk::SwapchainKHR& oldSwaphchain
 ) : m_context(context)
 {
-    const std::shared_ptr<CRenderContext> ctx = m_context.lock();
-    if (!ctx) {
-        throw CRendererInitError("Cannot create vulkan swapchain: context is expired!");
-    }
-
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.pNext = nullptr;
     createInfo.surface = surface;
 
     //====================
-    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = ctx->PhysicalDevice()->GetHandle().getSurfaceCapabilitiesKHR(surface);
+    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = m_context->PhysicalDevice()->GetHandle().getSurfaceCapabilitiesKHR(surface);
     createInfo.minImageCount = std::clamp(
         imageCount,
         surfaceCapabilities.minImageCount,
@@ -52,7 +46,7 @@ CSwapchain::CSwapchain(
     );
 
     //====================
-    const vk::SurfaceFormatKHR chosenSurfaceFormat = ChooseSurfaceFormat(ctx->PhysicalDevice()->GetHandle().getSurfaceFormatsKHR(surface));
+    const vk::SurfaceFormatKHR chosenSurfaceFormat = ChooseSurfaceFormat(m_context->PhysicalDevice()->GetHandle().getSurfaceFormatsKHR(surface));
     createInfo.imageFormat = chosenSurfaceFormat.format;
     createInfo.imageColorSpace = chosenSurfaceFormat.colorSpace;
     createInfo.imageExtent = surfaceCapabilities.currentExtent;
@@ -61,11 +55,11 @@ CSwapchain::CSwapchain(
 
     //====================
     const std::uint32_t queueFamilyIndices[] = {
-        ctx->Device()->GetGraphicsQueue().m_familyIndex,
-        ctx->Device()->GetPresentQueue().m_familyIndex
+        m_context->Device()->GetGraphicsQueue().m_familyIndex,
+        m_context->Device()->GetPresentQueue().m_familyIndex
     };
 
-    if (ctx->Device()->GetGraphicsQueue().m_familyIndex != ctx->Device()->GetPresentQueue().m_familyIndex) {
+    if (m_context->Device()->GetGraphicsQueue().m_familyIndex != m_context->Device()->GetPresentQueue().m_familyIndex) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = 2;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -80,7 +74,7 @@ CSwapchain::CSwapchain(
     createInfo.clipped = vk::True;
     createInfo.oldSwapchain = oldSwaphchain;
 
-    m_handle = ctx->Device()->GetHandle().createSwapchainKHR(createInfo);
+    m_handle = m_context->Device()->GetHandle().createSwapchainKHR(createInfo);
 }
 
 CSwapchain::~CSwapchain() {
@@ -88,10 +82,6 @@ CSwapchain::~CSwapchain() {
         return;
     }
 
-    if (const auto ctx = m_context.lock()) {
-        ctx->Device()->GetHandle().destroySwapchainKHR(m_handle);
-    } else {
-        Log::Error("Couldn't properly destroy vulkan swapchain. Render context is expired!");
-    }
+    m_context->Device()->GetHandle().destroySwapchainKHR(m_handle);
 }
 }

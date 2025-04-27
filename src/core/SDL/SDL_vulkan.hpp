@@ -10,7 +10,7 @@ inline std::vector<const char*> GetInstanceExtensions() {
     Uint32 extCount = 0;
     SDL_Vulkan_GetInstanceExtensions(&extCount);
     const char* const* extensions = SDL_Vulkan_GetInstanceExtensions(&extCount);
-    return std::vector(extensions, extensions + extCount);
+    return { extensions, extensions + extCount };
 }
 
 inline bool GetPresentationSupport(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, const Uint32 queueFamilyIndex) {

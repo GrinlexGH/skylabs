@@ -74,7 +74,9 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
 }
 
 void CLauncher::Main() {
-    SDL::CContext context(SDL_INIT_VIDEO);
+    SDL::CGlobalContext context;
+    SDL::CSubSystemContext video(SDL_INIT_VIDEO);
+
     const SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
     SDL_SetWindowRelativeMouseMode(window.m_ptr, true);
 

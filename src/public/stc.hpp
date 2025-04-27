@@ -28,7 +28,7 @@ SOFTWARE.
 #include <limits>
 #include <cstdint>
 
-#include "publicapi.hpp"
+#include "export.hpp"
 
 namespace stc {
     enum _color_modes : std::uint8_t {

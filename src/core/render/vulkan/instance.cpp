@@ -151,7 +151,7 @@ CInstance::CInstance(
         for (const auto name : missingExtensions) {
             error << '\t' << name << '\n';
         }
-        throw CRendererInitError(error.str());
+        throw CRendererError(error.str());
     }
 
     //====================
@@ -230,7 +230,7 @@ CInstance::CInstance(
 void CInstance::QueryPhysicalDevices() {
     std::vector<vk::PhysicalDevice> physicalDevices = m_handle.enumeratePhysicalDevices();
     if (physicalDevices.empty()) {
-        throw CRendererInitError("Couldn't find a physical device that supports Vulkan!");
+        throw CRendererError("Couldn't find a physical device that supports Vulkan!");
     }
 
     for (vk::PhysicalDevice& physicalDevice : physicalDevices) {

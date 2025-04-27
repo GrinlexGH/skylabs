@@ -6,8 +6,6 @@
 
 #include "vulkan.hpp"
 
-namespace Vulkan { class CRenderContext; }
-
 class IVulkanWindow : public IWindow
 {
 public:
