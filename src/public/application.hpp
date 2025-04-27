@@ -1,5 +1,5 @@
 #pragma once
-#include "publicapi.hpp"
+#include "export.hpp"
 
 class PUBLIC_CLASS IApplication
 {

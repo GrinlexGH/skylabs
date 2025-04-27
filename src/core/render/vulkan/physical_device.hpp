@@ -50,7 +50,7 @@ public:
         if (GetExtensionFeatures<Feature>().*flag) {
             AddExtensionFeatures<Feature>().*flag = true;
         } else {
-            throw CRendererInitError(
+            throw CRendererError(
                 std::format(
                     "Requested required feature <{}::{}> is not supported!",
                     featureName, flagName
@@ -75,7 +75,7 @@ public:
         if (m_features.*flag) {
             m_requiredFeatures.*flag = true;
         } else {
-            throw CRendererInitError(
+            throw CRendererError(
                 std::format(
                     "Requested required feature \"{}\" is not supported!",
                     flagName

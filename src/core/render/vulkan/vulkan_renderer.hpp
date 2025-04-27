@@ -20,7 +20,7 @@ public:
     void Draw() override {}
 
 private:
-    std::shared_ptr<Vulkan::CRenderContext> m_context;
+    std::unique_ptr<Vulkan::CRenderContext> m_context;
 
     std::unique_ptr<Vulkan::CSurface> m_surface;
     std::unique_ptr<Vulkan::CSwapchain> m_swapchain;

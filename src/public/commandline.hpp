@@ -1,4 +1,4 @@
 #pragma once
-#include "publicapi.hpp"
+#include "export.hpp"
 
 PUBLIC_INTERFACE void ParseCommandLineArguments(int argc, char* argv[]);

@@ -4,15 +4,15 @@
 
 CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     if (window == nullptr) {
-        throw CRendererInitError("Cannot initialize vulkan renderer. Window is nullptr");
+        throw CRendererError("Cannot initialize vulkan renderer. Window is nullptr");
     }
 
-    m_context = std::make_shared<Vulkan::CRenderContext>(window);
+    m_context = std::make_unique<Vulkan::CRenderContext>(window);
 
-    m_surface = std::make_unique<Vulkan::CSurface>(m_context);
+    m_surface = std::make_unique<Vulkan::CSurface>(m_context.get());
 
     m_swapchain = std::make_unique<Vulkan::CSwapchain>(
-        m_context,
+        m_context.get(),
         m_surface->GetHandle(),
         2,
         vk::PresentModeKHR::eImmediate
@@ -23,7 +23,7 @@ std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindo
     try {
         return std::make_unique<CVulkanRenderer>(window);
     } catch (const std::exception& e) {
-        Log::Error("Cannot initialize vulkan renderer. {}", e.what());
+        Log::Error("Cannot initialize vulkan renderer: {}", e.what());
         return nullptr;
     }
 }

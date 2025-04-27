@@ -14,10 +14,10 @@ public:
     virtual void Draw() = 0;
 };
 
-class CRendererInitError final : public std::runtime_error
+class CRendererError final : public std::runtime_error
 {
 public:
-    explicit CRendererInitError(const std::string& message) : std::runtime_error(message.c_str()) {}
-    explicit CRendererInitError(const char* message) : std::runtime_error(message) {}
+    explicit CRendererError(const std::string& message) : std::runtime_error(message.c_str()) {}
+    explicit CRendererError(const char* message) : std::runtime_error(message) {}
 };
 

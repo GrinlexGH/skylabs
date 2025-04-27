@@ -1,13 +1,13 @@
 #pragma once
 #include "vulkan.hpp"
-#include "device.hpp"
+#include "render_context.hpp"
 
 namespace Vulkan {
 class CSwapchain
 {
 public:
     explicit CSwapchain(
-        const std::weak_ptr<CRenderContext>& context,
+        const CRenderContext* context,
         const vk::SurfaceKHR& surface,
         std::uint32_t imageCount,
         const vk::PresentModeKHR& vSync,
@@ -24,6 +24,6 @@ public:
 private:
     vk::SwapchainKHR m_handle = VK_NULL_HANDLE;
 
-    const std::weak_ptr<CRenderContext> m_context;
+    const CRenderContext* m_context;
 };
 }
