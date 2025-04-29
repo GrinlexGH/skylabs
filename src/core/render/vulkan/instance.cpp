@@ -123,7 +123,7 @@ CInstance::CInstance(
 
     //====================
     vk::ApplicationInfo appInfo;
-    appInfo.pApplicationName = "Half-Life 3";
+    appInfo.pApplicationName = "Half-Life 3";   // TODO: change to normal name
     appInfo.applicationVersion = 0;
     appInfo.pEngineName = "Skylabs";
     appInfo.engineVersion = 0;

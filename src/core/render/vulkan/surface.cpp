@@ -2,7 +2,7 @@
 
 namespace Vulkan {
 CSurface::CSurface(const CRenderContext* context) : m_context(context) {
-    m_handle = m_context->CreateSurface();
+    m_handle = m_context->Window()->CreateSurface(m_context->Instance()->GetHandle());
 }
 
 CSurface::~CSurface() {
@@ -10,6 +10,6 @@ CSurface::~CSurface() {
         return;
     }
 
-    m_context->DestroySurface(m_handle);
+    m_context->Window()->DestroySurface(m_context->Instance()->GetHandle(), m_handle);
 }
 }

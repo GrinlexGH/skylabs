@@ -5,7 +5,7 @@ namespace App::Metadata {
     constexpr char COMPANY[] = "Grinlex Stydios";
     constexpr char COPYRIGHT[] = "GNU GPLv3 License\n\n© 2025-present Grinlex Stydios";
     constexpr char VERSION[] = "0.0.0.0";
-    constexpr char GIT_COMMIT[] = "d0a0724";
+    constexpr char GIT_COMMIT[] = "e4ed23f";
     constexpr char HOMEPAGE[] = "https://grinlexstudios.ru";
 
     constexpr int VERSION_MAJOR = 0;
