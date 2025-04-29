@@ -55,11 +55,11 @@ CSwapchain::CSwapchain(
 
     //====================
     const std::uint32_t queueFamilyIndices[] = {
-        m_context->Device()->GetGraphicsQueue().m_familyIndex,
-        m_context->Device()->GetPresentQueue().m_familyIndex
+        m_context->Device()->GetGraphicsQueue().GetFamilyIndex(),
+        m_context->Device()->GetPresentQueue().GetFamilyIndex()
     };
 
-    if (m_context->Device()->GetGraphicsQueue().m_familyIndex != m_context->Device()->GetPresentQueue().m_familyIndex) {
+    if (m_context->Device()->GetGraphicsQueue().GetFamilyIndex() != m_context->Device()->GetPresentQueue().GetFamilyIndex()) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = 2;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;

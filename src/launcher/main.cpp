@@ -81,7 +81,7 @@ std::string GetLastErrorMessage() {
     return finalMsg;
 }
 
-std::wstring GetPathToProgram() {
+std::wstring GetProgramPath() {
     std::wstring out(MAX_PATH, L'\0');
     DWORD size = GetModuleFileNameW(nullptr, out.data(), MAX_PATH);
 
@@ -92,39 +92,6 @@ std::wstring GetPathToProgram() {
 
     return out;
 }
-
-class CLibrary
-{
-public:
-    explicit CLibrary(const std::wstring& name) {
-        m_ptr = LoadLibraryExW(name.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
-        if (!m_ptr) {
-            throw std::runtime_error(
-                std::format("Failed to load library \"{}\":\n\n{}", Narrow(name), GetLastErrorMessage())
-            );
-        }
-    }
-
-    ~CLibrary() { FreeLibrary(m_ptr); }
-
-    CLibrary(const CLibrary&) = delete;
-    CLibrary(CLibrary&&) = delete;
-    CLibrary& operator=(const CLibrary&) = delete;
-    CLibrary& operator=(CLibrary&&) = delete;
-
-    [[nodiscard]] void* GetFunctionAddress(const std::string& name) const {
-        const auto function = reinterpret_cast<void*>(GetProcAddress(m_ptr, name.c_str()));
-        if (!function) {
-            throw std::runtime_error(
-                std::format("Failed to load \"{}\" function from dll:\n\n{}", name, GetLastErrorMessage())
-            );
-        }
-        return function;
-    }
-
-private:
-    HMODULE m_ptr = nullptr;
-};
 
 class CArgFix
 {
@@ -153,7 +120,7 @@ private:
 
         ~CWArgv() {
             if (m_ptr) {
-                LocalFree(static_cast<void*>(m_ptr));
+                LocalFree(m_ptr);
             }
         }
 
@@ -197,12 +164,24 @@ int WINAPI WinMain(
     _In_ int /*nShowCmd*/
 ) {
     try {
-        std::filesystem::path rootDir { GetPathToProgram() };
+        std::filesystem::path rootDir { GetProgramPath() };
         rootDir.remove_filename();
 
-        const CLibrary core(rootDir / L"bin" / L"core.dll");
+        const std::wstring libCorePath = rootDir / L"bin" / L"core.dll";
 
-        const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
+        const HINSTANCE core = LoadLibraryExW(libCorePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if (!core) {
+            throw std::runtime_error(
+                std::format("Failed to load library:\n{}\n\n{}\n", Narrow(libCorePath), GetLastErrorMessage())
+            );
+        }
+
+        const auto main = reinterpret_cast<main_t>(GetProcAddress(core, "CoreInit"));
+        if (!main) {
+            throw std::runtime_error(
+                std::format("Failed to load library entry point:\n{}\n\n{}\n", Narrow(libCorePath), GetLastErrorMessage())
+            );
+        }
 
         // converts wide argv to narrow argv
         int argc = 0;
@@ -214,8 +193,13 @@ int WINAPI WinMain(
             const int ret = main(argc, argv);
             return ret;
         } catch (const std::exception& e) {
-            // alloc new exception because caught exception becomes invalid due to FreeLibrary(core)
-            std::rethrow_exception(std::make_exception_ptr(e));
+            MessageBoxW(
+                nullptr,
+                Widen(e.what()).c_str(),
+                L"Error!",
+                MB_OK | MB_ICONERROR
+            );
+            return 1;
         }
     } catch (const std::exception& e) {
         MessageBoxW(
@@ -235,22 +219,30 @@ int main(int argc, char** argv) {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();
 
-        void* lib = dlopen((rootDir.string() + "/bin/libcore.so").c_str(), RTLD_NOW);
+        const std::string libCorePath = rootDir / "bin" / "libcore.so";
+
+        void* lib = dlopen(libCorePath.c_str(), RTLD_NOW);
         if (!lib) {
-            throw std::runtime_error(std::string("failed open library: ") + dlerror() + "!\n");
+            throw std::runtime_error(std::format("Failed load library:\n{}\n\n{}\n"), libCorePath, dlerror());
         }
 
-        auto main = (main_t)dlsym(lib, "CoreInit");
+        auto main = reinterpret_cast<main_t>(dlsym(lib, "CoreInit"));
         if (!main) {
             throw std::runtime_error(
-                std::string("Failed to load the launcher entry proc: ") +
-                dlerror()
+                std::format("Failed to load library entry point:\n{}\n\n{}\n", libCorePath, dlerror())
             );
         }
 
-        int ret = main(argc, argv);
+        try {
+            int ret = main(argc, argv);
+            dlclose(lib);
+            return ret;
+        } catch (const std::exception& e) {
+            std::cout << e.what() << std::endl;
+        }
+
         dlclose(lib);
-        return ret;
+        return 1;
     } catch (const std::exception& e) {
         std::cout << e.what() << std::endl;
         return 1;

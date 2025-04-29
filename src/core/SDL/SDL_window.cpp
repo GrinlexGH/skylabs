@@ -10,10 +10,6 @@
 
 namespace SDL {
 CVulkanWindow::CVulkanWindow(const char* title, const int w, const int h, SDL_WindowFlags flags) {
-    if (!SDL_WasInit(SDL_INIT_VIDEO)) {
-        throw std::runtime_error("Failed to create SDL window. SDL_Video was not initialized!");
-    }
-
     flags |= SDL_WINDOW_VULKAN;
     m_ptr = SDL_CreateWindow(title, w, h, flags);
     if (!m_ptr) {

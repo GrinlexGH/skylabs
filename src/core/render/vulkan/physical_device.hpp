@@ -4,7 +4,7 @@
 #include "../renderer.hpp"
 #include "instance.hpp"
 #include "console.hpp"
-#include "extensions/extensions.hpp"
+#include "extensions.hpp"
 
 namespace Vulkan {
 class CPhysicalDevice

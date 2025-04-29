@@ -23,8 +23,8 @@ public:
     [[nodiscard]] const CDevice* Device() const { return m_device.get(); }
     [[nodiscard]] const CPhysicalDevice* PhysicalDevice() const { return m_selectedPhysicalDevice; }
 
-    [[nodiscard]] vk::SurfaceKHR CreateSurface() const { return m_window && m_instance ? m_window->CreateSurface(m_instance->GetHandle()) : VK_NULL_HANDLE; }
-    void DestroySurface(vk::SurfaceKHR& surface) const { if (m_window && m_instance) { m_window->DestroySurface(m_instance->GetHandle(), surface); } }
+    [[nodiscard]] vk::SurfaceKHR CreateSurface() const { return m_window->CreateSurface(m_instance->GetHandle()); }
+    void DestroySurface(vk::SurfaceKHR& surface) const { m_window->DestroySurface(m_instance->GetHandle(), surface); }
 
 private:
     void CreateInstance();

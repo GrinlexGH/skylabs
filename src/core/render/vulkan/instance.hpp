@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "vulkan_window.hpp"
-#include "extensions/extensions.hpp"
+#include "extensions.hpp"
 
 namespace Vulkan {
 class CPhysicalDevice;
@@ -27,8 +27,6 @@ public:
     [[nodiscard]] std::uint32_t ApiVersion() const { return m_apiVersion; }
 
     CPhysicalDevice* GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
-
-    explicit operator vk::Instance() const { return m_handle; }
 
 private:
     void QueryPhysicalDevices();
