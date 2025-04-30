@@ -176,7 +176,7 @@ int WINAPI WinMain(
             );
         }
 
-        const auto main = reinterpret_cast<main_t>(GetProcAddress(core, "CoreInit"));
+        const auto main = reinterpret_cast<main_t>(GetProcAddress(core, "CoreMain"));
         if (!main) {
             throw std::runtime_error(
                 std::format("Failed to load library entry point:\n{}\n\n{}\n", Narrow(libCorePath), GetLastErrorMessage())
@@ -223,13 +223,13 @@ int main(int argc, char** argv) {
 
         void* lib = dlopen(libCorePath.c_str(), RTLD_NOW);
         if (!lib) {
-            throw std::runtime_error(std::format("Failed load library:\n{}\n\n{}\n"), libCorePath, dlerror());
+            throw std::runtime_error(std::format("Failed load library:\n{}\n\n{}\n", libCorePath, dlerror()));
         }
 
-        auto main = reinterpret_cast<main_t>(dlsym(lib, "CoreInit"));
+        auto main = reinterpret_cast<main_t>(dlsym(lib, "CoreMain"));
         if (!main) {
             throw std::runtime_error(
-                std::format("Failed to load library entry point:\n{}\n\n{}\n", libCorePath, dlerror())
+                std::format("Failed to load library entry point:\n{}\n", dlerror())
             );
         }
 

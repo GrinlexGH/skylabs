@@ -10,6 +10,6 @@ build/*
 out
 
 # Third party compiled libs
-libs/bin/posix/*
+libs/bin/unix/*
 libs/bin/windows/*
 **/build/

@@ -4,8 +4,7 @@ namespace App::Metadata {
     constexpr char NAME[] = "@APP_NAME@";
     constexpr char COMPANY[] = "@APP_COMPANY@";
     constexpr char COPYRIGHT[] = "@APP_COPYRIGHT@";
-    constexpr char VERSION[] = "@APP_VERSION_MAJOR@.@APP_VERSION_MINOR@.@APP_VERSION_PATCH@.@APP_VERSION_TWEAK@";
-    constexpr char GIT_COMMIT[] = "@GIT_HASH@";
+    constexpr char VERSION[] = "@APP_VERSION@";
     constexpr char HOMEPAGE[] = "@APP_HOMEPAGE@";
 
     constexpr int VERSION_MAJOR = @APP_VERSION_MAJOR@;
