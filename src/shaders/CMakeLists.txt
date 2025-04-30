@@ -7,80 +7,81 @@ set(SHADERS
     shader.comp.glsl
 )
 
-set(SHADER_BINARY_DIR ${ROOT_OUTPUT_DIRECTORY}/shaders)
+foreach(SHADER ${SHADERS})
+    get_filename_component(SHADER_NAME "${SHADER}" NAME)
+    get_filename_component(SHADER_NAME_WE "${SHADER}" NAME_WE)
+    get_filename_component(SHADER_DIR "${SHADER}" DIRECTORY)
 
-add_custom_command(
-    MAIN_DEPENDENCY ${SHADER_BINARY_DIR}
-    OUTPUT ${SHADER_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_BINARY_DIR}
-    VERBATIM
-)
+    if(SHADER_DIR STREQUAL "")
+        set(SHADER_OUT_DIR "${SHADER_OUTPUT_DIRECTORY}")
+    else()
+        set(SHADER_OUT_DIR "${SHADER_OUTPUT_DIRECTORY}/${SHADER_DIR}")
+    endif()
 
-if(USE_GLSLC)
-    foreach(SHADER ${SHADERS})
-        get_filename_component(SHADER_NAME ${SHADER} NAME)
+    file(MAKE_DIRECTORY ${SHADER_OUT_DIR})
 
-        string(REGEX MATCH "([^.]+)\\.glsl$" _ ${SHADER_NAME})
-        if(NOT CMAKE_MATCH_1)
-            message(WARNING "Invalid shader name format: ${SHADER_NAME}")
-            continue()
-        endif()
-        set(SHADER_STAGE_SUFFIX ${CMAKE_MATCH_1})
+    # Get shader stage suffix from extension
+    # shader.comp.glsl -> comp
+    string(REGEX REPLACE ".*\\.([^.]+)\\.glsl$" "\\1" SHADER_STAGE_SUFFIX "${SHADER_NAME}")
+    string(TOLOWER "${SHADER_STAGE_SUFFIX}" SHADER_STAGE_SUFFIX)
 
-        if(SHADER_STAGE_SUFFIX STREQUAL "vert")
-            set(SHADER_STAGE "vertex")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "frag")
-            set(SHADER_STAGE "fragment")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "comp")
-            set(SHADER_STAGE "compute")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "tesc")
-            set(SHADER_STAGE "tesscontrol")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "tese")
-            set(SHADER_STAGE "tesseval")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "geom")
-            set(SHADER_STAGE "geometry")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "mesh")
-            set(SHADER_STAGE "mesh")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "task")
-            set(SHADER_STAGE "task")
-        elseif(SHADER_STAGE_SUFFIX STREQUAL "rgen")
-            set(SHADER_STAGE "rgen")
-        else()
-            message(WARNING "Unknown shader stage suffix: ${SHADER_STAGE_SUFFIX}")
-            continue()
-        endif()
+    # Same as [ "vert", "vertex",  "frag", "fragment" ]
+    set(STAGE_MAP
+        "vert;vertex"
+        "frag;fragment"
+        "comp;compute"
+        "tesc;tesscontrol"
+        "tese;tesseval"
+        "geom;geometry"
+        "mesh;mesh"
+        "task;task"
+        "rgen;rgen"
+    )
 
-        get_filename_component(SHADER_NAME_WE ${SHADER} NAME_WE)
-        set(SHADER_OUT_NAME "${SHADER_BINARY_DIR}/${SHADER_NAME_WE}.${SHADER_STAGE_SUFFIX}.spv")
-        list(APPEND SHADER_OUT_NAMES ${SHADER_OUT_NAME})
+    list(FIND STAGE_MAP "${SHADER_STAGE_SUFFIX}" STAGE_INDEX)
 
+    if(NOT STAGE_INDEX EQUAL -1)
+        # Get list element after stage suffix
+        math(EXPR STAGE_INDEX "${STAGE_INDEX} + 1")
+        list(GET STAGE_MAP ${STAGE_INDEX} SHADER_STAGE)
+    else()
+        message(WARNING "Unknown shader stage suffix: ${SHADER_STAGE_SUFFIX}")
+        continue()
+    endif()
+
+    set(SHADER_OUT_NAME "${SHADER_OUT_DIR}/${SHADER_NAME_WE}.${SHADER_STAGE_SUFFIX}.spv")
+    list(APPEND SHADER_OUT_NAMES "${SHADER_OUT_NAME}")
+
+    if(USE_GLSLC)
         add_custom_command(
-            OUTPUT ${SHADER_OUT_NAME}
-            DEPENDS ${SHADER}
+            OUTPUT "${SHADER_OUT_NAME}"
             COMMAND Vulkan::glslc
                 "-fshader-stage=${SHADER_STAGE}"
-                ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}
-                -o ${SHADER_OUT_NAME}
+                "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}"
+                -o "${SHADER_OUT_NAME}"
+            DEPENDS "${SHADER}"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
             COMMENT "Compiling ${SHADER_NAME} [${SHADER_STAGE}]"
             VERBATIM
         )
-    endforeach()
-else()
-    foreach(SHADER ${SHADERS})
-        get_filename_component(SHADER_NAME ${SHADER} NAME)
-        set(SHADER_OUT_NAME "${SHADER_BINARY_DIR}/${SHADER_NAME}.spv")
-        list(APPEND SHADER_OUT_NAMES ${SHADER_OUT_NAME})
+    else()
         add_custom_command(
-            MAIN_DEPENDENCY ${SHADER}
-            OUTPUT ${SHADER_OUT_NAME}
-            COMMAND Vulkan::glslangValidator -V ${SHADER} "-o" ${SHADER_OUT_NAME}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            OUTPUT "${SHADER_OUT_NAME}"
+            COMMAND Vulkan::glslangValidator
+                -V "${SHADER}"
+                -o "${SHADER_OUT_NAME}"
+            DEPENDS "${SHADER}"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Compiling ${SHADER_NAME}"
             VERBATIM
         )
-    endforeach()
-endif()
+    endif()
+endforeach()
 
-add_custom_target(${CURRENT_TARGET_NAME} DEPENDS ${SHADER_OUT_NAMES})
+add_custom_target(${CURRENT_TARGET_NAME}
+    DEPENDS ${SHADER_OUT_NAMES}
+    SOURCES ${SHADERS}
+)
 
 foreach(FILE IN LISTS SHADERS)
     get_filename_component(SOURCE_PATH "${FILE}" PATH)

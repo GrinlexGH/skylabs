@@ -24,13 +24,13 @@ set_target_properties(${CURRENT_TARGET_NAME}
     LIBRARY_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
 )
 
-# set project as startup project
+# Set project as startup project
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
     set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 endif()
 
-# copy all third party libraries here
+# Copy all third party libraries here
 add_custom_command(
     TARGET ${CURRENT_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory

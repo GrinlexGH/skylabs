@@ -39,7 +39,7 @@ set(SOURCES
     SDL/SDL.hpp
 )
 
-add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
+add_library(${CURRENT_TARGET_NAME} MODULE ${SOURCES})
 
 foreach(FILE IN LISTS SOURCES)
     get_filename_component(SOURCE_PATH "${FILE}" PATH)

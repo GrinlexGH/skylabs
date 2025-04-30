@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(PROJECT_NAME "Skylabs" HOMEPAGE_URL "https://grinlexstudios.ru")
+set(PROJECT_NAME "Skylabs")
 
-project(${PROJECT_NAME} VERSION 0.0.0.0 LANGUAGES CXX C)
+project(${PROJECT_NAME} HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0.0 LANGUAGES CXX C)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
@@ -31,26 +31,17 @@ endif()
 set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
 set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
 set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
+set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/${CMAKE_BUILD_TYPE}/shaders)
 
 # If you want to compile dependencies with default options, just configure this project.
 # If you want to compile dependencies with custom options, run build_dependencies.cmd(.sh)
 # with cmake options as arguments and after that configure this project.
 # If you want to use your own libraries, then put them into libs/bin/*platform*/*lib name* folder
 if(WIN32)
-    add_custom_command(
-        OUTPUT ${PROJECT_SOURCE_DIR}/libs/bin/windows
-        COMMAND ${CMAKE_COMMAND} make_directory ${PROJECT_SOURCE_DIR}/libs/bin/windows
-        VERBATIM
-    )
     set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
     set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
     include_directories(${PROJECT_SOURCE_DIR}/libs/bin/windows)
 else()
-    add_custom_command(
-        OUTPUT ${PROJECT_SOURCE_DIR}/libs/bin/unix
-        COMMAND ${CMAKE_COMMAND} make_directory ${PROJECT_SOURCE_DIR}/libs/bin/unix
-        VERBATIM
-    )
     set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
     set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/unix)
     include_directories(${PROJECT_SOURCE_DIR}/libs/bin/unix)

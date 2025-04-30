@@ -53,8 +53,8 @@ PUBLIC_INTERFACE void ParseCommandLineArguments(const int argc, char* /*argv*/[]
 //     -AudioLanguage Russian -AudioLanguage English \  (перезаписать значение)
 //     -AudioLanguage English,Russian \                 (ахуеть и выдать варнинг)
 //     "Out\my dir\" \                                  (понять что это всё пути и типа -game)
-//     "C:\Out\my dir\" \
-//     ..\
+//     "C:\Out\my dir\" \                               (понять что это путь и типа -game)
+//     ..\                                              (понять что это путь и типа -game)
 //     scene.tsn \                                      (понять что это сцена и сразу запустить сцену)
 //     -tools -particle-editor \                        (понять что particle editor нужно включить)
 //     -particle-editor                                 (без -tools ахуеть)
