@@ -49,13 +49,16 @@ void CRenderContext::CreateLogicalDevice() {
 #endif
     };
 
-    deviceExtensions.reserve(vmaExtensions.size() + 1);
+    deviceExtensions.reserve(vmaExtensions.size() + 2);
 
     for (auto extName : vmaExtensions) {
         deviceExtensions[extName] = false;
     }
 
     deviceExtensions[VK_KHR_SWAPCHAIN_EXTENSION_NAME] = true;
+#ifdef DEBUG
+    deviceExtensions[VK_EXT_device_address_binding_report] = true;
+#endif
 
     m_device = std::make_unique<CDevice>(
         *m_instance,

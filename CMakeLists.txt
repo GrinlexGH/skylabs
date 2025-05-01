@@ -28,10 +28,10 @@ else()
     message(WARNING "${PROJECT_NAME} compiles only on gcc, clang, apple clang or msvc! I have no idea if everything is going to be okay")
 endif()
 
-set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
+set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/)
 set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
-set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
-set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/${CMAKE_BUILD_TYPE}/shaders)
+set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
+set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
 
 # If you want to compile dependencies with default options, just configure this project.
 # If you want to compile dependencies with custom options, run build_dependencies.cmd(.sh)
