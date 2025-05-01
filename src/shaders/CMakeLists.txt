@@ -12,13 +12,7 @@ foreach(SHADER ${SHADERS})
     get_filename_component(SHADER_NAME_WE "${SHADER}" NAME_WE)
     get_filename_component(SHADER_DIR "${SHADER}" DIRECTORY)
 
-    if(SHADER_DIR STREQUAL "")
-        set(SHADER_OUT_DIR "${SHADER_OUTPUT_DIRECTORY}")
-    else()
-        set(SHADER_OUT_DIR "${SHADER_OUTPUT_DIRECTORY}/${SHADER_DIR}")
-    endif()
-
-    file(MAKE_DIRECTORY ${SHADER_OUT_DIR})
+    set(SHADER_OUT_DIR "${SHADER_OUTPUT_DIRECTORY}/${SHADER_DIR}")
 
     # Get shader stage suffix from extension
     # shader.comp.glsl -> comp
@@ -52,30 +46,17 @@ foreach(SHADER ${SHADERS})
     set(SHADER_OUT_NAME "${SHADER_OUT_DIR}/${SHADER_NAME_WE}.${SHADER_STAGE_SUFFIX}.spv")
     list(APPEND SHADER_OUT_NAMES "${SHADER_OUT_NAME}")
 
-    if(USE_GLSLC)
-        add_custom_command(
-            OUTPUT "${SHADER_OUT_NAME}"
-            COMMAND Vulkan::glslc
-                "-fshader-stage=${SHADER_STAGE}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}"
-                -o "${SHADER_OUT_NAME}"
-            DEPENDS "${SHADER}"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            COMMENT "Compiling ${SHADER_NAME} [${SHADER_STAGE}]"
-            VERBATIM
-        )
-    else()
-        add_custom_command(
-            OUTPUT "${SHADER_OUT_NAME}"
-            COMMAND Vulkan::glslangValidator
-                -V "${SHADER}"
-                -o "${SHADER_OUT_NAME}"
-            DEPENDS "${SHADER}"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            COMMENT "Compiling ${SHADER_NAME}"
-            VERBATIM
-        )
-    endif()
+    add_custom_command(
+        OUTPUT "${SHADER_OUT_NAME}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUT_DIR}
+        COMMAND Vulkan::glslc
+            "-fshader-stage=${SHADER_STAGE}"
+            "${SHADER}"
+            -o "${SHADER_OUT_NAME}"
+        DEPENDS "${SHADER}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Compiling ${SHADER} [${SHADER_STAGE}]"
+    )
 endforeach()
 
 add_custom_target(${CURRENT_TARGET_NAME}
