@@ -155,6 +155,10 @@ private:
     std::vector<char*> m_args;
     std::vector<std::string> m_argValues;
 };
+
+void* GetFunctionAddress(HINSTANCE lib, const char* funcName) {
+    return reinterpret_cast<void*>(GetProcAddress(lib, funcName));
+}
 }
 
 int WINAPI WinMain(
@@ -176,7 +180,7 @@ int WINAPI WinMain(
             );
         }
 
-        const auto main = reinterpret_cast<main_t>(GetProcAddress(core, "CoreMain"));
+        const auto main = reinterpret_cast<main_t>(GetFunctionAddress(core, "CoreMain"));
         if (!main) {
             throw std::runtime_error(
                 std::format("Failed to load library entry point:\n{}\n\n{}\n", Narrow(libCorePath), GetLastErrorMessage())

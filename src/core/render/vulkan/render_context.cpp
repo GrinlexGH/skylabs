@@ -56,8 +56,9 @@ void CRenderContext::CreateLogicalDevice() {
     }
 
     deviceExtensions[VK_KHR_SWAPCHAIN_EXTENSION_NAME] = true;
+
 #ifdef DEBUG
-    deviceExtensions[VK_EXT_device_address_binding_report] = true;
+    deviceExtensions[VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME] = true;
 #endif
 
     m_device = std::make_unique<CDevice>(
