@@ -1,6 +1,6 @@
 #include "swapchain.hpp"
 
-#include "console.hpp"
+#include "logging.hpp"
 #include "render_context.hpp"
 
 namespace {

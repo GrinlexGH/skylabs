@@ -12,6 +12,7 @@ public:
     CGlobalContext& operator=(CGlobalContext&&) = delete;
     ~CGlobalContext();
 
+private:
     static int m_refCount;
 };
 
@@ -27,6 +28,6 @@ public:
     ~CSubSystemContext();
 
 private:
-    SDL_InitFlags m_subSystems = 0;
+    SDL_InitFlags m_subSystems;
 };
 }

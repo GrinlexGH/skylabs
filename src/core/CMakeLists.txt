@@ -36,7 +36,6 @@ set(SOURCES
     SDL/SDL_window.cpp
     SDL/SDL_window.hpp
     SDL/SDL_video.hpp
-    SDL/SDL.hpp
 )
 
 add_library(${CURRENT_TARGET_NAME} MODULE ${SOURCES})

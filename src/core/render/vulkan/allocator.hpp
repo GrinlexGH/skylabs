@@ -1,6 +1,8 @@
 #pragma once
 #include "vulkan.hpp"
 
+#include <vk_mem_alloc.hpp>
+
 namespace Vulkan {
 class CAllocator
 {

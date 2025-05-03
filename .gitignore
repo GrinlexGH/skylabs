@@ -1,8 +1,7 @@
 # Tools
 .cache/
 .PVS-Studio/
-.vscode/*
-!.vscode/launch.json
+.vscode/
 .vs/
 
 # Build folders

@@ -11,7 +11,7 @@ set(SOURCES
     app_metadata.hpp
     application.hpp
     application.cpp
-    console.hpp
+    logging.hpp
     commandline.hpp
     commandline.cpp
     export.hpp
