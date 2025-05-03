@@ -1,7 +1,7 @@
 #include "commandline.hpp"
 #include "launcher.hpp"
 #include "export.hpp"
-#include "console.hpp"
+#include "logging.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>

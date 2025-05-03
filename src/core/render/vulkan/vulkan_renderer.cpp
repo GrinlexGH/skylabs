@@ -1,10 +1,10 @@
 #include "vulkan_renderer.hpp"
 
-#include "console.hpp"
+#include "logging.hpp"
 
 CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     if (window == nullptr) {
-        throw CRendererError("Cannot initialize vulkan renderer. Window is nullptr");
+        throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
     }
 
     m_context = std::make_unique<Vulkan::CRenderContext>(window);

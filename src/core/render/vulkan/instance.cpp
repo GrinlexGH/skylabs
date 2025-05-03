@@ -151,7 +151,7 @@ CInstance::CInstance(
         for (const auto name : missingExtensions) {
             error << '\t' << name << '\n';
         }
-        throw CRendererError(error.str());
+        throw std::runtime_error(error.str());
     }
 
     //====================
@@ -187,6 +187,7 @@ CInstance::CInstance(
 #ifdef DEBUG
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
         {},
+
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
@@ -194,8 +195,7 @@ CInstance::CInstance(
 
         vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
         vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding,
+        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
 
         DebugCallback
     };
@@ -230,7 +230,7 @@ CInstance::CInstance(
 void CInstance::QueryPhysicalDevices() {
     std::vector<vk::PhysicalDevice> physicalDevices = m_handle.enumeratePhysicalDevices();
     if (physicalDevices.empty()) {
-        throw CRendererError("Couldn't find a physical device that supports Vulkan!");
+        throw std::runtime_error("Couldn't find a physical device that supports Vulkan!");
     }
 
     for (vk::PhysicalDevice& physicalDevice : physicalDevices) {

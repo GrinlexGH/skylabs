@@ -1,6 +1,6 @@
 #include "render_context.hpp"
 
-#include "console.hpp"
+#include "logging.hpp"
 
 namespace Vulkan {
 CRenderContext::CRenderContext(const IVulkanWindow* const window) : m_window(window) {
@@ -58,7 +58,7 @@ void CRenderContext::CreateLogicalDevice() {
     deviceExtensions[VK_KHR_SWAPCHAIN_EXTENSION_NAME] = true;
 
 #ifdef DEBUG
-    deviceExtensions[VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME] = true;
+    deviceExtensions[VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME] = false;
 #endif
 
     m_device = std::make_unique<CDevice>(

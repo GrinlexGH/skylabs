@@ -1,7 +1,7 @@
 #include "launcher.hpp"
 
-#include "SDL/SDL.hpp"
-#include "console.hpp"
+#include "SDL/SDL_context.hpp"
+#include "SDL/SDL_window.hpp"
 #include "camera.hpp"
 #include "render/vulkan/vulkan_renderer.hpp"
 

@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <format>
 
-#include <console.hpp>
+#include "logging.hpp"
 
 namespace SDL {
 CVulkanWindow::CVulkanWindow(const char* title, const int w, const int h, SDL_WindowFlags flags) {

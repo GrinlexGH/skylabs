@@ -1,7 +1,8 @@
 #include "SDL_context.hpp"
 
 #include <SDL3/SDL.h>
-#include <app_metadata.hpp>
+#include "app_metadata.hpp"
+#include "logging.hpp"
 
 #include <stdexcept>
 #include <format>
@@ -19,8 +20,11 @@ CGlobalContext::CGlobalContext() {
         SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING, "game");
 
         if (!SDL_Init(0)) {
+            SDL_Quit();
             throw std::runtime_error(std::format("Failed to initialize SDL: {}!", SDL_GetError()));
         }
+    } else {
+        Log::Warning("SDL already initialized {} time(s).", m_refCount);
     }
 
     ++m_refCount;
