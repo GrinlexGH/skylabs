@@ -3,6 +3,7 @@
 .PVS-Studio/
 .vscode/
 .vs/
+.idea/
 
 # Build folders
 build/*

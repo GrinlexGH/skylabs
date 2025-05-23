@@ -111,7 +111,7 @@ private:
     class CWArgv
     {
     public:
-        CWArgv() {
+        explicit CWArgv() {
             m_ptr = CommandLineToArgvW(GetCommandLineW(), &m_argc);
             if (!m_ptr) {
                 throw std::runtime_error("Could not get command line!");
@@ -133,12 +133,12 @@ private:
         const wchar_t* operator[](const std::size_t i) const { return m_ptr[i]; }
 
     private:
-        wchar_t** m_ptr;
-        int m_argc;
+        wchar_t** m_ptr = nullptr;
+        int m_argc = 0;
     };
 
     void FixArgs(int& argc, char**& argv) {
-        const CWArgv wArgv;
+        const CWArgv wArgv {};
 
         m_args.resize(wArgv.size() + 1, nullptr);
         m_argValues.resize(wArgv.size());
@@ -156,7 +156,7 @@ private:
     std::vector<std::string> m_argValues;
 };
 
-void* GetFunctionAddress(HINSTANCE lib, const char* funcName) {
+void* GetFunctionAddress(const HINSTANCE lib, const char* funcName) {
     return reinterpret_cast<void*>(GetProcAddress(lib, funcName));
 }
 }
