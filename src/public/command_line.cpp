@@ -1,9 +1,11 @@
-#include "commandline.hpp"
+#include "command_line.hpp"
 
-PUBLIC_INTERFACE void ParseCommandLineArguments(const int argc, char* /*argv*/[]) {
+namespace CommandLine {
+PUBLIC_INTERFACE void ParseArguments(const int argc, char* /*argv*/[]) {
     for (int i = 0; i < argc; ++i) {
         
     }
+}
 }
 
 // Принципы обработки

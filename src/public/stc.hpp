@@ -28,7 +28,7 @@ SOFTWARE.
 #include <limits>
 #include <cstdint>
 
-#include "export.hpp"
+#include "dll_export.hpp"
 
 namespace stc {
     enum _color_modes : std::uint8_t {
@@ -345,7 +345,7 @@ namespace stc {
         _color_data { 238, 238, 238, 255 /*Grey93*/ }
     };
 
-    constexpr float _color_distance(const int r, const int g, const int b, const _color_data color) {
+    constexpr float _color_distance(const int r, const int g, const int b, const _color_data& color) {
         // approximate color distance using redmean
         // (https://en.wikipedia.org/wiki/Color_difference)
         const auto red_difference = static_cast<float>(color.r - r);

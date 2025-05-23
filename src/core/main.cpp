@@ -1,14 +1,15 @@
-#include "commandline.hpp"
+#include "command_line.hpp"
 #include "launcher.hpp"
-#include "export.hpp"
+#include "dll_export.hpp"
 #include "logging.hpp"
+#include "os.hpp"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
 #include <cstdio>
 #include <iostream>
 
-#include <stc.hpp>
+#include "stc.hpp"
 
 namespace {
 BOOL CtrlHandler(DWORD /*fdwCtrlType*/) {
@@ -44,7 +45,7 @@ void SetupConsole() {
 #endif
 
 extern "C" DLL_EXPORT int CoreMain(const int argc, char* argv[]) {
-    ParseCommandLineArguments(argc, argv);
+    CommandLine::ParseArguments(argc, argv);
 
 #ifdef PLATFORM_WINDOWS
     SetupConsole();
@@ -53,8 +54,8 @@ extern "C" DLL_EXPORT int CoreMain(const int argc, char* argv[]) {
     CLauncher launcher;
     launcher.Run();
 
-    Log::Info("Press Enter to exit.");
-    std::cin.ignore();
+    Log::Info("Press any key to exit.");
+    OS::WaitAnyKey();
 
     return 0;
 }
