@@ -1,7 +1,7 @@
 #include "launcher.hpp"
 
-#include "SDL/SDL_context.hpp"
-#include "SDL/SDL_window.hpp"
+#include "SDL/context.hpp"
+#include "SDL/window.hpp"
 #include "camera.hpp"
 #include "render/vulkan/vulkan_renderer.hpp"
 
@@ -74,8 +74,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
 }
 
 void CLauncher::Main() {
-    SDL::CGlobalContext context;
-    SDL::CSubSystemContext video(SDL_INIT_VIDEO);
+    SDL::CContext sdl(SDL_INIT_VIDEO);
 
     const SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
     SDL_SetWindowRelativeMouseMode(window.m_ptr, true);
@@ -84,5 +83,6 @@ void CLauncher::Main() {
     if (!renderer) {
         throw std::runtime_error("Cannot initialize vulkan!\n");
     }
+
     MainLoop(renderer);
 }

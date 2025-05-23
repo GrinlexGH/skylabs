@@ -1,11 +1,10 @@
-#include "SDL_window.hpp"
-
-#include "SDL_vulkan.hpp"
-#include "SDL_video.hpp"
+#include "window.hpp"
 
 #include <stdexcept>
 #include <format>
 
+#include "vulkan.hpp"
+#include "video.hpp"
 #include "logging.hpp"
 
 namespace SDL {
@@ -14,12 +13,6 @@ CVulkanWindow::CVulkanWindow(const char* title, const int w, const int h, SDL_Wi
     m_ptr = SDL_CreateWindow(title, w, h, flags);
     if (!m_ptr) {
         throw std::runtime_error(std::format("Failed to create SDL window: {}!", SDL_GetError()));
-    }
-}
-
-CVulkanWindow::~CVulkanWindow() {
-    if (m_ptr) {
-        SDL_DestroyWindow(m_ptr);
     }
 }
 
@@ -44,7 +37,13 @@ void CVulkanWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR&
     surface = VK_NULL_HANDLE;
 }
 
-void CVulkanWindow::GetDrawableSize(int* w, int* h) {
+void CVulkanWindow::GetDrawableSize(int* w, int* h) const {
     GetWindowSizeInPixels(m_ptr, w, h);
+}
+
+CVulkanWindow::~CVulkanWindow() {
+    if (m_ptr) {
+        SDL_DestroyWindow(m_ptr);
+    }
 }
 }

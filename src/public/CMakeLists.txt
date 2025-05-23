@@ -2,13 +2,13 @@
 set(CURRENT_TARGET_NAME public)
 
 configure_file(
-    ${PROJECT_SOURCE_DIR}/cmake/app_metadata.hpp.in
-    ${CMAKE_CURRENT_SOURCE_DIR}/app_metadata.hpp
+    ${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/project_info.hpp
     @ONLY
 )
 
 set(SOURCES
-    app_metadata.hpp
+    project_info.hpp
     application.hpp
     application.cpp
     logging.hpp
