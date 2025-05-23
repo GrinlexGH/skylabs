@@ -206,15 +206,15 @@ CInstance::CInstance(
 #endif
 
     //====================
-    vk::InstanceCreateInfo instanceCreateInfo;
-    instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.enabledExtensionCount = static_cast<std::uint32_t>(m_enabledExtensions.size());
-    instanceCreateInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
-    instanceCreateInfo.enabledLayerCount = static_cast<std::uint32_t>(enabledLayers.size());
-    instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
-    instanceCreateInfo.pNext = pNext;
+    vk::InstanceCreateInfo createInfo;
+    createInfo.pApplicationInfo = &appInfo;
+    createInfo.enabledExtensionCount = static_cast<std::uint32_t>(m_enabledExtensions.size());
+    createInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
+    createInfo.enabledLayerCount = static_cast<std::uint32_t>(enabledLayers.size());
+    createInfo.ppEnabledLayerNames = enabledLayers.data();
+    createInfo.pNext = pNext;
 
-    m_handle = createInstance(instanceCreateInfo);
+    m_handle = createInstance(createInfo);
     VULKAN_HPP_DEFAULT_DISPATCHER.init(m_handle);
 
     //====================

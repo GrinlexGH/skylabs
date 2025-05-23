@@ -1,7 +1,4 @@
 #pragma once
-#include <map>
-
-#include "../renderer.hpp"
 #include "instance.hpp"
 #include "logging.hpp"
 #include "extensions.hpp"
@@ -98,6 +95,7 @@ private:
     const std::vector<vk::QueueFamilyProperties> m_queueFamilies;
     const std::vector<vk::ExtensionProperties> m_extensions;
 
+    // Extensions and features
     std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures {};
     void* m_extensionFeaturePNext = nullptr;
     vk::PhysicalDeviceFeatures m_requiredFeatures {};
