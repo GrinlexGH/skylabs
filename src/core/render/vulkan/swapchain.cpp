@@ -29,16 +29,19 @@ CSwapchain::CSwapchain(
     const CRenderContext* context,
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
-    const vk::PresentModeKHR& vSync,
+    const vk::PresentModeKHR presentMode,
     const vk::SwapchainKHR& oldSwaphchain
 ) : m_context(context)
 {
+    const CDevice* device = context->Device();
+    const vk::PhysicalDevice physicalDevice = context->PhysicalDevice()->GetHandle();
+
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.pNext = nullptr;
     createInfo.surface = surface;
 
     //====================
-    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = m_context->PhysicalDevice()->GetHandle().getSurfaceCapabilitiesKHR(surface);
+    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
     createInfo.minImageCount = std::clamp(
         imageCount,
         surfaceCapabilities.minImageCount,
@@ -46,20 +49,22 @@ CSwapchain::CSwapchain(
     );
 
     //====================
-    const vk::SurfaceFormatKHR chosenSurfaceFormat = ChooseSurfaceFormat(m_context->PhysicalDevice()->GetHandle().getSurfaceFormatsKHR(surface));
-    createInfo.imageFormat = chosenSurfaceFormat.format;
-    createInfo.imageColorSpace = chosenSurfaceFormat.colorSpace;
-    createInfo.imageExtent = surfaceCapabilities.currentExtent;
+    m_info.m_format = ChooseSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
+    createInfo.imageFormat = m_info.m_format.format;
+    createInfo.imageColorSpace = m_info.m_format.colorSpace;
+
+    m_info.m_extent = ChooseSurfaceExtent(surfaceCapabilities);
+    createInfo.imageExtent = m_info.m_extent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
     //====================
-    const std::uint32_t queueFamilyIndices[] = {
-        m_context->Device()->GetGraphicsQueue().GetFamilyIndex(),
-        m_context->Device()->GetPresentQueue().GetFamilyIndex()
+    const std::uint32_t queueFamilyIndices[] {
+        device->GetGraphicsQueue().m_familyIndex,
+        device->GetPresentQueue().m_familyIndex
     };
 
-    if (m_context->Device()->GetGraphicsQueue().GetFamilyIndex() != m_context->Device()->GetPresentQueue().GetFamilyIndex()) {
+    if (device->GetGraphicsQueue().m_familyIndex != device->GetPresentQueue().m_familyIndex) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = 2;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -70,16 +75,60 @@ CSwapchain::CSwapchain(
     //====================
     createInfo.preTransform = surfaceCapabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    createInfo.presentMode = vSync; // Vsync
+    createInfo.presentMode = presentMode;   // VSync
     createInfo.clipped = vk::True;
     createInfo.oldSwapchain = oldSwaphchain;
 
-    m_handle = m_context->Device()->GetHandle().createSwapchainKHR(createInfo);
+    m_handle = device->GetHandle().createSwapchainKHR(createInfo);
+
+    m_images = device->GetHandle().getSwapchainImagesKHR(m_handle);
+    m_imageViews.reserve(m_images.size());
+
+    for (const auto& image : m_images) {
+        vk::ImageViewCreateInfo imageViewInfo {};
+        imageViewInfo.image = image;
+        imageViewInfo.viewType = vk::ImageViewType::e2D;
+        imageViewInfo.format = m_info.m_format.format;
+        imageViewInfo.components.r = vk::ComponentSwizzle::eIdentity;
+        imageViewInfo.components.g = vk::ComponentSwizzle::eIdentity;
+        imageViewInfo.components.b = vk::ComponentSwizzle::eIdentity;
+        imageViewInfo.components.a = vk::ComponentSwizzle::eIdentity;
+        imageViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        imageViewInfo.subresourceRange.baseMipLevel = 0;
+        imageViewInfo.subresourceRange.levelCount = 1;
+        imageViewInfo.subresourceRange.baseArrayLayer = 0;
+        imageViewInfo.subresourceRange.layerCount = 1;
+
+        m_imageViews.emplace_back(m_context->Device()->GetHandle().createImageView(imageViewInfo));
+    }
+}
+
+vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const {
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        return capabilities.currentExtent;
+    }
+
+    int width, height;
+    m_context->Window()->GetDrawableSize(&width, &height);
+
+    vk::Extent2D actualExtent = {
+        static_cast<std::uint32_t>(width),
+        static_cast<std::uint32_t>(height)
+    };
+
+    actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+    return actualExtent;
 }
 
 CSwapchain::~CSwapchain() {
     if (!m_handle) {
         return;
+    }
+
+    for (const auto& imageView : m_imageViews) {
+        m_context->Device()->GetHandle().destroyImageView(imageView);
     }
 
     m_context->Device()->GetHandle().destroySwapchainKHR(m_handle);
