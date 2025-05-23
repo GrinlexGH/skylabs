@@ -10,5 +10,5 @@ public:
     IWindow& operator=(IWindow&&) = delete;
     virtual ~IWindow() = default;
 
-    virtual void GetDrawableSize(int* w, int* h) = 0;
+    virtual void GetDrawableSize(int* w, int* h) const = 0;
 };

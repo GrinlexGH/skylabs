@@ -8,7 +8,7 @@
 class CVulkanRenderer final : public IRenderer
 {
 public:
-    // window must be valid for the entire lifetime of the renderer
+    // Window must be valid for the entire lifetime of the renderer
     explicit CVulkanRenderer(const IVulkanWindow* window);
     CVulkanRenderer(const CVulkanRenderer&) = delete;
     CVulkanRenderer(CVulkanRenderer&&) noexcept = delete;
