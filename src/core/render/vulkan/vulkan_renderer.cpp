@@ -12,10 +12,8 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     m_surface = std::make_unique<Vulkan::CSurface>(m_context.get());
 
     m_swapchain = std::make_unique<Vulkan::CSwapchain>(
-        m_context.get(),
-        m_surface->GetHandle(),
-        2,
-        vk::PresentModeKHR::eImmediate
+        m_context.get(), m_surface->GetHandle(),
+        2, vk::PresentModeKHR::eImmediate
     );
 }
 
