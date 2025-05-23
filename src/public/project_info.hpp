@@ -1,7 +1,8 @@
 #pragma once
 
-namespace App::Metadata {
+namespace Skylabs {
     constexpr char NAME[] = "Skylabs";
+    constexpr char GAME_NAME[] = "Skylabs";
     constexpr char COMPANY[] = "Grinlex Stydios";
     constexpr char COPYRIGHT[] = "MIT License. Copyright (c) 2025-present Grinlex Stydios";
     constexpr char VERSION[] = "0.0.0.0";

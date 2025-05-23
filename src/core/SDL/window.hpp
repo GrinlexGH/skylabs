@@ -24,7 +24,7 @@ public:
     [[nodiscard]] vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const override;
     void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const override;
 
-    void GetDrawableSize(int* w, int* h) override;
+    void GetDrawableSize(int* w, int* h) const override;
 
     SDL_Window* m_ptr = nullptr;
 };

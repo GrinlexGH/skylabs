@@ -30,12 +30,12 @@ set(SOURCES
     render/vulkan/swapchain.cpp
     render/vulkan/allocator.hpp
     render/vulkan/allocator.cpp
-    SDL/SDL_context.cpp
-    SDL/SDL_context.hpp
-    SDL/SDL_vulkan.hpp
-    SDL/SDL_window.cpp
-    SDL/SDL_window.hpp
-    SDL/SDL_video.hpp
+    SDL/context.cpp
+    SDL/context.hpp
+    SDL/vulkan.hpp
+    SDL/window.cpp
+    SDL/window.hpp
+    SDL/video.hpp
 )
 
 add_library(${CURRENT_TARGET_NAME} MODULE ${SOURCES})
