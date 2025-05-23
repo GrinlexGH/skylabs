@@ -1,96 +1,128 @@
-#!/usr/bin/bash
+#!/bin/bash
+set -euo pipefail
 
 # Author: Grinlex
 
-cd sources
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+BIN_DIR="$ROOT/bin/unix"
+SRC_DIR="$ROOT/sources"
 
-if [ ! -d "../bin/unix/SDL3" ]; then
-    echo "Compiling SDL"
-    cd SDL
-    if [ -d "build" ]; then
-        rm -rf build
+check_git_hash_match() {
+    local SOURCE_DIR="$1"
+    local HASH_FILE="$2"
+
+    local GIT_HASH
+    GIT_HASH=$(git -C "$SOURCE_DIR" rev-parse HEAD)
+
+    if [ -f "$HASH_FILE" ]; then
+        local EXISTING_HASH
+        EXISTING_HASH=$(<"$HASH_FILE")
+        if [ "$EXISTING_HASH" = "$GIT_HASH" ]; then
+            return 0
+        fi
     fi
-    mkdir -p build
-    cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/unix/SDL3" $* ..
-    cmake --build . --config Release --parallel
-    cmake --install . --config Release
-    cd ../
-    rm -rf build
-    cd ../
-fi
 
-if [ ! -d "../bin/unix/glm" ]; then
-    echo "Compiling glm"
-    cd glm
-    if [ -d "build" ]; then
-        rm -rf build
+    return 1
+}
+
+build_library() {
+    local LIB_NAME="$1"
+    local SOURCE_DIR="$2"
+    local INSTALL_DIR="$3"
+    local EXTRA_CMAKE_FLAGS=("${@:4}")
+    local CONFIGS=("Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+    local BUILD_DIR="$SOURCE_DIR/build"
+    local HASH_FILE="$INSTALL_DIR/git_hash.txt"
+
+    if [ -d "$INSTALL_DIR" ] && check_git_hash_match "$SOURCE_DIR" "$HASH_FILE"; then
+        echo "[$LIB_NAME] is up to date."
+        return
     fi
-    mkdir -p build
-    cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DGLM_BUILD_TESTS=OFF -DGLM_ENABLE_CXX_20=ON -DCMAKE_INSTALL_PREFIX="../../../bin/unix/glm" $* ..
-    cmake --build . -- all
-    cmake --build . -- install
-    cd ../
-    rm -rf build
-    cd ../
-fi
 
-if [ ! -d "../bin/unix/VulkanMemoryAllocator" ]; then
-    echo "Compiling VulkanMemoryAllocator"
-    cd VulkanMemoryAllocator
-    if [ -d "build" ]; then
-        rm -rf build
+    echo "Compiling [$LIB_NAME]..."
+
+    rm -rf "$BUILD_DIR"
+    mkdir -p "$BUILD_DIR"
+
+    rm -rf "$INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR"
+
+    for CONFIG in "${CONFIGS[@]}"; do
+        cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE="$CONFIG" \
+            -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
+            "${EXTRA_CMAKE_FLAGS[@]}" \
+            -S "$SOURCE_DIR" \
+            -B "$BUILD_DIR"
+
+        cmake --build "$BUILD_DIR" --config "$CONFIG" --parallel
+        cmake --install "$BUILD_DIR" --config "$CONFIG"
+    done
+
+    rm -rf "$BUILD_DIR"
+
+    git -C "$SOURCE_DIR" rev-parse HEAD > "$HASH_FILE"
+    echo "[$LIB_NAME] has been compiled."
+}
+
+copy_headers_only() {
+    local LIB_NAME="$1"
+    local SOURCE_DIR="$2"
+    local INSTALL_DIR="$3"
+    local HEADER_FILES=("${@:4}")
+    local HASH_FILE="$INSTALL_DIR/git_hash.txt"
+
+    if [ -d "$INSTALL_DIR" ] && check_git_hash_match "$SOURCE_DIR" "$HASH_FILE"; then
+        echo "[$LIB_NAME] is up to date"
+        return
     fi
-    mkdir -p build
-    cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DCMAKE_INSTALL_PREFIX="../../../bin/unix/VulkanMemoryAllocator" $* ..
-    cmake --build . --config Release --parallel
-    cmake --install . --config Release
-    cd ../
-    rm -rf build
-    cd ../
-fi
 
-if [ ! -d "../bin/unix/VulkanMemoryAllocator-Hpp" ]; then
-    echo "Compiling VulkanMemoryAllocator-Hpp"
-    cd VulkanMemoryAllocator-Hpp
-    if [ -d "build" ]; then
-        rm -rf build
-    fi
-    mkdir -p build
-    cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DVMA_HPP_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX="../../../bin/unix/VulkanMemoryAllocator-Hpp" $* ..
-    cmake --build . --config Release --parallel
-    cmake --install . --config Release
-    cd ../
-    rm -rf build
-    cd ../
-fi
+    echo "Copying [$LIB_NAME] library files"
 
-if [ ! -d "../bin/unix/tinyobjloader" ]; then
-    echo "Compiling tinyobjloader"
-    cd tinyobjloader
-    if [ -d "build" ]; then
-        rm -rf build
-    fi
-    mkdir -p build
-    cd build
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../../bin/unix/tinyobjloader" $* ..
-    cmake --build . --config Release --parallel
-    cmake --install . --config Release
-    cd ../
-    rm -rf build
-    cd ../
-fi
+    rm -rf "$INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR"
 
-if [ ! -d "../bin/unix/stb" ]; then
-    echo "Copying stb files"
-    cd stb
-    mkdir -p "../../bin/unix/stb"
-    cp "./stb_image.h" "../../bin/unix/stb/"
-    cd ../
-fi
+    for HEADER in "${HEADER_FILES[@]}"; do
+        cp "$SOURCE_DIR/$HEADER" "$INSTALL_DIR/"
+    done
 
+    git -C "$SOURCE_DIR" rev-parse HEAD > "$HASH_FILE"
+    echo "[$LIB_NAME] has been copied"
+}
+
+build_library "SDL" \
+    "$SRC_DIR/SDL" \
+    "$BIN_DIR/SDL3"
+
+build_library "Boost.Nowide" \
+    "$SRC_DIR/Boost.Nowide" \
+    "$BIN_DIR/nowide" \
+    -DNOWIDE_INSTALL=ON
+
+build_library "SDL_Image" \
+    "$SRC_DIR/SDL_Image" \
+    "$BIN_DIR/SDL3_Image" \
+    -DCMAKE_PREFIX_PATH=$BIN_DIR
+
+build_library "glm" \
+    "$SRC_DIR/glm" \
+    "$BIN_DIR/glm" \
+    -DGLM_BUILD_TESTS=OFF \
+    -DGLM_ENABLE_CXX_20=ON
+
+build_library "VulkanMemoryAllocator" \
+    "$SRC_DIR/VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator" \
+    "$BIN_DIR/VulkanMemoryAllocator" \
+    -DVMA_BUILD_DOCUMENTATION=OFF \
+    -DVMA_BUILD_SAMPLES=OFF
+
+build_library "VulkanMemoryAllocator-Hpp" \
+    "$SRC_DIR/VulkanMemoryAllocator-Hpp" \
+    "$BIN_DIR/VulkanMemoryAllocator-Hpp" \
+    -DVMA_HPP_ENABLE_INSTALL=ON
+
+build_library "tinyobjloader" \
+    "$SRC_DIR/tinyobjloader" \
+    "$BIN_DIR/tinyobjloader"
 
 echo "Done."
