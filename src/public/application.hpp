@@ -1,5 +1,5 @@
 #pragma once
-#include "export.hpp"
+#include "dll_export.hpp"
 
 class PUBLIC_CLASS IApplication
 {

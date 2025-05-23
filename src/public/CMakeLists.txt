@@ -12,11 +12,13 @@ set(SOURCES
     application.hpp
     application.cpp
     logging.hpp
-    commandline.hpp
-    commandline.cpp
-    export.hpp
+    command_line.hpp
+    command_line.cpp
+    dll_export.hpp
     stc.hpp
     stc.cpp
+    os.hpp
+    os.cpp
 )
 
 add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
@@ -34,7 +36,7 @@ set_target_properties(${CURRENT_TARGET_NAME}
     LIBRARY_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
 )
 
-target_compile_definitions(${CURRENT_TARGET_NAME} PRIVATE PUBLIC_DLL_EXPORT)
+target_compile_definitions(${CURRENT_TARGET_NAME} PRIVATE PUBLIC_SOURCE)
 
 target_include_directories(${CURRENT_TARGET_NAME} INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

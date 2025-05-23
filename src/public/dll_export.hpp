@@ -8,7 +8,7 @@
     #define DLL_IMPORT __declspec(dllimport)
 #endif
 
-#ifdef PUBLIC_DLL_EXPORT
+#ifdef PUBLIC_SOURCE
     #define PUBLIC_INTERFACE extern "C" DLL_EXPORT
     #define PUBLIC_GLOBAL extern DLL_EXPORT
     #define PUBLIC_CLASS DLL_EXPORT
