@@ -1,8 +1,13 @@
 #pragma once
 #include "instance.hpp"
-#include "queue.hpp"
 
 namespace Vulkan {
+struct CQueue
+{
+    vk::Queue m_handle;
+    std::uint32_t m_familyIndex;
+};
+
 class CDevice
 {
 public:
@@ -18,21 +23,19 @@ public:
     CDevice& operator=(CDevice&&) = delete;
     ~CDevice();
 
-    [[nodiscard]] CQueue GetGraphicsQueue() const { return *m_graphicsQueue; }
-    [[nodiscard]] CQueue GetPresentQueue() const { return *m_presentQueue; }
-    [[nodiscard]] CQueue GetTransferQueue() const { return *m_transferQueue; }
-    [[nodiscard]] CQueue GetComputeQueue() const { return *m_computeQueue; }
+    [[nodiscard]] const CQueue& GetGraphicsQueue() const { return m_graphicsQueue; }
+    [[nodiscard]] const CQueue& GetPresentQueue() const { return m_presentQueue; }
+    [[nodiscard]] const CQueue& GetTransferQueue() const { return m_transferQueue; }
+    [[nodiscard]] const CQueue& GetComputeQueue() const { return m_computeQueue; }
 
     [[nodiscard]] vk::Device GetHandle() const { return m_handle; }
-
-    explicit operator vk::Device() const { return m_handle; }
 
 private:
     vk::Device m_handle;
 
-    std::unique_ptr<CQueue> m_graphicsQueue;
-    std::unique_ptr<CQueue> m_presentQueue;
-    std::unique_ptr<CQueue> m_transferQueue;
-    std::unique_ptr<CQueue> m_computeQueue;
+    CQueue m_graphicsQueue;
+    CQueue m_presentQueue;
+    CQueue m_transferQueue;
+    CQueue m_computeQueue;
 };
 }

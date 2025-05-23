@@ -20,8 +20,6 @@ set(SOURCES
     render/vulkan/physical_device.cpp
     render/vulkan/device.hpp
     render/vulkan/device.cpp
-    render/vulkan/queue.hpp
-    render/vulkan/queue.cpp
     render/vulkan/render_context.hpp
     render/vulkan/render_context.cpp
     render/vulkan/surface.hpp
