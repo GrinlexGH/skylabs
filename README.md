@@ -1,29 +1,50 @@
 # About
-This is my own game engine and I plan to include all the best that other game engines have in it.
+This is my trying to make some kind of 3D game from scratch on c++. I know I will write it all my life because I use vulkan, but anyway I like it.
 
-Requirements for build:
+## Build
+Requirements:
 * CMake
-* Ninja
-* MSVC, g++ (at least 13) / clang++ (at least 15)
-* Vulkan SDK
+* [Ninja](https://ninja-build.org/)
+* `MSVC` / `g++` (>=13) / `clang++` (>=15)
+* [Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
 
-For other libraries cmake uses `build_dependencies` script. **You must install all dependencies to build these libraries manually.**
-You will compile all the dependencies only once, so the first build will be long, but all subsequent builds will be fast if you don't delete the `libs/bin/*platform*` folder.
+CMake uses `build_dependencies` script to build all third-party libraries. It outputs the compiled libraries into the `libs/bin/<platform>` directory. It uses the `Ninja` generator and assumes the compiler is either **GCC** or **Clang**.
+
+On Windows, the build output path and generator depend on the selected compiler:
+
+- If **MSVC** is used, libraries are built into `libs/bin/windows/static/msvc` using the default CMake generator, assuming compiler is **MSVC** .
+
+- If **MinGW** or **LLVM** is used, libraries are built into `libs/bin/windows/static/mingw` using the `Ninja` generator, assuming the compiler is either **GCC** or **Clang**.
+
+This separation is necessary because static library formats differ between **MSVC** and **GCC**/**Clang**.
+
+**You need to install the dependencies to build these libraries yourself**, but usually everything should work without problems.
+The largest library that requires much dependencies is **SDL**. If you're on linux, check out [**this file**](libs/sources/SDL/docs/README-linux.md) to compile it.
+
+*If you have any problems with compilation, please write to issues.*
+
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build .
+```
+
+Binaries will be located in the `.output` folder
+
 
 Discord: [grinlex](https://discord.gg/WX9HSAmPDF)
 
 ## Cloning
 This repository contains submodules for external dependencies, so when doing a fresh clone you need to clone recursively:
 
-```
+```bash
 git clone --recursive https://github.com/GrinlexGH/skylabs.git
 ```
 
 Existing repositories can be updated manually:
 
-```
-git submodule init
-git submodule update --recursive
+```bash
+git submodule update --init --recursive
 ```
 
 ---

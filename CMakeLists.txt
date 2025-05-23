@@ -18,8 +18,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     add_compile_options(
         "-Wall" "-Wextra" "-Wpedantic"
         "$<$<CONFIG:Release>:-Werror>"
+        "-march=native" "-mtune=native"
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    set(COMPILER_MSVC ON)
     add_compile_options(
         "/W4" "/utf-8" "/Zc:__cplusplus"
         "$<$<CONFIG:Release>:/WX>"
@@ -33,13 +35,15 @@ set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
 set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
 set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
 
-# If you want to compile dependencies with default options, just configure this project.
-# If you want to compile dependencies with custom options, run build_dependencies.cmd(.sh)
-# with cmake options as arguments and after that configure this project.
-# If you want to use your own libraries, then put them into libs/bin/*platform*/*lib name* folder
 if(WIN32)
-    set(BUILD_SCRIPT_CMD cmd.exe /c ${PROJECT_SOURCE_DIR}/libs/build_dependencies.cmd)
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/windows)
+    if(COMPILER_MSVC)
+        set(DEPENDENCIES_COMPILER "msvc")
+    else()
+        set(DEPENDENCIES_COMPILER "mingw")
+    endif()
+
+    set(BUILD_SCRIPT_CMD powershell -ExecutionPolicy Bypass -File ${PROJECT_SOURCE_DIR}/libs/build_dependencies.ps1 ${DEPENDENCIES_COMPILER})
+    set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/libs/bin/windows;${PROJECT_SOURCE_DIR}/libs/bin/windows/static/${DEPENDENCIES_COMPILER}")
     include_directories(${PROJECT_SOURCE_DIR}/libs/bin/windows)
 else()
     set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
@@ -54,9 +58,11 @@ execute_process(
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
-find_package(glm REQUIRED)
 find_package(SDL3 REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(nowide REQUIRED)
+find_package(SDL3_Image REQUIRED)
+find_package(glm REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 find_package(tinyobjloader REQUIRED)
