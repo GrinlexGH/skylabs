@@ -5,7 +5,7 @@
 	path = libs/sources/Boost.Nowide
 	url = https://github.com/boostorg/nowide.git
 [submodule "libs/sources/SDL_Image"]
-	path = libs/sources/SDL_Image
+	path = libs/sources/SDL_image
 	url = https://github.com/libsdl-org/SDL_image.git
 [submodule "libs/sources/glm"]
 	path = libs/sources/glm

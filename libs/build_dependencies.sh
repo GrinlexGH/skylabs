@@ -99,9 +99,9 @@ build_library "Boost.Nowide" \
     "$BIN_DIR/nowide" \
     -DNOWIDE_INSTALL=ON
 
-build_library "SDL_Image" \
-    "$SRC_DIR/SDL_Image" \
-    "$BIN_DIR/SDL3_Image" \
+build_library "SDL_image" \
+    "$SRC_DIR/SDL_image" \
+    "$BIN_DIR/SDL3_image" \
     -DCMAKE_PREFIX_PATH=$BIN_DIR
 
 build_library "glm" \
