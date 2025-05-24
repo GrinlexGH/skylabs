@@ -22,9 +22,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(COMPILER_MSVC ON)
+    add_link_options("/ignore:4099")
     add_compile_options(
         "/W4" "/utf-8" "/Zc:__cplusplus"
-        "$<$<CONFIG:Release>:/WX>"
+        "$<$<CONFIG:Release>:/WX>" "/MP"
     )
 else()
     message(WARNING "${PROJECT_NAME} compiles only on gcc, clang, apple clang or msvc! I have no idea if everything is going to be okay")
@@ -44,11 +45,9 @@ if(WIN32)
 
     set(BUILD_SCRIPT_CMD powershell -ExecutionPolicy Bypass -File ${PROJECT_SOURCE_DIR}/libs/build_dependencies.ps1 ${DEPENDENCIES_COMPILER})
     set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/libs/bin/windows;${PROJECT_SOURCE_DIR}/libs/bin/windows/static/${DEPENDENCIES_COMPILER}")
-    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/windows)
 else()
     set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
     set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/unix)
-    include_directories(${PROJECT_SOURCE_DIR}/libs/bin/unix)
 endif()
 
 execute_process(
@@ -58,11 +57,11 @@ execute_process(
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
-find_package(SDL3 REQUIRED)
-find_package(Vulkan REQUIRED)
 find_package(nowide REQUIRED)
-find_package(SDL3_Image REQUIRED)
 find_package(glm REQUIRED)
+find_package(SDL3 REQUIRED)
+find_package(SDL3_image REQUIRED)
+find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 find_package(tinyobjloader REQUIRED)
