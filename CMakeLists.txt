@@ -43,11 +43,11 @@ if(WIN32)
         set(DEPENDENCIES_COMPILER "mingw")
     endif()
 
-    set(BUILD_SCRIPT_CMD powershell -ExecutionPolicy Bypass -File ${PROJECT_SOURCE_DIR}/libs/build_dependencies.ps1 ${DEPENDENCIES_COMPILER})
+    set(BUILD_SCRIPT_CMD pwsh -ExecutionPolicy Bypass -File ${PROJECT_SOURCE_DIR}/libs/build_dependencies.ps1 ${DEPENDENCIES_COMPILER})
     set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/libs/bin/windows;${PROJECT_SOURCE_DIR}/libs/bin/windows/static/${DEPENDENCIES_COMPILER}")
 else()
     set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/libs/bin/unix)
+    set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/libs/bin/unix;${PROJECT_SOURCE_DIR}/libs/bin/unix/static/")
 endif()
 
 execute_process(

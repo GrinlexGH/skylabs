@@ -156,14 +156,14 @@ New-Library "SDL" `
     (Join-Path $SRC_DIR "SDL") `
     ("SDL3")
 
+New-Library "SDL_image" `
+    (Join-Path $SRC_DIR "SDL_image") `
+    ("SDL3_image") `
+
 New-Static-Library "Boost.Nowide" `
     (Join-Path $SRC_DIR "Boost.Nowide") `
     ("nowide") `
     @("-DNOWIDE_INSTALL=ON")
-
-New-Library "SDL_image" `
-    (Join-Path $SRC_DIR "SDL_image") `
-    ("SDL3_image") `
 
 New-Static-Library "glm" `
     (Join-Path $SRC_DIR "glm") `
