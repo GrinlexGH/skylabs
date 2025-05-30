@@ -131,7 +131,7 @@ function New-Static-Library {
             "-DCMAKE_BUILD_TYPE=$config",
             "-DCMAKE_INSTALL_PREFIX=$installDir",
             "-DCMAKE_PREFIX_PATH=$BIN_DIR;$BIN_DIR/static/$Compiler",
-            "-DCMAKE_${configUpperName}_POSTFIX=`"$postfix`""
+            "-DCMAKE_${configUpperName}_POSTFIX=$postfix"
         ) + $ExtraCMakeFlags + @("-S", $SourceDir, "-B", $buildDir)
 
         & cmake @cmakeArgs
