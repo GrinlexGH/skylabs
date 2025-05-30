@@ -41,3 +41,8 @@ target_compile_definitions(${CURRENT_TARGET_NAME} PRIVATE PUBLIC_SOURCE)
 target_include_directories(${CURRENT_TARGET_NAME} INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
+
+target_link_libraries(${CURRENT_TARGET_NAME}
+    PUBLIC
+    nowide::nowide
+)

@@ -8,121 +8,155 @@ BIN_DIR="$ROOT/bin/unix"
 SRC_DIR="$ROOT/sources"
 
 check_git_hash_match() {
-    local SOURCE_DIR="$1"
-    local HASH_FILE="$2"
+    local source_dir="$1"
+    local hash_file="$2"
 
-    local GIT_HASH
-    GIT_HASH=$(git -C "$SOURCE_DIR" rev-parse HEAD)
+    local git_hash
+    git_hash=$(git -C "$source_dir" rev-parse HEAD)
 
-    if [ -f "$HASH_FILE" ]; then
-        local EXISTING_HASH
-        EXISTING_HASH=$(<"$HASH_FILE")
-        if [ "$EXISTING_HASH" = "$GIT_HASH" ]; then
-            return 0
-        fi
+    if [ -f "$hash_file" ]; then
+        local existing_hash
+        read -r existing_hash < "$hash_file"
+        [ "$git_hash" == "$existing_hash" ]
+        return
     fi
-
     return 1
 }
 
 build_library() {
-    local LIB_NAME="$1"
-    local SOURCE_DIR="$2"
-    local INSTALL_DIR="$3"
-    local EXTRA_CMAKE_FLAGS=("${@:4}")
-    local CONFIGS=("Debug" "Release" "RelWithDebInfo" "MinSizeRel")
-    local BUILD_DIR="$SOURCE_DIR/build"
-    local HASH_FILE="$INSTALL_DIR/git_hash.txt"
+    local lib_name="$1"
+    local source_dir="$2"
+    local install_base_name="$3"
+    local extra_cmake_flags=("${@:4}")
 
-    if [ -d "$INSTALL_DIR" ] && check_git_hash_match "$SOURCE_DIR" "$HASH_FILE"; then
-        echo "[$LIB_NAME] is up to date."
+    local install_dir="$BIN_DIR/$install_base_name"
+    local build_dir="$source_dir/build"
+    local hash_file="$install_dir/git_hash.txt"
+
+    if [ -d "$install_dir" ] && check_git_hash_match "$source_dir" "$hash_file"; then
+        echo "[$lib_name] is up to date."
         return
     fi
 
-    echo "Compiling [$LIB_NAME]..."
+    echo "Compiling [$lib_name]..."
 
-    rm -rf "$BUILD_DIR"
-    mkdir -p "$BUILD_DIR"
+    rm -rf "$build_dir"
+    mkdir -p "$build_dir"
 
-    rm -rf "$INSTALL_DIR"
-    mkdir -p "$INSTALL_DIR"
+    cmake_args=(
+        -G Ninja
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_PREFIX="$install_dir"
+        -DCMAKE_PREFIX_PATH="$BIN_DIR;$BIN_DIR/static"
+        "${extra_cmake_flags[@]}"
+        -S "$source_dir"
+        -B "$build_dir"
+    )
 
-    for CONFIG in "${CONFIGS[@]}"; do
-        cmake -G Ninja \
-            -DCMAKE_BUILD_TYPE="$CONFIG" \
-            -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
-            "${EXTRA_CMAKE_FLAGS[@]}" \
-            -S "$SOURCE_DIR" \
-            -B "$BUILD_DIR"
+    cmake "${cmake_args[@]}"
+    cmake --build "$build_dir" --config Release --parallel
 
-        cmake --build "$BUILD_DIR" --config "$CONFIG" --parallel
-        cmake --install "$BUILD_DIR" --config "$CONFIG"
-    done
+    rm -rf "$install_dir"
+    mkdir -p "$install_dir"
 
-    rm -rf "$BUILD_DIR"
+    cmake --install "$build_dir" --config Release
+    rm -rf "$build_dir"
 
-    git -C "$SOURCE_DIR" rev-parse HEAD > "$HASH_FILE"
-    echo "[$LIB_NAME] has been compiled."
+    git -C "$source_dir" rev-parse HEAD > "$hash_file"
+
+    echo "[$lib_name] has been compiled."
 }
 
-copy_headers_only() {
-    local LIB_NAME="$1"
-    local SOURCE_DIR="$2"
-    local INSTALL_DIR="$3"
-    local HEADER_FILES=("${@:4}")
-    local HASH_FILE="$INSTALL_DIR/git_hash.txt"
+build_static_library() {
+    local lib_name="$1"
+    local source_dir="$2"
+    local install_base_name="$3"
+    local extra_cmake_flags=("${@:4}")
 
-    if [ -d "$INSTALL_DIR" ] && check_git_hash_match "$SOURCE_DIR" "$HASH_FILE"; then
-        echo "[$LIB_NAME] is up to date"
+    local install_dir="$BIN_DIR/static/$install_base_name"
+    local build_dir="$source_dir/build"
+    local hash_file="$install_dir/git_hash.txt"
+
+    if [ -d "$install_dir" ] && check_git_hash_match "$source_dir" "$hash_file"; then
+        echo "[$lib_name] is up to date."
         return
     fi
 
-    echo "Copying [$LIB_NAME] library files"
+    echo "Compiling [$lib_name] static library..."
 
-    rm -rf "$INSTALL_DIR"
-    mkdir -p "$INSTALL_DIR"
+    declare -A config_postfix_map=(
+        ["Debug"]="_d"
+        ["Release"]=""
+        ["RelWithDebInfo"]="_rd"
+        ["MinSizeRel"]="_mr"
+    )
 
-    for HEADER in "${HEADER_FILES[@]}"; do
-        cp "$SOURCE_DIR/$HEADER" "$INSTALL_DIR/"
+    local configs=("Debug" "Release" "RelWithDebInfo" "MinSizeRel")
+
+    rm -rf "$build_dir" "$install_dir"
+    mkdir -p "$build_dir" "$install_dir"
+
+    for config in "${configs[@]}"; do
+        local postfix="${config_postfix_map[$config]}"
+        local config_upper
+        config_upper=$(echo "$config" | tr '[:lower:]' '[:upper:]')
+
+        cmake_args=(
+            -G Ninja
+            -DCMAKE_BUILD_TYPE="$config"
+            -DCMAKE_INSTALL_PREFIX="$install_dir"
+            -DCMAKE_PREFIX_PATH="$BIN_DIR;$BIN_DIR/static"
+            "-DCMAKE_${config_upper}_POSTFIX=${postfix}"
+            "${extra_cmake_flags[@]}"
+            -S "$source_dir"
+            -B "$build_dir"
+        )
+
+        cmake "${cmake_args[@]}"
+        cmake --build "$build_dir" --config "$config" --parallel
+        cmake --install "$build_dir" --config "$config"
     done
 
-    git -C "$SOURCE_DIR" rev-parse HEAD > "$HASH_FILE"
-    echo "[$LIB_NAME] has been copied"
+    rm -rf "$build_dir"
+    git -C "$source_dir" rev-parse HEAD > "$hash_file"
+
+    echo "[$lib_name] has been compiled."
 }
 
+# Build all libraries
 build_library "SDL" \
     "$SRC_DIR/SDL" \
-    "$BIN_DIR/SDL3"
-
-build_library "Boost.Nowide" \
-    "$SRC_DIR/Boost.Nowide" \
-    "$BIN_DIR/nowide" \
-    -DNOWIDE_INSTALL=ON
+    "SDL3"
 
 build_library "SDL_image" \
     "$SRC_DIR/SDL_image" \
-    "$BIN_DIR/SDL3_image" \
-    -DCMAKE_PREFIX_PATH=$BIN_DIR
+    "SDL3_image"
 
-build_library "glm" \
+build_static_library "Boost.Nowide" \
+    "$SRC_DIR/Boost.Nowide" \
+    "nowide" \
+    -DNOWIDE_INSTALL=ON
+
+build_static_library "glm" \
     "$SRC_DIR/glm" \
-    "$BIN_DIR/glm" \
+    "glm" \
     -DGLM_BUILD_TESTS=OFF \
     -DGLM_ENABLE_CXX_20=ON
 
 build_library "VulkanMemoryAllocator" \
     "$SRC_DIR/VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator" \
-    "$BIN_DIR/VulkanMemoryAllocator" \
+    "VulkanMemoryAllocator" \
     -DVMA_BUILD_DOCUMENTATION=OFF \
     -DVMA_BUILD_SAMPLES=OFF
 
 build_library "VulkanMemoryAllocator-Hpp" \
     "$SRC_DIR/VulkanMemoryAllocator-Hpp" \
-    "$BIN_DIR/VulkanMemoryAllocator-Hpp" \
-    -DVMA_HPP_ENABLE_INSTALL=ON
+    "VulkanMemoryAllocator-Hpp" \
+    -DVMA_HPP_ENABLE_INSTALL=ON \
+    -DVMA_BUILD_EXAMPLE=OFF
 
-build_library "tinyobjloader" \
+build_static_library "tinyobjloader" \
     "$SRC_DIR/tinyobjloader" \
-    "$BIN_DIR/tinyobjloader"
+    "tinyobjloader"
 
 echo "Done."
