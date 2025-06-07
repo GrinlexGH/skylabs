@@ -18,6 +18,7 @@ BOOL CtrlHandler(DWORD /*fdwCtrlType*/) {
 
 void SetupConsole() {
     AllocConsole();
+
     std::FILE* dummy;
     if (freopen_s(&dummy, "CONOUT$", "w", stdout)) { OutputDebugStringA("Cannot open CONOUT$ for write!"); }
     if (freopen_s(&dummy, "CONOUT$", "w", stderr)) { OutputDebugStringA("Cannot open CONOUT$ for write!"); }
@@ -54,8 +55,8 @@ extern "C" DLL_EXPORT int CoreMain(const int argc, char* argv[]) {
     CLauncher launcher;
     launcher.Run();
 
-    Log::Info("Press any key to exit.");
-    OS::WaitAnyKey();
+    Log::Info("Press enter to exit.");
+    std::cin.ignore();
 
     return 0;
 }

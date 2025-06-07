@@ -13,3 +13,6 @@ out
 libs/bin/unix/*
 libs/bin/windows/*
 **/build/
+
+# Generated files
+src/public/project_info

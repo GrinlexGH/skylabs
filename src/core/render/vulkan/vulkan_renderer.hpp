@@ -17,13 +17,22 @@ public:
     ~CVulkanRenderer() override;
 
     static std::unique_ptr<CVulkanRenderer> TryToCreate(const IVulkanWindow* window);
-    void Draw() override {}
+    void Draw() override;
 
 private:
     std::unique_ptr<Vulkan::CRenderContext> m_context;
 
     std::unique_ptr<Vulkan::CSurface> m_surface;
     std::unique_ptr<Vulkan::CSwapchain> m_swapchain;
+    vk::PipelineLayout m_pipelineLayout;
+    vk::RenderPass m_renderPass;
+    vk::Pipeline m_pipeline;
+    std::vector<vk::Framebuffer> m_frameBuffers;
+    vk::CommandPool m_commandPool;
+    vk::CommandBuffer m_commandBuffer;
+    vk::Semaphore m_imageAvailableSemaphore;
+    vk::Semaphore m_renderFinishedSemaphore;
+    vk::Fence m_inFlightFence;
 };
 
 
