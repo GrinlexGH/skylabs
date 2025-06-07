@@ -86,7 +86,7 @@ std::wstring GetProgramPath() {
     DWORD size = GetModuleFileNameW(nullptr, out.data(), MAX_PATH);
 
     while (size == out.size()) {
-        out.resize(out.size() * 2);
+        out.resize(out.size() * 1.5);
         size = GetModuleFileNameW(nullptr, out.data(), static_cast<DWORD>(out.size()));
     }
 
@@ -168,7 +168,7 @@ int WINAPI WinMain(
     _In_ int /*nShowCmd*/
 ) {
     try {
-        std::filesystem::path rootDir { GetProgramPath() };
+        std::filesystem::path rootDir(GetProgramPath());
         rootDir.remove_filename();
 
         const std::wstring libCorePath = rootDir / L"bin" / L"core.dll";

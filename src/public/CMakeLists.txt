@@ -19,6 +19,8 @@ set(SOURCES
     stc.cpp
     os.hpp
     os.cpp
+    resource_system.hpp
+    resource_system.cpp
 )
 
 add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
