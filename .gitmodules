@@ -16,3 +16,6 @@
 [submodule "libs/sources/tinyobjloader"]
 	path = libs/sources/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "libs/sources/simple_term_colors"]
+	path = libs/sources/simple_term_colors
+	url = https://github.com/illyigan/simple_term_colors.git

@@ -30,6 +30,8 @@ if(NOT CMKR_VS_STARTUP_PROJECT)
     set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 endif()
 
+target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE nowide::nowide)
+
 # Copy all third party libraries here
 add_custom_command(
     TARGET ${CURRENT_TARGET_NAME} POST_BUILD
@@ -37,6 +39,8 @@ add_custom_command(
     ${DLLS_OUTPUT_DIRECTORY}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     $<TARGET_FILE:SDL3::SDL3>
+    $<TARGET_FILE:SteamworksSDK::SteamworksSDK>
+    $<TARGET_FILE:SteamworksSDK::AppTicket>
     ${DLLS_OUTPUT_DIRECTORY}
-    COMMENT "Copying SDL3::SDL3 dll"
+    COMMENT "Copying libraries dll"
 )

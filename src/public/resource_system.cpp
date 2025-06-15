@@ -7,22 +7,10 @@
 #include <format>
 
 #include "logging.hpp"
-struct MyString : std::string {
-    using std::string::string;
-        MyString(const std::string& other) : std::string(other) {
-        Log::Info("Copied from std::string");
-    }
-
-    MyString(std::string&& other) noexcept : std::string(std::move(other)) {
-        Log::Info("Moved from std::string");
-    }
-    MyString(MyString&&) { Log::Info("Moved"); }
-    MyString(const MyString&) { Log::Info("Copied"); }
-};
 
 namespace {
-MyString GetRelativeResourcePath(const ResourceSystem::ResourceType type, const char* relativePath) {
-    MyString path = OS::GetProgramPath();
+std::string GetRelativeResourcePath(const ResourceSystem::ResourceType type, const char* relativePath) {
+    std::string path = OS::GetProgramPath();
     path.reserve(std::strlen(relativePath) + 10);
     switch (type) {
         case ResourceSystem::ResourceType::eShader: {
@@ -36,7 +24,7 @@ MyString GetRelativeResourcePath(const ResourceSystem::ResourceType type, const 
 
 namespace ResourceSystem {
 [[nodiscard]] PUBLIC_CLASS std::vector<char> LoadBinary(const ResourceType type, const char* relativePath) {
-    MyString path = GetRelativeResourcePath(type, relativePath);
+    std::string path = GetRelativeResourcePath(type, relativePath);
 
     nowide::ifstream file(path.c_str(), std::ios_base::ate | std::ios_base::binary);
     file.exceptions(std::ios_base::failbit | std::ios_base::badbit);

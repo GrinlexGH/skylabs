@@ -60,6 +60,7 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     glm::glm
     GPUOpen::VulkanMemoryAllocator
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
-    tinyobjloader::tinyobjloader
+    SteamworksSDK::SteamworksSDK
+    SteamworksSDK::AppTicket
     #GLFW3::GLFW3
 )

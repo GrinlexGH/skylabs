@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.25)
 
 set(PROJECT_NAME "Skylabs")
 
@@ -14,6 +14,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
+add_subdirectory(libs/sources/Boost.Nowide EXCLUDE_FROM_ALL SYSTEM)
+set(GLM_ENABLE_CXX_20 ON)
+add_subdirectory(libs/sources/glm EXCLUDE_FROM_ALL SYSTEM)
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set_target_properties(nowide glm PROPERTIES FOLDER "third_party")
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     add_compile_options(
         "-Wall" "-Wextra" "-Wpedantic"
@@ -21,11 +28,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         "-march=native" "-mtune=native"
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(COMPILER_MSVC ON)
-    add_link_options("/ignore:4099")
     add_compile_options(
-        "/W4" "/utf-8" "/Zc:__cplusplus"
-        "$<$<CONFIG:Release>:/WX>" "/MP"
+        "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"
+        "$<$<CONFIG:Release>:/WX>"
     )
 else()
     message(WARNING "${PROJECT_NAME} compiles only on gcc, clang, apple clang or msvc! I have no idea if everything is going to be okay")
@@ -36,34 +41,49 @@ set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
 set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
 set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
 
-if(WIN32)
-    if(COMPILER_MSVC)
-        set(DEPENDENCIES_COMPILER "msvc")
-    else()
-        set(DEPENDENCIES_COMPILER "mingw")
-    endif()
+set(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/libs/bin/${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 
-    set(BUILD_SCRIPT_CMD pwsh -ExecutionPolicy Bypass -File ${PROJECT_SOURCE_DIR}/libs/build_dependencies.ps1 ${DEPENDENCIES_COMPILER})
-    set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/libs/bin/windows;${PROJECT_SOURCE_DIR}/libs/bin/windows/static/${DEPENDENCIES_COMPILER}")
-else()
-    set(BUILD_SCRIPT_CMD bash ${PROJECT_SOURCE_DIR}/libs/build_dependencies.sh)
-    set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/libs/bin/unix;${PROJECT_SOURCE_DIR}/libs/bin/unix/static/")
+set(DEPS_CMAKE_ARGS CACHE STRING "Global cmake arguments for all libraries.")
+set(DEPS_CMAKE_LIB_ARGS CACHE STRING "Library-specific cmake arguments. Use format: name=(args). Example: zlib=(-DSKIP_EXAMPLES=ON) SDL=(-DOPTION=VALUE)")
+
+set(DEPS_INSTALL_CMD
+    python
+    ${PROJECT_SOURCE_DIR}/libs/install_dependencies.py
+    "--install-dir"
+    "${DEPS_INSTALL_DIR}"
+    "--cmake-sizeof-void-p"
+    "${CMAKE_SIZEOF_VOID_P}"
+)
+
+if(DEPS_CMAKE_ARGS)
+    list(APPEND DEPS_INSTALL_CMD "--cmake-args" "${DEPS_CMAKE_ARGS}")
+endif()
+
+if(DEPS_CMAKE_LIB_ARGS)
+    list(APPEND DEPS_INSTALL_CMD "--cmake-lib-args" "${DEPS_CMAKE_LIB_ARGS}")
 endif()
 
 execute_process(
-    COMMAND ${BUILD_SCRIPT_CMD}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs/
+    COMMAND ${DEPS_INSTALL_CMD}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs
+    RESULT_VARIABLE ret
 )
 
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/")
+if(NOT(ret EQUAL 0))
+    message(FATAL_ERROR "Error when building or installing dependencies!")
+endif()
 
-find_package(nowide REQUIRED)
-find_package(glm REQUIRED)
+include_directories(SYSTEM "${DEPS_INSTALL_DIR}/header-only")
+list(APPEND CMAKE_PREFIX_PATH "${DEPS_INSTALL_DIR}")
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
+
+find_package(SteamworksSDK REQUIRED)
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
-find_package(tinyobjloader REQUIRED)
 
 add_subdirectory(src)
