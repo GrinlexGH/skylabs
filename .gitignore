@@ -10,9 +10,8 @@ build/*
 out
 
 # Third party compiled libs
-libs/bin/unix/*
-libs/bin/windows/*
+libs/bin/*
 **/build/
 
 # Generated files
-src/public/project_info
+src/public/project_info.hpp

@@ -12,17 +12,15 @@ namespace OS {
 #ifdef PLATFORM_WINDOWS
 std::string GetProgramPath() {
     static std::string programPath = [] {
-        std::wstring out(MAX_PATH, '\0');
-        DWORD size = GetModuleFileNameW(nullptr, out.data(), MAX_PATH);
-        if (size == 0) {
-            throw std::runtime_error("Failed to get executable path!");
-        }
-
-        while (size == out.size()) {
-            out.resize(out.size() * 1.5);
+        std::wstring out(100, L'\0');
+        DWORD size;
+        while (true) {
             size = GetModuleFileNameW(nullptr, out.data(), static_cast<DWORD>(out.size()));
+            if (size < out.size())
+                break;
+            out.resize(out.size() + 100);
         }
-        out.shrink_to_fit();
+        out.resize(size);
         return nowide::narrow(std::filesystem::path(std::move(out)).parent_path().wstring());
     }();
 

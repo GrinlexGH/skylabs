@@ -12,11 +12,7 @@ set(SOURCES
     application.hpp
     application.cpp
     logging.hpp
-    command_line.hpp
-    command_line.cpp
     dll_export.hpp
-    stc.hpp
-    stc.cpp
     os.hpp
     os.cpp
     resource_system.hpp
@@ -36,9 +32,8 @@ set_target_properties(${CURRENT_TARGET_NAME}
     ARCHIVE_OUTPUT_DIRECTORY ${LIBS_OUTPUT_DIRECTORY}/
     RUNTIME_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
     LIBRARY_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
+    DEFINE_SYMBOL "PUBLIC_EXPORTS"
 )
-
-target_compile_definitions(${CURRENT_TARGET_NAME} PRIVATE PUBLIC_SOURCE)
 
 target_include_directories(${CURRENT_TARGET_NAME} INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

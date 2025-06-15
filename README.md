@@ -1,22 +1,19 @@
 # About
-This is my trying to make some kind of 3D game from scratch on c++. I know I will write it all my life because I use vulkan, but anyway I like it.
+This is my sandbox, where I test some c++ features, project architectures and much more.
+
+Abstract goal is to make some kind of 3D game from scratch on c++.
 
 ## Build
 Requirements:
-* CMake
-* [Ninja](https://ninja-build.org/)
+* `CMake`
+* `Ninja`
 * `MSVC` / `g++` (>=13) / `clang++` (>=15)
-* [Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
+* `Python` (>=3.8)
+* [`Vulkan SDK`](https://vulkan.lunarg.com/sdk/home)
 
-CMake uses `build_dependencies` script to build all third-party libraries. It outputs the compiled libraries into the `libs/bin/<platform>` directory. It uses the `Ninja` generator and assumes the compiler is either **GCC** or **Clang**.
-
-On Windows, the build output path and generator depend on the selected compiler:
-
-- If **MSVC** is used, libraries are built into `libs/bin/windows/static/msvc` using the default CMake generator, assuming compiler is **MSVC** .
-
-- If **MinGW** or **LLVM** is used, libraries are built into `libs/bin/windows/static/mingw` using the `Ninja` generator, assuming the compiler is either **GCC** or **Clang**.
-
-This separation is necessary because static library formats differ between **MSVC** and **GCC**/**Clang**.
+CMake uses `build_dependencies` python script to install all third-party libraries.
+It skips rebuilds using Git submodule commit hashes and can install header only libraries.
+You can specify cmake arguments for all submodules or for a specific one by defining DEPS_CMAKE_ARGS and DEPS_CMAKE_LIB_ARGS cmake variables. See `build_dependencies.py --help`.
 
 **You need to install the dependencies to build these libraries yourself**, but usually everything should work without problems.
 The largest library that requires much dependencies is **SDL**. If you're on linux, check out [**this file**](libs/sources/SDL/docs/README-linux.md) to compile it.
