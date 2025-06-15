@@ -151,12 +151,12 @@ def install_steamworks_sdk(version="1.62", sizeof_void_p=8):
     sdk_extract_dir = INSTALL_ROOT / f"steamworks_sdk_{arch}"
 
     if sdk_extract_dir.exists():
-        log("Steamworks SDK is up to date.", LogLevel.Info)
+        log("[Steamworks SDK] is up to date.", LogLevel.Info)
         return
 
     zip_path.parent.mkdir(parents=True, exist_ok=True)
 
-    log(f"Downloading Steam SDK to {zip_path}", LogLevel.Info)
+    log(f"Downloading Steamworks SDK to {zip_path}", LogLevel.Info)
     try:
         urllib.request.urlretrieve(sdk_url, zip_path)
     except Exception as e:
