@@ -139,9 +139,36 @@ def install_header_only_library(source_dir_base: Path, install_dir_base: Path, h
 
     log(f"[{lib_name}] installed.", LogLevel.Success)
 
-def install_steamworks_sdk(version="1.62", sizeof_void_p=8):
+def download_and_extract_zip(url, zip_path, extract_to):
+    try:
+        log(f"Downloading from {url} to {zip_path}", LogLevel.Info)
+        urllib.request.urlretrieve(url, zip_path)
+    except Exception as e:
+        log(f"Failed to download: {e}", LogLevel.Error)
+        return False
+
+    log(f"Unzipping archive to {extract_to}", LogLevel.Info)
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            for member in zip_ref.infolist():
+                fixed_path = extract_to / member.filename.replace('\\', '/')
+                if member.is_dir():
+                    fixed_path.mkdir(parents=True, exist_ok=True)
+                else:
+                    fixed_path.parent.mkdir(parents=True, exist_ok=True)
+                    with zip_ref.open(member) as source, open(fixed_path, 'wb') as target:
+                        shutil.copyfileobj(source, target)
+    except Exception as e:
+        log(f"Failed to unzip archive: {e}", LogLevel.Error)
+        return False
+
+    return True
+
+def install_steamworks_sdk(sizeof_void_p=8):
     global INSTALL_ROOT
+    version = "1.62"
     arch = "x64" if sizeof_void_p == 8 else "x86"
+
     zip_name = f"steamworks_sdk_{arch}.zip"
     zip_path = INSTALL_ROOT / "downloads" / zip_name
     sdk_url = (
@@ -156,30 +183,11 @@ def install_steamworks_sdk(version="1.62", sizeof_void_p=8):
 
     zip_path.parent.mkdir(parents=True, exist_ok=True)
 
-    log(f"Downloading Steamworks SDK to {zip_path}", LogLevel.Info)
-    try:
-        urllib.request.urlretrieve(sdk_url, zip_path)
-    except Exception as e:
-        log(f"Failed to download Steamworks SDK: {e}", LogLevel.Error)
-        return
+    success = download_and_extract_zip(sdk_url, zip_path, sdk_extract_dir)
+    if not success:
+        log("[Steamworks SDK] installation failed.", LogLevel.Error)
 
-    log(f"Unzipping Steam SDK to {sdk_extract_dir}", LogLevel.Info)
-    try:
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            for member in zip_ref.infolist():
-                fixed_path = sdk_extract_dir / member.filename.replace('\\', '/')
-                if member.is_dir():
-                    fixed_path.mkdir(parents=True, exist_ok=True)
-                else:
-                    fixed_path.parent.mkdir(parents=True, exist_ok=True)
-                    with zip_ref.open(member) as source, open(fixed_path, 'wb') as target:
-                        shutil.copyfileobj(source, target)
-    except Exception as e:
-        log(f"Failed to unzip Steamworks SDK: {e}", LogLevel.Error)
-        return
-
-    shutil.rmtree(zip_path.parent)
-    log("Steamworks SDK installed.", LogLevel.Success)
+    log("[Steamworks SDK] installed.", LogLevel.Success)
 
 def parse_cmake_lib_args(lib_arg_str: str) -> dict[str, list[str]]:
     """
@@ -246,7 +254,7 @@ def main():
     CMAKE_GLOBAL_ARGS = shlex.split(args.cmake_args)
     CMAKE_PERSUBMODULE_ARGS = parse_cmake_lib_args(args.cmake_lib_args)
 
-    install_steamworks_sdk(sizeof_void_p=args.cmake_sizeof_void_p)
+    install_steamworks_sdk(args.cmake_sizeof_void_p)
 
     libraries = [
         ("SDL", "SDL3", ["-DSDL_TEST_LIBRARY=OFF"]),
