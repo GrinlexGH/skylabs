@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.25)
 set(PROJECT_NAME "Skylabs")
 
 project(${PROJECT_NAME} HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0.0 LANGUAGES CXX C)
-message(STATUS "${PROJECT_NAME} v${CMAKE_PROJECT_VERSION}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
