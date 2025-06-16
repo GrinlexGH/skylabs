@@ -1,3 +1,5 @@
+# Author: Grinlex
+
 import argparse
 import platform
 import re
