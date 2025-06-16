@@ -8,8 +8,10 @@ set(PROJECTS
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
-add_compile_definitions(NOMINMAX)
-add_compile_definitions($<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>)
+set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/)
+set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
+set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
+set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
 
 set(APP_NAME ${PROJECT_NAME})
 set(APP_GAME_NAME ${PROJECT_NAME})
@@ -21,6 +23,21 @@ set(APP_VERSION_TWEAK ${PROJECT_VERSION_TWEAK})
 set(APP_COMPANY "Grinlex Stydios")
 set(APP_COPYRIGHT "MIT License. Copyright (c) 2025-present ${APP_COMPANY}")
 set(APP_HOMEPAGE ${CMAKE_PROJECT_HOMEPAGE_URL})
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    add_compile_options(
+        "-Wall" "-Wextra" "-Wpedantic"
+        "$<$<CONFIG:Release>:-Werror>"
+        "-march=native" "-mtune=native"
+    )
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    add_compile_options(
+        "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"
+        "$<$<CONFIG:Release>:/WX>"
+    )
+endif()
+
+add_compile_definitions(NOMINMAX $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>)
 
 if(WIN32)
     add_compile_definitions(PLATFORM_WINDOWS UNICODE _UNICODE)
@@ -34,24 +51,9 @@ if(LINUX)
     add_compile_definitions(PLATFORM_LINUX)
 endif()
 
-if(CYGWIN)
-    add_compile_definitions(PLATFORM_CYGWIN)
-endif()
-
-if(ANDROID)
-    add_compile_definitions(PLATFORM_ANDROID)
-endif()
-
-if(IOS)
-    add_compile_definitions(PLATFORM_IOS)
-endif()
-
 if(APPLE)
     add_compile_definitions(PLATFORM_APPLE)
 endif()
-
-# For the future: there is a CMAKE_SYSTEM_NAME if
-# there is no special definition for the platform
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     add_compile_definitions(ARCH_64)
@@ -59,7 +61,7 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     add_compile_definitions(ARCH_32)
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC" OR CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
     add_compile_definitions(COMPILER_MSVC)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_definitions(COMPILER_GCC)
