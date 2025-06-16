@@ -3,17 +3,12 @@ cmake_minimum_required(VERSION 3.25)
 set(PROJECT_NAME "Skylabs")
 
 project(${PROJECT_NAME} HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0.0 LANGUAGES CXX C)
+message(STATUS "${PROJECT_NAME} v${CMAKE_PROJECT_VERSION}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-message(STATUS "Using C standard: c${CMAKE_C_STANDARD}")
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
-
+# Third party static libraries
 add_subdirectory(libs/sources/Boost.Nowide EXCLUDE_FROM_ALL SYSTEM)
 set(GLM_ENABLE_CXX_20 ON)
 add_subdirectory(libs/sources/glm EXCLUDE_FROM_ALL SYSTEM)
@@ -21,26 +16,7 @@ add_subdirectory(libs/sources/glm EXCLUDE_FROM_ALL SYSTEM)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(nowide glm PROPERTIES FOLDER "third_party")
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    add_compile_options(
-        "-Wall" "-Wextra" "-Wpedantic"
-        "$<$<CONFIG:Release>:-Werror>"
-        "-march=native" "-mtune=native"
-    )
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    add_compile_options(
-        "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"
-        "$<$<CONFIG:Release>:/WX>"
-    )
-else()
-    message(WARNING "${PROJECT_NAME} compiles only on gcc, clang, apple clang or msvc! I have no idea if everything is going to be okay")
-endif()
-
-set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/)
-set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
-set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
-set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
-
+# Build and install third party shared libraries
 set(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/libs/bin/${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 
 set(DEPS_CMAKE_ARGS CACHE STRING "Global cmake arguments for all libraries.")
@@ -73,6 +49,7 @@ if(NOT(ret EQUAL 0))
     message(FATAL_ERROR "Error when building or installing dependencies!")
 endif()
 
+# Find these libraries
 include_directories(SYSTEM "${DEPS_INSTALL_DIR}/header-only")
 list(APPEND CMAKE_PREFIX_PATH "${DEPS_INSTALL_DIR}")
 
@@ -86,4 +63,5 @@ find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 
+# Skylabs
 add_subdirectory(src)
