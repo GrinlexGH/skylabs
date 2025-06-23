@@ -33,8 +33,9 @@ CSwapchain::CSwapchain(
     const vk::SwapchainKHR& oldSwaphchain
 ) : m_context(context)
 {
-    const CDevice* device = context->Device();
-    const vk::PhysicalDevice physicalDevice = context->PhysicalDevice()->GetHandle();
+    const CDevice* device = context->GetDevice();
+    const vk::Device deviceHandle = device->GetHandle();
+    const vk::PhysicalDevice physicalDevice = context->GetPhysicalDevice()->GetHandle();
 
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.pNext = nullptr;
@@ -79,9 +80,9 @@ CSwapchain::CSwapchain(
     createInfo.clipped = vk::True;
     createInfo.oldSwapchain = oldSwaphchain;
 
-    m_handle = device->GetHandle().createSwapchainKHR(createInfo);
+    m_handle = deviceHandle.createSwapchainKHR(createInfo);
 
-    m_images = device->GetHandle().getSwapchainImagesKHR(m_handle);
+    m_images = deviceHandle.getSwapchainImagesKHR(m_handle);
     m_imageViews.reserve(m_images.size());
 
     for (const auto& image : m_images) {
@@ -99,7 +100,7 @@ CSwapchain::CSwapchain(
         imageViewInfo.subresourceRange.baseArrayLayer = 0;
         imageViewInfo.subresourceRange.layerCount = 1;
 
-        m_imageViews.emplace_back(m_context->Device()->GetHandle().createImageView(imageViewInfo));
+        m_imageViews.emplace_back(deviceHandle.createImageView(imageViewInfo));
     }
 }
 
@@ -109,7 +110,7 @@ vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& c
     }
 
     int width, height;
-    m_context->Window()->GetDrawableSize(&width, &height);
+    m_context->GetWindow()->GetDrawableSize(&width, &height);
 
     vk::Extent2D actualExtent = {
         static_cast<std::uint32_t>(width),
@@ -127,10 +128,11 @@ CSwapchain::~CSwapchain() {
         return;
     }
 
+    const vk::Device device = m_context->GetDevice()->GetHandle();
     for (const auto& imageView : m_imageViews) {
-        m_context->Device()->GetHandle().destroyImageView(imageView);
+        device.destroyImageView(imageView);
     }
 
-    m_context->Device()->GetHandle().destroySwapchainKHR(m_handle);
+    device.destroySwapchainKHR(m_handle);
 }
 }

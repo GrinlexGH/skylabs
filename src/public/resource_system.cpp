@@ -9,9 +9,9 @@
 #include "logging.hpp"
 
 namespace {
-std::string GetRelativeResourcePath(const ResourceSystem::ResourceType type, const char* relativePath) {
+std::string GetRelativeResourcePath(const ResourceSystem::ResourceType type, const std::string_view relativePath) {
     std::string path = OS::GetProgramPath();
-    path.reserve(std::strlen(relativePath) + 10);
+    path.reserve(relativePath.size() + 10);
     switch (type) {
         case ResourceSystem::ResourceType::eShader: {
             path += "/shaders/";
@@ -23,8 +23,8 @@ std::string GetRelativeResourcePath(const ResourceSystem::ResourceType type, con
 }
 
 namespace ResourceSystem {
-[[nodiscard]] PUBLIC_CLASS std::vector<char> LoadBinary(const ResourceType type, const char* relativePath) {
-    std::string path = GetRelativeResourcePath(type, relativePath);
+[[nodiscard]] PUBLIC_CLASS std::vector<char> LoadBinary(const ResourceType type, const std::string_view relativePath) {
+    const std::string path = GetRelativeResourcePath(type, relativePath);
 
     nowide::ifstream file(path.c_str(), std::ios_base::ate | std::ios_base::binary);
     file.exceptions(std::ios_base::failbit | std::ios_base::badbit);

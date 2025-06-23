@@ -18,13 +18,10 @@ public:
     CRenderContext& operator=(CRenderContext&&) = delete;
     ~CRenderContext() = default;
 
-    [[nodiscard]] const IVulkanWindow* Window() const { return m_window; }
-    [[nodiscard]] const CInstance* Instance() const { return m_instance.get(); }
-    [[nodiscard]] const CDevice* Device() const { return m_device.get(); }
-    [[nodiscard]] const CPhysicalDevice* PhysicalDevice() const { return m_selectedPhysicalDevice; }
-
-    [[nodiscard]] vk::SurfaceKHR CreateSurface() const { return m_window->CreateSurface(m_instance->GetHandle()); }
-    void DestroySurface(vk::SurfaceKHR& surface) const { m_window->DestroySurface(m_instance->GetHandle(), surface); }
+    [[nodiscard]] const IVulkanWindow* GetWindow() const { return m_window; }
+    [[nodiscard]] const CInstance* GetInstance() const { return m_instance.get(); }
+    [[nodiscard]] const CDevice* GetDevice() const { return m_device.get(); }
+    [[nodiscard]] const CPhysicalDevice* GetPhysicalDevice() const { return m_selectedPhysicalDevice; }
 
 private:
     void CreateInstance();
