@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "../renderer.hpp"
 #include "physical_device.hpp"
 
 namespace {

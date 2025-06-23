@@ -89,6 +89,7 @@ if(NOT SteamworksSDK_FOUND)
         set_target_properties(SteamworksSDK::AppTicket PROPERTIES
             IMPORTED_LOCATION "${SteamworksSDK_AppTicket_LIBRARY}"
             INTERFACE_INCLUDE_DIRECTORIES "${SteamworksSDK_INCLUDE_DIR}"
+            IMPORTED_NO_SONAME TRUE
         )
     endif()
 

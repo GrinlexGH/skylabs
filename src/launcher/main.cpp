@@ -12,12 +12,12 @@
 #include <format>
 #include <filesystem>
 
-#include <nowide/args.hpp>
-#include <nowide/convert.hpp>
-
 using main_t = int (*)(int argc, char* argv[]);
 
 #ifdef PLATFORM_WINDOWS
+
+#include <nowide/args.hpp>
+#include <nowide/convert.hpp>
 
 namespace {
 std::string GetLastErrorMessage() {
@@ -45,7 +45,6 @@ std::wstring GetProgramPath() {
 
     while (true) {
         size = GetModuleFileNameW(nullptr, out.data(), static_cast<DWORD>(out.size()));
-
         if (size < out.size())
             break;
 
@@ -56,9 +55,40 @@ std::wstring GetProgramPath() {
     return out;
 }
 
-void* GetFunctionAddress(HINSTANCE lib, LPCSTR funcName) {
-    return reinterpret_cast<void*>(GetProcAddress(lib, funcName));
-}
+class CLibrary
+{
+public:
+    CLibrary() = delete;
+    explicit CLibrary(const wchar_t* path) {
+        handle = LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if (!handle) {
+            FreeLibrary(handle);
+            throw std::runtime_error {
+                std::format("Failed to load library:\n{}\n\n{}\n", nowide::narrow(path), GetLastErrorMessage())
+            };
+        }
+    }
+    CLibrary(const CLibrary&) = delete;
+    CLibrary(CLibrary&&) = delete;
+    CLibrary& operator=(const CLibrary&) = delete;
+    CLibrary& operator=(CLibrary&&) = delete;
+    ~CLibrary() {
+        FreeLibrary(handle);
+    }
+
+    void* GetFunctionAddress(const char* name) const {
+        void* func = reinterpret_cast<void*>(GetProcAddress(handle, name));
+        if (!func) {
+            throw std::runtime_error {
+                std::format("Failed to load library function:\n{}\n\n{}\n", name, GetLastErrorMessage())
+            };
+        }
+        return func;
+    }
+
+private:
+    HMODULE handle;
+};
 }
 
 int WINAPI WinMain(
@@ -73,19 +103,8 @@ int WINAPI WinMain(
 
         const std::filesystem::path libCorePath { rootDir / L"bin" / L"core.dll" };
 
-        const HMODULE core = LoadLibraryExW(libCorePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
-        if (!core) {
-            throw std::runtime_error {
-                std::format("Failed to load library:\n{}\n\n{}\n", nowide::narrow(libCorePath.c_str()), GetLastErrorMessage())
-            };
-        }
-
-        const auto main = reinterpret_cast<main_t>(GetFunctionAddress(core, "CoreMain"));
-        if (!main) {
-            throw std::runtime_error {
-                std::format("Failed to load library entry point:\n{}\n\n{}\n", nowide::narrow(libCorePath.c_str()), GetLastErrorMessage())
-            };
-        }
+        const CLibrary core(libCorePath.c_str());
+        const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         // converts wide argv to narrow argv
         int argc = 0;
@@ -116,7 +135,46 @@ int WINAPI WinMain(
     }
 }
 
+int main() {
+    // Dummy main for console in debug
+    return WinMain(GetModuleHandle(NULL), NULL, GetCommandLineA(), SW_SHOWNORMAL);
+}
+
 #elif defined(PLATFORM_UNIX)
+
+class CLibrary
+{
+public:
+    CLibrary() = delete;
+    explicit CLibrary(const char* path) {
+        handle = dlopen(path, RTLD_LAZY);
+        if (!handle) {
+            throw std::runtime_error {
+                std::format("Failed to load library:\n{}\n", dlerror())
+            };
+        }
+    }
+    CLibrary(const CLibrary&) = delete;
+    CLibrary(CLibrary&&) = delete;
+    CLibrary& operator=(const CLibrary&) = delete;
+    CLibrary& operator=(CLibrary&&) = delete;
+    ~CLibrary() {
+        dlclose(handle);
+    }
+
+    void* GetFunctionAddress(const char* name) const {
+        void* func = dlsym(handle, name);
+        if (const char* error = dlerror(); error != NULL) {
+            throw std::runtime_error {
+                std::format("Failed to load library function:\n{}\n", error)
+            };
+        }
+        return func;
+    }
+
+private:
+    void* handle;
+};
 
 int main(int argc, char** argv) {
     try {
@@ -125,27 +183,16 @@ int main(int argc, char** argv) {
 
         const std::string libCorePath = rootDir / "bin" / "libcore.so";
 
-        void* lib = dlopen(libCorePath.c_str(), RTLD_NOW);
-        if (!lib) {
-            throw std::runtime_error(std::format("Failed load library:\n{}\n\n{}\n", libCorePath, dlerror()));
-        }
-
-        auto main = reinterpret_cast<main_t>(dlsym(lib, "CoreMain"));
-        if (!main) {
-            throw std::runtime_error(
-                std::format("Failed to load library entry point:\n{}\n", dlerror())
-            );
-        }
+        const CLibrary core(libCorePath.c_str());
+        auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
             int ret = main(argc, argv);
-            dlclose(lib);
             return ret;
         } catch (const std::exception& e) {
             std::cout << e.what() << std::endl;
         }
 
-        dlclose(lib);
         return 1;
     } catch (const std::exception& e) {
         std::cout << e.what() << std::endl;
