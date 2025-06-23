@@ -41,7 +41,7 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
-    m_renderPass = m_context->Device()->GetHandle().createRenderPass(renderPassInfo);
+    m_renderPass = m_context->GetDevice()->GetHandle().createRenderPass(renderPassInfo);
 
 
 
@@ -50,13 +50,13 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     createInfo.codeSize = vertexShaderSource.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(vertexShaderSource.data());
 
-    const vk::ShaderModule vertShaderModule = m_context->Device()->GetHandle().createShaderModule(createInfo);
+    const vk::ShaderModule vertShaderModule = m_context->GetDevice()->GetHandle().createShaderModule(createInfo);
 
     const std::vector<char> fragmentShaderSource = ResourceSystem::LoadShader("shader.frag.spv");
     createInfo.codeSize = fragmentShaderSource.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(fragmentShaderSource.data());
 
-    const vk::ShaderModule fragShaderModule = m_context->Device()->GetHandle().createShaderModule(createInfo);
+    const vk::ShaderModule fragShaderModule = m_context->GetDevice()->GetHandle().createShaderModule(createInfo);
 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
@@ -122,7 +122,7 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    m_pipelineLayout = m_context->Device()->GetHandle().createPipelineLayout(pipelineLayoutInfo);
+    m_pipelineLayout = m_context->GetDevice()->GetHandle().createPipelineLayout(pipelineLayoutInfo);
 
     vk::GraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.stageCount = 2;
@@ -139,10 +139,10 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    m_pipeline = m_context->Device()->GetHandle().createGraphicsPipeline(VK_NULL_HANDLE, pipelineInfo).value;
+    m_pipeline = m_context->GetDevice()->GetHandle().createGraphicsPipeline(VK_NULL_HANDLE, pipelineInfo).value;
 
-    m_context->Device()->GetHandle().destroyShaderModule(vertShaderModule);
-    m_context->Device()->GetHandle().destroyShaderModule(fragShaderModule);
+    m_context->GetDevice()->GetHandle().destroyShaderModule(vertShaderModule);
+    m_context->GetDevice()->GetHandle().destroyShaderModule(fragShaderModule);
 
     m_frameBuffers.resize(m_swapchain->GetImageViews().size());
 
@@ -159,14 +159,14 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
         framebufferInfo.height = m_swapchain->GetInfo().m_extent.height;
         framebufferInfo.layers = 1;
 
-        m_frameBuffers[i] = m_context->Device()->GetHandle().createFramebuffer(framebufferInfo);
+        m_frameBuffers[i] = m_context->GetDevice()->GetHandle().createFramebuffer(framebufferInfo);
     }
 
     vk::CommandPoolCreateInfo commandPoolInfo{};
     commandPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    commandPoolInfo.queueFamilyIndex = m_context->Device()->GetGraphicsQueue().m_familyIndex;
+    commandPoolInfo.queueFamilyIndex = m_context->GetDevice()->GetGraphicsQueue().m_familyIndex;
 
-    m_commandPool = m_context->Device()->GetHandle().createCommandPool(commandPoolInfo);
+    m_commandPool = m_context->GetDevice()->GetHandle().createCommandPool(commandPoolInfo);
 
 
     vk::CommandBufferAllocateInfo cmdBufferAllocInfo{};
@@ -174,11 +174,11 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     cmdBufferAllocInfo.level = vk::CommandBufferLevel::ePrimary;
     cmdBufferAllocInfo.commandBufferCount = 1;
 
-    m_commandBuffer = m_context->Device()->GetHandle().allocateCommandBuffers(cmdBufferAllocInfo).front();
+    m_commandBuffer = m_context->GetDevice()->GetHandle().allocateCommandBuffers(cmdBufferAllocInfo).front();
 
-    m_imageAvailableSemaphore = m_context->Device()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo{});
-    m_renderFinishedSemaphore = m_context->Device()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo{});
-    m_inFlightFence = m_context->Device()->GetHandle().createFence(vk::FenceCreateInfo{ vk::FenceCreateFlagBits::eSignaled });
+    m_imageAvailableSemaphore = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo{});
+    m_renderFinishedSemaphore = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo{});
+    m_inFlightFence = m_context->GetDevice()->GetHandle().createFence(vk::FenceCreateInfo{ vk::FenceCreateFlagBits::eSignaled });
 }
 
 std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindow* const window) {
@@ -192,7 +192,7 @@ std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindo
 
 void CVulkanRenderer::Draw() {
 
-    auto m_device = m_context->Device()->GetHandle();
+    auto m_device = m_context->GetDevice()->GetHandle();
 
     auto m_swapChain = m_swapchain->GetHandle();
     std::ignore = m_device.waitForFences(m_inFlightFence, vk::True, std::numeric_limits<unsigned int>::max());
@@ -261,7 +261,7 @@ void CVulkanRenderer::Draw() {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    std::ignore = m_context->Device()->GetGraphicsQueue().m_handle.submit(1, &submitInfo, m_inFlightFence);
+    std::ignore = m_context->GetDevice()->GetGraphicsQueue().m_handle.submit(1, &submitInfo, m_inFlightFence);
 
     vk::PresentInfoKHR presentInfo{};
 
@@ -274,18 +274,18 @@ void CVulkanRenderer::Draw() {
 
     presentInfo.pImageIndices = &imageIndex;
 
-    std::ignore = m_context->Device()->GetPresentQueue().m_handle.presentKHR(presentInfo);
+    std::ignore = m_context->GetDevice()->GetPresentQueue().m_handle.presentKHR(presentInfo);
 }
 
 
 CVulkanRenderer::~CVulkanRenderer() {
     for (auto framebuffer : m_frameBuffers) {
-        m_context->Device()->GetHandle().destroyFramebuffer(framebuffer);
+        m_context->GetDevice()->GetHandle().destroyFramebuffer(framebuffer);
     }
-    m_context->Device()->GetHandle().destroyPipelineLayout(m_pipelineLayout);
-    m_context->Device()->GetHandle().destroyRenderPass(m_renderPass);
-    m_context->Device()->GetHandle().destroyPipeline(m_pipeline);
-    m_context->Device()->GetHandle().destroyCommandPool(m_commandPool);
+    m_context->GetDevice()->GetHandle().destroyPipelineLayout(m_pipelineLayout);
+    m_context->GetDevice()->GetHandle().destroyRenderPass(m_renderPass);
+    m_context->GetDevice()->GetHandle().destroyPipeline(m_pipeline);
+    m_context->GetDevice()->GetHandle().destroyCommandPool(m_commandPool);
 }
 
 

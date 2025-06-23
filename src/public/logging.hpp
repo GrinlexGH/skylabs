@@ -2,42 +2,41 @@
 #include <format>
 #include <iostream>
 #include <mutex>
+#include <array>
 
-#include "stc.hpp"
+#include <stc.hpp>
 
 namespace Log {
-struct LogMutex {
-    inline static std::mutex m_mutex;
-};
-
 enum class LogType : std::int8_t
 {
     eDebug = 0,
     eInfo,
     eWarning,
-    eError
+    eError,
+    eCount
 };
+
+inline auto g_minLogLevel = LogType::eDebug;
+inline std::mutex g_mutex;
 
 template <class... Args>
 void Log(const LogType type, const std::format_string<Args...> fmt, Args&&... args) {
-    std::lock_guard<std::mutex> lock(LogMutex::m_mutex);
+    if (type < g_minLogLevel)
+        return;
 
-    std::cout << '[';
-    switch (type) {
-        case LogType::eDebug: {
-            std::cout << stc::rgb_fg(168, 228, 160) << "Debug" << stc::reset_fg << "] ";
-        } break;
-        case LogType::eInfo: {
-            std::cout << stc::rgb_fg(114, 159, 207) << "Info" << stc::reset_fg << "] ";
-        } break;
-        case LogType::eWarning: {
-            std::cout << stc::rgb_fg(196, 160, 0) << "Warning" << stc::reset_fg << "] ";
-        } break;
-        case LogType::eError: {
-            std::cout << stc::rgb_fg(204, 0, 0) << "Error" << stc::reset_fg << "] ";
-        } break;
-    }
-    std::cout << std::format(fmt, std::forward<Args>(args)...) << '\n';
+    constexpr std::array<std::tuple<std::string_view, int, int, int>, static_cast<std::size_t>(LogType::eCount)> logPrefixes = { {
+        { "Debug", 168, 228, 160 },
+        { "Info", 114, 159, 207 },
+        { "Warning", 196, 160, 0 },
+        { "Error", 204, 0, 0 },
+    } };
+
+    auto [label, r, g, b] = logPrefixes[static_cast<std::size_t>(type)];
+
+    std::lock_guard lock(g_mutex);
+    std::cout << stc::true_color
+              << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "
+              << std::format(fmt, std::forward<Args>(args)...) << std::endl;
 }
 
 template <class... Args>
