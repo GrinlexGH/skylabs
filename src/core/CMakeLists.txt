@@ -62,5 +62,4 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
     SteamworksSDK::SteamworksSDK
     SteamworksSDK::AppTicket
-    #GLFW3::GLFW3
 )
