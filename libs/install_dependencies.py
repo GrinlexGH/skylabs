@@ -1,6 +1,7 @@
 # Author: Grinlex
 
 import argparse
+import os
 import platform
 import re
 import shlex
@@ -88,17 +89,21 @@ def build_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_fla
         ".."
     ] + extra_cmake_flags + CMAKE_GLOBAL_ARGS + submodule_args
 
-    subprocess.run(cmake_cmd, cwd=build_dir, check=True)
+    vs_env = os.environ.copy()
+    vs_env["VSLANG"] = "1033"
+
+    subprocess.run(cmake_cmd, cwd=build_dir, check=True, env=vs_env)
 
     build_cmd = [CMAKE, "--build", ".", "--config", "Release", "--parallel"]
-    subprocess.run(build_cmd, cwd=build_dir, check=True)
+
+    subprocess.run(build_cmd, cwd=build_dir, check=True, env=vs_env)
 
     if install_dir.exists():
         shutil.rmtree(install_dir)
     install_dir.mkdir(parents=True)
 
     install_cmd = [CMAKE, "--install", ".", "--config", "Release"]
-    subprocess.run(install_cmd, cwd=build_dir, check=True)
+    subprocess.run(install_cmd, cwd=build_dir, check=True, env=vs_env)
 
     shutil.rmtree(build_dir)
 
