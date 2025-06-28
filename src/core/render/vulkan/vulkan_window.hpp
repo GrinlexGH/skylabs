@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "vulkan.hpp"
+#include <vulkan/vulkan.hpp>
 
 class IVulkanWindow : public IWindow
 {

@@ -27,9 +27,14 @@ public:
     [[nodiscard]] void* GetExtensionFeaturePNext() const { return m_extensionFeaturePNext; }
 
     template <typename Feature>
-    Feature GetExtensionFeatures() {
+    [[nodiscard]] Feature GetExtensionFeatures() const {
         // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME is required
         return m_handle.getFeatures2KHR<vk::PhysicalDeviceFeatures2KHR, Feature>().template get<Feature>();
+    }
+
+    template <typename Feature>
+    [[nodiscard]] vk::Bool32 IsExtensionFeatureSupported(vk::Bool32 Feature::* flag) const {
+        return GetExtensionFeatures<Feature>().*flag;
     }
 
     template <typename Feature>
@@ -87,7 +92,7 @@ public:
     }
 
 private:
-    vk::PhysicalDevice m_handle;
+    vk::PhysicalDevice m_handle = VK_NULL_HANDLE;
 
     // Properties
     const vk::PhysicalDeviceProperties m_properties;
@@ -96,13 +101,15 @@ private:
     const std::vector<vk::ExtensionProperties> m_extensions;
 
     // Extensions and features
-    std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures {};
+    std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures;
     void* m_extensionFeaturePNext = nullptr;
-    vk::PhysicalDeviceFeatures m_requiredFeatures {};
+    vk::PhysicalDeviceFeatures m_requiredFeatures;
 };
 
 #define REQUEST_OPTIONAL_EXT_FEATURE(gpu, feature, flag) gpu->RequestOptionalExtensionFeature<feature>(&feature::flag, #feature, #flag)
 #define REQUEST_REQUIRED_EXT_FEATURE(gpu, feature, flag) gpu->RequestRequiredExtensionFeature<feature>(&feature::flag, #feature, #flag)
 #define REQUEST_OPTIONAL_FEATURE(gpu, flag) gpu->RequestOptionalFeature(&vk::PhysicalDeviceFeatures::flag, #flag)
 #define REQUEST_REQUIRED_FEATURE(gpu, flag) gpu->RequestRequiredFeature(&vk::PhysicalDeviceFeatures::flag, #flag)
+#define CHECK_EXT_FEATURE(gpu, feature, flag) gpu->IsExtensionFeatureSupported<feature>(&feature::flag)
+#define CHECK_FEATURE(gpu, flag) gpu->GetFeatures().flag
 }

@@ -30,7 +30,7 @@ private:
 
     std::unique_ptr<CInstance> m_instance;
     std::unique_ptr<CDevice> m_device;
-    CPhysicalDevice* m_selectedPhysicalDevice = nullptr;
-    const IVulkanWindow* const m_window = nullptr;
+    CPhysicalDevice* m_selectedPhysicalDevice;
+    const IVulkanWindow* const m_window;
 };
 }

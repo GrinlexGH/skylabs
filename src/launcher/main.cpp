@@ -7,12 +7,12 @@
 #error
 #endif
 
-#include <string>
-#include <stdexcept>
-#include <format>
 #include <filesystem>
+#include <format>
+#include <stdexcept>
+#include <string>
 
-using main_t = int (*)(int argc, char* argv[]);
+using main_t = int (*)(int argc, char* argv[]); // NOLINT
 
 #ifdef PLATFORM_WINDOWS
 
@@ -24,8 +24,8 @@ std::string GetLastErrorMessage() {
     wchar_t* errorMsg = nullptr;
     FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
+            FORMAT_MESSAGE_FROM_SYSTEM |
+            FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr,
         GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         reinterpret_cast<LPWSTR>(&errorMsg), 0,
@@ -60,9 +60,9 @@ class CLibrary
 public:
     CLibrary() = delete;
     explicit CLibrary(const wchar_t* path) {
-        handle = LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
-        if (!handle) {
-            FreeLibrary(handle);
+        m_handle = LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if (!m_handle) {
+            FreeLibrary(m_handle);
             throw std::runtime_error {
                 std::format("Failed to load library:\n{}\n\n{}\n", nowide::narrow(path), GetLastErrorMessage())
             };
@@ -73,11 +73,11 @@ public:
     CLibrary& operator=(const CLibrary&) = delete;
     CLibrary& operator=(CLibrary&&) = delete;
     ~CLibrary() {
-        FreeLibrary(handle);
+        FreeLibrary(m_handle);
     }
 
     void* GetFunctionAddress(const char* name) const {
-        void* func = reinterpret_cast<void*>(GetProcAddress(handle, name));
+        const auto func = reinterpret_cast<void*>(GetProcAddress(m_handle, name));
         if (!func) {
             throw std::runtime_error {
                 std::format("Failed to load library function:\n{}\n\n{}\n", name, GetLastErrorMessage())
@@ -87,14 +87,14 @@ public:
     }
 
 private:
-    HMODULE handle;
+    HMODULE m_handle;
 };
 }
 
-int WINAPI WinMain(
+int WINAPI wWinMain(
     _In_ HINSTANCE /*hInstance*/,
     _In_opt_ HINSTANCE /*hPrevInstance*/,
-    _In_ LPSTR /*lpCmdLine*/,
+    _In_ LPWSTR /*lpCmdLine*/,
     _In_ int /*nShowCmd*/
 ) {
     try {
@@ -137,7 +137,7 @@ int WINAPI WinMain(
 
 int main() {
     // Dummy main for console in debug
-    return WinMain(GetModuleHandle(NULL), NULL, GetCommandLineA(), SW_SHOWNORMAL);
+    return wWinMain(GetModuleHandleW(nullptr), nullptr, GetCommandLineW(), SW_SHOWNORMAL);
 }
 
 #elif defined(PLATFORM_UNIX)
@@ -146,9 +146,9 @@ class CLibrary
 {
 public:
     CLibrary() = delete;
-    explicit CLibrary(const char* path) {
-        handle = dlopen(path, RTLD_LAZY);
-        if (!handle) {
+    explicit CLibrary(const char* path) :
+        m_handle(dlopen(path, RTLD_LAZY)) {
+        if (!m_handle) {
             throw std::runtime_error {
                 std::format("Failed to load library:\n{}\n", dlerror())
             };
@@ -159,11 +159,11 @@ public:
     CLibrary& operator=(const CLibrary&) = delete;
     CLibrary& operator=(CLibrary&&) = delete;
     ~CLibrary() {
-        dlclose(handle);
+        dlclose(m_handle);
     }
 
     void* GetFunctionAddress(const char* name) const {
-        void* func = dlsym(handle, name);
+        void* func = dlsym(m_handle, name);
         if (const char* error = dlerror(); error != NULL) {
             throw std::runtime_error {
                 std::format("Failed to load library function:\n{}\n", error)
@@ -173,7 +173,7 @@ public:
     }
 
 private:
-    void* handle;
+    void* m_handle;
 };
 
 int main(int argc, char** argv) {
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
         const std::string libCorePath = rootDir / "bin" / "libcore.so";
 
         const CLibrary core(libCorePath.c_str());
-        auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
+        const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
             int ret = main(argc, argv);

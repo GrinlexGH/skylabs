@@ -56,7 +56,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
                 minimized = false;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                //renderer.m_frameBufferResized = true;
+                // renderer.m_frameBufferResized = true;
                 break;
             case SDL_EVENT_MOUSE_MOTION:
                 g_camera.ProcessMouseMovement(e.motion.xrel, -e.motion.yrel);
@@ -64,7 +64,8 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
             case SDL_EVENT_MOUSE_WHEEL:
                 g_camera.ProcessMouseScroll(e.wheel.y);
                 break;
-            default: break;
+            default:
+                break;
         }
 
         if (!minimized) {
@@ -77,7 +78,7 @@ void CLauncher::Main() {
     SDL::CContext sdl(SDL_INIT_VIDEO);
 
     const SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
-    //SDL_SetWindowRelativeMouseMode(window.m_ptr, true);
+    // SDL_SetWindowRelativeMouseMode(window.m_ptr, true);
 
     const std::unique_ptr<IRenderer> renderer = CVulkanRenderer::TryToCreate(&window);
     if (!renderer) {

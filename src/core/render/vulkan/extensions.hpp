@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan.hpp"
+#include <vulkan/vulkan.hpp>
 
 inline bool HasExtension(const std::vector<const char*>& set, const std::string_view target) {
     return std::ranges::any_of(

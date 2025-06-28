@@ -29,21 +29,30 @@ CSwapchain::CSwapchain(
     const CRenderContext* context,
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
-    const vk::PresentModeKHR presentMode,
-    const vk::SwapchainKHR& oldSwaphchain
-) : m_context(context)
-{
-    const CDevice* device = context->GetDevice();
-    const vk::Device deviceHandle = device->GetHandle();
-    const vk::PhysicalDevice physicalDevice = context->GetPhysicalDevice()->GetHandle();
+    const vk::PresentModeKHR presentMode
+) : m_context(context) {
+    CreateSwapchain(surface, imageCount, presentMode);
+    CreateImages();
+}
 
+void CSwapchain::CreateSwapchain(
+    const vk::SurfaceKHR& surface,
+    const std::uint32_t imageCount,
+    const vk::PresentModeKHR presentMode,
+    const vk::SwapchainKHR& oldSwapchain
+) {
+    const CDevice* device = m_context->GetDevice();
+    const vk::Device deviceHandle = device->GetHandle();
+    const vk::PhysicalDevice physicalDevice = m_context->GetPhysicalDevice()->GetHandle();
+
+    //====================
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.pNext = nullptr;
-    createInfo.surface = surface;
+    createInfo.surface = m_info.m_associatedSurface = surface;
 
     //====================
     const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
-    createInfo.minImageCount = std::clamp(
+    createInfo.minImageCount = m_info.m_imageCount = std::clamp(
         imageCount,
         surfaceCapabilities.minImageCount,
         surfaceCapabilities.maxImageCount ? surfaceCapabilities.maxImageCount : std::numeric_limits<std::uint32_t>::max()
@@ -60,15 +69,15 @@ CSwapchain::CSwapchain(
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
     //====================
-    const std::uint32_t queueFamilyIndices[] {
+    const std::array queueFamilyIndices {
         device->GetGraphicsQueue().m_familyIndex,
         device->GetPresentQueue().m_familyIndex
     };
 
     if (device->GetGraphicsQueue().m_familyIndex != device->GetPresentQueue().m_familyIndex) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
+        createInfo.queueFamilyIndexCount = static_cast<std::uint32_t>(queueFamilyIndices.size());
+        createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
     } else {
         createInfo.imageSharingMode = vk::SharingMode::eExclusive;
     }
@@ -76,14 +85,20 @@ CSwapchain::CSwapchain(
     //====================
     createInfo.preTransform = surfaceCapabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    createInfo.presentMode = presentMode;   // VSync
+    createInfo.presentMode = m_info.m_presentMode = presentMode; // VSync
     createInfo.clipped = vk::True;
-    createInfo.oldSwapchain = oldSwaphchain;
+    createInfo.oldSwapchain = oldSwapchain;
 
+    //====================
     m_handle = deviceHandle.createSwapchainKHR(createInfo);
+}
+
+void CSwapchain::CreateImages() {
+    const vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
 
     m_images = deviceHandle.getSwapchainImagesKHR(m_handle);
-    m_imageViews.reserve(m_images.size());
+    m_info.m_imageCount = static_cast<std::uint32_t>(m_images.size());
+    m_imageViews.reserve(m_info.m_imageCount);
 
     for (const auto& image : m_images) {
         vk::ImageViewCreateInfo imageViewInfo {};
@@ -102,6 +117,31 @@ CSwapchain::CSwapchain(
 
         m_imageViews.emplace_back(deviceHandle.createImageView(imageViewInfo));
     }
+}
+
+void CSwapchain::DestroyImages() {
+    const auto deviceHandle = m_context->GetDevice()->GetHandle();
+    for (const auto& imageView : m_imageViews) {
+        deviceHandle.destroyImageView(imageView);
+    }
+    m_imageViews.clear();
+}
+
+void CSwapchain::Recreate() {
+    Recreate(m_info.m_associatedSurface, m_info.m_imageCount, m_info.m_presentMode);
+}
+
+void CSwapchain::Recreate(const vk::SurfaceKHR& surface, const std::uint32_t imageCount, const vk::PresentModeKHR presentMode) {
+    const vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
+
+    deviceHandle.waitIdle();    // TODO: Wait for fence, not idle
+
+    const vk::SwapchainKHR oldSwapchain = m_handle;
+    CreateSwapchain(surface, imageCount, presentMode, oldSwapchain);
+    deviceHandle.destroySwapchainKHR(oldSwapchain);
+
+    DestroyImages();
+    CreateImages();
 }
 
 vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const {
@@ -129,6 +169,7 @@ CSwapchain::~CSwapchain() {
     }
 
     const vk::Device device = m_context->GetDevice()->GetHandle();
+
     for (const auto& imageView : m_imageViews) {
         device.destroyImageView(imageView);
     }
