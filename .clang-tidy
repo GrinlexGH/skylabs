@@ -1,0 +1,39 @@
+---
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  cert-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-init-variables,
+  -readability-braces-around-statements,
+  -hicpp-braces-around-statements,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -hicpp-uppercase-literal-suffix,
+  -readability-uppercase-literal-suffix,
+  -readability-identifier-length,
+  -readability-qualified-auto,
+  -readability-isolate-declaration,
+  -misc-misplaced-const,
+  -cppcoreguidelines-pro-type-member-init,
+  -hicpp-member-init,
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
+FormatStyle: file
+
+CheckOptions:
+  - key:              readability-implicit-bool-conversion.AllowIntegerConditions
+    value:            'true'
+  - key:              readability-implicit-bool-conversion.AllowPointerConditions
+    value:            'true'
+...
