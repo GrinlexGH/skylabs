@@ -26,7 +26,7 @@ CQueueFamilies GetQueueFamilies(
     std::optional<std::uint32_t> transferQueueIndex;
     std::optional<std::uint32_t> computeQueueIndex;
 
-    for (std::uint32_t i = 0; const auto & queue : queueFamilies) {
+    for (std::uint32_t i = 0; const auto& queue : queueFamilies) {
         if (queue.queueCount == 0) {
             ++i;
             continue;
@@ -52,7 +52,7 @@ CQueueFamilies GetQueueFamilies(
             presentQueueIndex.has_value() &&
             transferQueueIndex.has_value() &&
             computeQueueIndex.has_value()
-            ) {
+        ) {
             break;
         }
 

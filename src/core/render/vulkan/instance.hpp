@@ -24,7 +24,7 @@ public:
     [[nodiscard]] vk::Instance GetHandle() const { return m_handle; }
 
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return HasExtension(m_enabledExtensions, name); }
-    [[nodiscard]] std::uint32_t ApiVersion() const { return m_apiVersion; }
+    [[nodiscard]] std::uint32_t GetApiVersion() const { return m_apiVersion; }
 
     CPhysicalDevice* GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
 
@@ -33,7 +33,7 @@ private:
 
     vk::Instance m_handle = VK_NULL_HANDLE;
 
-    std::vector<const char*> m_enabledExtensions {};
+    std::vector<const char*> m_enabledExtensions;
     std::uint32_t m_apiVersion = vk::ApiVersion10;
 
 #ifdef DEBUG

@@ -4,7 +4,6 @@
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
-#include <conio.h>
 #include <nowide/convert.hpp>
 #endif
 

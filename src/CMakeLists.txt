@@ -18,6 +18,7 @@ set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
 set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
 set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
 
+# For project info header generation
 set(APP_NAME ${PROJECT_NAME})
 set(APP_GAME_NAME ${PROJECT_NAME})
 set(APP_VERSION ${PROJECT_VERSION})
@@ -43,14 +44,19 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
         "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"
-        "$<$<CONFIG:Release>:/WX>"
+        "$<$<CONFIG:Release>:/WX;/Ox>"
     )
 endif()
 
-add_compile_definitions(NOMINMAX $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>)
+# All macros in one place (except targetname_EXPORT macros)
+add_compile_definitions(
+    NOMINMAX
+    $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>
+    VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+)
 
 if(WIN32)
-    add_compile_definitions(PLATFORM_WINDOWS UNICODE _UNICODE)
+    add_compile_definitions(PLATFORM_WINDOWS UNICODE _UNICODE VK_USE_PLATFORM_WIN32_KHR)
 endif()
 
 if(UNIX)
@@ -73,9 +79,13 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC" OR CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
     add_compile_definitions(COMPILER_MSVC)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_definitions(COMPILER_GCC)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
     add_compile_definitions(COMPILER_CLANG)
 endif()
 

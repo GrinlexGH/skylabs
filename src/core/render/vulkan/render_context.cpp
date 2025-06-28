@@ -27,13 +27,13 @@ void CRenderContext::CreateInstance() {
 void CRenderContext::SelectPhysicalDevice() {
     m_selectedPhysicalDevice = m_instance->GetSuitablePhysicalDevice(m_window);
 
-    Log::Info("Selected device: {}", std::string_view{ m_selectedPhysicalDevice->GetProperties().deviceName });
+    Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->GetProperties().deviceName });
 
     REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
 }
 
 void CRenderContext::CreateLogicalDevice() {
-    std::unordered_map<const char*, bool> deviceExtensions{
+    std::unordered_map<const char*, bool> deviceExtensions {
         // VMA
         { VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME, false },
         { VK_KHR_BIND_MEMORY_2_EXTENSION_NAME, false },
@@ -53,6 +53,12 @@ void CRenderContext::CreateLogicalDevice() {
         { VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME, false }
 #endif
     };
+
+    // Enable all extensions here
+    if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
+        deviceExtensions[VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME] = true;
+        REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
+    }
 
     m_device = std::make_unique<CDevice>(
         *m_instance,

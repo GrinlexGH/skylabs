@@ -4,8 +4,8 @@
 namespace Vulkan {
 struct CQueue
 {
-    vk::Queue m_handle;
-    std::uint32_t m_familyIndex;
+    vk::Queue m_handle = VK_NULL_HANDLE;
+    std::uint32_t m_familyIndex = std::numeric_limits<std::uint32_t>::max();
 };
 
 class CDevice
@@ -31,7 +31,7 @@ public:
     [[nodiscard]] vk::Device GetHandle() const { return m_handle; }
 
 private:
-    vk::Device m_handle;
+    vk::Device m_handle = VK_NULL_HANDLE;
 
     CQueue m_graphicsQueue;
     CQueue m_presentQueue;
