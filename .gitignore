@@ -1,7 +1,7 @@
 # Tools
 .cache/
 .PVS-Studio/
-.vscode/
+.vscode/*
 .vs/
 .idea/
 
@@ -15,3 +15,6 @@ libs/bin/*
 
 # Generated files
 src/public/project_info.hpp
+
+# Do not ignore vscode launch.json
+!.vscode/launch.json
