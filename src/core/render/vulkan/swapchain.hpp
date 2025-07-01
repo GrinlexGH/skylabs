@@ -9,7 +9,7 @@ class CSwapchain
 public:
     struct CInfo
     {
-        vk::SurfaceFormatKHR m_format;
+        vk::SurfaceFormatKHR m_surfaceFormat;
         vk::Extent2D m_extent;
         std::uint32_t m_imageCount;
         vk::PresentModeKHR m_presentMode;
@@ -53,8 +53,6 @@ private:
     CInfo m_info;
     std::vector<vk::Image> m_images;
     std::vector<vk::ImageView> m_imageViews;
-
-    std::vector<vk::Framebuffer> m_frameBuffers;
 
     const CRenderContext* m_context;
 };

@@ -32,8 +32,10 @@ set(APP_HOMEPAGE ${CMAKE_PROJECT_HOMEPAGE_URL})
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     add_compile_options(
@@ -41,6 +43,16 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         "$<$<CONFIG:Release>:-Werror>"
         "-march=native" "-mtune=native"
     )
+
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang" AND NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
+        set(CMAKE_LINKER_TYPE LLD)
+        add_compile_options(
+            "-stdlib=libc++"
+        )
+        add_link_options(
+            "-stdlib=libc++"
+        )
+    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
         "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"

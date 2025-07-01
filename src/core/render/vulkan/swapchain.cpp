@@ -59,9 +59,9 @@ void CSwapchain::CreateSwapchain(
     );
 
     //====================
-    m_info.m_format = ChooseSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
-    createInfo.imageFormat = m_info.m_format.format;
-    createInfo.imageColorSpace = m_info.m_format.colorSpace;
+    m_info.m_surfaceFormat = ChooseSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
+    createInfo.imageFormat = m_info.m_surfaceFormat.format;
+    createInfo.imageColorSpace = m_info.m_surfaceFormat.colorSpace;
 
     m_info.m_extent = ChooseSurfaceExtent(surfaceCapabilities);
     createInfo.imageExtent = m_info.m_extent;
@@ -104,7 +104,7 @@ void CSwapchain::CreateImages() {
         vk::ImageViewCreateInfo imageViewInfo {};
         imageViewInfo.image = image;
         imageViewInfo.viewType = vk::ImageViewType::e2D;
-        imageViewInfo.format = m_info.m_format.format;
+        imageViewInfo.format = m_info.m_surfaceFormat.format;
         imageViewInfo.components.r = vk::ComponentSwizzle::eIdentity;
         imageViewInfo.components.g = vk::ComponentSwizzle::eIdentity;
         imageViewInfo.components.b = vk::ComponentSwizzle::eIdentity;

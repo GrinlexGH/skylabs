@@ -7,6 +7,7 @@
 #include <format>
 #include <iostream>
 
+namespace {
 std::string GetLastErrorMessage() {
     wchar_t* errorMsg = nullptr;
     FormatMessageW(
@@ -25,6 +26,32 @@ std::string GetLastErrorMessage() {
 
     return finalMsg;
 }
+
+void EnableAnsiEscapeSequences() {
+    const HANDLE stdoutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (stdoutHandle == INVALID_HANDLE_VALUE) {
+        std::cout << std::format("Invalid handle: {}\n", GetLastErrorMessage());
+        return;
+    }
+
+    DWORD mode = 0;
+    if (!GetConsoleMode(stdoutHandle, &mode)) {
+        std::cout << std::format("Failed to get console mode: {}\n", GetLastErrorMessage());
+        return;
+    }
+
+    const DWORD desiredFlags = ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    if ((mode & desiredFlags) == desiredFlags) {
+        return;
+    }
+
+    mode |= desiredFlags;
+    if (!SetConsoleMode(stdoutHandle, mode)) {
+        std::cout << std::format("Failed to set console mode: {}\n", GetLastErrorMessage());
+        return;
+    }
+}
+}
 #endif
 
 extern "C" DLL_EXPORT int CoreMain(const int /*argc*/, char* /*argv*/[]) {
@@ -32,12 +59,7 @@ extern "C" DLL_EXPORT int CoreMain(const int /*argc*/, char* /*argv*/[]) {
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 
-    // Making allow ansi escape
-    DWORD mode = 0;
-    const HANDLE cmdOutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (!GetConsoleMode(cmdOutputHandle, &mode)) { std::cout << std::format("Cant get console mode! {}", GetLastErrorMessage()); };
-    mode |= ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(cmdOutputHandle, mode)) { std::cout << std::format("Cant set console mode! {}", GetLastErrorMessage()); };
+    EnableAnsiEscapeSequences();
 #endif
 
     CLauncher launcher;
