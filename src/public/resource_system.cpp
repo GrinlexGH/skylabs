@@ -3,10 +3,6 @@
 #include "os.hpp"
 
 #include <nowide/fstream.hpp>
-#include <cstring>
-#include <format>
-
-#include "logging.hpp"
 
 namespace {
 std::string GetRelativeResourcePath(const ResourceSystem::ResourceType type, const std::string_view relativePath) {

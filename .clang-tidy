@@ -26,14 +26,11 @@ Checks: >
   -misc-misplaced-const,
   -cppcoreguidelines-pro-type-member-init,
   -hicpp-member-init,
+  -hicpp-signed-bitwise,
+  -readability-implicit-bool-conversion,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'
 FormatStyle: file
-
-CheckOptions:
-  - key:              readability-implicit-bool-conversion.AllowIntegerConditions
-    value:            'true'
-  - key:              readability-implicit-bool-conversion.AllowPointerConditions
-    value:            'true'
 ...

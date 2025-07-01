@@ -28,13 +28,18 @@ public:
 
     template <typename Feature>
     [[nodiscard]] Feature GetExtensionFeatures() const {
-        // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME is required
+        // VK_KHR_get_physical_device_properties2 is required
         return m_handle.getFeatures2KHR<vk::PhysicalDeviceFeatures2KHR, Feature>().template get<Feature>();
     }
 
     template <typename Feature>
-    [[nodiscard]] vk::Bool32 IsExtensionFeatureSupported(vk::Bool32 Feature::* flag) const {
-        return GetExtensionFeatures<Feature>().*flag;
+    [[nodiscard]] vk::Bool32 IsExtensionFeatureEnabled(vk::Bool32 Feature::* flag) const {
+        auto it = m_extensionFeatures.find(Feature::structureType);
+        if (it != m_extensionFeatures.end() && it->second) {
+            auto feature = std::static_pointer_cast<Feature>(it->second);
+            return (*feature).*flag;
+        }
+        return vk::False;
     }
 
     template <typename Feature>
@@ -72,7 +77,7 @@ public:
 
     void RequestRequiredFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, const char* flagName) {
         if (m_features.*flag) {
-            m_requiredFeatures.*flag = true;
+            m_requiredFeatures.*flag = vk::True;
         } else {
             throw std::runtime_error(
                 std::format("Requested required feature \"{}\" is not supported!", flagName)
@@ -83,7 +88,7 @@ public:
     vk::Bool32 RequestOptionalFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, const char* flagName) {
         const vk::Bool32 supported = m_features.*flag;
         if (supported) {
-            m_requiredFeatures.*flag = true;
+            m_requiredFeatures.*flag = vk::True;
         } else {
             Log::Info("Requested optional feature \"{}\" is not supported.", flagName);
         }
@@ -100,7 +105,7 @@ private:
     const std::vector<vk::QueueFamilyProperties> m_queueFamilies;
     const std::vector<vk::ExtensionProperties> m_extensions;
 
-    // Extensions and features
+    // Extensions features
     std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures;
     void* m_extensionFeaturePNext = nullptr;
     vk::PhysicalDeviceFeatures m_requiredFeatures;

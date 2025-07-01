@@ -5,7 +5,7 @@
 #include "camera.hpp"
 #include "render/vulkan/vulkan_renderer.hpp"
 
-CCamera g_camera { glm::vec3(0.0f, 0.0f, 0.0f) };
+CCamera g_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -20,7 +20,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
         deltaTime = static_cast<float>(currentFrame) - lastFrame;
         lastFrame = static_cast<float>(currentFrame);
 
-        const bool* keyState = SDL_GetKeyboardState(nullptr);
+        const std::span keyState(SDL_GetKeyboardState(nullptr), SDL_SCANCODE_COUNT);
         if (keyState[SDL_SCANCODE_W]) {
             g_camera.ProcessKeyboard(FORWARD, deltaTime);
         }
@@ -69,7 +69,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
         }
 
         if (!minimized) {
-            renderer->Draw();
+            renderer->Draw(g_camera.GetViewMatrix());
         }
     }
 }

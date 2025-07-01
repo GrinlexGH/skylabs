@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 class IRenderer
 {
 public:
@@ -10,5 +12,5 @@ public:
     IRenderer& operator=(IRenderer&&) = default;
     virtual ~IRenderer() = default;
 
-    virtual void Draw() = 0;
+    virtual void Draw(glm::mat4) = 0;
 };

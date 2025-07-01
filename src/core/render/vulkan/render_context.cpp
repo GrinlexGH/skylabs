@@ -11,7 +11,7 @@ CRenderContext::CRenderContext(const IVulkanWindow* const window) : m_window(win
 
 void CRenderContext::CreateInstance() {
     std::unordered_map<const char*, bool> instanceExtensions {
-        { VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, true }
+        { vk::KHRGetPhysicalDeviceProperties2ExtensionName, true }
     };
 
     const std::vector<const char*> requiredExtensions = m_window->GetRequiredInstanceExtensions();
@@ -35,28 +35,28 @@ void CRenderContext::SelectPhysicalDevice() {
 void CRenderContext::CreateLogicalDevice() {
     std::unordered_map<const char*, bool> deviceExtensions {
         // VMA
-        { VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME, false },
-        { VK_KHR_BIND_MEMORY_2_EXTENSION_NAME, false },
-        { VK_KHR_MAINTENANCE_4_EXTENSION_NAME, false },
-        { VK_KHR_MAINTENANCE_5_EXTENSION_NAME, false },
-        { VK_EXT_MEMORY_BUDGET_EXTENSION_NAME, false },
-        { VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false },
-        { VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME, false },
-        { VK_AMD_DEVICE_COHERENT_MEMORY_EXTENSION_NAME, false },
+        { vk::KHRDedicatedAllocationExtensionName, false },
+        { vk::KHRBindMemory2ExtensionName, false },
+        { vk::KHRMaintenance4ExtensionName, false },
+        { vk::KHRMaintenance5ExtensionName, false },
+        { vk::EXTMemoryBudgetExtensionName, false },
+        { vk::KHRBufferDeviceAddressExtensionName, false },
+        { vk::EXTMemoryPriorityExtensionName, false },
+        { vk::AMDDeviceCoherentMemoryExtensionName, false },
 #ifdef PLATFORM_WINDOWS
-        { VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, false },
+        { vk::KHRExternalMemoryWin32ExtensionName, false },
 #endif
 
-        { VK_KHR_SWAPCHAIN_EXTENSION_NAME, true },
+        { vk::KHRSwapchainExtensionName, true },
 
 #ifdef DEBUG
-        { VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME, false }
+        { vk::EXTDeviceAddressBindingReportExtensionName, false }
 #endif
     };
 
     // Enable all extensions here
     if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
-        deviceExtensions[VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME] = true;
+        deviceExtensions[vk::KHRDynamicRenderingExtensionName] = true;
         REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
     }
 
