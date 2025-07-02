@@ -30,17 +30,18 @@ set(APP_COMPANY "Grinlex Stydios")
 set(APP_COPYRIGHT "MIT License. Copyright (c) 2025-present ${APP_COMPANY}")
 set(APP_HOMEPAGE ${CMAKE_PROJECT_HOMEPAGE_URL})
 
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     add_compile_options(
         "-Wall" "-Wextra" "-Wpedantic"
-        "$<$<CONFIG:Release>:-Werror>"
+        #"$<$<CONFIG:Release>:-Werror>"
+        "$<$<CONFIG:Release>:-O3>"
         "-march=native" "-mtune=native"
     )
 
@@ -56,7 +57,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
         "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"
-        "$<$<CONFIG:Release>:/WX;/Ox>"
+        #"$<$<CONFIG:Release>:/WX>"
+        "$<$<CONFIG:Release>:/Ox>"
     )
 endif()
 

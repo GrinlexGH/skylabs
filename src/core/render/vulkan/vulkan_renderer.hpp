@@ -18,7 +18,7 @@ public:
     ~CVulkanRenderer() override;
 
     static std::unique_ptr<CVulkanRenderer> TryToCreate(const IVulkanWindow* window);
-    void Draw(glm::mat4 view_mat);
+    void Draw(glm::mat4 view_mat) override;
 
 private:
     std::unique_ptr<Vulkan::CRenderContext> m_context;
@@ -54,6 +54,8 @@ private:
 
     vk::Image m_texture;
     vk::DeviceMemory m_textureMemory;
+    vk::ImageView m_textureView;
+    vk::Sampler m_textureSampler;
 
     std::uint32_t m_frameIndex = 0;
 };
