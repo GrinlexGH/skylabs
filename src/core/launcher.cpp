@@ -13,7 +13,7 @@ float lastX = 640 / 2.0f;
 float lastY = 480 / 2.0f;
 bool firstMouse = true;
 
-void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
+void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
     bool quit = false;
     while (!quit) {
         const Uint64 currentFrame = SDL_GetTicks();
@@ -35,6 +35,9 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
         }
         if (keyState[SDL_SCANCODE_ESCAPE]) {
             quit = true;
+        }
+        if (keyState[SDL_SCANCODE_GRAVE]) {
+            SDL_SetWindowRelativeMouseMode(window, true);
         }
         if (keyState[SDL_SCANCODE_LSHIFT]) {
             g_camera.MoveFaster();
@@ -64,6 +67,8 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer) {
             case SDL_EVENT_MOUSE_WHEEL:
                 g_camera.ProcessMouseScroll(e.wheel.y);
                 break;
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                SDL_SetWindowRelativeMouseMode(window, true);
             default:
                 break;
         }
@@ -78,12 +83,12 @@ void CLauncher::Main() {
     SDL::CContext sdl(SDL_INIT_VIDEO);
 
     const SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
-    // SDL_SetWindowRelativeMouseMode(window.m_ptr, true);
+    SDL_SetWindowRelativeMouseMode(window.m_ptr, true);
 
     const std::unique_ptr<IRenderer> renderer = CVulkanRenderer::TryToCreate(&window);
     if (!renderer) {
         throw std::runtime_error("Cannot initialize vulkan!\n");
     }
 
-    MainLoop(renderer);
+    MainLoop(renderer, window.m_ptr);
 }

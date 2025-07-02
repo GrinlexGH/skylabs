@@ -11,12 +11,13 @@
 
 #include <chrono>
 
-constexpr int MAX_FRAMES_IN_FLIGHT = 25;
+constexpr int MAX_FRAMES_IN_FLIGHT = 3;
 
 struct Vertex
 {
     glm::vec2 pos;
     glm::vec3 color;
+    glm::vec2 texCoord;
 
     static vk::VertexInputBindingDescription getBindingDescription() {
         vk::VertexInputBindingDescription bindingDescription {};
@@ -27,8 +28,9 @@ struct Vertex
         return bindingDescription;
     }
 
-    static std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions() {
-        std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions {};
+    static std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions() {
+        std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions{};
+
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;
         attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
@@ -38,6 +40,11 @@ struct Vertex
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
         attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = vk::Format::eR32G32Sfloat;
+        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
         return attributeDescriptions;
     }
@@ -50,10 +57,10 @@ struct UniformBufferObject {
 };
 
 const std::array vertices {
-    Vertex { .pos = {-0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-    Vertex { .pos = {0.5f, -0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-    Vertex { .pos = {0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}},
-    Vertex { .pos = { -0.5f, 0.5f }, .color = { 1.0f, 1.0f, 1.0f } },
+    Vertex { .pos = {-0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}, .texCoord = {1.0f, 0.0f}},
+    Vertex { .pos = {0.5f, -0.5f}, .color = {0.0f, 1.0f, 0.0f}, .texCoord = {0.0f, 0.0f}},
+    Vertex { .pos = {0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}, .texCoord = {0.0f, 1.0f}},
+    Vertex { .pos = {-0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}, .texCoord = {1.0f, 1.0f} },
 };
 
 const std::array<std::uint16_t, 6> indices = {
@@ -293,6 +300,7 @@ void TransitionImageLayout(
     vk::ImageLayout oldLayout,
     vk::ImageLayout newLayout
 ) {
+    (void)format;
     vk::CommandBuffer commandBuffer = BeginSingleTimeCommands(deviceHandle, commandPool);
 
     vk::ImageMemoryBarrier barrier{};   // todo: sync2
@@ -338,10 +346,10 @@ void UpdateUniformBuffer(
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
+    float time = std::chrono::duration<float, std::chrono::hours::period>(currentTime - startTime).count();
+    (void)time;
     UniformBufferObject ubo {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     ubo.view = view;
     ubo.proj = glm::perspective(glm::radians(45.0f), (float) cameraDemensions.width / (float) cameraDemensions.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
@@ -433,6 +441,134 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     std::array shaderStages = { vertShaderStageInfo, fragShaderStageInfo };
     // #endregion SHADER_MODULES
 
+    // #region COMMAND_BUFFERS
+    vk::CommandPoolCreateInfo commandPoolInfo {};
+    commandPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+    commandPoolInfo.queueFamilyIndex = m_context->GetDevice()->GetGraphicsQueue().m_familyIndex;
+
+    m_commandPool = deviceHandle.createCommandPool(commandPoolInfo);
+
+    m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    vk::CommandBufferAllocateInfo cmdBufferAllocInfo {};
+    cmdBufferAllocInfo.commandPool = m_commandPool;
+    cmdBufferAllocInfo.level = vk::CommandBufferLevel::ePrimary;
+    cmdBufferAllocInfo.commandBufferCount = static_cast<std::uint32_t>(m_commandBuffers.size());
+    m_commandBuffers = deviceHandle.allocateCommandBuffers(cmdBufferAllocInfo);
+    // #endregion
+
+    // #region TEXTURE
+    (void)(0);
+    // #region LOAD_TEXTURE
+    SDL_Surface* imageRaw = IMG_Load("texture.jpg");
+    if (!imageRaw) {
+        throw std::runtime_error("failed to load texture image!");
+    }
+    SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
+    SDL_DestroySurface(imageRaw);
+    vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
+    vk::Buffer stagingBuffer;
+    vk::DeviceMemory stagingBufferMemory;
+    void* data;
+    CreateBuffer(
+        physicalDeviceHandle,
+        deviceHandle,
+        imageSize,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+        stagingBuffer,
+        stagingBufferMemory
+    );
+
+    int b = imageSize / 3;
+    char* a = new char[b];
+    data = nullptr;
+    data = deviceHandle.mapMemory(stagingBufferMemory, 0, imageSize);
+    std::memcpy(data, image->pixels, static_cast<size_t>(imageSize / 1));
+    std::memcpy((char*)data + (3 * imageSize / 4), a, imageSize / 4);
+    deviceHandle.unmapMemory(stagingBufferMemory);
+    delete[] a;
+
+    // #endregion LOAD_TEXTURE
+
+    // #region COPY_TO_IMAGE
+    CreateImage(
+        physicalDeviceHandle,
+        deviceHandle,
+        image->w,
+        image->h,
+        vk::Format::eR8G8B8A8Srgb,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        m_texture,
+        m_textureMemory
+    );
+
+    TransitionImageLayout(
+        deviceHandle,
+        m_commandPool,
+        m_context->GetDevice()->GetGraphicsQueue().m_handle,
+        m_texture,
+        vk::Format::eR8G8B8A8Srgb,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eTransferDstOptimal
+    );
+    CopyBufferToImage(
+        deviceHandle,
+        m_commandPool,
+        m_context->GetDevice()->GetGraphicsQueue().m_handle,
+        stagingBuffer, m_texture, static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h)
+    );
+    TransitionImageLayout(
+        deviceHandle,
+        m_commandPool,
+        m_context->GetDevice()->GetGraphicsQueue().m_handle,
+        m_texture,
+        vk::Format::eR8G8B8A8Srgb,
+        vk::ImageLayout::eTransferDstOptimal,
+        vk::ImageLayout::eShaderReadOnlyOptimal
+    );
+    deviceHandle.destroyBuffer(stagingBuffer);
+    deviceHandle.freeMemory(stagingBufferMemory);
+    SDL_DestroySurface(image);
+    image = nullptr;
+    // #endregion COPY_TO_IMAGE
+
+    // #region IMAGE_VIEW
+    vk::ImageViewCreateInfo textureViewInfo{};
+    textureViewInfo.image = m_texture;
+    textureViewInfo.viewType = vk::ImageViewType::e2D;
+    textureViewInfo.format = vk::Format::eR8G8B8A8Srgb;
+    textureViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+    textureViewInfo.subresourceRange.baseMipLevel = 0;
+    textureViewInfo.subresourceRange.levelCount = 1;
+    textureViewInfo.subresourceRange.baseArrayLayer = 0;
+    textureViewInfo.subresourceRange.layerCount = 1;
+    m_textureView = deviceHandle.createImageView(textureViewInfo);
+    // #endregion IMAGE_VIEW
+
+    // #endregion TEXTURE
+
+
+    // #region SAMPLER
+    vk::SamplerCreateInfo samplerInfo{};
+    samplerInfo.magFilter = vk::Filter::eLinear;
+    samplerInfo.minFilter = vk::Filter::eLinear;
+    samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.anisotropyEnable = vk::True;
+    samplerInfo.maxAnisotropy = m_context->GetPhysicalDevice()->GetProperties().limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+    samplerInfo.unnormalizedCoordinates = vk::False;
+    samplerInfo.compareEnable = vk::False;
+    samplerInfo.compareOp = vk::CompareOp::eAlways;
+    samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+    m_textureSampler = deviceHandle.createSampler(samplerInfo);
+    // #endregion SAMPLER
 
     // #region UBO
     vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
@@ -464,21 +600,32 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
     uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
+    vk::DescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = 1;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+
+    std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+
     vk::DescriptorSetLayoutCreateInfo layoutInfo {};
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uboLayoutBinding;
+    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
     m_descriptorSetLayout = deviceHandle.createDescriptorSetLayout(layoutInfo);
     // #endregion DESCRIPTOR_SET_LAYOUT
 
     // #region DESCRIPTOR_POOL
-    vk::DescriptorPoolSize poolSize {};
-    poolSize.type = vk::DescriptorType::eUniformBuffer;
-    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    std::array<vk::DescriptorPoolSize, 2> poolSizes{};
+    poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     vk::DescriptorPoolCreateInfo poolInfo {};
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     m_descriptorPool = deviceHandle.createDescriptorPool(poolInfo);
@@ -500,24 +647,36 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
-        vk::WriteDescriptorSet descriptorWrite {};
-        descriptorWrite.dstSet = m_descriptorSets[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &bufferInfo;
-        descriptorWrite.pImageInfo = nullptr;
-        descriptorWrite.pTexelBufferView = nullptr;
+        vk::DescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfo.imageView = m_textureView;
+        imageInfo.sampler = m_textureSampler;
 
-        deviceHandle.updateDescriptorSets(descriptorWrite, {});
+        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
+        descriptorWrites[0].dstSet = m_descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
+        descriptorWrites[0].pImageInfo = nullptr;
+        descriptorWrites[0].pTexelBufferView = nullptr;
+
+        descriptorWrites[1].dstSet = m_descriptorSets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+
+        deviceHandle.updateDescriptorSets(descriptorWrites, {});
     }
     // #endregion DESCRIPTOR_SET
 
 
     // #region PIPELINE
     vk::VertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
-    std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions = Vertex::getAttributeDescriptions();
+    std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions = Vertex::getAttributeDescriptions();
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
     vertexInputInfo.vertexBindingDescriptionCount = 1;
@@ -591,25 +750,10 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
     m_pipeline = deviceHandle.createGraphicsPipeline(VK_NULL_HANDLE, pipelineInfo).value;
-    // #endregion
+    // #endregion PIPELINE
 
     deviceHandle.destroyShaderModule(vertShaderModule);
     deviceHandle.destroyShaderModule(fragShaderModule);
-
-    // #region COMMAND_BUFFERS
-    vk::CommandPoolCreateInfo commandPoolInfo {};
-    commandPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    commandPoolInfo.queueFamilyIndex = m_context->GetDevice()->GetGraphicsQueue().m_familyIndex;
-
-    m_commandPool = deviceHandle.createCommandPool(commandPoolInfo);
-
-    m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-    vk::CommandBufferAllocateInfo cmdBufferAllocInfo {};
-    cmdBufferAllocInfo.commandPool = m_commandPool;
-    cmdBufferAllocInfo.level = vk::CommandBufferLevel::ePrimary;
-    cmdBufferAllocInfo.commandBufferCount = static_cast<std::uint32_t>(m_commandBuffers.size());
-    m_commandBuffers = deviceHandle.allocateCommandBuffers(cmdBufferAllocInfo);
-    // #endregion
 
     m_frameBuffers = CreateFrameBuffers(deviceHandle, m_swapchain.get(), m_renderPass);
 
@@ -630,8 +774,6 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     // #region VERTEX_BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
 
-    vk::Buffer stagingBuffer;
-    vk::DeviceMemory stagingBufferMemory;
     CreateBuffer(
         physicalDeviceHandle,
         deviceHandle,
@@ -642,7 +784,7 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
         stagingBufferMemory
     );
 
-    void* data = deviceHandle.mapMemory(stagingBufferMemory, 0, vertexBufferSize);
+    data = deviceHandle.mapMemory(stagingBufferMemory, 0, vertexBufferSize);
         memcpy(data, vertices.data(), static_cast<std::size_t>(vertexBufferSize));
     deviceHandle.unmapMemory(stagingBufferMemory);
 
@@ -708,76 +850,6 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     deviceHandle.destroyBuffer(stagingBuffer);
     deviceHandle.freeMemory(stagingBufferMemory);
     // #endregion INDEX_BUFFER
-
-    // #region TEXTURE
-    // #region LOAD_TEXTURE
-    SDL_Surface* image = IMG_Load("texture.jpg");
-    if (!image) {
-        throw std::runtime_error("failed to load texture image!");
-    }
-    SDL_ConvertSurface(image, SDL_PIXELFORMAT_RGBA8888);
-    vk::DeviceSize imageSize = image->w * image->h * 4;
-
-    CreateBuffer(
-        physicalDeviceHandle,
-        deviceHandle,
-        imageSize,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-        stagingBuffer,
-        stagingBufferMemory
-    );
-
-    data = nullptr;
-    data = deviceHandle.mapMemory(stagingBufferMemory, 0, imageSize);
-    std::memcpy(data, image->pixels, static_cast<size_t>(imageSize / 4));
-    deviceHandle.unmapMemory(stagingBufferMemory);
-
-    // #endregion LOAD_TEXTURE
-
-    CreateImage(
-        physicalDeviceHandle,
-        deviceHandle,
-        image->w,
-        image->h,
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        m_texture,
-        m_textureMemory
-    );
-
-    TransitionImageLayout(
-        deviceHandle,
-        m_commandPool,
-        m_context->GetDevice()->GetGraphicsQueue().m_handle,
-        m_texture,
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal
-    );
-    CopyBufferToImage(
-        deviceHandle,
-        m_commandPool,
-        m_context->GetDevice()->GetGraphicsQueue().m_handle,
-        stagingBuffer, m_texture, static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h)
-    );
-    TransitionImageLayout(
-        deviceHandle,
-        m_commandPool,
-        m_context->GetDevice()->GetGraphicsQueue().m_handle,
-        m_texture,
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageLayout::eTransferDstOptimal,
-        vk::ImageLayout::eShaderReadOnlyOptimal
-    );
-
-    deviceHandle.destroyBuffer(stagingBuffer);
-    deviceHandle.freeMemory(stagingBufferMemory);
-    SDL_DestroySurface(image);
-    image = nullptr;
-    // #endregion TEXTURE
 }
 
 std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindow* const window) {
@@ -829,7 +901,7 @@ void CVulkanRenderer::Draw(glm::mat4 view) {
     renderPassInfo.renderArea.offset = { { 0, 0 } };
     renderPassInfo.renderArea.extent = m_swapchain->GetInfo().m_extent;
 
-    vk::ClearValue clearColor = vk::ClearColorValue { 0.0f, 0.0f, 0.005f, 1.0f };
+    vk::ClearValue clearColor = vk::ClearColorValue { 0.1f, 0.1f, 0.1f, 1.0f };
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
 
@@ -918,6 +990,8 @@ CVulkanRenderer::~CVulkanRenderer() {
         deviceHandle.destroyBuffer(m_uniformBuffers[i]);
         deviceHandle.freeMemory(m_uniformBuffersMemory[i]);
     }
+    deviceHandle.destroySampler(m_textureSampler);
+    deviceHandle.destroyImageView(m_textureView);
     deviceHandle.destroyImage(m_texture);
     deviceHandle.freeMemory(m_textureMemory);
     deviceHandle.destroyDescriptorSetLayout(m_descriptorSetLayout);
