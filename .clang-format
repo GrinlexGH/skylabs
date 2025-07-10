@@ -25,16 +25,17 @@ BraceWrapping:
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
 BreakBeforeBraces: Custom
-BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: AfterColon
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortCaseExpressionOnASingleLine: true
 AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortCompoundRequirementOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
+PackConstructorInitializers: CurrentLine
 #BreakBeforeBraceAfterConstructorInitializerLists: true # https://github.com/llvm/llvm-project/issues/79132
 ColumnLimit: 0
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: false
 IncludeCategories: 
   - Regex: '^<.*'

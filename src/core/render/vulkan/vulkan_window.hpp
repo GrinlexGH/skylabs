@@ -11,9 +11,9 @@ class IVulkanWindow : public IWindow
 public:
     IVulkanWindow() = default;
     IVulkanWindow(const IVulkanWindow&) = delete;
-    IVulkanWindow(IVulkanWindow&&) = delete;
+    IVulkanWindow(IVulkanWindow&&) noexcept = default;
     IVulkanWindow& operator=(const IVulkanWindow&) = delete;
-    IVulkanWindow& operator=(IVulkanWindow&&) = delete;
+    IVulkanWindow& operator=(IVulkanWindow&&) noexcept = default;
     ~IVulkanWindow() override = default;
 
     [[nodiscard]] virtual std::vector<const char*> GetRequiredInstanceExtensions() const = 0;

@@ -33,10 +33,29 @@ void Log(const LogType type, const std::format_string<Args...> fmt, Args&&... ar
 
     auto [label, r, g, b] = logPrefixes[static_cast<std::size_t>(type)];
 
+    std::string_view prefix;
+    std::string_view suffix;
+
+    switch (type) {
+        case LogType::eWarning:
+            prefix = "\n";
+            suffix = "\n";
+            break;
+        case LogType::eError:
+            prefix = "\n\n";
+            suffix = "\n\n";
+            break;
+        default:
+            break;
+    }
+
     std::lock_guard lock(g_mutex);
-    std::cout << stc::true_color
+    std::cout << prefix
+              << stc::true_color
               << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "
-              << std::format(fmt, std::forward<Args>(args)...) << std::endl;
+              << std::format(fmt, std::forward<Args>(args)...) 
+              << suffix
+              << std::endl;
 }
 
 template <class... Args>
