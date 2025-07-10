@@ -7,7 +7,7 @@
 
 # Build folders
 build/*
-out
+out/
 
 # Third party compiled libs
 libs/bin/*

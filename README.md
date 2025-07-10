@@ -12,8 +12,13 @@ Requirements:
 * [`Vulkan SDK`](https://vulkan.lunarg.com/sdk/home)
 
 CMake uses `build_dependencies` python script to install all third-party libraries.
+
 It skips rebuilds using Git submodule commit hashes and can install header only libraries.
-You can specify cmake arguments for all submodules or for a specific one by defining DEPS_CMAKE_ARGS and DEPS_CMAKE_LIB_ARGS cmake variables. See `build_dependencies.py --help`.
+
+You can specify cmake arguments for all submodules or for a specific one by defining `DEPS_CMAKE_ARGS` and `DEPS_CMAKE_LIB_ARGS` cmake variables or env variables. See `build_dependencies.py --help`.
+
+Set `DEPS_TARGET_SYSTEM`, `DEPS_TARGET_ARCH` and `DEPS_SUBFOLDER` variables or env variables to control `DEPS_INSTALL_DIR` path (e.g. `libs/bin/Linux-x86_64/libcxx/`) and separate builds for different targets - useful for cross-compilation via `CMAKE_TOOLCHAIN_FILE`, or for [`cmake-tools-kits.json`](https://gist.github.com/GrinlexGH/cffbe9727b7183d7044e2c4af378ffd2) from vscode extension.
+
 
 **You need to install the dependencies to build these libraries yourself**, but usually everything should work without problems.
 The largest library that requires much dependencies is **SDL**. If you're on linux, check out [**this file**](libs/sources/SDL/docs/README-linux.md) to compile it.

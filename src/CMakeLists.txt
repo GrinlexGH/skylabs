@@ -25,7 +25,6 @@ set(APP_VERSION ${PROJECT_VERSION})
 set(APP_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(APP_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(APP_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-set(APP_VERSION_TWEAK ${PROJECT_VERSION_TWEAK})
 set(APP_COMPANY "Grinlex Stydios")
 set(APP_COPYRIGHT "MIT License. Copyright (c) 2025-present ${APP_COMPANY}")
 set(APP_HOMEPAGE ${CMAKE_PROJECT_HOMEPAGE_URL})
@@ -44,16 +43,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
         "-march=native" "-mtune=native"
     )
-
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang" AND NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
-        set(CMAKE_LINKER_TYPE LLD)
-        add_compile_options(
-            "-stdlib=libc++"
-        )
-        add_link_options(
-            "-stdlib=libc++"
-        )
-    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
         "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"

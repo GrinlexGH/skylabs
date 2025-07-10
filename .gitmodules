@@ -19,3 +19,6 @@
 [submodule "libs/sources/simple_term_colors"]
 	path = libs/sources/simple_term_colors
 	url = https://github.com/illyigan/simple_term_colors.git
+[submodule "libs/sources/SteamworksSDK"]
+	path = libs/sources/SteamworksSDK
+	url = https://github.com/rlabrecque/SteamworksSDK.git

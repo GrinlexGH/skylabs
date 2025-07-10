@@ -2,44 +2,43 @@
 include(FindPackageHandleStandardArgs)
 
 if(NOT SteamworksSDK_FOUND)
-    set(_steam_api_lib_names steam_api64 steam_api)
-    set(_appticket_lib_names sdkencryptedappticket64 sdkencryptedappticket)
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(_arch_suffix "x64")
+        set(_arch_suffix "64")
+        set(_steam_api_lib_names steam_api64)
         set(_steam_api_dll_names steam_api64.dll)
+        set(_appticket_lib_names sdkencryptedappticket64)
         set(_appticket_dll_names sdkencryptedappticket64.dll)
     elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-        set(_arch_suffix "x86")
+        set(_arch_suffix "32")
+        set(_steam_api_lib_names steam_api)
         set(_steam_api_dll_names steam_api.dll)
+        set(_appticket_lib_names sdkencryptedappticket)
         set(_appticket_dll_names sdkencryptedappticket.dll)
-    else()
-        message(FATAL_ERROR "Unknown pointer size")
     endif()
 
     find_library(
         SteamworksSDK_LIBRARY
         ${_steam_api_lib_names}
         PATH_SUFFIXES
-        steamworks_sdk/lib/steam
-        steamworks_sdk/bin/steam
-        steamworks_sdk_${_arch_suffix}/lib/steam
-        steamworks_sdk_${_arch_suffix}/bin/steam
+        SteamworksSDK/lib/
+        SteamworksSDK/lib/win64/
+        SteamworksSDK/lib/linux${_arch_suffix}/
+        SteamworksSDK/lib/osx/
     )
 
     find_file(
         SteamworksSDK_DLL
         ${_steam_api_dll_names}
         PATH_SUFFIXES
-        steamworks_sdk/bin/steam
-        steamworks_sdk_${_arch_suffix}/bin/steam
+        SteamworksSDK/bin/
+        SteamworksSDK/bin/win64/
     )
 
     find_path(
         SteamworksSDK_INCLUDE_DIR
         steam/steam_api.h
         PATH_SUFFIXES
-        steamworks_sdk/include
-        steamworks_sdk_${_arch_suffix}/include
+        SteamworksSDK/include/
     )
 
     add_library(SteamworksSDK::SteamworksSDK SHARED IMPORTED)
@@ -63,18 +62,16 @@ if(NOT SteamworksSDK_FOUND)
         SteamworksSDK_AppTicket_LIBRARY
         ${_appticket_lib_names}
         PATH_SUFFIXES
-        steamworks_sdk/bin/steam
-        steamworks_sdk/lib/steam
-        steamworks_sdk_${_arch_suffix}/bin/steam
-        steamworks_sdk_${_arch_suffix}/lib/steam
+        SteamworksSDK/lib/win${_arch_suffix}/
+        SteamworksSDK/lib/linux${_arch_suffix}/
+        SteamworksSDK/lib/osx/
     )
 
     find_file(
         SteamworksSDK_AppTicket_DLL
         ${_appticket_dll_names}
         PATH_SUFFIXES
-        steamworks_sdk/bin/steam
-        steamworks_sdk_${_arch_suffix}/bin/steam
+        SteamworksSDK/bin/win${_arch_suffix}/
     )
 
     add_library(SteamworksSDK::AppTicket SHARED IMPORTED)
@@ -89,7 +86,6 @@ if(NOT SteamworksSDK_FOUND)
         set_target_properties(SteamworksSDK::AppTicket PROPERTIES
             IMPORTED_LOCATION "${SteamworksSDK_AppTicket_LIBRARY}"
             INTERFACE_INCLUDE_DIRECTORIES "${SteamworksSDK_INCLUDE_DIR}"
-            IMPORTED_NO_SONAME TRUE
         )
     endif()
 
