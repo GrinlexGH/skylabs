@@ -9,10 +9,12 @@ class CVulkanWindow final : public IVulkanWindow
 public:
     explicit CVulkanWindow(const char* title, int w, int h, SDL_WindowFlags flags = 0);
     CVulkanWindow(const CVulkanWindow&) = delete;
-    CVulkanWindow(CVulkanWindow&&) = delete;
+    CVulkanWindow(CVulkanWindow&& other) noexcept;
     CVulkanWindow& operator=(const CVulkanWindow&) = delete;
-    CVulkanWindow& operator=(CVulkanWindow&&) = delete;
+    CVulkanWindow& operator=(CVulkanWindow&& other) noexcept;
     ~CVulkanWindow() override;
+
+    [[nodiscard]] SDL_Window* GetHandle() const { return m_handle; }
 
     [[nodiscard]] std::vector<const char*> GetRequiredInstanceExtensions() const override;
     [[nodiscard]] bool CheckQueuePresentSupport(
@@ -26,6 +28,7 @@ public:
 
     void GetDrawableSize(int* w, int* h) const override;
 
-    SDL_Window* m_ptr = nullptr;
+private:
+    SDL_Window* m_handle = nullptr;
 };
 }

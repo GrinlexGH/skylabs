@@ -59,22 +59,23 @@ class CLibrary
 {
 public:
     CLibrary() = delete;
-    explicit CLibrary(const wchar_t* path) {
-        m_handle = LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+    explicit CLibrary(const wchar_t* path) : m_handle(LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH)) {
         if (!m_handle) {
-            FreeLibrary(m_handle);
             throw std::runtime_error {
                 std::format("Failed to load library:\n{}\n\n{}\n", nowide::narrow(path), GetLastErrorMessage())
             };
         }
     }
     CLibrary(const CLibrary&) = delete;
-    CLibrary(CLibrary&&) = delete;
+    CLibrary(CLibrary&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
     CLibrary& operator=(const CLibrary&) = delete;
-    CLibrary& operator=(CLibrary&&) = delete;
-    ~CLibrary() {
-        FreeLibrary(m_handle);
+    CLibrary& operator=(CLibrary&& other) noexcept {
+        if (this == &other) { return *this; }
+        if (m_handle) { FreeLibrary(m_handle); }
+        m_handle = std::exchange(other.m_handle, nullptr);
+        return *this;
     }
+    ~CLibrary() { if (m_handle) { FreeLibrary(m_handle); } }
 
     void* GetFunctionAddress(const char* name) const {
         const auto func = reinterpret_cast<void*>(GetProcAddress(m_handle, name));
@@ -91,12 +92,7 @@ private:
 };
 }
 
-int WINAPI wWinMain(
-    _In_ HINSTANCE /*hInstance*/,
-    _In_opt_ HINSTANCE /*hPrevInstance*/,
-    _In_ LPWSTR /*lpCmdLine*/,
-    _In_ int /*nShowCmd*/
-) {
+int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int /*nShowCmd*/) {
     try {
         std::filesystem::path rootDir { GetProgramPath() };
         rootDir.remove_filename();
@@ -146,8 +142,7 @@ class CLibrary
 {
 public:
     CLibrary() = delete;
-    explicit CLibrary(const char* path) :
-        m_handle(dlopen(path, RTLD_LAZY)) {
+    explicit CLibrary(const char* path) : m_handle(dlopen(path, RTLD_LAZY)) {
         if (!m_handle) {
             throw std::runtime_error {
                 std::format("Failed to load library:\n{}\n", dlerror())
@@ -155,12 +150,15 @@ public:
         }
     }
     CLibrary(const CLibrary&) = delete;
-    CLibrary(CLibrary&&) = delete;
+    CLibrary(CLibrary&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
     CLibrary& operator=(const CLibrary&) = delete;
-    CLibrary& operator=(CLibrary&&) = delete;
-    ~CLibrary() {
-        dlclose(m_handle);
+    CLibrary& operator=(CLibrary&& other) noexcept {
+        if (this == &other) { return *this; }
+        if (m_handle) { dlclose(m_handle); }
+        m_handle = std::exchange(other.m_handle, nullptr);
+        return *this;
     }
+    ~CLibrary() { if(m_handle) { dlclose(m_handle); } }
 
     void* GetFunctionAddress(const char* name) const {
         void* func = dlsym(m_handle, name);
@@ -176,7 +174,7 @@ private:
     void* m_handle;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char* argv[]) {
     try {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();

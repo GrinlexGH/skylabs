@@ -7,9 +7,9 @@ class IRenderer
 public:
     IRenderer() = default;
     IRenderer(const IRenderer&) = delete;
-    IRenderer(IRenderer&&) = default;
+    IRenderer(IRenderer&&) noexcept = default;
     IRenderer& operator=(const IRenderer&) = delete;
-    IRenderer& operator=(IRenderer&&) = default;
+    IRenderer& operator=(IRenderer&&) noexcept = default;
     virtual ~IRenderer() = default;
 
     virtual void Draw(glm::mat4) = 0;

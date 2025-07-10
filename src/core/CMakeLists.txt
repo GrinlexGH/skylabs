@@ -27,6 +27,8 @@ set(SOURCES
     render/vulkan/swapchain.cpp
     render/vulkan/allocator.hpp
     render/vulkan/allocator.cpp
+    render/vulkan/frame_data.hpp
+    render/vulkan/frame_data.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan.hpp
