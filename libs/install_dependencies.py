@@ -1,23 +1,24 @@
 # Author: Grinlex
 
 import argparse
-import os
 import platform
 import re
 import shlex
 import shutil
 import subprocess
 import sys
-import urllib.request
-import zipfile
 from enum import IntEnum
 from pathlib import Path
+from glob import glob
 
 SOURCES_ROOT = Path()
 INSTALL_ROOT = Path()
 CMAKE = "cmake"
 CMAKE_GLOBAL_ARGS = list[str]()
 CMAKE_PERSUBMODULE_ARGS = dict[str, list[str]]()
+
+# ========================================================================================
+# region ====== Logging and terminal colors ==============================================
 
 class LogLevel(IntEnum):
     Info = 0
@@ -42,6 +43,12 @@ def log(message, log_level:LogLevel=LogLevel.Info):
     else:
         print(f"{TerminalColors.OKBLUE}{message}{TerminalColors.ENDC}", flush=True)
 
+# endregion === Logging and terminal colors ==============================================
+# ========================================================================================
+
+# ========================================================================================
+# region ====== Git utilities ============================================================
+
 def get_git_hash(source_dir: Path) -> str:
     result = subprocess.run(
         ["git", "-C", str(source_dir), "rev-parse", "HEAD"],
@@ -60,13 +67,19 @@ def check_git_hash_match(source_dir: Path, hash_file: Path) -> bool:
         log(f"Failed to get git hash for {source_dir}: {e}", LogLevel.Error)
     return False
 
-def build_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags: list[str] = []) -> None:
+# endregion === Git utilities ============================================================
+# ========================================================================================
+
+# ========================================================================================
+# region ====== CMake libraries building and installation ================================
+
+def build_and_install_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags: list[str] = []) -> None:
     global SOURCES_ROOT, INSTALL_ROOT, CMAKE, CMAKE_GLOBAL_ARGS, CMAKE_PERSUBMODULE_ARGS
 
     lib_name = source_dir_base.name
     source_dir = SOURCES_ROOT / source_dir_base
     install_dir = INSTALL_ROOT / install_dir_base
-    hash_file = install_dir / "git_hash.txt"
+    hash_file = install_dir / f"git_hash_{lib_name}.txt"
 
     if hash_file.exists() and check_git_hash_match(source_dir, hash_file):
         log(f"[{lib_name}] is up to date.")
@@ -89,21 +102,18 @@ def build_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_fla
         ".."
     ] + extra_cmake_flags + CMAKE_GLOBAL_ARGS + submodule_args
 
-    vs_env = os.environ.copy()
-    vs_env["VSLANG"] = "1033"
-
-    subprocess.run(cmake_cmd, cwd=build_dir, check=True, env=vs_env)
+    subprocess.run(cmake_cmd, cwd=build_dir, check=True)
 
     build_cmd = [CMAKE, "--build", ".", "--config", "Release", "--parallel"]
-
-    subprocess.run(build_cmd, cwd=build_dir, check=True, env=vs_env)
+    subprocess.run(build_cmd, cwd=build_dir, check=True)
+    log(f"[{lib_name}] successfully built.", LogLevel.Success)
 
     if install_dir.exists():
         shutil.rmtree(install_dir)
     install_dir.mkdir(parents=True)
 
     install_cmd = [CMAKE, "--install", ".", "--config", "Release"]
-    subprocess.run(install_cmd, cwd=build_dir, check=True, env=vs_env)
+    subprocess.run(install_cmd, cwd=build_dir, check=True)
 
     shutil.rmtree(build_dir)
 
@@ -111,14 +121,33 @@ def build_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_fla
     with open(hash_file, "w", encoding="utf-8") as f:
         f.write(current_hash)
 
-    log(f"[{lib_name}] build complete.", LogLevel.Success)
+    log(f"[{lib_name}] installed.", LogLevel.Success)
 
-def install_header_only_library(source_dir_base: Path, install_dir_base: Path, header_paths: list[str]):
+# endregion === CMake libraries building and installation ================================
+# ========================================================================================
+
+# ========================================================================================
+# region ====== Manual installation libraries ============================================
+
+def split_pattern(pattern: str) -> tuple[Path, str]:
+    """
+    Splits pattern on (fixed_prefix, sub_pattern):
+    e.g. "redistributable_bin/**/*.dll" -> (Path("redistributable_bin"), "**/*.dll")
+    """
+    parts = Path(pattern).parts
+    for i, part in enumerate(parts):
+        if any(ch in part for ch in ("*", "?", "[")):
+            fixed = Path(*parts[:i]) if i > 0 else Path()
+            sub = "/".join(parts[i:])
+            return fixed, sub
+    return Path(*parts), ""
+
+def install_manual_install_libraries(source_dir_base: Path, install_dir_base: Path, rules: list[tuple[str, str]]):
     global SOURCES_ROOT, INSTALL_ROOT
 
     lib_name = source_dir_base.name
     source_dir = SOURCES_ROOT / source_dir_base
-    install_dir = INSTALL_ROOT / "header-only" / install_dir_base
+    install_dir = INSTALL_ROOT / install_dir_base
     hash_file = install_dir / f"git_hash_{lib_name}.txt"
 
     if hash_file.exists() and check_git_hash_match(source_dir, hash_file):
@@ -128,17 +157,38 @@ def install_header_only_library(source_dir_base: Path, install_dir_base: Path, h
     if not install_dir.exists():
         install_dir.mkdir(parents=True)
 
-    for header in header_paths:
-        src = source_dir / header
-        dst = install_dir
+    for pattern, dst_subdir in rules:
+        fixed_prefix, sub_pattern = split_pattern(pattern)
+        glob_root = source_dir / fixed_prefix
 
-        if src.is_file():
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
-        elif src.is_dir():
-            shutil.copytree(src, dst, dirs_exist_ok=True)
-        else:
-            log(f"[{lib_name}] Cannot find path: {src}", LogLevel.Warning)
+        if not glob_root.exists():
+            log(f"Pattern base path not found: {glob_root}", LogLevel.Warning)
+            continue
+
+        search_pattern = str(glob_root / sub_pattern) if sub_pattern else str(glob_root)
+        matches = glob(search_pattern, recursive=True)
+
+        for full_path in matches:
+            full_path = Path(full_path)
+
+            try:
+                rel_path = full_path.relative_to(glob_root)
+            except ValueError:
+                log(f"Failed to compute relative path for {full_path}", LogLevel.Warning)
+                continue
+
+            use_flat = "**" not in sub_pattern
+            if use_flat:
+                target = install_dir / dst_subdir / full_path.name
+            else:
+                target = install_dir / dst_subdir / rel_path
+
+            if full_path.is_file():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(full_path, target)
+
+            elif full_path.is_dir():
+                shutil.copytree(full_path, target, dirs_exist_ok=True)
 
     current_hash = get_git_hash(source_dir)
     with open(hash_file, "w", encoding="utf-8") as f:
@@ -146,60 +196,69 @@ def install_header_only_library(source_dir_base: Path, install_dir_base: Path, h
 
     log(f"[{lib_name}] installed.", LogLevel.Success)
 
-def download_and_extract_zip(url, zip_path, extract_to):
-    try:
-        log(f"Downloading from {url} to {zip_path}", LogLevel.Info)
-        urllib.request.urlretrieve(url, zip_path)
-    except Exception as e:
-        log(f"Failed to download: {e}", LogLevel.Error)
-        return False
+# endregion === Manual installation libraries ============================================
+# ========================================================================================
 
-    log(f"Unzipping archive to {extract_to}", LogLevel.Info)
-    try:
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            for member in zip_ref.infolist():
-                fixed_path = extract_to / member.filename.replace('\\', '/')
-                if member.is_dir():
-                    fixed_path.mkdir(parents=True, exist_ok=True)
-                else:
-                    fixed_path.parent.mkdir(parents=True, exist_ok=True)
-                    with zip_ref.open(member) as source, open(fixed_path, 'wb') as target:
-                        shutil.copyfileobj(source, target)
-    except Exception as e:
-        log(f"Failed to unzip archive: {e}", LogLevel.Error)
-        return False
+# ========================================================================================
+# region ====== Header only installation =================================================
 
-    return True
+def install_header_only_library(source_dir_base: Path, install_dir_base: Path, paths: list[str]):
+    global SOURCES_ROOT, INSTALL_ROOT
 
-def install_steamworks_sdk(sizeof_void_p=8):
-    global INSTALL_ROOT
-    version = "1.62"
-    arch = "x64" if sizeof_void_p == 8 else "x86"
+    dst_subdir = Path("header-only") / install_dir_base
+    rules = [(path, str(install_dir_base)) for path in paths]
 
-    zip_name = f"steamworks_sdk_{arch}.zip"
-    zip_path = INSTALL_ROOT / "downloads" / zip_name
-    sdk_url = (
-        f"https://github.com/julianxhokaxhiu/SteamworksSDKCI/releases/download/"
-        f"{version}/SteamworksSDK-v{version}.0_{arch}.zip"
-    )
-    sdk_extract_dir = INSTALL_ROOT / f"steamworks_sdk_{arch}"
+    install_manual_install_libraries(source_dir_base, dst_subdir, rules)
 
-    if sdk_extract_dir.exists():
-        log("[Steamworks SDK] is up to date.", LogLevel.Info)
-        return
+# endregion === Header only installation =================================================
+# ========================================================================================
 
-    zip_path.parent.mkdir(parents=True, exist_ok=True)
+# ========================================================================================
+# region ====== Main library installation functions ======================================
 
-    success = download_and_extract_zip(sdk_url, zip_path, sdk_extract_dir)
-    if not success:
-        log("[Steamworks SDK] installation failed.", LogLevel.Error)
+def skip_if_missing(lib_folder: str) -> bool:
+    global SOURCES_ROOT
 
-    log("[Steamworks SDK] installed.", LogLevel.Success)
+    src_path = SOURCES_ROOT / lib_folder
+    if not src_path.exists():
+        log(f"Source folder not found: {src_path}", LogLevel.Warning)
+        return True
+    return False
+
+def build_and_install_all_libraries(libraries: list[tuple[str, str, list[str]]]):
+    for lib_folder, install_subdir, flags in libraries:
+        if skip_if_missing(lib_folder):
+            continue
+        try:
+            build_and_install_library(Path(lib_folder), Path(install_subdir), flags)
+        except subprocess.CalledProcessError:
+            log(f"Failed to compile {lib_folder}", LogLevel.Error)
+            sys.exit(1)
+
+def install_all_header_only_libraries(header_libraries: list[tuple[str, str, list[str]]]):
+    for lib_folder, install_subdir, files in header_libraries:
+        if skip_if_missing(lib_folder):
+            continue
+
+        install_header_only_library(Path(lib_folder), Path(install_subdir), files)
+
+def install_all_manual_install_libraries(manual_install_libraries: list[tuple[str, str, list[tuple[str, str]]]]):
+    for lib_folder, install_subdir, rules in manual_install_libraries:
+        if skip_if_missing(lib_folder):
+            continue
+
+        install_manual_install_libraries(Path(lib_folder), Path(install_subdir), rules)
+
+# endregion === Main library installation functions ======================================
+# ========================================================================================
+
+# ========================================================================================
+# region ====== CMake argument parsing ===================================================
 
 def parse_cmake_lib_args(lib_arg_str: str) -> dict[str, list[str]]:
     """
     Parse library-specific cmake arguments passed as a string like:
-    'SDL=(-G "Ninlogja Multi-Config") SDL_image=(-G "Ninja")'
+    'SDL=(-G "Ninja Multi-Config") SDL_image=(-G "Ninja")'
     into a dictionary: {"SDL": ["-G", "Ninja Multi-Config"], "SDL_image": ["-G", "Ninja"]}
     """
     result = {}
@@ -214,7 +273,11 @@ def parse_cmake_lib_args(lib_arg_str: str) -> dict[str, list[str]]:
             log(f"Failed to parse arguments for {lib_name}: {e}", LogLevel.Warning)
     return result
 
+# endregion === CMake argument parsing ===================================================
+# ========================================================================================
+
 def main():
+    # region ===== Argument parsing ===========================
     parser = argparse.ArgumentParser(
         description="Build and install project dependencies using CMake with optional per-library arguments."
     )
@@ -242,15 +305,11 @@ def main():
             "--cmake-lib-args 'zlib=(-DSKIP_EXAMPLES=ON) SDL=(-DOPTION=VALUE)'"
         )
     )
-    parser.add_argument("--cmake-sizeof-void-p", type=int, default=8,
-        help=(
-            "Size of void pointer from cmake for downloading pre-compiled libraries. "
-            "Usually ${CMAKE_SIZE_OF_VOID_P} Default: 8"
-        )
-    )
 
     args = parser.parse_args()
+    # endregion == Argument parsing ===========================
 
+    # region ===== Global variables setup =====================
     global SOURCES_ROOT, INSTALL_ROOT, CMAKE, CMAKE_GLOBAL_ARGS, CMAKE_PERSUBMODULE_ARGS
 
     root = Path(__file__).resolve().parent
@@ -260,10 +319,17 @@ def main():
     CMAKE = args.cmake
     CMAKE_GLOBAL_ARGS = shlex.split(args.cmake_args)
     CMAKE_PERSUBMODULE_ARGS = parse_cmake_lib_args(args.cmake_lib_args)
+    # endregion == Global variables setup =====================
 
-    install_steamworks_sdk(args.cmake_sizeof_void_p)
-
+    # region ===== Build and install libraries with CMake =====
+    # Source folder | Install folder | cmake arguments
     libraries = [
+        ("VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator", "VulkanMemoryAllocator", [
+            "-DVMA_BUILD_DOCUMENTATION=OFF", "-DVMA_BUILD_SAMPLES=OFF"
+        ]),
+        ("VulkanMemoryAllocator-Hpp", "VulkanMemoryAllocator-Hpp", [
+            "-DVMA_HPP_ENABLE_INSTALL=ON", "-DVMA_BUILD_EXAMPLE=OFF"
+        ]),
         ("SDL", "SDL3", ["-DSDL_TEST_LIBRARY=OFF"]),
         ("SDL_image", "SDL3_image", [
             "-DSDLIMAGE_AVIF=OFF", "-DSDLIMAGE_LBM=OFF",
@@ -271,40 +337,43 @@ def main():
             "-DSDLIMAGE_XCF=OFF", "-DSDLIMAGE_XPM=OFF",
             "-DSDLIMAGE_XV=OFF", "-DSDLIMAGE_WEBP=OFF"
         ]),
-        ("VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator", "VulkanMemoryAllocator", [
-            "-DVMA_BUILD_DOCUMENTATION=OFF", "-DVMA_BUILD_SAMPLES=OFF"
-        ]),
-        ("VulkanMemoryAllocator-Hpp", "VulkanMemoryAllocator-Hpp", [
-            "-DVMA_HPP_ENABLE_INSTALL=ON", "-DVMA_BUILD_EXAMPLE=OFF"
-        ]),
     ]
 
-    for lib_folder, install_subdir, flags in libraries:
-        src_path = SOURCES_ROOT / lib_folder
-        if not src_path.exists():
-            log(f"Source folder not found: {src_path}", LogLevel.Warning)
-            continue
-        try:
-            build_library(Path(lib_folder), Path(install_subdir), flags)
-        except subprocess.CalledProcessError:
-            log(f"Failed to compile {lib_folder}", LogLevel.Error)
-            sys.exit(1)
+    build_and_install_all_libraries(libraries)
+    # endregion == Build and install libraries with CMake =====
 
+    # region ===== Install header-only libraries ==============
+    # Source folder | Install subfolder | files or folders
     header_libraries = [
         ("tinyobjloader", "", ["tiny_obj_loader.h"]),
-        ("simple_term_colors", "", ["include"]),
+        ("simple_term_colors", "", ["include/*"]),
     ]
 
-    for lib_folder, install_subdir, files in header_libraries:
-        src_path = SOURCES_ROOT / lib_folder
-        if not src_path.exists():
-            log(f"Source folder not found: {src_path}", LogLevel.Warning)
-            continue
-        try:
-            install_header_only_library(Path(lib_folder), Path(install_subdir), files)
-        except subprocess.CalledProcessError:
-            log(f"Failed to compile {lib_folder}", LogLevel.Error)
-            sys.exit(1)
+    install_all_header_only_libraries(header_libraries)
+    # endregion === Install header-only libraries =============
+
+    # region ===== Install manually specified libraries =======
+    # Source folder | Install folder | Rules (pattern, destonation)
+    manual_install_libraries = [
+        (
+            "SteamworksSDK",
+            "SteamworksSDK",
+            [
+                ( "redistributable_bin/**/*.dll",   "bin" ),
+                ( "public/steam/lib/**/*.dll",      "bin" ),
+                ( "public/steam/*.h",               "include/steam" ),
+                ( "redistributable_bin/**/*.lib",   "lib" ),
+                ( "redistributable_bin/**/*.so",    "lib" ),
+                ( "redistributable_bin/**/*.dylib", "lib" ),
+                ( "public/steam/lib/**/*.lib",      "lib" ),
+                ( "public/steam/lib/**/*.so",       "lib" ),
+                ( "public/steam/lib/**/*.dylib",    "lib" ),
+            ],
+        )
+    ]
+
+    install_all_manual_install_libraries(manual_install_libraries)
+    # endregion == Install manually specified libraries =======
 
     log("All libraries installed successfully", LogLevel.Success)
 
