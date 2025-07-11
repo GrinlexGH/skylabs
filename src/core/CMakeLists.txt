@@ -58,7 +58,7 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     public
     SDL3::SDL3
     SDL3_image::SDL3_image
-    Vulkan::Vulkan
+    Vulkan::Headers
     glm::glm
     GPUOpen::VulkanMemoryAllocator
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp

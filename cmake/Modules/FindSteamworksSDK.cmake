@@ -4,9 +4,9 @@ include(FindPackageHandleStandardArgs)
 if(NOT SteamworksSDK_FOUND)
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(_arch_suffix "64")
-        set(_steam_api_lib_names steam_api64)
+        set(_steam_api_lib_names steam_api64 steam_api)
         set(_steam_api_dll_names steam_api64.dll)
-        set(_appticket_lib_names sdkencryptedappticket64)
+        set(_appticket_lib_names sdkencryptedappticket64 sdkencryptedappticket)
         set(_appticket_dll_names sdkencryptedappticket64.dll)
     elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
         set(_arch_suffix "32")
@@ -18,6 +18,7 @@ if(NOT SteamworksSDK_FOUND)
 
     find_library(
         SteamworksSDK_LIBRARY
+        NAMES
         ${_steam_api_lib_names}
         PATH_SUFFIXES
         SteamworksSDK/lib/
@@ -86,6 +87,7 @@ if(NOT SteamworksSDK_FOUND)
         set_target_properties(SteamworksSDK::AppTicket PROPERTIES
             IMPORTED_LOCATION "${SteamworksSDK_AppTicket_LIBRARY}"
             INTERFACE_INCLUDE_DIRECTORIES "${SteamworksSDK_INCLUDE_DIR}"
+            IMPORTED_NO_SONAME 1
         )
     endif()
 
