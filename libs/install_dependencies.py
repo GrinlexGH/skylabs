@@ -325,7 +325,7 @@ def main():
     # Source folder | Install folder | cmake arguments
     libraries = [
         ("VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator", "VulkanMemoryAllocator", [
-            "-DVMA_BUILD_DOCUMENTATION=OFF", "-DVMA_BUILD_SAMPLES=OFF"
+            "-DVMA_BUILD_DOCUMENTATION=OFF", "-DVMA_BUILD_SAMPLES=OFF", "-DVMA_STATIC_VULKAN_FUNCTIONS=OFF"
         ]),
         ("VulkanMemoryAllocator-Hpp", "VulkanMemoryAllocator-Hpp", [
             "-DVMA_HPP_ENABLE_INSTALL=ON", "-DVMA_BUILD_EXAMPLE=OFF"

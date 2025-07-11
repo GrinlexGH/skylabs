@@ -56,10 +56,12 @@ add_compile_definitions(
     NOMINMAX
     $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>
     VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+    VMA_STATIC_VULKAN_FUNCTIONS=0
+    VMA_DYNAMIC_VULKAN_FUNCTIONS=0
 )
 
 if(WIN32)
-    add_compile_definitions(PLATFORM_WINDOWS UNICODE _UNICODE VK_USE_PLATFORM_WIN32_KHR)
+    add_compile_definitions(PLATFORM_WINDOWS VK_USE_PLATFORM_WIN32_KHR)
 endif()
 
 if(UNIX)
@@ -97,8 +99,8 @@ foreach(PROJECT ${PROJECTS})
     add_subdirectory("${PROJECT}")
 endforeach()
 
-foreach(PROJECT ${PROJECTS})
-    if(WIN32)
+if(WIN32)
+    foreach(PROJECT ${PROJECTS})
         set_target_properties(${PROJECT} PROPERTIES PREFIX "")
-    endif()
-endforeach()
+    endforeach()
+endif()
