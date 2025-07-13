@@ -7,9 +7,11 @@ import shlex
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass, field
 from enum import IntEnum
-from pathlib import Path
 from glob import glob
+from pathlib import Path
+from typing import List, Tuple
 
 SOURCES_ROOT = Path()
 INSTALL_ROOT = Path()
@@ -73,7 +75,7 @@ def check_git_hash_match(source_dir: Path, hash_file: Path) -> bool:
 # ========================================================================================
 # region ====== CMake libraries building and installation ================================
 
-def build_and_install_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags: list[str] = []) -> None:
+def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags: list[str] = []) -> None:
     global SOURCES_ROOT, INSTALL_ROOT, CMAKE, CMAKE_GLOBAL_ARGS, CMAKE_PERSUBMODULE_ARGS
 
     lib_name = source_dir_base.name
@@ -142,7 +144,7 @@ def split_pattern(pattern: str) -> tuple[Path, str]:
             return fixed, sub
     return Path(*parts), ""
 
-def install_manual_install_libraries(source_dir_base: Path, install_dir_base: Path, rules: list[tuple[str, str]]):
+def install_manual_install_library(source_dir_base: Path, install_dir_base: Path, rules: list[tuple[str, str]]):
     global SOURCES_ROOT, INSTALL_ROOT
 
     lib_name = source_dir_base.name
@@ -200,17 +202,41 @@ def install_manual_install_libraries(source_dir_base: Path, install_dir_base: Pa
 # ========================================================================================
 
 # ========================================================================================
-# region ====== Header only installation =================================================
+# region ====== Header installation ======================================================
 
-def install_header_only_library(source_dir_base: Path, install_dir_base: Path, paths: list[str]):
+def install_header_library(source_dir_base: Path, install_dir_base: Path, paths: list[str]):
     global SOURCES_ROOT, INSTALL_ROOT
 
     dst_subdir = Path("header-only") / install_dir_base
     rules = [(path, str(install_dir_base)) for path in paths]
 
-    install_manual_install_libraries(source_dir_base, dst_subdir, rules)
+    install_manual_install_library(source_dir_base, dst_subdir, rules)
 
 # endregion === Header only installation =================================================
+# ========================================================================================
+
+# ========================================================================================
+# region ====== Library classes ==========================================================
+
+@dataclass
+class CMakeLibrary:
+    source_subdir: str
+    install_subdir: str
+    cmake_args: List[str] = field(default_factory=list)
+
+@dataclass
+class HeaderLibrary:
+    source_subdir: str
+    install_subdir: str
+    paths: List[str] # wildcard pattern
+
+@dataclass
+class ManualInstallLibrary:
+    source_subdir: str
+    install_subdir: str
+    rules: List[Tuple[str, str]] # (wildcard pattern, destination)
+
+# endregion ====== Library classes =======================================================
 # ========================================================================================
 
 # ========================================================================================
@@ -225,29 +251,29 @@ def skip_if_missing(lib_folder: str) -> bool:
         return True
     return False
 
-def build_and_install_all_libraries(libraries: list[tuple[str, str, list[str]]]):
-    for lib_folder, install_subdir, flags in libraries:
-        if skip_if_missing(lib_folder):
+def build_and_install_cmake_libraries(cmake_libraries: List[CMakeLibrary]):
+    for lib in cmake_libraries:
+        if skip_if_missing(lib.source_subdir):
             continue
         try:
-            build_and_install_library(Path(lib_folder), Path(install_subdir), flags)
+            build_and_install_cmake_library(Path(lib.source_subdir), Path(lib.install_subdir), lib.cmake_args)
         except subprocess.CalledProcessError:
-            log(f"Failed to compile {lib_folder}", LogLevel.Error)
+            log(f"Failed to compile {lib.source_subdir}", LogLevel.Error)
             sys.exit(1)
 
-def install_all_header_only_libraries(header_libraries: list[tuple[str, str, list[str]]]):
-    for lib_folder, install_subdir, files in header_libraries:
-        if skip_if_missing(lib_folder):
+def install_header_libraries(header_libraries: List[HeaderLibrary]):
+    for lib in header_libraries:
+        if skip_if_missing(lib.source_subdir):
             continue
 
-        install_header_only_library(Path(lib_folder), Path(install_subdir), files)
+        install_header_library(Path(lib.source_subdir), Path(lib.install_subdir), lib.paths)
 
-def install_all_manual_install_libraries(manual_install_libraries: list[tuple[str, str, list[tuple[str, str]]]]):
-    for lib_folder, install_subdir, rules in manual_install_libraries:
-        if skip_if_missing(lib_folder):
+def install_manual_install_libraries(manual_install_libraries: ManualInstallLibrary):
+    for lib in manual_install_libraries:
+        if skip_if_missing(lib.source_subdir):
             continue
 
-        install_manual_install_libraries(Path(lib_folder), Path(install_subdir), rules)
+        install_manual_install_library(Path(lib.source_subdir), Path(lib.install_subdir), lib.rules)
 
 # endregion === Main library installation functions ======================================
 # ========================================================================================
@@ -322,57 +348,74 @@ def main():
     # endregion == Global variables setup =====================
 
     # region ===== Build and install libraries with CMake =====
-    # Source folder | Install folder | cmake arguments
-    libraries = [
-        ("VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator", "VulkanMemoryAllocator", [
-            "-DVMA_BUILD_DOCUMENTATION=OFF", "-DVMA_BUILD_SAMPLES=OFF", "-DVMA_STATIC_VULKAN_FUNCTIONS=OFF"
-        ]),
-        ("VulkanMemoryAllocator-Hpp", "VulkanMemoryAllocator-Hpp", [
-            "-DVMA_HPP_ENABLE_INSTALL=ON", "-DVMA_BUILD_EXAMPLE=OFF"
-        ]),
-        ("SDL", "SDL3", ["-DSDL_TEST_LIBRARY=OFF"]),
-        ("SDL_image", "SDL3_image", [
-            "-DSDLIMAGE_AVIF=OFF", "-DSDLIMAGE_LBM=OFF",
-            "-DSDLIMAGE_PCX=OFF", "-DSDLIMAGE_TIF=OFF",
-            "-DSDLIMAGE_XCF=OFF", "-DSDLIMAGE_XPM=OFF",
-            "-DSDLIMAGE_XV=OFF", "-DSDLIMAGE_WEBP=OFF"
-        ]),
-    ]
-
-    build_and_install_all_libraries(libraries)
-    # endregion == Build and install libraries with CMake =====
-
-    # region ===== Install header-only libraries ==============
-    # Source folder | Install subfolder | files or folders
-    header_libraries = [
-        ("tinyobjloader", "", ["tiny_obj_loader.h"]),
-        ("simple_term_colors", "", ["include/*"]),
-    ]
-
-    install_all_header_only_libraries(header_libraries)
-    # endregion === Install header-only libraries =============
-
-    # region ===== Install manually specified libraries =======
-    # Source folder | Install folder | Rules (pattern, destonation)
-    manual_install_libraries = [
-        (
-            "SteamworksSDK",
-            "SteamworksSDK",
-            [
-                ( "redistributable_bin/**/*.dll",   "bin" ),
-                ( "public/steam/lib/**/*.dll",      "bin" ),
-                ( "public/steam/*.h",               "include/steam" ),
-                ( "redistributable_bin/**/*.lib",   "lib" ),
-                ( "redistributable_bin/**/*.so",    "lib" ),
-                ( "redistributable_bin/**/*.dylib", "lib" ),
-                ( "public/steam/lib/**/*.lib",      "lib" ),
-                ( "public/steam/lib/**/*.so",       "lib" ),
-                ( "public/steam/lib/**/*.dylib",    "lib" ),
-            ],
+    cmake_libraries: List[CMakeLibrary] = [
+        CMakeLibrary(
+            source_subdir="VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator",
+            install_subdir="VulkanMemoryAllocator",
+            cmake_args=["-DVMA_BUILD_DOCUMENTATION=OFF", "-DVMA_BUILD_SAMPLES=OFF", "-DVMA_ENABLE_INSTALL=ON"]
+        ),
+        CMakeLibrary(
+            source_subdir="VulkanMemoryAllocator-Hpp",
+            install_subdir="VulkanMemoryAllocator-Hpp",
+            cmake_args=["-DVMA_HPP_ENABLE_INSTALL=ON"]
+        ),
+        CMakeLibrary(
+            source_subdir="SDL",
+            install_subdir="SDL3",
+            cmake_args=["-DSDL_TEST_LIBRARY=OFF"]
+        ),
+        CMakeLibrary(
+            source_subdir="SDL_image",
+            install_subdir="SDL3_image",
+            cmake_args=[
+                "-DSDLIMAGE_AVIF=OFF", "-DSDLIMAGE_LBM=OFF",
+                "-DSDLIMAGE_PCX=OFF", "-DSDLIMAGE_TIF=OFF",
+                "-DSDLIMAGE_XCF=OFF", "-DSDLIMAGE_XPM=OFF",
+                "-DSDLIMAGE_XV=OFF", "-DSDLIMAGE_WEBP=OFF"
+            ]
         )
     ]
 
-    install_all_manual_install_libraries(manual_install_libraries)
+    build_and_install_cmake_libraries(cmake_libraries)
+    # endregion == Build and install libraries with CMake =====
+
+    # region ===== Install header libraries ===================
+    header_libraries: List[HeaderLibrary] = [
+        HeaderLibrary(
+            source_subdir="tinyobjloader",
+            install_subdir="",
+            paths=["tiny_obj_loader.h"]
+        ),
+        HeaderLibrary(
+            source_subdir="simple_term_colors",
+            install_subdir="",
+            paths=["include/stc.hpp"]
+        )
+    ]
+
+    install_header_libraries(header_libraries)
+    # endregion === Install header libraries ==================
+
+    # region ===== Install manually specified libraries =======
+    manual_install_libraries: List[ManualInstallLibrary] = [
+        ManualInstallLibrary(
+            source_subdir="SteamworksSDK",
+            install_subdir="SteamworksSDK",
+            rules=[
+                ("redistributable_bin/**/*.dll",   "bin"),
+                ("public/steam/lib/**/*.dll",      "bin"),
+                ("public/steam/*.h",               "include/steam"),
+                ("redistributable_bin/**/*.lib",   "lib"),
+                ("redistributable_bin/**/*.so",    "lib"),
+                ("redistributable_bin/**/*.dylib", "lib"),
+                ("public/steam/lib/**/*.lib",      "lib"),
+                ("public/steam/lib/**/*.so",       "lib"),
+                ("public/steam/lib/**/*.dylib",    "lib"),
+            ]
+        )
+    ]
+
+    install_manual_install_libraries(manual_install_libraries)
     # endregion == Install manually specified libraries =======
 
     log("All libraries installed successfully", LogLevel.Success)
