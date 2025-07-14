@@ -75,7 +75,7 @@ def check_git_hash_match(source_dir: Path, hash_file: Path) -> bool:
 # ========================================================================================
 # region ====== CMake libraries building and installation ================================
 
-def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags: list[str] = []) -> None:
+def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags: list[str] = [], build_folder: Path = "build") -> None:
     global SOURCES_ROOT, INSTALL_ROOT, CMAKE, CMAKE_GLOBAL_ARGS, CMAKE_PERSUBMODULE_ARGS
 
     lib_name = source_dir_base.name
@@ -89,7 +89,7 @@ def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Pat
 
     log(f"Compiling [{lib_name}]...")
 
-    build_dir = source_dir / "build"
+    build_dir = source_dir / build_folder
     if build_dir.exists():
         shutil.rmtree(build_dir)
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -101,6 +101,7 @@ def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Pat
         "-DCMAKE_BUILD_TYPE=Release",
         f"-DCMAKE_INSTALL_PREFIX={install_dir}",
         f"-DCMAKE_PREFIX_PATH={INSTALL_ROOT}",
+        "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded", # use statically linking runtime
         ".."
     ] + extra_cmake_flags + CMAKE_GLOBAL_ARGS + submodule_args
 
@@ -223,6 +224,7 @@ class CMakeLibrary:
     source_subdir: str
     install_subdir: str
     cmake_args: List[str] = field(default_factory=list)
+    build_folder: Path = Path("build")
 
 @dataclass
 class HeaderLibrary:
@@ -256,7 +258,7 @@ def build_and_install_cmake_libraries(cmake_libraries: List[CMakeLibrary]):
         if skip_if_missing(lib.source_subdir):
             continue
         try:
-            build_and_install_cmake_library(Path(lib.source_subdir), Path(lib.install_subdir), lib.cmake_args)
+            build_and_install_cmake_library(Path(lib.source_subdir), Path(lib.install_subdir), lib.cmake_args, lib.build_folder)
         except subprocess.CalledProcessError:
             log(f"Failed to compile {lib.source_subdir}", LogLevel.Error)
             sys.exit(1)
