@@ -32,7 +32,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     $<TARGET_FILE:SDL3::SDL3>
     $<TARGET_FILE:SDL3_image::SDL3_image>
-    $<TARGET_FILE:SteamworksSDK::SteamworksSDK>
+    $<TARGET_FILE:SteamworksSDK::SteamAPI>
     $<TARGET_FILE:SteamworksSDK::AppTicket>
     ${DLLS_OUTPUT_DIRECTORY}
     COMMAND ${CMAKE_COMMAND} -E create_symlink
