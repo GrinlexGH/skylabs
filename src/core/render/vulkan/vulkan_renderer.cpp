@@ -378,8 +378,6 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
         m_frameData.emplace_back(std::make_unique<Vulkan::CFrameData>(m_context.get()));
     }
 
-    m_renderPass.swap({})
-
     /*
     // #region RENDER_PASS
     vk::AttachmentDescription colorAttachment {};
