@@ -15,21 +15,13 @@ CVulkanWindow::CVulkanWindow(const char* title, const int w, const int h, SDL_Wi
     }
 }
 
-CVulkanWindow::CVulkanWindow(CVulkanWindow&& rhs) noexcept : m_handle(std::exchange(rhs.m_handle, nullptr)) {}
+CVulkanWindow::CVulkanWindow(CVulkanWindow&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
 
 CVulkanWindow& CVulkanWindow::operator=(CVulkanWindow&& rhs) noexcept {
     if (this != &rhs) {
-        if (m_handle) {
-            SDL_DestroyWindow(m_handle);
-        }
-        std::swap( m_instance, rhs.m_instance );
-        std::swap( m_surfaceKHR, rhs.m_surfaceKHR );
-        std::swap( m_allocator, rhs.m_allocator );
-        std::swap( m_dispatcher, rhs.m_dispatcher );
+        if (m_handle) { SDL_DestroyWindow(m_handle); }
+        m_handle = std::exchange(rhs.m_handle, nullptr);
     }
-    return *this;
-    if (m_handle) {  }
-    m_handle = std::exchange(other.m_handle, nullptr);
     return *this;
 }
 

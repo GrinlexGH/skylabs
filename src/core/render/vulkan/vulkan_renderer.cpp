@@ -375,7 +375,7 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     );
 
     for (auto _ : std::views::iota(0, FRAMES_IN_FLIGHT_COUNT)) {
-        m_frameData.emplace_back(std::make_unique<Vulkan::CFrameData>(m_context.get()));
+        m_frameData.emplace_back(m_context.get());
     }
 
     /*
@@ -859,7 +859,7 @@ std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindo
 }
 
 void CVulkanRenderer::Draw(glm::mat4 view) {
-    const Vulkan::CFrameData* frameData = m_frameData[m_frameIndex].get();
+    const Vulkan::CFrameData& frameData = m_frameData[m_frameIndex];
     const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain->GetHandle();
 
@@ -868,7 +868,7 @@ void CVulkanRenderer::Draw(glm::mat4 view) {
     */
 
     // #region ACQUIRE_IMAGE
-    vk::Result result = deviceHandle.waitForFences({ frameData->GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+    vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
     if (result != vk::Result::eSuccess) {
         throw std::runtime_error(std::format("Failed to wait for fence: {}", vk::to_string(result)));
     }
@@ -876,12 +876,12 @@ void CVulkanRenderer::Draw(glm::mat4 view) {
     std::uint32_t imageIndex;
     std::tie(result, imageIndex) = swapchainHandle.acquireNextImage(
         std::numeric_limits<std::uint64_t>::max(),
-        frameData->GetImageAvailableSemaphore(),
+        frameData.GetImageAvailableSemaphore(),
         VK_NULL_HANDLE
     );
 
     // Reset fence before we can return from function to avoid deadlock
-    deviceHandle.resetFences({ frameData->GetFence() });
+    deviceHandle.resetFences({ frameData.GetFence() });
 
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
         m_swapchain->Recreate();

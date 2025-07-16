@@ -155,9 +155,10 @@ public:
     CLibrary(CLibrary&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
     CLibrary& operator=(const CLibrary&) = delete;
     CLibrary& operator=(CLibrary&& other) noexcept {
-        if (this == &other) { return *this; }
-        if (m_handle) { dlclose(m_handle); }
-        m_handle = std::exchange(other.m_handle, nullptr);
+        if (this != &other) {
+            if (m_handle) { dlclose(m_handle); }
+            m_handle = std::exchange(other.m_handle, nullptr);
+        }
         return *this;
     }
     ~CLibrary() { if(m_handle) { dlclose(m_handle); } }
