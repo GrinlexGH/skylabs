@@ -4,15 +4,16 @@
 #include "resource_system.hpp"
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <SDL3_image/SDL_image.h>
 
 #include <chrono>
+#include <ranges>
 
-constexpr int MAX_FRAMES_IN_FLIGHT = 3;
-
+/*
 struct Vertex
 {
     glm::vec2 pos;
@@ -351,14 +352,14 @@ void UpdateUniformBuffer(
     UniformBufferObject ubo {};
     ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     ubo.view = view;
-    ubo.proj = glm::perspective(glm::radians(45.0f), (float) cameraDemensions.width / (float) cameraDemensions.height, 0.1f, 10.0f);
+    ubo.proj = glm::perspective(glm::radians(90.0f), (float) cameraDemensions.width / (float) cameraDemensions.height, 0.01f, 10.0f);
     ubo.proj[1][1] *= -1;
 
     std::memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
 }
-
+*/
 CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     if (window == nullptr) {
         throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
@@ -373,9 +374,13 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
         3, vk::PresentModeKHR::eImmediate
     );
 
-    vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
-    vk::PhysicalDevice physicalDeviceHandle = m_context->GetPhysicalDevice()->GetHandle();
+    for (auto _ : std::views::iota(0, FRAMES_IN_FLIGHT_COUNT)) {
+        m_frameData.emplace_back(std::make_unique<Vulkan::CFrameData>(m_context.get()));
+    }
 
+    m_renderPass.swap({})
+
+    /*
     // #region RENDER_PASS
     vk::AttachmentDescription colorAttachment {};
     colorAttachment.format = m_swapchain->GetInfo().m_surfaceFormat.format;
@@ -552,8 +557,8 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
 
     // #region SAMPLER
     vk::SamplerCreateInfo samplerInfo{};
-    samplerInfo.magFilter = vk::Filter::eLinear;
-    samplerInfo.minFilter = vk::Filter::eLinear;
+    samplerInfo.magFilter = vk::Filter::eNearest;
+    samplerInfo.minFilter = vk::Filter::eNearest;
     samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
     samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
     samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
@@ -763,12 +768,6 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
         m_renderFinishedSemaphores[i] = deviceHandle.createSemaphore(vk::SemaphoreCreateInfo {});
     }
 
-    m_currentImageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        m_currentImageAvailableSemaphores[i] = deviceHandle.createSemaphore(vk::SemaphoreCreateInfo {});
-        m_inFlightFences[i] = deviceHandle.createFence(vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled });
-    }
     // #endregion SYNC_PRIMITIVES
 
     // #region VERTEX_BUFFER
@@ -849,7 +848,7 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
 
     deviceHandle.destroyBuffer(stagingBuffer);
     deviceHandle.freeMemory(stagingBufferMemory);
-    // #endregion INDEX_BUFFER
+    // #endregion INDEX_BUFFER*/
 }
 
 std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindow* const window) {
@@ -862,33 +861,41 @@ std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindo
 }
 
 void CVulkanRenderer::Draw(glm::mat4 view) {
-    auto deviceHandle = m_context->GetDevice()->GetHandle();
-    auto swapchainHandle = m_swapchain->GetHandle();
+    const Vulkan::CFrameData* frameData = m_frameData[m_frameIndex].get();
+    const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
+    const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain->GetHandle();
 
+    /*
     UpdateUniformBuffer(m_swapchain->GetInfo().m_extent, m_uniformBuffersMapped, m_frameIndex, view);
+    */
 
     // #region ACQUIRE_IMAGE
-    std::ignore = deviceHandle.waitForFences(m_inFlightFences[m_frameIndex], vk::True, std::numeric_limits<unsigned int>::max());
-
-    std::uint32_t imageIndex;
-    auto res = deviceHandle.acquireNextImageKHR(
-        swapchainHandle,
-        std::numeric_limits<unsigned int>::max(),
-        m_currentImageAvailableSemaphores[m_frameIndex],
-        VK_NULL_HANDLE,
-        &imageIndex
-    );
-    if (res == vk::Result::eErrorOutOfDateKHR) {
-        Resize(deviceHandle, m_swapchain.get(), m_frameBuffers, m_renderPass);
-        return;
+    vk::Result result = deviceHandle.waitForFences({ frameData->GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+    if (result != vk::Result::eSuccess) {
+        throw std::runtime_error(std::format("Failed to wait for fence: {}", vk::to_string(result)));
     }
 
-    deviceHandle.resetFences(m_inFlightFences[m_frameIndex]);
-    if (res != vk::Result::eSuccess && res != vk::Result::eSuboptimalKHR) {
-        throw std::runtime_error("failed to acquire swap chain image!");
+    std::uint32_t imageIndex;
+    std::tie(result, imageIndex) = swapchainHandle.acquireNextImage(
+        std::numeric_limits<std::uint64_t>::max(),
+        frameData->GetImageAvailableSemaphore(),
+        VK_NULL_HANDLE
+    );
+
+    // Reset fence before we can return from function to avoid deadlock
+    deviceHandle.resetFences({ frameData->GetFence() });
+
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+        m_swapchain->Recreate();
+        return;
+    }
+    if (result != vk::Result::eSuccess) {
+        throw std::runtime_error(std::format("Failed to acquire swapchain image: {}", vk::to_string(result)));
     }
     // #endregion ACQUIRE_IMAGE
 
+
+    /*
     // #region COMMAND_RECORD
     m_commandBuffers[m_frameIndex].reset();
     vk::CommandBufferBeginInfo beginInfo {};
@@ -979,41 +986,41 @@ void CVulkanRenderer::Draw(glm::mat4 view) {
         return;
     }
     // #endregion PRESENT
-
-    m_frameIndex = (m_frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+    */
+    m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
 }
 
-CVulkanRenderer::~CVulkanRenderer() {
-    vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
-    deviceHandle.waitIdle();
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        deviceHandle.destroyBuffer(m_uniformBuffers[i]);
-        deviceHandle.freeMemory(m_uniformBuffersMemory[i]);
-    }
-    deviceHandle.destroySampler(m_textureSampler);
-    deviceHandle.destroyImageView(m_textureView);
-    deviceHandle.destroyImage(m_texture);
-    deviceHandle.freeMemory(m_textureMemory);
-    deviceHandle.destroyDescriptorSetLayout(m_descriptorSetLayout);
-    deviceHandle.destroyDescriptorPool(m_descriptorPool);
-    deviceHandle.freeMemory(m_indexBufferMemory);
-    deviceHandle.destroyBuffer(m_indexBuffer);
-    deviceHandle.freeMemory(m_vertexBufferMemory);
-    deviceHandle.destroyBuffer(m_vertexBuffer);
-    for (auto ias : m_currentImageAvailableSemaphores) {
-        deviceHandle.destroySemaphore(ias);
-    }
-    for (auto iff : m_inFlightFences) {
-        deviceHandle.destroyFence(iff);
-    }
-    for (auto rfs : m_renderFinishedSemaphores) {
-        deviceHandle.destroySemaphore(rfs);
-    }
-    deviceHandle.destroyCommandPool(m_commandPool);
-    for (auto framebuffer : m_frameBuffers) {
-        deviceHandle.destroyFramebuffer(framebuffer);
-    }
-    deviceHandle.destroyPipeline(m_pipeline);
-    deviceHandle.destroyPipelineLayout(m_pipelineLayout);
-    deviceHandle.destroyRenderPass(m_renderPass);
+CVulkanRenderer::~CVulkanRenderer() { /*
+     vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
+     deviceHandle.waitIdle();
+     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+         deviceHandle.destroyBuffer(m_uniformBuffers[i]);
+         deviceHandle.freeMemory(m_uniformBuffersMemory[i]);
+     }
+     deviceHandle.destroySampler(m_textureSampler);
+     deviceHandle.destroyImageView(m_textureView);
+     deviceHandle.destroyImage(m_texture);
+     deviceHandle.freeMemory(m_textureMemory);
+     deviceHandle.destroyDescriptorSetLayout(m_descriptorSetLayout);
+     deviceHandle.destroyDescriptorPool(m_descriptorPool);
+     deviceHandle.freeMemory(m_indexBufferMemory);
+     deviceHandle.destroyBuffer(m_indexBuffer);
+     deviceHandle.freeMemory(m_vertexBufferMemory);
+     deviceHandle.destroyBuffer(m_vertexBuffer);
+     for (auto ias : m_currentImageAvailableSemaphores) {
+         deviceHandle.destroySemaphore(ias);
+     }
+     for (auto iff : m_inFlightFences) {
+         deviceHandle.destroyFence(iff);
+     }
+     for (auto rfs : m_renderFinishedSemaphores) {
+         deviceHandle.destroySemaphore(rfs);
+     }
+     deviceHandle.destroyCommandPool(m_commandPool);
+     for (auto framebuffer : m_frameBuffers) {
+         deviceHandle.destroyFramebuffer(framebuffer);
+     }
+     deviceHandle.destroyPipeline(m_pipeline);
+     deviceHandle.destroyPipelineLayout(m_pipelineLayout);
+     deviceHandle.destroyRenderPass(m_renderPass);*/
 }

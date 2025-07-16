@@ -21,10 +21,14 @@ CQueueFamilies GetQueueFamilies(
     const IVulkanWindow* window
 ) {
     const std::vector<vk::QueueFamilyProperties>& queueFamilies = physicalDevice.GetQueueFamilies();
+    const vk::PhysicalDevice physicalDeviceHandle = physicalDevice.GetHandle();
+
     std::optional<std::uint32_t> graphicsQueueIndex;
     std::optional<std::uint32_t> presentQueueIndex;
     std::optional<std::uint32_t> transferQueueIndex;
     std::optional<std::uint32_t> computeQueueIndex;
+
+    bool allQueuesFound = false;
 
     for (std::uint32_t i = 0; const auto& queue : queueFamilies) {
         if (queue.queueCount == 0) {
@@ -36,7 +40,7 @@ CQueueFamilies GetQueueFamilies(
             graphicsQueueIndex.emplace(i);
         }
 
-        if (window->CheckQueuePresentSupport(instance, physicalDevice.GetHandle(), i)) {
+        if (window->CheckQueuePresentSupport(instance, physicalDeviceHandle, i)) {
             presentQueueIndex.emplace(i);
         }
 
@@ -53,51 +57,54 @@ CQueueFamilies GetQueueFamilies(
             transferQueueIndex.has_value() &&
             computeQueueIndex.has_value()
         ) {
+            allQueuesFound = true;
             break;
         }
 
         ++i;
     }
 
-    std::vector<const char*> missingQueues;
-    missingQueues.reserve(4);
+    if (!allQueuesFound) {
+        std::vector<const char*> missingQueues;
+        missingQueues.reserve(4);
 
-    if (!graphicsQueueIndex.has_value()) {
-        missingQueues.emplace_back("graphics");
-    }
-
-    if (!presentQueueIndex.has_value()) {
-        missingQueues.emplace_back("present");
-    }
-
-    if (!transferQueueIndex.has_value()) {
-        missingQueues.emplace_back("transfer");
-    }
-
-    if (!computeQueueIndex.has_value()) {
-        missingQueues.emplace_back("compute");
-    }
-
-    if (!missingQueues.empty()) {
-        std::stringstream error;
-        error << "System doesn't have required vulkan queue families: [";
-
-        for (std::size_t i = 0; i < missingQueues.size(); ++i) {
-            error << missingQueues[i];
-            if (i < missingQueues.size() - 1) {
-                error << " | ";
-            }
+        if (!graphicsQueueIndex.has_value()) {
+            missingQueues.emplace_back("graphics");
         }
-        error << "]!";
 
-        throw std::runtime_error(error.str());
+        if (!presentQueueIndex.has_value()) {
+            missingQueues.emplace_back("present");
+        }
+
+        if (!transferQueueIndex.has_value()) {
+            missingQueues.emplace_back("transfer");
+        }
+
+        if (!computeQueueIndex.has_value()) {
+            missingQueues.emplace_back("compute");
+        }
+
+        if (!missingQueues.empty()) {
+            std::stringstream error;
+            error << "System doesn't have required vulkan queue families: [";
+
+            for (std::size_t i = 0; i < missingQueues.size(); ++i) {
+                error << missingQueues[i];
+                if (i < missingQueues.size() - 1) {
+                    error << " | ";
+                }
+            }
+            error << "]!";
+
+            throw std::runtime_error(error.str());
+        }
     }
 
     return {
-        .m_graphics = *graphicsQueueIndex,  //-V1007
-        .m_present = *presentQueueIndex,    //-V1007
-        .m_transfer = *transferQueueIndex,  //-V1007
-        .m_compute = *computeQueueIndex     //-V1007
+        .m_graphics = *graphicsQueueIndex,
+        .m_present = *presentQueueIndex,
+        .m_transfer = *transferQueueIndex,
+        .m_compute = *computeQueueIndex
     };
 }
 
@@ -108,7 +115,7 @@ bool EnableExtension(
 ) {
     if (HasExtension(availableExtensions, name)) {
         if (!HasExtension(enabledExtensions, name)) {
-            enabledExtensions.push_back(name);
+            enabledExtensions.emplace_back(name);
         }
     } else {
         return false;
@@ -195,11 +202,5 @@ CDevice::CDevice(
     m_presentQueue = { .m_handle = m_handle.getQueue(presentQueueFamily, 0), .m_familyIndex = presentQueueFamily };
     m_transferQueue = { .m_handle = m_handle.getQueue(transferQueueFamily, 0), .m_familyIndex = transferQueueFamily };
     m_computeQueue = { .m_handle = m_handle.getQueue(computeQueueFamily, 0), .m_familyIndex = computeQueueFamily };
-}
-
-CDevice::~CDevice() {
-    if (m_handle) {
-        m_handle.destroy();
-    }
 }
 }

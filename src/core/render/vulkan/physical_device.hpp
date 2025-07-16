@@ -7,14 +7,14 @@ namespace Vulkan {
 class CPhysicalDevice
 {
 public:
-    explicit CPhysicalDevice(const vk::PhysicalDevice& physicalDevice);
+    explicit CPhysicalDevice(vk::raii::PhysicalDevice&& physicalDevice);
     CPhysicalDevice(const CPhysicalDevice&) = delete;
-    CPhysicalDevice(CPhysicalDevice&&) = delete;
+    CPhysicalDevice(CPhysicalDevice&&) noexcept = default;
     CPhysicalDevice& operator=(const CPhysicalDevice&) = delete;
-    CPhysicalDevice& operator=(CPhysicalDevice&&) = delete;
+    CPhysicalDevice& operator=(CPhysicalDevice&&) noexcept = default;
     ~CPhysicalDevice() = default;
 
-    [[nodiscard]] vk::PhysicalDevice GetHandle() const { return m_handle; }
+    [[nodiscard]] const vk::raii::PhysicalDevice& GetHandle() const { return m_handle; }
 
     [[nodiscard]] const vk::PhysicalDeviceProperties& GetProperties() const { return m_properties; }
     [[nodiscard]] const vk::PhysicalDeviceFeatures& GetFeatures() const { return m_features; }
@@ -55,7 +55,7 @@ public:
     template <typename Feature>
     void RequestRequiredExtensionFeature(vk::Bool32 Feature::* flag, const char* featureName, const char* flagName) {
         if (GetExtensionFeatures<Feature>().*flag) {
-            AddExtensionFeatures<Feature>().*flag = true;
+            AddExtensionFeatures<Feature>().*flag = vk::True;
         } else {
             throw std::runtime_error(
                 std::format("Requested required feature <{}::{}> is not supported!", featureName, flagName)
@@ -67,7 +67,7 @@ public:
     vk::Bool32 RequestOptionalExtensionFeature(vk::Bool32 Feature::* flag, const char* featureName, const char* flagName) {
         const vk::Bool32 supported = GetExtensionFeatures<Feature>().*flag;
         if (supported) {
-            AddExtensionFeatures<Feature>().*flag = true;
+            AddExtensionFeatures<Feature>().*flag = vk::True;
         } else {
             Log::Info("Requested optional feature <{}::{}> is not supported", featureName, flagName);
         }
@@ -97,13 +97,13 @@ public:
     }
 
 private:
-    vk::PhysicalDevice m_handle = VK_NULL_HANDLE;
+    vk::raii::PhysicalDevice m_handle;
 
     // Properties
-    const vk::PhysicalDeviceProperties m_properties;
-    const vk::PhysicalDeviceFeatures m_features;
-    const std::vector<vk::QueueFamilyProperties> m_queueFamilies;
-    const std::vector<vk::ExtensionProperties> m_extensions;
+    vk::PhysicalDeviceProperties m_properties;
+    vk::PhysicalDeviceFeatures m_features;
+    std::vector<vk::QueueFamilyProperties> m_queueFamilies;
+    std::vector<vk::ExtensionProperties> m_extensions;
 
     // Extensions features
     std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures;
@@ -115,6 +115,4 @@ private:
 #define REQUEST_REQUIRED_EXT_FEATURE(gpu, feature, flag) gpu->RequestRequiredExtensionFeature<feature>(&feature::flag, #feature, #flag)
 #define REQUEST_OPTIONAL_FEATURE(gpu, flag) gpu->RequestOptionalFeature(&vk::PhysicalDeviceFeatures::flag, #flag)
 #define REQUEST_REQUIRED_FEATURE(gpu, flag) gpu->RequestRequiredFeature(&vk::PhysicalDeviceFeatures::flag, #flag)
-#define CHECK_EXT_FEATURE(gpu, feature, flag) gpu->IsExtensionFeatureSupported<feature>(&feature::flag)
-#define CHECK_FEATURE(gpu, flag) gpu->GetFeatures().flag
 }

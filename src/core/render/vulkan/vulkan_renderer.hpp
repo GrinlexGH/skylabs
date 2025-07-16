@@ -1,6 +1,7 @@
 #pragma once
 #include "../renderer.hpp"
 
+#include "frame_data.hpp"
 #include "render_context.hpp"
 #include "surface.hpp"
 #include "swapchain.hpp"
@@ -12,22 +13,28 @@ public:
     // Window must be valid for the entire lifetime of the renderer
     explicit CVulkanRenderer(const IVulkanWindow* window);
     CVulkanRenderer(const CVulkanRenderer&) = delete;
-    CVulkanRenderer(CVulkanRenderer&&) noexcept = delete;
+    CVulkanRenderer(CVulkanRenderer&&) noexcept = default;
     CVulkanRenderer& operator=(const CVulkanRenderer&) = delete;
-    CVulkanRenderer& operator=(CVulkanRenderer&&) noexcept = delete;
+    CVulkanRenderer& operator=(CVulkanRenderer&&) noexcept = default;
     ~CVulkanRenderer() override;
 
     static std::unique_ptr<CVulkanRenderer> TryToCreate(const IVulkanWindow* window);
     void Draw(glm::mat4 view_mat) override;
 
 private:
+    static constexpr int FRAMES_IN_FLIGHT_COUNT = 3;
+
     std::unique_ptr<Vulkan::CRenderContext> m_context;
 
     std::unique_ptr<Vulkan::CSurface> m_surface;
     std::unique_ptr<Vulkan::CSwapchain> m_swapchain;
 
+    std::vector<std::unique_ptr<Vulkan::CFrameData>> m_frameData;
+
+    vk::raii::RenderPass m_renderPass = VK_NULL_HANDLE;
+
+
     std::vector<vk::Framebuffer> m_frameBuffers;
-    vk::RenderPass m_renderPass;
 
     vk::DescriptorSetLayout m_descriptorSetLayout;
     vk::DescriptorPool m_descriptorPool;
@@ -39,9 +46,7 @@ private:
     vk::CommandPool m_commandPool;
     std::vector<vk::CommandBuffer> m_commandBuffers;
 
-    std::vector<vk::Semaphore> m_currentImageAvailableSemaphores;
     std::vector<vk::Semaphore> m_renderFinishedSemaphores;
-    std::vector<vk::Fence> m_inFlightFences;
 
     vk::Buffer m_vertexBuffer;
     vk::DeviceMemory m_vertexBufferMemory;

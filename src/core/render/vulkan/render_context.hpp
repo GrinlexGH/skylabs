@@ -13,9 +13,9 @@ class CRenderContext
 public:
     explicit CRenderContext(const IVulkanWindow* window);
     CRenderContext(const CRenderContext&) = delete;
-    CRenderContext(CRenderContext&&) = delete;
+    CRenderContext(CRenderContext&&) noexcept = default;
     CRenderContext& operator=(const CRenderContext&) = delete;
-    CRenderContext& operator=(CRenderContext&&) = delete;
+    CRenderContext& operator=(CRenderContext&&) noexcept = default;
     ~CRenderContext() = default;
 
     [[nodiscard]] const IVulkanWindow* GetWindow() const { return m_window; }
@@ -28,9 +28,12 @@ private:
     void SelectPhysicalDevice();
     void CreateLogicalDevice();
 
+    [[nodiscard]] bool IsDeviceSuitable(const CPhysicalDevice* physicalDevice) const;
+    [[nodiscard]] CPhysicalDevice* GetSuitablePhysicalDevice() const;
+
     std::unique_ptr<CInstance> m_instance;
     std::unique_ptr<CDevice> m_device;
     CPhysicalDevice* m_selectedPhysicalDevice;
-    const IVulkanWindow* const m_window;
+    const IVulkanWindow* m_window;
 };
 }
