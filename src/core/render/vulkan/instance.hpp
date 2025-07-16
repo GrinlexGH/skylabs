@@ -1,9 +1,9 @@
 #pragma once
-#include <unordered_map>
-#include <memory>
-
-#include "vulkan_window.hpp"
 #include "extensions.hpp"
+
+#include <memory>
+#include <unordered_map>
+#include <vulkan/vulkan_raii.hpp>
 
 namespace Vulkan {
 class CPhysicalDevice;
@@ -16,28 +16,32 @@ public:
         const std::vector<const char*>& layers = {}
     );
     CInstance(const CInstance&) = delete;
-    CInstance(CInstance&&) = delete;
+    CInstance(CInstance&&) noexcept = default;
     CInstance& operator=(const CInstance&) = delete;
-    CInstance& operator=(CInstance&&) = delete;
-    ~CInstance();
+    CInstance& operator=(CInstance&&) noexcept = default;
+    ~CInstance() = default;
 
-    [[nodiscard]] vk::Instance GetHandle() const { return m_handle; }
+    [[nodiscard]] const vk::raii::Instance& GetHandle() const { return m_handle; }
 
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return HasExtension(m_enabledExtensions, name); }
-    [[nodiscard]] std::uint32_t GetApiVersion() const { return m_apiVersion; }
 
-    CPhysicalDevice* GetSuitablePhysicalDevice(const IVulkanWindow* window) const;
+    [[nodiscard]] const std::vector<const char*>& GetEnabledExtensions() const { return m_enabledExtensions; }
+    [[nodiscard]] std::uint32_t GetApiVersion() const { return m_apiVersion; }
+    [[nodiscard]] const std::vector<std::unique_ptr<CPhysicalDevice>>& GetPhysicalDevices() const { return m_physicalDevices; }
 
 private:
+    bool EnableExtension(const char* name);
+    bool EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const;
     void QueryPhysicalDevices();
 
-    vk::Instance m_handle = VK_NULL_HANDLE;
+    vk::raii::Context m_context;
+    vk::raii::Instance m_handle = VK_NULL_HANDLE;
 
     std::vector<const char*> m_enabledExtensions;
     std::uint32_t m_apiVersion = vk::ApiVersion10;
 
 #ifdef DEBUG
-    vk::DebugUtilsMessengerEXT m_debugUtilsMessenger = VK_NULL_HANDLE;
+    vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger = VK_NULL_HANDLE;
 #endif
 
     std::vector<std::unique_ptr<CPhysicalDevice>> m_physicalDevices;

@@ -11,6 +11,7 @@
 #include <format>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 using main_t = int (*)(int argc, char* argv[]); // NOLINT
 
@@ -69,10 +70,11 @@ public:
     CLibrary(const CLibrary&) = delete;
     CLibrary(CLibrary&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
     CLibrary& operator=(const CLibrary&) = delete;
-    CLibrary& operator=(CLibrary&& other) noexcept {
-        if (this == &other) { return *this; }
-        if (m_handle) { FreeLibrary(m_handle); }
-        m_handle = std::exchange(other.m_handle, nullptr);
+    CLibrary& operator=(CLibrary&& rhs) noexcept {
+        if (this != &rhs) {
+            if (m_handle) { FreeLibrary(m_handle); }
+            m_handle = std::exchange(rhs.m_handle, nullptr);
+        }
         return *this;
     }
     ~CLibrary() { if (m_handle) { FreeLibrary(m_handle); } }

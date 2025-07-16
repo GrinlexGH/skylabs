@@ -2,6 +2,25 @@
 
 #include "logging.hpp"
 
+namespace {
+int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
+    switch (type) {
+        case vk::PhysicalDeviceType::eDiscreteGpu:
+            return 5;
+        case vk::PhysicalDeviceType::eIntegratedGpu:
+            return 4;
+        case vk::PhysicalDeviceType::eVirtualGpu:
+            return 3;
+        case vk::PhysicalDeviceType::eCpu:
+            return 2;
+        case vk::PhysicalDeviceType::eOther:
+            return 1;
+    }
+
+    return 0;
+}
+}
+
 namespace Vulkan {
 CRenderContext::CRenderContext(const IVulkanWindow* const window) : m_window(window) {
     CreateInstance();
@@ -24,12 +43,55 @@ void CRenderContext::CreateInstance() {
     m_instance = std::make_unique<CInstance>(instanceExtensions);
 }
 
+bool CRenderContext::IsDeviceSuitable(const CPhysicalDevice* const physicalDevice) const {
+    bool hasPresentQueue = false;
+    bool hasGraphicsQueue = false;
+
+    for (std::uint32_t i = 0; const auto& queue : physicalDevice->GetQueueFamilies()) {
+        if (m_window->CheckQueuePresentSupport(m_instance->GetHandle(), physicalDevice->GetHandle(), i)) {
+            hasPresentQueue = true;
+        }
+
+        if (queue.queueFlags & vk::QueueFlagBits::eGraphics) {
+            hasGraphicsQueue = true;
+        }
+
+        if (hasPresentQueue && hasGraphicsQueue) {
+            return true;
+        }
+
+        ++i;
+    }
+
+    return false;
+}
+
+CPhysicalDevice* CRenderContext::GetSuitablePhysicalDevice() const {
+    CPhysicalDevice* selectedDevice = nullptr;
+    const std::vector<std::unique_ptr<CPhysicalDevice>>& physicalDevices = m_instance->GetPhysicalDevices();
+
+    int deviceTypeScore = 0;
+    for (const auto& physicalDevice : physicalDevices) {
+        if (IsDeviceSuitable(physicalDevice.get())) {
+            if (const int optionScore = GetDeviceTypeScore(physicalDevice->GetProperties().deviceType); optionScore > deviceTypeScore) {
+                selectedDevice = physicalDevice.get();
+                deviceTypeScore = optionScore;
+            }
+        }
+    }
+
+    if (selectedDevice == nullptr) {
+        Log::Warning("No suitable GPU was found! Picking default GPU: {}", *physicalDevices[0]->GetProperties().deviceName);
+        return physicalDevices[0].get();
+    }
+
+    return selectedDevice;
+}
+
 void CRenderContext::SelectPhysicalDevice() {
-    m_selectedPhysicalDevice = m_instance->GetSuitablePhysicalDevice(m_window);
+    m_selectedPhysicalDevice = GetSuitablePhysicalDevice();
 
     Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->GetProperties().deviceName });
-
-    REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
 }
 
 void CRenderContext::CreateLogicalDevice() {
@@ -55,6 +117,8 @@ void CRenderContext::CreateLogicalDevice() {
     };
 
     // Enable all extensions here
+    REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
+
     if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
         deviceExtensions[vk::KHRDynamicRenderingExtensionName] = true;
         REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);

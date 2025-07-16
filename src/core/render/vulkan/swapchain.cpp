@@ -31,19 +31,18 @@ CSwapchain::CSwapchain(
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
 ) : m_context(context) {
-    CreateSwapchain(surface, imageCount, presentMode);
-    CreateImages();
+    Recreate(surface, imageCount, presentMode);
 }
 
 void CSwapchain::CreateSwapchain(
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
-    const vk::PresentModeKHR presentMode,
-    const vk::SwapchainKHR& oldSwapchain
+    vk::PresentModeKHR presentMode,
+    const vk::raii::SwapchainKHR& oldSwapchain
 ) {
     const CDevice* device = m_context->GetDevice();
-    const vk::Device deviceHandle = device->GetHandle();
-    const vk::PhysicalDevice physicalDevice = m_context->GetPhysicalDevice()->GetHandle();
+    const vk::raii::Device& deviceHandle = device->GetHandle();
+    const vk::raii::PhysicalDevice physicalDevice = m_context->GetPhysicalDevice()->GetHandle();
 
     //====================
     vk::SwapchainCreateInfoKHR createInfo;
@@ -85,7 +84,22 @@ void CSwapchain::CreateSwapchain(
     //====================
     createInfo.preTransform = surfaceCapabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+
+    //====================
+    if (const std::vector<vk::PresentModeKHR> presentModes = physicalDevice.getSurfacePresentModesKHR(surface);
+        !std::ranges::contains(presentModes, presentMode)
+    ) {
+        Log::Warning(
+            "Requested present mode ({}) is not available. Choosing ({})",
+            vk::to_string(presentMode),
+            vk::to_string(presentModes[0])
+        );
+        presentMode = presentModes[0];
+    }
+
     createInfo.presentMode = m_info.m_presentMode = presentMode; // VSync
+
+    //====================
     createInfo.clipped = vk::True;
     createInfo.oldSwapchain = oldSwapchain;
 
@@ -94,9 +108,9 @@ void CSwapchain::CreateSwapchain(
 }
 
 void CSwapchain::CreateImages() {
-    const vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
+    const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
 
-    m_images = deviceHandle.getSwapchainImagesKHR(m_handle);
+    m_images = m_handle.getImages();
     m_info.m_imageCount = static_cast<std::uint32_t>(m_images.size());
     m_imageViews.reserve(m_info.m_imageCount);
 
@@ -120,10 +134,6 @@ void CSwapchain::CreateImages() {
 }
 
 void CSwapchain::DestroyImages() {
-    const auto deviceHandle = m_context->GetDevice()->GetHandle();
-    for (const auto& imageView : m_imageViews) {
-        deviceHandle.destroyImageView(imageView);
-    }
     m_imageViews.clear();
 }
 
@@ -132,13 +142,11 @@ void CSwapchain::Recreate() {
 }
 
 void CSwapchain::Recreate(const vk::SurfaceKHR& surface, const std::uint32_t imageCount, const vk::PresentModeKHR presentMode) {
-    const vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
+    const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
 
-    deviceHandle.waitIdle();    // TODO: Wait for fence, not idle
+    deviceHandle.waitIdle(); // TODO: Wait for fence, not idle
 
-    const vk::SwapchainKHR oldSwapchain = m_handle;
-    CreateSwapchain(surface, imageCount, presentMode, oldSwapchain);
-    deviceHandle.destroySwapchainKHR(oldSwapchain);
+    CreateSwapchain(surface, imageCount, presentMode, vk::raii::SwapchainKHR { std::move(m_handle) });
 
     DestroyImages();
     CreateImages();
@@ -161,19 +169,5 @@ vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& c
     actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
     return actualExtent;
-}
-
-CSwapchain::~CSwapchain() {
-    if (!m_handle) {
-        return;
-    }
-
-    const vk::Device device = m_context->GetDevice()->GetHandle();
-
-    for (const auto& imageView : m_imageViews) {
-        device.destroyImageView(imageView);
-    }
-
-    device.destroySwapchainKHR(m_handle);
 }
 }
