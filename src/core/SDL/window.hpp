@@ -9,7 +9,7 @@ class CVulkanWindow final : public IVulkanWindow
 public:
     explicit CVulkanWindow(const char* title, int w, int h, SDL_WindowFlags flags = 0);
     CVulkanWindow(const CVulkanWindow&) = delete;
-    CVulkanWindow(CVulkanWindow&& rhs) noexcept;
+    CVulkanWindow(CVulkanWindow&& other) noexcept;
     CVulkanWindow& operator=(const CVulkanWindow&) = delete;
     CVulkanWindow& operator=(CVulkanWindow&& rhs) noexcept;
     ~CVulkanWindow() override;

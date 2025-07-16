@@ -29,7 +29,7 @@ private:
     std::unique_ptr<Vulkan::CSurface> m_surface;
     std::unique_ptr<Vulkan::CSwapchain> m_swapchain;
 
-    std::vector<std::unique_ptr<Vulkan::CFrameData>> m_frameData;
+    std::vector<Vulkan::CFrameData> m_frameData;
 
     vk::raii::RenderPass m_renderPass = VK_NULL_HANDLE;
 
