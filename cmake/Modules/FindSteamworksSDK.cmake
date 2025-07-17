@@ -68,6 +68,10 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(_steam_api_dll_names steam_api64.dll)
     set(_appticket_lib_names sdkencryptedappticket64)
     set(_appticket_dll_names sdkencryptedappticket64.dll)
+    if(NOT WIN32)
+        list(APPEND _steam_api_lib_names steam_api)
+        list(APPEND _appticket_lib_names sdkencryptedappticket)
+    endif()
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     set(_arch_suffix "32")
     set(_steam_api_lib_names steam_api)
@@ -179,6 +183,7 @@ if("AppTicket" IN_LIST SteamworksSDK_FIND_COMPONENTS OR NOT SteamworksSDK_FIND_C
                 )
             endif()
         else()
+            add_library(SteamworksSDK::AppTicket SHARED IMPORTED)
             set_target_properties(SteamworksSDK::AppTicket PROPERTIES
                 IMPORTED_LOCATION "${SteamworksSDK_AppTicket_LIBRARY}"
                 INTERFACE_INCLUDE_DIRECTORIES "${SteamworksSDK_INCLUDE_DIR}"
