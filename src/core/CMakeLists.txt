@@ -62,6 +62,12 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     glm::glm
     GPUOpen::VulkanMemoryAllocator
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
-    SteamworksSDK::SteamAPI
-    SteamworksSDK::AppTicket
 )
+
+if(ENABLE_STEAM)
+    target_link_libraries(${CURRENT_TARGET_NAME}
+        PRIVATE
+        SteamworksSDK::SteamAPI
+        SteamworksSDK::AppTicket
+    )
+endif()

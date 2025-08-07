@@ -352,6 +352,14 @@ def main():
     # region ===== Build and install libraries with CMake =====
     cmake_libraries: List[CMakeLibrary] = [
         CMakeLibrary(
+            source_subdir="VulkanMemoryAllocator-Hpp/Vulkan-Headers",
+            install_subdir="VulkanHeaders",
+            cmake_args=[
+                "-DVULKAN_HEADERS_ENABLE_TESTS=OFF",
+                "-DVULKAN-HEADERS_ENABLE_MODULE=ON"
+            ]
+        ),
+        CMakeLibrary(
             source_subdir="VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator",
             install_subdir="VulkanMemoryAllocator",
             cmake_args=["-DVMA_BUILD_DOCUMENTATION=OFF", "-DVMA_BUILD_SAMPLES=OFF", "-DVMA_ENABLE_INSTALL=ON"]

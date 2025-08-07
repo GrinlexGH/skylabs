@@ -364,7 +364,6 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     if (window == nullptr) {
         throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
     }
-
     m_context = std::make_unique<Vulkan::CRenderContext>(window);
 
     m_surface = std::make_unique<Vulkan::CSurface>(m_context.get());
@@ -378,6 +377,13 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
         m_frameData.emplace_back(m_context.get());
     }
 
+    // #region SYNC_PRIMITIVES
+    m_imageAvailableSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
+    for (unsigned int i = 0; i < m_swapchain->GetInfo().m_imageCount; ++i) {
+        m_imageAvailableSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo {});
+    }
+
+    // #endregion SYNC_PRIMITIVES
     /*
     // #region RENDER_PASS
     vk::AttachmentDescription colorAttachment {};
@@ -760,14 +766,6 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
 
     m_frameBuffers = CreateFrameBuffers(deviceHandle, m_swapchain.get(), m_renderPass);
 
-    // #region SYNC_PRIMITIVES
-    m_renderFinishedSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
-    for (unsigned int i = 0; i < m_swapchain->GetInfo().m_imageCount; ++i) {
-        m_renderFinishedSemaphores[i] = deviceHandle.createSemaphore(vk::SemaphoreCreateInfo {});
-    }
-
-    // #endregion SYNC_PRIMITIVES
-
     // #region VERTEX_BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -859,13 +857,15 @@ std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindo
 }
 
 void CVulkanRenderer::Draw(glm::mat4 view) {
+
+    /*
     const Vulkan::CFrameData& frameData = m_frameData[m_frameIndex];
     const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain->GetHandle();
 
     /*
     UpdateUniformBuffer(m_swapchain->GetInfo().m_extent, m_uniformBuffersMapped, m_frameIndex, view);
-    */
+    
 
     // #region ACQUIRE_IMAGE
     vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -876,7 +876,7 @@ void CVulkanRenderer::Draw(glm::mat4 view) {
     std::uint32_t imageIndex;
     std::tie(result, imageIndex) = swapchainHandle.acquireNextImage(
         std::numeric_limits<std::uint64_t>::max(),
-        frameData.GetImageAvailableSemaphore(),
+        *frameData.GetImageAvailableSemaphore(),
         VK_NULL_HANDLE
     );
 
@@ -966,25 +966,25 @@ void CVulkanRenderer::Draw(glm::mat4 view) {
 
     std::ignore = m_context->GetDevice()->GetGraphicsQueue().m_handle.submit(1, &submitInfo, m_inFlightFences[m_frameIndex]);
     // #endregion COMMAND_RECORD
-
+    
     // #region PRESENT
     vk::PresentInfoKHR presentInfo {};
 
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = &*frameData.GetImageAvailableSemaphore();
 
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &swapchainHandle;
+    presentInfo.pSwapchains = &*swapchainHandle;
 
     presentInfo.pImageIndices = &imageIndex;
 
-    res = m_context->GetDevice()->GetPresentQueue().m_handle.presentKHR(&presentInfo);
-    if (res == vk::Result::eErrorOutOfDateKHR) {
-        Resize(deviceHandle, m_swapchain.get(), m_frameBuffers, m_renderPass);
+    result = m_context->GetDevice()->GetPresentQueue().m_handle.presentKHR(presentInfo);
+    if (result == vk::Result::eErrorOutOfDateKHR) {
+        m_swapchain->Recreate();
         return;
     }
     // #endregion PRESENT
-    */
+*/
     m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
 }
 

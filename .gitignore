@@ -18,3 +18,8 @@ src/public/project_info.hpp
 
 # Do not ignore vscode launch.json
 !.vscode/launch.json
+
+# Gradle
+android/.gradle
+android/app/.cxx
+android/local.properties

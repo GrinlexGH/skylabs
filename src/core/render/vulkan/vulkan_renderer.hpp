@@ -30,6 +30,7 @@ private:
     std::unique_ptr<Vulkan::CSwapchain> m_swapchain;
 
     std::vector<Vulkan::CFrameData> m_frameData;
+    std::vector<vk::Semaphore> m_imageAvailableSemaphores;
 
     vk::raii::RenderPass m_renderPass = VK_NULL_HANDLE;
 

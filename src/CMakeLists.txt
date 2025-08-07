@@ -42,6 +42,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         #"$<$<CONFIG:Release>:-Werror>"
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
         "-march=native" "-mtune=native"
+        "-fdiagnostics-color=always"
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
@@ -56,6 +57,7 @@ add_compile_definitions(
     NOMINMAX
     $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>
     VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+    VULKAN_HPP_TYPESAFE_CONVERSION=1
     VMA_STATIC_VULKAN_FUNCTIONS=0
     VMA_DYNAMIC_VULKAN_FUNCTIONS=0
 )
@@ -74,6 +76,10 @@ endif()
 
 if(APPLE)
     add_compile_definitions(PLATFORM_APPLE)
+endif()
+
+if(ANDROID)
+    add_compile_definitions(PLATFORM_ANDROID)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -97,10 +103,8 @@ endif()
 add_subdirectory("shaders")
 foreach(PROJECT ${PROJECTS})
     add_subdirectory("${PROJECT}")
+    if(WIN32)
+        set_target_properties(${PROJECT} PROPERTIES PREFIX "")
+    endif()
 endforeach()
 
-if(WIN32)
-    foreach(PROJECT ${PROJECTS})
-        set_target_properties(${PROJECT} PROPERTIES PREFIX "")
-    endforeach()
-endif()
