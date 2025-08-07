@@ -120,8 +120,8 @@ void CRenderContext::CreateLogicalDevice() {
     REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
 
     if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
-        deviceExtensions[vk::KHRDynamicRenderingExtensionName] = true;
-        REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
+        deviceExtensions[vk::KHRDynamicRenderingExtensionName] = false;
+        REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
     }
 
     m_device = std::make_unique<CDevice>(

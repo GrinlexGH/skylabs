@@ -1,11 +1,19 @@
 # launcher
-set(CURRENT_TARGET_NAME launcher)
+if(ANDROID)
+    set(CURRENT_TARGET_NAME main)
+else()
+    set(CURRENT_TARGET_NAME launcher)
+endif()
 
 set(SOURCES
     main.cpp
 )
 
-add_executable(${CURRENT_TARGET_NAME} ${SOURCES})
+if(ANDROID)
+    add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
+else()
+    add_executable(${CURRENT_TARGET_NAME} ${SOURCES})
+endif()
 
 foreach(FILE IN LISTS SOURCES)
     get_filename_component(SOURCE_PATH "${FILE}" PATH)
@@ -25,6 +33,10 @@ set_target_properties(${CURRENT_TARGET_NAME}
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE nowide::nowide)
+
+if(ANDROID)
+    target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE SDL3::SDL3)
+endif()
 
 # Copy all third party libraries here
 add_custom_command(

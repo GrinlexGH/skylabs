@@ -29,8 +29,12 @@ Checks: >
   -hicpp-signed-bitwise,
   -readability-implicit-bool-conversion,
   -cppcoreguidelines-pro-bounds-constant-array-index,
-
+dddd
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'
 FormatStyle: file
+
+CheckOptions:
+  - key:             misc-include-cleaner.UnusedIncludes
+    value:           false
 ...

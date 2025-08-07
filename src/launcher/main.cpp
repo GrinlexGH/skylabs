@@ -138,7 +138,7 @@ int main() {
     return wWinMain(GetModuleHandleW(nullptr), nullptr, GetCommandLineW(), SW_SHOWNORMAL);
 }
 
-#elif defined(PLATFORM_UNIX)
+#elifdef PLATFORM_UNIX
 
 class CLibrary
 {
@@ -177,6 +177,38 @@ private:
     void* m_handle;
 };
 
+#ifdef PLATFORM_ANDROID
+
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+
+#define DLL_EXPORT __attribute__((visibility("default")))
+
+DLL_EXPORT int SDL_main(int argc, char* argv[]) {
+    SDL_Log("Skylabs is starting...");
+
+    try {
+        const std::string libCorePath = "libcore.so";
+
+        const CLibrary core(libCorePath.c_str());
+        const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
+
+        try {
+            int ret = main(argc, argv);
+            return ret;
+        } catch (const std::exception& e) {
+            SDL_LogError(0, "%s", e.what());
+        }
+
+        return 1;
+    } catch (const std::exception& e) {
+        SDL_LogError(0, "%s", e.what());
+        return 1;
+    }
+}
+
+#else
+
 int main(int argc, char* argv[]) {
     try {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
@@ -202,3 +234,6 @@ int main(int argc, char* argv[]) {
 }
 
 #endif
+
+#endif
+

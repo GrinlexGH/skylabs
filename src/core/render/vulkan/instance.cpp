@@ -7,7 +7,7 @@
 
 namespace {
 #ifdef DEBUG
-vk::Bool32 DebugCallback(
+VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
     const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -57,7 +57,9 @@ CInstance::CInstance(
 
     //====================
 #ifdef DEBUG
-    const bool isDebugUtilsAvailable = EnableExtension(vk::EXTDebugUtilsExtensionName);
+    // TODO: https://developer.android.com/ndk/guides/graphics/validation-layer#enable_the_debug_callback
+    const bool isDebugUtilsAvailable = true;
+    EnableExtension(vk::EXTDebugUtilsExtensionName);
 #endif
 
     // if required extension is missing, put it into error message

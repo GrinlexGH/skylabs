@@ -64,6 +64,11 @@ CQueueFamilies GetQueueFamilies(
         ++i;
     }
 
+    // Compute and graphics queue can implicitly accept transfer commands
+    if (!transferQueueIndex.has_value()) {
+        transferQueueIndex = computeQueueIndex;
+    }
+
     if (!allQueuesFound) {
         std::vector<const char*> missingQueues;
         missingQueues.reserve(4);
@@ -148,7 +153,7 @@ CDevice::CDevice(
         computeQueueFamily
     };
 
-    float queuePriority = 0.5f;
+    const float queuePriority = 0.5f;
     for (std::uint32_t queueFamily : uniqueQueueFamilies) {
         vk::DeviceQueueCreateInfo queueCreateInfo;
         queueCreateInfo.queueFamilyIndex = queueFamily;
