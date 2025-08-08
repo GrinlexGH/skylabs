@@ -1,6 +1,6 @@
 #pragma once
 #include "instance.hpp"
-#include "vulkan_window.hpp"
+#include "window.hpp"
 
 namespace Vulkan {
 struct CQueue
@@ -15,7 +15,7 @@ public:
     explicit CDevice(
         const CInstance& instance,
         const CPhysicalDevice& physicalDevice,
-        const IVulkanWindow* window,
+        const IWindow* window,
         const std::unordered_map<const char*, bool>& extensions
     );
     CDevice(const CDevice&) = delete;

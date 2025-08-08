@@ -6,15 +6,16 @@
 
 #include <vulkan/vulkan.hpp>
 
-class IVulkanWindow : public IWindow
+namespace Vulkan {
+class IWindow : public ::IWindow
 {
 public:
-    IVulkanWindow() = default;
-    IVulkanWindow(const IVulkanWindow&) = delete;
-    IVulkanWindow(IVulkanWindow&&) noexcept = default;
-    IVulkanWindow& operator=(const IVulkanWindow&) = delete;
-    IVulkanWindow& operator=(IVulkanWindow&&) noexcept = default;
-    ~IVulkanWindow() override = default;
+    IWindow() = default;
+    IWindow(const IWindow&) = delete;
+    IWindow(IWindow&&) noexcept = default;
+    IWindow& operator=(const IWindow&) = delete;
+    IWindow& operator=(IWindow&&) noexcept = default;
+    ~IWindow() override = default;
 
     [[nodiscard]] virtual std::vector<const char*> GetRequiredInstanceExtensions() const = 0;
     [[nodiscard]] virtual bool CheckQueuePresentSupport(
@@ -26,3 +27,4 @@ public:
     [[nodiscard]] virtual vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const = 0;
     virtual void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const = 0;
 };
+}

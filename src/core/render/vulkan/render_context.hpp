@@ -2,7 +2,6 @@
 #include "device.hpp"
 #include "instance.hpp"
 #include "physical_device.hpp"
-#include "vulkan_window.hpp"
 
 namespace Vulkan {
 //====================
@@ -11,14 +10,14 @@ namespace Vulkan {
 class CRenderContext
 {
 public:
-    explicit CRenderContext(const IVulkanWindow* window);
+    explicit CRenderContext(const IWindow* window);
     CRenderContext(const CRenderContext&) = delete;
     CRenderContext(CRenderContext&&) noexcept = default;
     CRenderContext& operator=(const CRenderContext&) = delete;
     CRenderContext& operator=(CRenderContext&&) noexcept = default;
     ~CRenderContext() = default;
 
-    [[nodiscard]] const IVulkanWindow* GetWindow() const { return m_window; }
+    [[nodiscard]] const IWindow* GetWindow() const { return m_window; }
     [[nodiscard]] const CInstance* GetInstance() const { return m_instance.get(); }
     [[nodiscard]] const CDevice* GetDevice() const { return m_device.get(); }
     [[nodiscard]] const CPhysicalDevice* GetPhysicalDevice() const { return m_selectedPhysicalDevice; }
@@ -34,6 +33,6 @@ private:
     std::unique_ptr<CInstance> m_instance;
     std::unique_ptr<CDevice> m_device;
     CPhysicalDevice* m_selectedPhysicalDevice;
-    const IVulkanWindow* m_window;
+    const IWindow* m_window;
 };
 }
