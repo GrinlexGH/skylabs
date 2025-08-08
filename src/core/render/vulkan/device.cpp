@@ -40,7 +40,7 @@ CQueueFamilies GetQueueFamilies(
             graphicsQueueIndex.emplace(i);
         }
 
-        if (window->CheckQueuePresentSupport(instance, physicalDeviceHandle, i)) {
+        if (window->IsQueueFamilyPresentSupport(instance, physicalDeviceHandle, i)) {
             presentQueueIndex.emplace(i);
         }
 
