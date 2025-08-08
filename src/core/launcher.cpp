@@ -1,7 +1,7 @@
 #include "launcher.hpp"
 
 #include "SDL/context.hpp"
-#include "SDL/window.hpp"
+#include "SDL/vulkan/window.hpp"
 #include "camera.hpp"
 #include "render/vulkan/renderer.hpp"
 
@@ -111,7 +111,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
 void CLauncher::Main() {
     SDL::CContext sdl(SDL_INIT_VIDEO);
 
-    SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
+    SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
     SDL_SetWindowRelativeMouseMode(window.GetHandle(), true);
 
     const std::unique_ptr<IRenderer> renderer ;/* = Vulkan::CRenderer::TryToCreate(&window); */

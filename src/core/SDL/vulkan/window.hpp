@@ -1,18 +1,18 @@
 #pragma once
-#include "../window.hpp"
+#include "../../window.hpp"
 
 #include <SDL3/SDL.h>
 
-namespace SDL {
-class CVulkanWindow : public IWindow
+namespace SDL::Vulkan {
+class CWindow : public IWindow
 {
 public:
-    explicit CVulkanWindow(const char* title, int w, int h, SDL_WindowFlags flags = 0);
-    CVulkanWindow(const CVulkanWindow&) = delete;
-    CVulkanWindow(CVulkanWindow&& other) noexcept;
-    CVulkanWindow& operator=(const CVulkanWindow&) = delete;
-    CVulkanWindow& operator=(CVulkanWindow&& rhs) noexcept;
-    ~CVulkanWindow() override;
+    explicit CWindow(const char* title, int w, int h, SDL_WindowFlags flags = 0);
+    CWindow(const CWindow&) = delete;
+    CWindow(CWindow&& other) noexcept;
+    CWindow& operator=(const CWindow&) = delete;
+    CWindow& operator=(CWindow&& rhs) noexcept;
+    ~CWindow() override;
 
     [[nodiscard]] SDL_Window* GetHandle() const { return m_handle; }
 
