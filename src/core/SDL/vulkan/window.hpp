@@ -1,10 +1,10 @@
 #pragma once
-#include "../../window.hpp"
+#include "../../render/vulkan/window.hpp"
 
 #include <SDL3/SDL.h>
 
 namespace SDL::Vulkan {
-class CWindow : public IWindow
+class CWindow : public ::Vulkan::IWindow
 {
 public:
     explicit CWindow(const char* title, int w, int h, SDL_WindowFlags flags = 0);
@@ -14,19 +14,20 @@ public:
     CWindow& operator=(CWindow&& rhs) noexcept;
     ~CWindow() override;
 
-    [[nodiscard]] SDL_Window* GetHandle() const { return m_handle; }
+    [[nodiscard]] auto GetHandle() const -> SDL_Window* { return m_handle; }
 
-    // [[nodiscard]] std::vector<const char*> GetRequiredInstanceExtensions() const override;
-    // [[nodiscard]] bool CheckQueuePresentSupport(
-    //     const vk::Instance& instance,
-    //     const vk::PhysicalDevice& physicalDevice,
-    //     std::uint32_t queueFamilyIndex
-    // ) const override;
-    //
-    // [[nodiscard]] vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const override;
-    // void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const override;
+    auto GetDrawableSize(int* w, int* h) const -> void override;
 
-    void GetDrawableSize(int* w, int* h) const override;
+    [[nodiscard]] auto GetRequiredInstanceExtensions() const -> std::vector<const char*> override;
+
+    [[nodiscard]] auto CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR override;
+    auto DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void override;
+
+    [[nodiscard]] auto IsQueueFamilyPresentSupport(
+        const vk::Instance& instance,
+        const vk::PhysicalDevice& physicalDevice,
+        std::uint32_t index
+    ) const -> bool override;
 
 private:
     SDL_Window* m_handle = nullptr;

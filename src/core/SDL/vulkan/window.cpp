@@ -4,6 +4,7 @@
 #include <format>
 
 #include "../video.hpp"
+#include "vulkan.hpp"
 
 namespace SDL::Vulkan {
 CWindow::CWindow(const char* title, const int w, const int h, SDL_WindowFlags flags) :
@@ -25,29 +26,29 @@ CWindow& CWindow::operator=(CWindow&& rhs) noexcept {
     }
     return *this;
 }
-//
-// std::vector<const char*> CVulkanWindow::GetRequiredInstanceExtensions() const {
-//     return Vulkan::GetInstanceExtensions();
-// }
-//
-// bool CVulkanWindow::CheckQueuePresentSupport(
-//     const vk::Instance& instance,
-//     const vk::PhysicalDevice& physicalDevice,
-//     const uint32_t queueFamilyIndex
-// ) const {
-//     return Vulkan::GetPresentationSupport(instance, physicalDevice, queueFamilyIndex);
-// }
-//
-// vk::SurfaceKHR CVulkanWindow::CreateSurface(const vk::Instance& instance) const {
-//     return Vulkan::CreateSurface(m_handle, instance);
-// }
-//
-// void CVulkanWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const {
-//     Vulkan::DestroySurface(instance, surface);
-//     surface = VK_NULL_HANDLE;
-// }
-//
-void CWindow::GetDrawableSize(int* w, int* h) const {
+
+auto CWindow::GetRequiredInstanceExtensions() const -> std::vector<const char*> {
+    return Vulkan::GetInstanceExtensions();
+}
+
+auto CWindow::IsQueueFamilyPresentSupport(
+    const vk::Instance& instance,
+    const vk::PhysicalDevice& physicalDevice,
+    const uint32_t index
+) const -> bool {
+    return Vulkan::GetPresentationSupport(instance, physicalDevice, index);
+}
+
+auto CWindow::CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR {
+    return Vulkan::CreateSurface(m_handle, instance);
+}
+
+auto CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void {
+    Vulkan::DestroySurface(instance, surface);
+    surface = VK_NULL_HANDLE;
+}
+
+auto CWindow::GetDrawableSize(int* w, int* h) const -> void {
     GetWindowSizeInPixels(m_handle, w, h);
 }
 
