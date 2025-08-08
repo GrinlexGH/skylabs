@@ -48,8 +48,8 @@ auto CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surfa
     surface = VK_NULL_HANDLE;
 }
 
-auto CWindow::GetDrawableSize(int* w, int* h) const -> void {
-    GetWindowSizeInPixels(m_handle, w, h);
+auto CWindow::GetDrawableSize(int& w, int& h) const -> void {
+    GetWindowSizeInPixels(m_handle, &w, &h);
 }
 
 CWindow::~CWindow() {

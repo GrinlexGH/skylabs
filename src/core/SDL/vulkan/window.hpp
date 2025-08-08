@@ -16,7 +16,7 @@ public:
 
     [[nodiscard]] auto GetHandle() const -> SDL_Window* { return m_handle; }
 
-    auto GetDrawableSize(int* w, int* h) const -> void override;
+    auto GetDrawableSize(int& w, int& h) const -> void override;
 
     [[nodiscard]] auto GetRequiredInstanceExtensions() const -> std::vector<const char*> override;
 
