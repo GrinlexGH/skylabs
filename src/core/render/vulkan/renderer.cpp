@@ -857,16 +857,16 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const w
     }
 }
 
-void CRenderer::Draw(glm::mat4 view) {
+void CRenderer::Draw(glm::mat4 /* view */) {
 
     /*
     const Vulkan::CFrameData& frameData = m_frameData[m_frameIndex];
     const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain->GetHandle();
 
-    /*
+
     UpdateUniformBuffer(m_swapchain->GetInfo().m_extent, m_uniformBuffersMapped, m_frameIndex, view);
-    
+
 
     // #region ACQUIRE_IMAGE
     vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -894,7 +894,6 @@ void CRenderer::Draw(glm::mat4 view) {
     // #endregion ACQUIRE_IMAGE
 
 
-    /*
     // #region COMMAND_RECORD
     m_commandBuffers[m_frameIndex].reset();
     vk::CommandBufferBeginInfo beginInfo {};
@@ -967,7 +966,7 @@ void CRenderer::Draw(glm::mat4 view) {
 
     std::ignore = m_context->GetDevice()->GetGraphicsQueue().m_handle.submit(1, &submitInfo, m_inFlightFences[m_frameIndex]);
     // #endregion COMMAND_RECORD
-    
+
     // #region PRESENT
     vk::PresentInfoKHR presentInfo {};
 
