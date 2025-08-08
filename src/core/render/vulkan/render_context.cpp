@@ -48,7 +48,7 @@ bool CRenderContext::IsDeviceSuitable(const CPhysicalDevice* const physicalDevic
     bool hasGraphicsQueue = false;
 
     for (std::uint32_t i = 0; const auto& queue : physicalDevice->GetQueueFamilies()) {
-        if (m_window->CheckQueuePresentSupport(m_instance->GetHandle(), physicalDevice->GetHandle(), i)) {
+        if (m_window->IsQueueFamilyPresentSupport(m_instance->GetHandle(), physicalDevice->GetHandle(), i)) {
             hasPresentQueue = true;
         }
 
