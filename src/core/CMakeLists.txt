@@ -31,9 +31,9 @@ set(SOURCES
     render/vulkan/frame_data.cpp
     SDL/context.cpp
     SDL/context.hpp
-    SDL/vulkan.hpp
-    SDL/window.cpp
-    SDL/window.hpp
+    SDL/vulkan/vulkan.hpp
+    SDL/vulkan/window.cpp
+    SDL/vulkan/window.hpp
     SDL/video.hpp
 )
 

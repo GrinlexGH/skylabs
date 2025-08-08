@@ -3,22 +3,22 @@
 #include <stdexcept>
 #include <format>
 
-#include "video.hpp"
+#include "../video.hpp"
 
-namespace SDL {
-CVulkanWindow::CVulkanWindow(const char* title, const int w, const int h, SDL_WindowFlags flags) :
-    m_handle(SDL_CreateWindow(title, w, h, flags))
+namespace SDL::Vulkan {
+CWindow::CWindow(const char* title, const int w, const int h, SDL_WindowFlags flags) :
+    m_handle(SDL_CreateWindow(title, w, h, SDL_WINDOW_VULKAN | flags))
 {
     if (!m_handle) {
         throw std::runtime_error(std::format("Failed to create SDL window: {}!", SDL_GetError()));
     }
 }
 
-CVulkanWindow::CVulkanWindow(CVulkanWindow&& other) noexcept :
+CWindow::CWindow(CWindow&& other) noexcept :
     m_handle(std::exchange(other.m_handle, nullptr))
 { }
 
-CVulkanWindow& CVulkanWindow::operator=(CVulkanWindow&& rhs) noexcept {
+CWindow& CWindow::operator=(CWindow&& rhs) noexcept {
     if (this != &rhs) {
         if (m_handle) { SDL_DestroyWindow(m_handle); }
         m_handle = std::exchange(rhs.m_handle, nullptr);
@@ -47,11 +47,11 @@ CVulkanWindow& CVulkanWindow::operator=(CVulkanWindow&& rhs) noexcept {
 //     surface = VK_NULL_HANDLE;
 // }
 //
-void CVulkanWindow::GetDrawableSize(int* w, int* h) const {
+void CWindow::GetDrawableSize(int* w, int* h) const {
     GetWindowSizeInPixels(m_handle, w, h);
 }
 
-CVulkanWindow::~CVulkanWindow() {
+CWindow::~CWindow() {
     if(m_handle) {
         SDL_DestroyWindow(m_handle);
     }
