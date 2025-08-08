@@ -22,7 +22,7 @@ int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
 }
 
 namespace Vulkan {
-CRenderContext::CRenderContext(const IVulkanWindow* const window) : m_window(window) {
+CRenderContext::CRenderContext(const IWindow* const window) : m_window(window) {
     CreateInstance();
     SelectPhysicalDevice();
     CreateLogicalDevice();

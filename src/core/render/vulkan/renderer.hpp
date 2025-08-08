@@ -7,29 +7,30 @@
 #include "swapchain.hpp"
 #include <glm/glm.hpp>
 
-class CVulkanRenderer final : public IRenderer
+namespace Vulkan {
+class CRenderer final : public IRenderer
 {
 public:
     // Window must be valid for the entire lifetime of the renderer
-    explicit CVulkanRenderer(const IVulkanWindow* window);
-    CVulkanRenderer(const CVulkanRenderer&) = delete;
-    CVulkanRenderer(CVulkanRenderer&&) noexcept = default;
-    CVulkanRenderer& operator=(const CVulkanRenderer&) = delete;
-    CVulkanRenderer& operator=(CVulkanRenderer&&) noexcept = default;
-    ~CVulkanRenderer() override;
+    explicit CRenderer(const IWindow* window);
+    CRenderer(const CRenderer&) = delete;
+    CRenderer(CRenderer&&) noexcept = default;
+    CRenderer& operator=(const CRenderer&) = delete;
+    CRenderer& operator=(CRenderer&&) noexcept = default;
+    ~CRenderer() override;
 
-    static std::unique_ptr<CVulkanRenderer> TryToCreate(const IVulkanWindow* window);
+    static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window);
     void Draw(glm::mat4 view_mat) override;
 
 private:
     static constexpr int FRAMES_IN_FLIGHT_COUNT = 3;
 
-    std::unique_ptr<Vulkan::CRenderContext> m_context;
+    std::unique_ptr<CRenderContext> m_context;
 
-    std::unique_ptr<Vulkan::CSurface> m_surface;
-    std::unique_ptr<Vulkan::CSwapchain> m_swapchain;
+    std::unique_ptr<CSurface> m_surface;
+    std::unique_ptr<CSwapchain> m_swapchain;
 
-    std::vector<Vulkan::CFrameData> m_frameData;
+    std::vector<CFrameData> m_frameData;
     std::vector<vk::Semaphore> m_imageAvailableSemaphores;
 
     vk::raii::RenderPass m_renderPass = VK_NULL_HANDLE;
@@ -65,3 +66,4 @@ private:
 
     std::uint32_t m_frameIndex = 0;
 };
+}

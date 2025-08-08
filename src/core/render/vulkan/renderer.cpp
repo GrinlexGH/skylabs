@@ -1,4 +1,4 @@
-#include "vulkan_renderer.hpp"
+#include "renderer.hpp"
 
 #include "logging.hpp"
 #include "resource_system.hpp"
@@ -360,7 +360,8 @@ void UpdateUniformBuffer(
 
 }
 */
-CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
+namespace Vulkan {
+CRenderer::CRenderer(const IWindow* const window) {
     if (window == nullptr) {
         throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
     }
@@ -847,16 +848,16 @@ CVulkanRenderer::CVulkanRenderer(const IVulkanWindow* const window) {
     // #endregion INDEX_BUFFER*/
 }
 
-std::unique_ptr<CVulkanRenderer> CVulkanRenderer::TryToCreate(const IVulkanWindow* const window) {
+std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const window) {
     try {
-        return std::make_unique<CVulkanRenderer>(window);
+        return std::make_unique<CRenderer>(window);
     } catch (const std::exception& e) {
         Log::Error("Cannot initialize vulkan renderer: {}", e.what());
         return nullptr;
     }
 }
 
-void CVulkanRenderer::Draw(glm::mat4 view) {
+void CRenderer::Draw(glm::mat4 view) {
 
     /*
     const Vulkan::CFrameData& frameData = m_frameData[m_frameIndex];
@@ -988,7 +989,7 @@ void CVulkanRenderer::Draw(glm::mat4 view) {
     m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
 }
 
-CVulkanRenderer::~CVulkanRenderer() { /*
+CRenderer::~CRenderer() { /*
      vk::Device deviceHandle = m_context->GetDevice()->GetHandle();
      deviceHandle.waitIdle();
      for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -1021,4 +1022,5 @@ CVulkanRenderer::~CVulkanRenderer() { /*
      deviceHandle.destroyPipeline(m_pipeline);
      deviceHandle.destroyPipelineLayout(m_pipelineLayout);
      deviceHandle.destroyRenderPass(m_renderPass);*/
+}
 }

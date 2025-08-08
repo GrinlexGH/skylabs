@@ -3,7 +3,7 @@
 #include "SDL/context.hpp"
 #include "SDL/window.hpp"
 #include "camera.hpp"
-#include "render/vulkan/vulkan_renderer.hpp"
+#include "render/vulkan/renderer.hpp"
 
 CCamera g_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
 
@@ -114,7 +114,7 @@ void CLauncher::Main() {
     SDL::CVulkanWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
     SDL_SetWindowRelativeMouseMode(window.GetHandle(), true);
 
-    const std::unique_ptr<IRenderer> renderer ;/* = CVulkanRenderer::TryToCreate(&window); */
+    const std::unique_ptr<IRenderer> renderer ;/* = Vulkan::CRenderer::TryToCreate(&window); */
     if (!renderer) {
         throw std::runtime_error("Cannot initialize vulkan!\n");
     }

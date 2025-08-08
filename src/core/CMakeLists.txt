@@ -9,9 +9,9 @@ set(SOURCES
     window.hpp
     camera.hpp
     render/renderer.hpp
-    render/vulkan/vulkan_window.hpp
-    render/vulkan/vulkan_renderer.hpp
-    render/vulkan/vulkan_renderer.cpp
+    render/vulkan/window.hpp
+    render/vulkan/renderer.hpp
+    render/vulkan/renderer.cpp
     render/vulkan/instance.hpp
     render/vulkan/instance.cpp
     render/vulkan/extensions.hpp

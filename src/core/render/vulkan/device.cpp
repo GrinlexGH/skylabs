@@ -18,7 +18,7 @@ struct CQueueFamilies
 CQueueFamilies GetQueueFamilies(
     const vk::Instance& instance,
     const Vulkan::CPhysicalDevice& physicalDevice,
-    const IVulkanWindow* window
+    const Vulkan::IWindow* window
 ) {
     const std::vector<vk::QueueFamilyProperties>& queueFamilies = physicalDevice.GetQueueFamilies();
     const vk::PhysicalDevice physicalDeviceHandle = physicalDevice.GetHandle();
@@ -134,7 +134,7 @@ namespace Vulkan {
 CDevice::CDevice(
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice,
-    const IVulkanWindow* const window,
+    const IWindow* const window,
     const std::unordered_map<const char*, bool>& extensions
 ) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
