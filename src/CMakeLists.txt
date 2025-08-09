@@ -107,4 +107,3 @@ foreach(PROJECT ${PROJECTS})
         set_target_properties(${PROJECT} PROPERTIES PREFIX "")
     endif()
 endforeach()
-

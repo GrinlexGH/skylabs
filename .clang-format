@@ -7,7 +7,7 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignOperands: false
 AlignTrailingComments: false
-BraceWrapping: 
+BraceWrapping:
   AfterCaseLabel: false
   AfterClass: true
   AfterControlStatement: false
@@ -37,7 +37,7 @@ PackConstructorInitializers: CurrentLine
 ColumnLimit: 0
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: false
-IncludeCategories: 
+IncludeCategories:
   - Regex: '^<.*'
     Priority: 1
   - Regex: '^".*'

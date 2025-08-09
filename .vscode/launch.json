@@ -1,7 +1,7 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    // Hover to view descriptions of existing attributes.
+    // Use IntelliSense to learn about possible attributes.
     "version": "0.2.0",
     "configurations": [
         {
@@ -42,7 +42,7 @@
             "console": "integratedTerminal",
             "initCommands": [
                 "settings set target.x86-disassembly-flavor intel"
-            ],
+            ]
         },
         {
             "name": "(msvc) Launch",
