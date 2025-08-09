@@ -31,7 +31,6 @@ private:
     std::unique_ptr<CSwapchain> m_swapchain;
 
     std::vector<CFrameData> m_frameData;
-    std::vector<vk::Semaphore> m_imageAvailableSemaphores;
 
     vk::raii::RenderPass m_renderPass = VK_NULL_HANDLE;
 
@@ -44,9 +43,6 @@ private:
 
     vk::PipelineLayout m_pipelineLayout;
     vk::Pipeline m_pipeline;
-
-    vk::CommandPool m_commandPool;
-    std::vector<vk::CommandBuffer> m_commandBuffers;
 
     std::vector<vk::Semaphore> m_renderFinishedSemaphores;
 
