@@ -29,7 +29,7 @@ Checks: >
   -hicpp-signed-bitwise,
   -readability-implicit-bool-conversion,
   -cppcoreguidelines-pro-bounds-constant-array-index,
-dddd
+
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'
 FormatStyle: file
