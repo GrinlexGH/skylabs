@@ -374,17 +374,18 @@ CRenderer::CRenderer(const IWindow* const window) {
         3, vk::PresentModeKHR::eImmediate
     );
 
+    // Слава богу c++23 слава комитету слава ISO IEC
     for (auto _ : std::views::iota(0, FRAMES_IN_FLIGHT_COUNT)) {
         m_frameData.emplace_back(m_context.get());
     }
 
     // #region SYNC_PRIMITIVES
-    m_imageAvailableSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
+    m_renderFinishedSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
     for (unsigned int i = 0; i < m_swapchain->GetInfo().m_imageCount; ++i) {
-        m_imageAvailableSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo {});
+        m_renderFinishedSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo {});
     }
-
     // #endregion SYNC_PRIMITIVES
+
     /*
     // #region RENDER_PASS
     vk::AttachmentDescription colorAttachment {};
