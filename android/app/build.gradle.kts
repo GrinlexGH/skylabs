@@ -2,25 +2,20 @@ plugins {
     id("com.android.application")
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
-
 android {
     namespace = "org.libsdl.app"
 
-    compileSdk = 35
-    buildToolsVersion = "35.0.1"
-    ndkVersion = "27.1.12297006"
+    compileSdk = 36
+    ndkVersion = "29.0.13846066"
 
     defaultConfig {
         applicationId = "ru.grinlexstydios.skylabs"
 
         minSdk = 21
-        targetSdk = 35
+        targetSdk = 36
+
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.0 Bruh"
 
         externalNativeBuild {
             cmake {
@@ -49,13 +44,13 @@ android {
                     "-Wno-deprecated"
                 )
 
-                abiFilters += listOf("arm64-v8a")
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
             }
         }
     }
 
     sourceSets.getByName("main") {
-        java.setSrcDirs(listOf("../../libs/sources/SDL/android-project/app/src/main/java"))
+        java.srcDirs("../../libs/sources/SDL/android-project/app/src/main/java")
     }
 
     compileOptions {
@@ -65,8 +60,11 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 

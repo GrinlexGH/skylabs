@@ -41,9 +41,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         "-Wall" "-Wextra" "-Wpedantic"
         #"$<$<CONFIG:Release>:-Werror>"
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
-        "-march=native" "-mtune=native"
         "-fdiagnostics-color=always"
     )
+    if(NOT ANDROID)
+        add_compile_options(
+            "-march=native" "-mtune=native"
+        )
+    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
         "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"
