@@ -13,7 +13,7 @@
 #include <string>
 #include <utility>
 
-using main_t = int (*)(int argc, char* argv[]); // NOLINT
+using main_t = int (*)(int argc, char* argv[]); // NOLINT: No, I dont wanna use span, thanks
 
 #ifdef PLATFORM_WINDOWS
 
@@ -165,7 +165,7 @@ public:
 
     void* GetFunctionAddress(const char* name) const {
         void* func = dlsym(m_handle, name);
-        if (const char* error = dlerror(); error != NULL) {
+        if (const char* error = dlerror(); error != nullptr) {
             throw std::runtime_error {
                 std::format("Failed to load library function:\n{}\n", error)
             };
@@ -223,12 +223,12 @@ int main(int argc, char* argv[]) {
             int ret = main(argc, argv);
             return ret;
         } catch (const std::exception& e) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << '\n' << std::flush;
         }
 
         return 1;
     } catch (const std::exception& e) {
-        std::cout << e.what() << std::endl;
+        std::cout << e.what() << '\n' << std::flush;
         return 1;
     }
 }

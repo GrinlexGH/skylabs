@@ -1,4 +1,3 @@
----
 Checks: >
   clang-diagnostic-*,
   clang-analyzer-*,
@@ -11,7 +10,6 @@ Checks: >
   modernize-*,
   performance-*,
   readability-*,
-  -modernize-use-trailing-return-type,
   -cppcoreguidelines-init-variables,
   -readability-braces-around-statements,
   -hicpp-braces-around-statements,
@@ -29,12 +27,12 @@ Checks: >
   -hicpp-signed-bitwise,
   -readability-implicit-bool-conversion,
   -cppcoreguidelines-pro-bounds-constant-array-index,
+  -concurrency-mt-unsafe,
 
+  -modernize-use-trailing-return-type,
+  -misc-include-cleaner
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*'
 FormatStyle: file
-
 CheckOptions:
-  - key:             misc-include-cleaner.UnusedIncludes
-    value:           false
-...
+  misc-include-cleaner.UnusedIncludes: 'false'
