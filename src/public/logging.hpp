@@ -60,7 +60,7 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
 
     #else
 
-    constexpr std::array<std::tuple<std::string_view, int, int, int>, static_cast<std::size_t>(LogType::eCount)> logInfo = { {
+    constexpr std::array<std::tuple<std::string_view, int, int, int>, static_cast<std::size_t>(Type::eCount)> logInfo = { {
         { "Debug", 168, 228, 160 },
         { "Info", 114, 159, 207 },
         { "Warning", 196, 160, 0 },
@@ -73,11 +73,11 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
     std::string_view suffix;
 
     switch (type) {
-        case LogType::eWarning:
+        case Type::eWarning:
             prefix = "\n";
             suffix = "\n";
             break;
-        case LogType::eError:
+        case Type::eError:
             prefix = "\n\n";
             suffix = "\n\n";
             break;
