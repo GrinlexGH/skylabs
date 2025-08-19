@@ -100,11 +100,6 @@ find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 
 # Global options
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang" AND NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
-    # NDK toolchain doesn't support explicitly setting LLD
-    if(NOT ANDROID)
-        set(CMAKE_LINKER_TYPE LLD)
-    endif()
-
     add_compile_options(
         "-fdiagnostics-color=always"
         "-stdlib=libc++"
