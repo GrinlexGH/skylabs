@@ -107,12 +107,34 @@ find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 
 # Global options
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang" AND NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
     add_compile_options(
-        "-fdiagnostics-color=always"
-        "-stdlib=libc++"
+        "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray backgroud
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
     )
-    add_link_options("-stdlib=libc++")
+
+    # Android SDK doesn't support march native. Kind of logical
+    if(NOT ANDROID)
+        add_compile_options(
+            "-march=native" "-mtune=native"
+        )
+    endif()
+
+    # Use libc++ on linux just because I can
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        if(NOT ANDROID) # Android SDK doesn't support explicitly setting lld
+            set(CMAKE_LINKER_TYPE LLD)
+        endif()
+        add_compile_options("-stdlib=libc++")
+        add_link_options("-stdlib=libc++")
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC" OR CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
+    add_compile_options(
+        "/utf-8" # No, I don't want to use one byte encoding
+        "/Zc:__cplusplus" # Idk what it is fixing, but it is definitely fixing something
+        "/MP" # Multithreading
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
+    )
 endif()
 
 if(WIN32)
