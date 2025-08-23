@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.26)
 
 set(PROJECT_NAME "Skylabs")
 
@@ -15,6 +15,12 @@ else()
 endif()
 
 option(ENABLE_STEAM "Enable steamapi" ${DEFAULT_ENABLE_STEAM})
+
+# Skylabs directories
+set(SKYLABS_ROOT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+set(SKYLABS_ASSETS_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/assets)
+set(SKYLABS_ANDROID_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android)
+set(SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android/app/src/main/assets)
 
 # Build and install third party shared libraries
 macro(set_from_env_or_default VAR ENV_NAME DEFAULT)

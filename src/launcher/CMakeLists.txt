@@ -26,7 +26,7 @@ set_target_properties(${CURRENT_TARGET_NAME}
     ARCHIVE_OUTPUT_DIRECTORY ${LIBS_OUTPUT_DIRECTORY}/
     RUNTIME_OUTPUT_DIRECTORY ${ROOT_OUTPUT_DIRECTORY}/
     LIBRARY_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
-    WIN32_EXECUTABLE $<CONFIG:Release>
+    WIN32_EXECUTABLE $<CONFIG:Release> # Do not show console in release
 )
 
 # Set project as startup project
@@ -39,22 +39,52 @@ if(ANDROID)
 endif()
 
 # Copy all third party libraries here
+set(DLLS_TO_COPY
+    $<TARGET_FILE:SDL3::SDL3>
+    $<TARGET_FILE:SDL3_image::SDL3_image>
+)
+
+if(ENABLE_STEAM)
+    list(APPEND DLLS_TO_COPY
+        $<TARGET_FILE:SteamworksSDK::SteamAPI>
+        $<TARGET_FILE:SteamworksSDK::AppTicket>
+    )
+endif()
+
 add_custom_command(
     TARGET ${CURRENT_TARGET_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:SDL3::SDL3>
-    $<TARGET_FILE:SDL3_image::SDL3_image>
-    $<TARGET_FILE:SteamworksSDK::SteamAPI>
-    $<TARGET_FILE:SteamworksSDK::AppTicket>
-    ${DLLS_OUTPUT_DIRECTORY}
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-    $<TARGET_FILE_NAME:SDL3::SDL3> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3::SDL3>>.so
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-    $<TARGET_FILE_NAME:SDL3::SDL3> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3::SDL3>>.so.0
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-    $<TARGET_FILE_NAME:SDL3_image::SDL3_image> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3_image::SDL3_image>>.so
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-    $<TARGET_FILE_NAME:SDL3_image::SDL3_image> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3_image::SDL3_image>>.so.0
+    ${DLLS_TO_COPY} ${DLLS_OUTPUT_DIRECTORY}
     WORKING_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}
-    COMMENT "Copying libraries dll"
+    COMMENT "Copying DLLs"
 )
+
+if(UNIX)
+    # <libname>.so & <libname>.so.0 symlinks for UNIX,
+    # because name of TARGET_FILE_NAME is <libname>.so.X.Y.Z
+    add_custom_command(
+        TARGET ${CURRENT_TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        $<TARGET_FILE_NAME:SDL3::SDL3> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3::SDL3>>.so
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        $<TARGET_FILE_NAME:SDL3::SDL3> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3::SDL3>>.so.0
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        $<TARGET_FILE_NAME:SDL3_image::SDL3_image> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3_image::SDL3_image>>.so
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        $<TARGET_FILE_NAME:SDL3_image::SDL3_image> $<PATH:GET_STEM,$<TARGET_FILE_NAME:SDL3_image::SDL3_image>>.so.0
+        WORKING_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}
+        COMMENT "Creating DLL's symlinks"
+    )
+endif()
+
+if(ANDROID)
+    # Copy assets to android apk
+    add_custom_command(
+        TARGET ${CURRENT_TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+        ${SKYLABS_ASSETS_DIRECTORY}
+        ${SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY}
+        WORKING_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}
+        COMMENT "Copying assets to apk"
+    )
+endif()

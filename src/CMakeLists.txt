@@ -16,7 +16,7 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 set(ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/)
 set(DLLS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/bin)
 set(LIBS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/libs)
-set(SHADER_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
+set(SHADERS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>/shaders)
 
 # For project info header generation
 set(APP_NAME ${PROJECT_NAME})
@@ -56,7 +56,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     )
 endif()
 
-# All macros in one place (except targetname_EXPORT macros)
+# All global macros here (except targetname_EXPORT macros)
 add_compile_definitions(
     NOMINMAX
     $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>

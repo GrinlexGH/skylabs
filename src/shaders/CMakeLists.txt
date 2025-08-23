@@ -12,7 +12,7 @@ foreach(SHADER ${SHADERS})
     get_filename_component(SHADER_NAME_WE "${SHADER}" NAME_WE)
     get_filename_component(SHADER_DIR "${SHADER}" DIRECTORY)
 
-    set(SHADER_OUT_DIR "${SHADER_OUTPUT_DIRECTORY}/${SHADER_DIR}")
+    set(SHADER_OUT_DIR "${SHADERS_OUTPUT_DIRECTORY}/${SHADER_DIR}")
 
     # Get shader stage suffix from extension
     # shader.comp.glsl -> comp
@@ -69,3 +69,15 @@ foreach(FILE IN LISTS SHADERS)
     string(REPLACE "/" "\\" SOURCE_PATH_GROUP "${SOURCE_PATH}")
     source_group("Source Files\\${SOURCE_PATH_GROUP}" FILES "${FILE}")
 endforeach()
+
+if(ANDROID)
+    # Copy shaders to android apk
+    add_custom_command(
+        TARGET ${CURRENT_TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+        ${SHADERS_OUTPUT_DIRECTORY}
+        ${SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY}/shaders
+        WORKING_DIRECTORY ${SHADERS_OUTPUT_DIRECTORY}
+        COMMENT "Copying shaders to apk"
+    )
+endif()

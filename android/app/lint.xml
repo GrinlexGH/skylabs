@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <issue id="MissingPermission">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="GestureBackNavigation">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="NewApi">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="ApplySharedPref">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="DefaultLocale">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="InlinedApi">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="StaticFieldLeak">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="UnspecifiedRegisterReceiverFlag">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+    <issue id="ObsoleteSdkInt">
+        <ignore path="**/SDL/android-project/app/src/main/java/**"/>
+    </issue>
+</lint>
