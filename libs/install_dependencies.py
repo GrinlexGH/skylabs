@@ -1,6 +1,7 @@
 # Author: Grinlex
 
 import argparse
+import os
 import platform
 import re
 import shlex
@@ -75,7 +76,26 @@ def check_git_hash_match(source_dir: Path, hash_file: Path) -> bool:
 # ========================================================================================
 # region ====== CMake libraries building and installation ================================
 
-def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags: list[str] = [], build_folder: Path = "build") -> None:
+# For parallel work of this script we need to lock the build dir
+def acquire_lock(lock_file: Path):
+    lock_file.parent.mkdir(parents=True, exist_ok=True)
+    f = open(lock_file, "w")
+
+    try:
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return f
+    except (OSError, BlockingIOError):
+        f.close()
+        return None
+
+def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Path, extra_cmake_flags=None, build_folder: Path = "build") -> None:
+    if extra_cmake_flags is None:
+        extra_cmake_flags = []
     global SOURCES_ROOT, INSTALL_ROOT, CMAKE, CMAKE_GLOBAL_ARGS, CMAKE_PERSUBMODULE_ARGS
 
     lib_name = source_dir_base.name
@@ -89,10 +109,28 @@ def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Pat
 
     log(f"Compiling [{lib_name}]...")
 
+    # Prepare build dir to allow multiple instance of this script at one time
     build_dir = source_dir / build_folder
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
-    build_dir.mkdir(parents=True, exist_ok=True)
+    n = 0
+    lock = None
+
+    while True:
+        lock_file = build_dir / ".lock"
+        lock = acquire_lock(lock_file)
+        if lock is not None:
+            # Delete all files and folders except .lock file
+            for item in build_dir.iterdir():
+                if item.name == lock_file.name:
+                    continue
+                if item.is_file() or item.is_symlink():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+            break
+        else:
+            # Use build-{n} folder instead
+            n += 1
+            build_dir = source_dir / f"{build_folder}-{n}"
 
     submodule_args = CMAKE_PERSUBMODULE_ARGS.get(source_dir.name, [])
 
@@ -109,6 +147,9 @@ def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Pat
 
     build_cmd = [CMAKE, "--build", ".", "--config", "Release", "--parallel"]
     subprocess.run(build_cmd, cwd=build_dir, check=True)
+
+    lock.close() # Unlock the build folder
+
     log(f"[{lib_name}] successfully built.", LogLevel.Success)
 
     if install_dir.exists():
