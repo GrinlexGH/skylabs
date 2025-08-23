@@ -175,13 +175,18 @@ def build_and_install_cmake_library(source_dir_base: Path, install_dir_base: Pat
 
 def split_pattern(pattern: str) -> tuple[Path, str]:
     """
-    Splits pattern on (fixed_prefix, sub_pattern):
-    e.g. "redistributable_bin/**/*.dll" -> (Path("redistributable_bin"), "**/*.dll")
+    Splits a path pattern into a fixed prefix and a wildcard sub-pattern.
+    `fixed_prefix` is the path up to (but not including) the first part containing a wildcard (*, ?, [).
+    `sub_pattern` is the remaining part of the path starting from the first wildcard.
+
+    Example:
+    `"redistributable_bin/**/*.dll"` ->
+    `(Path("redistributable_bin"), "**/*.dll")`
     """
     parts = Path(pattern).parts
     for i, part in enumerate(parts):
         if any(ch in part for ch in ("*", "?", "[")):
-            fixed = Path(*parts[:i]) if i > 0 else Path()
+            fixed = Path(*parts[:i])
             sub = "/".join(parts[i:])
             return fixed, sub
     return Path(*parts), ""
@@ -209,7 +214,7 @@ def install_manual_install_library(source_dir_base: Path, install_dir_base: Path
             log(f"Pattern base path not found: {glob_root}", LogLevel.Warning)
             continue
 
-        search_pattern = str(glob_root / sub_pattern) if sub_pattern else str(glob_root)
+        search_pattern = str(glob_root / sub_pattern)
         matches = glob(search_pattern, recursive=True)
 
         for full_path in matches:
@@ -230,7 +235,6 @@ def install_manual_install_library(source_dir_base: Path, install_dir_base: Path
             if full_path.is_file():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(full_path, target)
-
             elif full_path.is_dir():
                 shutil.copytree(full_path, target, dirs_exist_ok=True)
 
@@ -452,6 +456,10 @@ def main():
         ManualInstallLibrary(
             source_subdir="SteamworksSDK",
             install_subdir="SteamworksSDK",
+            # Copies all files with saving relative paths
+            # starting with first folder in ** pattern
+            # So for rule ("redistributable_bin/**/*.dll",   "bin"),
+            # redistributable_bin/linux64/libsteam_api.so -> bin/linux64/libsteam_api.so
             rules=[
                 ("redistributable_bin/**/*.dll",   "bin"),
                 ("public/steam/lib/**/*.dll",      "bin"),
