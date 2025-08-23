@@ -42,8 +42,10 @@ set(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/libs/bin/${DEPS_TARGET_SYSTEM}-${DEP
 set(DEPS_CMAKE_ARGS CACHE STRING "Global cmake arguments for all libraries.")
 set(DEPS_CMAKE_LIB_ARGS CACHE STRING "Library-specific cmake arguments. Use format: name=(args). Example: zlib=(-DSKIP_EXAMPLES=ON) SDL=(-DOPTION=VALUE)")
 
+find_package(Python COMPONENTS Interpreter)
+
 set(DEPS_INSTALL_CMD
-    python3
+    ${Python_EXECUTABLE}
     ${PROJECT_SOURCE_DIR}/libs/install_dependencies.py
     "--install-dir"
     "${DEPS_INSTALL_DIR}"
