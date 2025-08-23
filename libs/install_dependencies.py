@@ -311,7 +311,7 @@ def install_header_libraries(header_libraries: List[HeaderLibrary]):
 
         install_header_library(Path(lib.source_subdir), Path(lib.install_subdir), lib.paths)
 
-def install_manual_install_libraries(manual_install_libraries: ManualInstallLibrary):
+def install_manual_install_libraries(manual_install_libraries: list[ManualInstallLibrary]):
     for lib in manual_install_libraries:
         if skip_if_missing(lib.source_subdir):
             continue
