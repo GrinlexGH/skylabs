@@ -36,23 +36,16 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     add_compile_options(
         "-Wall" "-Wextra" "-Wpedantic"
         #"$<$<CONFIG:Release>:-Werror>"
-        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
-        "-fdiagnostics-color=always"
     )
-    if(NOT ANDROID)
-        add_compile_options(
-            "-march=native" "-mtune=native"
-        )
-    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
-        "/W4" "/utf-8" "/Zc:__cplusplus" "/MP"
+        "/W4"
         #"$<$<CONFIG:Release>:/WX>"
-        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
     )
 endif()
 
