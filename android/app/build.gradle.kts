@@ -2,6 +2,9 @@ plugins {
     id("com.android.application")
 }
 
+val projectRoot = "../.."
+val sdlBase = "$projectRoot/libs/sources/SDL/android-project/app"
+
 android {
     namespace = "org.libsdl.app"
 
@@ -15,7 +18,7 @@ android {
         targetSdk = 36
 
         versionCode = 1
-        versionName = "0.0 Bruh"
+        versionName = "0.0"
 
         externalNativeBuild {
             cmake {
@@ -49,13 +52,20 @@ android {
         }
     }
 
-    sourceSets.getByName("main") {
-        java.srcDirs("../../libs/sources/SDL/android-project/app/src/main/java")
+    externalNativeBuild {
+        cmake {
+            path = file("$projectRoot/CMakeLists.txt")
+            version = "4.1.0"
+        }
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+    sourceSets.getByName("main") {
+        java.srcDirs("$sdlBase/src/main/java")
+        assets.srcDirs("src/main/assets/**")
+    }
+
+    lint {
+        lintConfig = file("lint.xml") // Disable some warning from SDL shitty code
     }
 
     buildTypes {
@@ -63,14 +73,13 @@ android {
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android.txt"),
-                "proguard-rules.pro"
+                "$sdlBase/proguard-rules.pro"
             )
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("../../CMakeLists.txt")
-        }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }
