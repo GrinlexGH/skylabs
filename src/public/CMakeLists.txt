@@ -19,7 +19,7 @@ set(SOURCES
     resource_system.cpp
 )
 
-add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
+add_library(${CURRENT_TARGET_NAME} ${SOURCES})
 
 foreach(FILE IN LISTS SOURCES)
     get_filename_component(SOURCE_PATH "${FILE}" PATH)
