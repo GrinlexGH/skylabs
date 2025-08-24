@@ -379,15 +379,15 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_frameData.emplace_back(m_context.get());
     }
 
-    // #region SYNC_PRIMITIVES
+    //region SYNC_PRIMITIVES
     m_renderFinishedSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
     for (unsigned int i = 0; i < m_swapchain->GetInfo().m_imageCount; ++i) {
         m_renderFinishedSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo {});
     }
-    // #endregion SYNC_PRIMITIVES
+    //endregion SYNC_PRIMITIVES
 
     /*
-    // #region RENDER_PASS
+    //region RENDER_PASS
     vk::AttachmentDescription colorAttachment {};
     colorAttachment.format = m_swapchain->GetInfo().m_surfaceFormat.format;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
@@ -422,8 +422,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-    m_renderPass = deviceHandle.createRenderPass(renderPassInfo);
-    // #endregion RENDER_PASS
 
     // #region SHADER_MODULES
     const std::vector<char> vertexShaderSource = ResourceSystem::LoadShader("shader.vert.spv");

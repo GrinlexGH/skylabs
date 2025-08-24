@@ -13,7 +13,7 @@
 #include <string>
 #include <utility>
 
-using main_t = int (*)(int argc, char* argv[]); // NOLINT: No, I dont wanna use span, thanks
+using main_t = int (*)(int argc, char* argv[]);
 
 #ifdef PLATFORM_WINDOWS
 
@@ -152,15 +152,9 @@ public:
         }
     }
     CLibrary(const CLibrary&) = delete;
-    CLibrary(CLibrary&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
+    CLibrary(CLibrary&& other) = delete;
     CLibrary& operator=(const CLibrary&) = delete;
-    CLibrary& operator=(CLibrary&& other) noexcept {
-        if (this != &other) {
-            if (m_handle) { dlclose(m_handle); }
-            m_handle = std::exchange(other.m_handle, nullptr);
-        }
-        return *this;
-    }
+    CLibrary& operator=(CLibrary&& other) = delete;
     ~CLibrary() { if(m_handle) { dlclose(m_handle); } }
 
     void* GetFunctionAddress(const char* name) const {
@@ -220,7 +214,7 @@ int main(int argc, char* argv[]) {
         const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
-            int ret = main(argc, argv);
+            const int ret = main(argc, argv);
             return ret;
         } catch (const std::exception& e) {
             std::cout << e.what() << '\n' << std::flush;

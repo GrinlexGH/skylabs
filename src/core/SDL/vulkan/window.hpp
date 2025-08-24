@@ -4,7 +4,7 @@
 #include <SDL3/SDL.h>
 
 namespace SDL::Vulkan {
-class CWindow : public ::Vulkan::IWindow
+class CWindow final : public ::Vulkan::IWindow
 {
 public:
     explicit CWindow(const char* title, int w, int h, SDL_WindowFlags flags = 0);
