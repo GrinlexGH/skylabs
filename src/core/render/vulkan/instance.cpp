@@ -169,7 +169,7 @@ bool CInstance::EnableExtension(const char* name) {
 }
 
 bool CInstance::EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const {
-    static std::vector<vk::LayerProperties> availableLayers = m_context.enumerateInstanceLayerProperties();
+    const static std::vector<vk::LayerProperties> availableLayers = m_context.enumerateInstanceLayerProperties();
 
     if (HasLayer(availableLayers, name)) {
         if (!HasLayer(enabledLayers, name)) {

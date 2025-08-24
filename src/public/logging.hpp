@@ -32,13 +32,6 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
 
     #ifdef PLATFORM_ANDROID
 
-    // std::array<std::tuple<int, int, int>, static_cast<std::size_t>(Type::eCount)> logInfo = {
-    //     std::tuple{ 168, 228, 160 },
-    //     { 114, 159, 207 },
-    //     { 196, 160, 0 },
-    //     { 204, 0, 0 },
-    // };
-
     std::lock_guard lock(g_mutex);
     switch (type) {
         case Type::eDebug:
@@ -85,7 +78,7 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
             break;
     }
 
-    std::lock_guard lock(g_mutex);
+    const std::lock_guard lock(g_mutex);
     std::cout << prefix
               << stc::true_color
               << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "

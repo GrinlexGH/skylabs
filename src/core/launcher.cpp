@@ -24,9 +24,9 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
         elapsedTime += deltaTime / 1000.0f;
 
         if (elapsedTime >= 1.0f) {
-            float fps = static_cast<float>(frameCount) / elapsedTime;
+            const float fps = static_cast<float>(frameCount) / elapsedTime;
 
-            std::string title = "Skylabs | FPS: " + std::to_string(static_cast<int>(fps));
+            const std::string title = "Skylabs | FPS: " + std::to_string(static_cast<int>(fps));
             SDL_SetWindowTitle(window, title.c_str());
 
             frameCount = 0;
@@ -109,12 +109,12 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
 }
 
 void CLauncher::Main() {
-    SDL::CContext sdl(SDL_INIT_VIDEO);
+    const SDL::CContext sdl(SDL_INIT_VIDEO);
 
-    SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
+    const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
     SDL_SetWindowRelativeMouseMode(window.GetHandle(), true);
 
-    const std::unique_ptr<IRenderer> renderer ;/* = Vulkan::CRenderer::TryToCreate(&window); */
+    const std::unique_ptr<IRenderer> renderer = Vulkan::CRenderer::TryToCreate(&window);
     if (!renderer) {
         throw std::runtime_error("Cannot initialize vulkan!\n");
     }
