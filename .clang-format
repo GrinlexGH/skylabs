@@ -1,16 +1,48 @@
 ---
 Language: Cpp
 BasedOnStyle: LLVM
+
+DisableFormat: true
+
 AccessModifierOffset: -4
 AlignAfterOpenBracket: BlockIndent
-AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
-AlignOperands: false
-AlignTrailingComments: false
+AlignArrayOfStructures: None
+AlignConsecutiveAssignments:
+  Enabled: false
+AlignConsecutiveBitFields:
+  Enabled: false
+AlignConsecutiveDeclarations:
+  Enabled: false
+AlignConsecutiveMacros:
+  Enabled: false
+AlignConsecutiveShortCaseStatements:
+  Enabled: false
+AlignEscapedNewlines: LeftWithLastLine
+AlignOperands: DontAlign
+AlignTrailingComments:
+  Kind: Never
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowBreakBeforeNoexceptSpecifier: Always
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseExpressionOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+AllowShortNamespacesOnASingleLine: true
+AlwaysBreakBeforeMultilineStrings: false
+BinPackArguments: true
+# BinPackLongBracedList: true # clang-format 21
+BinPackParameters: AlwaysOnePerLine
+BitFieldColonSpacing: Both
 BraceWrapping:
   AfterCaseLabel: false
   AfterClass: true
-  AfterControlStatement: false
+  AfterControlStatement: Never
   AfterEnum: true
   AfterFunction: false
   AfterNamespace: false
@@ -19,24 +51,40 @@ BraceWrapping:
   AfterExternBlock: false
   BeforeCatch: false
   BeforeElse: false
-  BeforeLambdaBody: true
+  BeforeLambdaBody: false
   BeforeWhile: false
+  IndentBraces: false
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
+BracedInitializerIndentWidth: 4
+BreakAdjacentStringLiterals: true
+BreakAfterAttributes: Leave
+BreakAfterReturnType: ExceptShortType
+BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
+BreakBeforeConceptDeclarations: Always
+BreakBeforeInlineASMColon: OnlyMultiline
+#BreakBeforeTemplateCloser: false # clang-format 21
+BreakBeforeTernaryOperators: true
+BreakBinaryOperations: Never
 BreakConstructorInitializers: AfterColon
-AllowShortIfStatementsOnASingleLine: WithoutElse
-AllowShortCaseExpressionOnASingleLine: true
-AllowShortBlocksOnASingleLine: Always
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortCompoundRequirementOnASingleLine: true
-AllowShortFunctionsOnASingleLine: Inline
-PackConstructorInitializers: CurrentLine
-#BreakBeforeBraceAfterConstructorInitializerLists: true # https://github.com/llvm/llvm-project/issues/79132
-ColumnLimit: 0
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
-Cpp11BracedListStyle: false
+##BreakBeforeBraceAfterConstructorInitializerLists: true # https://github.com/llvm/llvm-project/issues/79132
+BreakFunctionDefinitionParameters: false
+BreakInheritanceList: AfterColon
+BreakStringLiterals: false
+BreakTemplateDeclarations: Leave
+ColumnLimit: 180
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Always
+#EnumTrailingComma: Insert # clang-format 21
+FixNamespaceComments: false
+IncludeBlocks: Preserve
 IncludeCategories:
   - Regex: '^<.*'
     Priority: 1
@@ -45,19 +93,79 @@ IncludeCategories:
   - Regex: '.*'
     Priority: 3
 IncludeIsMainRegex: '([-_](test|unittest))?$'
+IndentAccessModifiers: false
+IndentCaseBlocks: false
 IndentCaseLabels: true
+IndentExportBlock: false
+IndentExternBlock: false
+IndentGotoLabels: false
+IndentPPDirectives: BeforeHash
+IndentRequiresClause: true
 IndentWidth: 4
+IndentWrappedFunctionNames: false
+InsertBraces: false
 InsertNewlineAtEOF: true
-FixNamespaceComments: false
-MacroBlockBegin: ''
-MacroBlockEnd: ''
+KeepEmptyLines:
+  AtEndOfFile: true
+  AtStartOfBlock: false
+  AtStartOfFile: false
+KeepFormFeed: false
+LambdaBodyIndentation: Signature
+MainIncludeChar: Quote
 MaxEmptyLinesToKeep: 2
+NamespaceIndentation: None
+PackConstructorInitializers: CurrentLine
 PointerAlignment: Left
+QualifierAlignment: Left
+ReferenceAlignment: Left
+ReflowComments: Never
+RemoveBracesLLVM: false
+RemoveEmptyLinesInUnwrappedLines: false
+RemoveParentheses: Leave
+RemoveSemicolon: true
+RequiresExpressionIndentation: OuterScope
+SeparateDefinitionBlocks: Leave
+SortIncludes: CaseSensitive
+SortUsingDeclarations: LexicographicNumeric
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+#SpaceAfterOperatorKeyword: false # clang-format 21
+SpaceAfterTemplateKeyword: true
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
 SpaceBeforeCpp11BracedList: true
-SpaceInEmptyParentheses: false
-SpacesInAngles: false
-SpacesInConditionalStatement: false
-SpacesInCStyleCastParentheses: false
-SpacesInParentheses: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: true
+  AfterFunctionDeclarationName: false
+  AfterFunctionDefinitionName: false
+  AfterIfMacros: true
+  AfterOverloadedOperator: false
+  AfterPlacementOperator: false
+  AfterRequiresInClause: false
+  AfterRequiresInExpression: false
+  BeforeNonEmptyParentheses: false
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+#SpaceInEmptyBraces: Always # clang-format 22
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInContainerLiterals: true
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: 999
+SpacesInParens: Custom
+SpacesInParensOptions:
+  ExceptDoubleParentheses: false
+  InConditionalStatements: false
+  InCStyleCasts: false
+  InEmptyParentheses: false
+  Other: false
+SpacesInSquareBrackets: false
 TabWidth: 4
+UseTab: Never
 ...
