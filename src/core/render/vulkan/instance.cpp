@@ -40,7 +40,8 @@ CInstance::CInstance(
         m_apiVersion = m_context.enumerateInstanceVersion();
     }
 
-    Log::Info("Vulkan version: {}.{}.{}.{}",
+    Log::Info(
+        "Vulkan version: {}.{}.{}.{}",
         vk::apiVersionVariant(m_apiVersion),
         vk::apiVersionMajor(m_apiVersion),
         vk::apiVersionMinor(m_apiVersion),
@@ -57,9 +58,21 @@ CInstance::CInstance(
 
     //====================
 #ifdef DEBUG
-    // TODO: https://developer.android.com/ndk/guides/graphics/validation-layer#enable_the_debug_callback
-    const bool isDebugUtilsAvailable = true;
-    EnableExtension(vk::EXTDebugUtilsExtensionName);
+    bool isDebugUtilsAvailable = EnableExtension(vk::EXTDebugUtilsExtensionName);
+    std::vector<vk::LayerProperties> layerProperties = m_context.enumerateInstanceLayerProperties();
+    if (!isDebugUtilsAvailable) {
+        for (const vk::LayerProperties& layer: layerProperties) {
+            auto layer_exts = m_context.enumerateInstanceExtensionProperties({layer.layerName});
+            isDebugUtilsAvailable = layer_exts.begin() != std::find_if(
+              layer_exts.begin(), layer_exts.end(),[](vk::ExtensionProperties extensionProperties) {
+                return strcmp(extensionProperties.extensionName,
+                vk::EXTDebugUtilsExtensionName) == 0;
+              });
+            if (isDebugUtilsAvailable) {
+                break;
+            }
+        }
+    }
 #endif
 
     // if required extension is missing, put it into error message
@@ -114,16 +127,16 @@ CInstance::CInstance(
 
 #ifdef DEBUG
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
-        {},
+        { },
 
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
 
         vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
 
         DebugCallback
     };

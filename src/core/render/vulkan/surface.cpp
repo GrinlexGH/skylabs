@@ -9,7 +9,7 @@ CSurface::CSurface(const CRenderContext* context) : m_context(context) {
 
 CSurface::CSurface(CSurface&& other) noexcept :
     m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE)),
-    m_context(std::exchange(other.m_context, nullptr)) {}
+    m_context(std::exchange(other.m_context, nullptr)) { }
 
 CSurface& CSurface::operator=(CSurface&& rhs) noexcept {
     if (this != &rhs) {

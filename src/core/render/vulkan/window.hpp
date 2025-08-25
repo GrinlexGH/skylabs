@@ -2,7 +2,6 @@
 #include "../../window.hpp"
 
 #include <vector>
-#include <cstdint>
 
 #include <vulkan/vulkan.hpp>
 
