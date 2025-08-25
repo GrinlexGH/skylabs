@@ -15,6 +15,39 @@ struct CQueueFamilies
     std::uint32_t m_compute;
 };
 
+void ThrowIfMissing(
+    const std::optional<std::uint32_t>& graphicsIndex,
+    const std::optional<std::uint32_t>& presentIndex,
+    const std::optional<std::uint32_t>& transferIndex,
+    const std::optional<std::uint32_t>& computeIndex
+) {
+    const std::array<std::pair<const char*, bool>, 4> checks = {
+        {
+            { "graphics", graphicsIndex.has_value() },
+            { "present", presentIndex.has_value() },
+            { "transfer", transferIndex.has_value() },
+            { "compute", computeIndex.has_value() }
+        }
+    };
+
+    std::stringstream error;
+    bool first = true;
+
+    for (const auto& [name, hasValue] : checks) {
+        if (!hasValue) {
+            if (!first) {
+                error << " | ";
+            }
+            error << name;
+            first = false;
+        }
+    }
+
+    if (!first) {
+        throw std::runtime_error("System doesn't have required Vulkan queue families: [" + error.str() + "]!");
+    }
+}
+
 CQueueFamilies GetQueueFamilies(
     const vk::Instance& instance,
     const Vulkan::CPhysicalDevice& physicalDevice,
@@ -23,10 +56,10 @@ CQueueFamilies GetQueueFamilies(
     const std::vector<vk::QueueFamilyProperties>& queueFamilies = physicalDevice.GetQueueFamilies();
     const vk::PhysicalDevice physicalDeviceHandle = physicalDevice.GetHandle();
 
-    std::optional<std::uint32_t> graphicsQueueIndex;
-    std::optional<std::uint32_t> presentQueueIndex;
-    std::optional<std::uint32_t> transferQueueIndex;
-    std::optional<std::uint32_t> computeQueueIndex;
+    std::optional<std::uint32_t> graphicsIndex;
+    std::optional<std::uint32_t> presentIndex;
+    std::optional<std::uint32_t> transferIndex;
+    std::optional<std::uint32_t> computeIndex;
 
     bool allQueuesFound = false;
 
@@ -37,26 +70,25 @@ CQueueFamilies GetQueueFamilies(
         }
 
         if (queue.queueFlags & vk::QueueFlagBits::eGraphics) {
-            graphicsQueueIndex.emplace(i);
+            graphicsIndex.emplace(i);
         }
 
         if (window->IsQueueFamilyPresentSupport(instance, physicalDeviceHandle, i)) {
-            presentQueueIndex.emplace(i);
+            presentIndex.emplace(i);
         }
 
         if (queue.queueFlags & vk::QueueFlagBits::eTransfer) {
-            transferQueueIndex.emplace(i);
+            transferIndex.emplace(i);
         }
 
         if (queue.queueFlags & vk::QueueFlagBits::eCompute) {
-            computeQueueIndex.emplace(i);
+            computeIndex.emplace(i);
         }
 
-        if (graphicsQueueIndex.has_value() &&
-            presentQueueIndex.has_value() &&
-            transferQueueIndex.has_value() &&
-            computeQueueIndex.has_value()
-        ) {
+        if (graphicsIndex.has_value() &&
+            presentIndex.has_value() &&
+            transferIndex.has_value() &&
+            computeIndex.has_value()) {
             allQueuesFound = true;
             break;
         }
@@ -65,51 +97,19 @@ CQueueFamilies GetQueueFamilies(
     }
 
     // Compute and graphics queue can implicitly accept transfer commands
-    if (!transferQueueIndex.has_value()) {
-        transferQueueIndex = computeQueueIndex;
+    if (!transferIndex.has_value()) {
+        transferIndex = computeIndex.has_value() ? computeIndex : graphicsIndex;
     }
 
     if (!allQueuesFound) {
-        std::vector<const char*> missingQueues;
-        missingQueues.reserve(4);
-
-        if (!graphicsQueueIndex.has_value()) {
-            missingQueues.emplace_back("graphics");
-        }
-
-        if (!presentQueueIndex.has_value()) {
-            missingQueues.emplace_back("present");
-        }
-
-        if (!transferQueueIndex.has_value()) {
-            missingQueues.emplace_back("transfer");
-        }
-
-        if (!computeQueueIndex.has_value()) {
-            missingQueues.emplace_back("compute");
-        }
-
-        if (!missingQueues.empty()) {
-            std::stringstream error;
-            error << "System doesn't have required vulkan queue families: [";
-
-            for (std::size_t i = 0; i < missingQueues.size(); ++i) {
-                error << missingQueues[i];
-                if (i < missingQueues.size() - 1) {
-                    error << " | ";
-                }
-            }
-            error << "]!";
-
-            throw std::runtime_error(error.str());
-        }
+        ThrowIfMissing(graphicsIndex, presentIndex, transferIndex, computeIndex);
     }
 
     return {
-        .m_graphics = *graphicsQueueIndex,
-        .m_present = *presentQueueIndex,
-        .m_transfer = *transferQueueIndex,
-        .m_compute = *computeQueueIndex
+        .m_graphics = *graphicsIndex,
+        .m_present = *presentIndex,
+        .m_transfer = *transferIndex,
+        .m_compute = *computeIndex
     };
 }
 
@@ -140,21 +140,17 @@ CDevice::CDevice(
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
     auto [
-        graphicsQueueFamily,
-        presentQueueFamily,
-        transferQueueFamily,
-        computeQueueFamily
+        graphicsFamily,
+        presentFamily,
+        transferFamily,
+        computeFamily
     ] = GetQueueFamilies(instance.GetHandle(), physicalDevice, window);
 
-    std::set uniqueQueueFamilies {
-        graphicsQueueFamily,
-        presentQueueFamily,
-        transferQueueFamily,
-        computeQueueFamily
-    };
+    const std::set uniqueQueueFamilies { graphicsFamily, presentFamily, transferFamily, computeFamily };
 
-    const float queuePriority = 0.5f;
-    for (std::uint32_t queueFamily : uniqueQueueFamilies) {
+    queueCreateInfos.reserve(uniqueQueueFamilies.size());
+    constexpr float queuePriority = 0.5f;
+    for (const std::uint32_t queueFamily : uniqueQueueFamilies) {
         vk::DeviceQueueCreateInfo queueCreateInfo;
         queueCreateInfo.queueFamilyIndex = queueFamily;
         queueCreateInfo.queueCount = 1;
@@ -196,16 +192,18 @@ CDevice::CDevice(
     vk::DeviceCreateInfo createInfo;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext() ? nullptr : &physicalDevice.GetRequiredFeatures();
+    createInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext()
+        ? nullptr
+        : &physicalDevice.GetRequiredFeatures();
     createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
     createInfo.pNext = pNext;
 
     m_handle = physicalDevice.GetHandle().createDevice(createInfo);
 
-    m_graphicsQueue = { .m_handle = m_handle.getQueue(graphicsQueueFamily, 0), .m_familyIndex = graphicsQueueFamily };
-    m_presentQueue = { .m_handle = m_handle.getQueue(presentQueueFamily, 0), .m_familyIndex = presentQueueFamily };
-    m_transferQueue = { .m_handle = m_handle.getQueue(transferQueueFamily, 0), .m_familyIndex = transferQueueFamily };
-    m_computeQueue = { .m_handle = m_handle.getQueue(computeQueueFamily, 0), .m_familyIndex = computeQueueFamily };
+    m_graphicsQueue = { .m_handle = m_handle.getQueue(graphicsFamily, 0), .m_familyIndex = graphicsFamily };
+    m_presentQueue = { .m_handle = m_handle.getQueue(presentFamily, 0), .m_familyIndex = presentFamily };
+    m_transferQueue = { .m_handle = m_handle.getQueue(transferFamily, 0), .m_familyIndex = transferFamily };
+    m_computeQueue = { .m_handle = m_handle.getQueue(computeFamily, 0), .m_familyIndex = computeFamily };
 }
 }
