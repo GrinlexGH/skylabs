@@ -13,7 +13,7 @@ CFrameData::CFrameData(const CRenderContext* context) : m_context(context) {
     );
 
     //====================
-    m_commandBuffer = vk::raii::CommandBuffers{
+    m_commandBuffer = vk::raii::CommandBuffers {
         deviceHandle, { m_commandPool, vk::CommandBufferLevel::ePrimary, 1 }
     };
 

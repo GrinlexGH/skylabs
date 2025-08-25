@@ -18,10 +18,10 @@ public:
     [[nodiscard]] const vk::raii::Semaphore& GetImageAvailableSemaphore() const { return m_imageAvailableSemaphore; }
 
 private:
-    vk::raii::CommandPool m_commandPool = VK_NULL_HANDLE;
-    vk::raii::CommandBuffers m_commandBuffer = VK_NULL_HANDLE;
-    vk::raii::Fence m_fence = VK_NULL_HANDLE;
-    vk::raii::Semaphore m_imageAvailableSemaphore = VK_NULL_HANDLE;
+    vk::raii::CommandPool m_commandPool = nullptr;
+    vk::raii::CommandBuffers m_commandBuffer = nullptr;
+    vk::raii::Fence m_fence = nullptr;
+    vk::raii::Semaphore m_imageAvailableSemaphore = nullptr;
 
     const CRenderContext* m_context;
 };
