@@ -14,13 +14,14 @@ CFrameData::CFrameData(const CRenderContext* context) : m_context(context) {
 
     //====================
     m_commandBuffer = vk::raii::CommandBuffers {
-        deviceHandle, { m_commandPool, vk::CommandBufferLevel::ePrimary, 1 }
+        deviceHandle,
+        { m_commandPool, vk::CommandBufferLevel::ePrimary, 1 }
     };
 
     //====================
     m_fence = deviceHandle.createFence({ vk::FenceCreateFlagBits::eSignaled });
 
     //====================
-    m_imageAvailableSemaphore = deviceHandle.createSemaphore({});
+    m_imageAvailableSemaphore = deviceHandle.createSemaphore({ });
 }
 }

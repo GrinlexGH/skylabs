@@ -39,14 +39,14 @@ private:
         const vk::SurfaceKHR& surface,
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode,
-        const vk::raii::SwapchainKHR& oldSwapchain = VK_NULL_HANDLE
+        const vk::raii::SwapchainKHR& oldSwapchain = nullptr
     );
     void CreateImages();
     void DestroyImages();
 
     [[nodiscard]] vk::Extent2D ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
 
-    vk::raii::SwapchainKHR m_handle = VK_NULL_HANDLE;
+    vk::raii::SwapchainKHR m_handle = nullptr;
 
     CInfo m_info;
     std::vector<vk::Image> m_images;
