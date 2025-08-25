@@ -158,7 +158,7 @@ public:
     ~CLibrary() { if(m_handle) { dlclose(m_handle); } }
 
     void* GetFunctionAddress(const char* name) const {
-        void* func = dlsym(m_handle, name);
+        void* const func = dlsym(m_handle, name);
         if (const char* error = dlerror(); error != nullptr) {
             throw std::runtime_error {
                 std::format("Failed to load library function:\n{}\n", error)
@@ -176,19 +176,17 @@ private:
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#define DLL_EXPORT __attribute__((visibility("default")))
-
-DLL_EXPORT int SDL_main(int argc, char* argv[]) {
+__attribute__((visibility("default"))) int main(int argc, char* argv[]) {
     SDL_Log("Skylabs is starting...");
 
     try {
         const std::string libCorePath = "libcore.so";
 
         const CLibrary core(libCorePath.c_str());
-        const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
+        const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
-            int ret = main(argc, argv);
+            const int ret = coreMain(argc, argv);
             return ret;
         } catch (const std::exception& e) {
             SDL_LogError(0, "%s", e.what());
@@ -211,10 +209,10 @@ int main(int argc, char* argv[]) {
         const std::string libCorePath = rootDir / "bin" / "libcore.so";
 
         const CLibrary core(libCorePath.c_str());
-        const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
+        const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
-            const int ret = main(argc, argv);
+            const int ret = coreMain(argc, argv);
             return ret;
         } catch (const std::exception& e) {
             std::cout << e.what() << '\n' << std::flush;
