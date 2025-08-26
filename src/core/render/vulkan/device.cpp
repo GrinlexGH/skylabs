@@ -118,15 +118,16 @@ bool EnableExtension(
     const char* name,
     std::vector<const char*>& enabledExtensions
 ) {
-    if (HasExtension(availableExtensions, name)) {
-        if (!HasExtension(enabledExtensions, name)) {
-            enabledExtensions.emplace_back(name);
-        }
-    } else {
-        return false;
+    if (HasExtension(enabledExtensions, name)) {
+        return true;
     }
 
-    return true;
+    if (HasExtension(availableExtensions, name)) {
+        enabledExtensions.emplace_back(name);
+        return true;
+    }
+
+    return false;
 }
 }
 
