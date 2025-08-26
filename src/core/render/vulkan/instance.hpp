@@ -21,27 +21,27 @@ public:
     CInstance& operator=(CInstance&&) noexcept = default;
     ~CInstance() = default;
 
-    [[nodiscard]] const vk::raii::Instance& GetHandle() const { return m_handle; }
+    [[nodiscard]] auto GetHandle() const -> const vk::raii::Instance& { return m_handle; }
 
-    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return HasExtension(m_enabledExtensions, name); }
+    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return HasExtension(m_enabledExtensions, name); }
 
-    [[nodiscard]] const std::vector<const char*>& GetEnabledExtensions() const { return m_enabledExtensions; }
-    [[nodiscard]] std::uint32_t GetApiVersion() const { return m_apiVersion; }
-    [[nodiscard]] const std::vector<std::unique_ptr<CPhysicalDevice>>& GetPhysicalDevices() const { return m_physicalDevices; }
+    [[nodiscard]] auto GetEnabledExtensions() const -> const std::vector<const char*>& { return m_enabledExtensions; }
+    [[nodiscard]] auto GetApiVersion() const -> std::uint32_t { return m_apiVersion; }
+    [[nodiscard]] auto GetPhysicalDevices() const -> const std::vector<std::unique_ptr<CPhysicalDevice>>& { return m_physicalDevices; }
 
 private:
-    bool EnableExtension(const char* name);
-    bool EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const;
-    void QueryPhysicalDevices();
+    auto EnableExtension(const char* name) -> bool;
+    auto EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const -> bool;
+    auto QueryPhysicalDevices() -> void;
 
     vk::raii::Context m_context;
-    vk::raii::Instance m_handle = VK_NULL_HANDLE;
+    vk::raii::Instance m_handle = nullptr;
 
     std::vector<const char*> m_enabledExtensions;
     std::uint32_t m_apiVersion = vk::ApiVersion10;
 
 #ifdef DEBUG
-    vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger = VK_NULL_HANDLE;
+    vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger = nullptr;
 #endif
 
     std::vector<std::unique_ptr<CPhysicalDevice>> m_physicalDevices;
