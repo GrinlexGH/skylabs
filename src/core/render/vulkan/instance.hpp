@@ -13,7 +13,7 @@ class CInstance
 public:
     explicit CInstance(
         const std::unordered_map<const char*, bool>& extensions,
-        const std::vector<const char*>& layers = { }
+        const std::vector<const char*>& layers = {}
     );
     CInstance(const CInstance&) = delete;
     CInstance(CInstance&&) noexcept = default;

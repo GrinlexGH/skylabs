@@ -3,7 +3,7 @@
 namespace Vulkan {
 CAttachment::CAttachment(const vk::AttachmentDescription description, const vk::AttachmentReference reference) :
     m_description(description), m_reference(reference)
-{ }
+{}
 
 auto CAttachment::ColorAttachment(vk::Format swapchainFormat) -> CAttachment {
     return CAttachment {
