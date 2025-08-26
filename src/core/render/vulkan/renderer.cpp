@@ -2,6 +2,7 @@
 
 #include "logging.hpp"
 #include "resource_system.hpp"
+#include "render_pass/attachment.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
@@ -370,8 +371,10 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_surface = std::make_unique<Vulkan::CSurface>(m_context.get());
 
     m_swapchain = std::make_unique<Vulkan::CSwapchain>(
-        m_context.get(), m_surface->GetHandle(),
-        3, vk::PresentModeKHR::eImmediate
+        m_context.get(),
+        m_surface->GetHandle(),
+        3,
+        vk::PresentModeKHR::eImmediate
     );
 
     // Слава богу c++23 слава комитету слава ISO IEC
@@ -382,47 +385,36 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region SYNC_PRIMITIVES
     m_renderFinishedSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
     for (unsigned int i = 0; i < m_swapchain->GetInfo().m_imageCount; ++i) {
-        m_renderFinishedSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo {});
+        m_renderFinishedSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo { });
     }
     //endregion SYNC_PRIMITIVES
 
-    /*
     //region RENDER_PASS
-    vk::AttachmentDescription colorAttachment {};
-    colorAttachment.format = m_swapchain->GetInfo().m_surfaceFormat.format;
-    colorAttachment.samples = vk::SampleCountFlagBits::e1;
-    colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-    colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-    colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-    colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-    colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+    CAttachment colorAttachment = CAttachment::ColorAttachment(m_swapchain->GetInfo().m_surfaceFormat.format);
 
-    vk::AttachmentReference colorAttachmentRef {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-    vk::SubpassDescription subpass {};
+    vk::SubpassDescription subpass { };
     subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
     subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pColorAttachments = &colorAttachment.m_reference;
 
-    vk::SubpassDependency dependency {};
+    vk::SubpassDependency dependency { };
     dependency.srcSubpass = vk::SubpassExternal;
     dependency.dstSubpass = 0;
     dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.srcAccessMask = {};
+    dependency.srcAccessMask = { };
     dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 
-    vk::RenderPassCreateInfo renderPassInfo {};
+    vk::RenderPassCreateInfo renderPassInfo { };
     renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.pAttachments = &colorAttachment.m_description;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-
+    m_renderPass = m_context->GetDevice()->GetHandle().createRenderPass(renderPassInfo);
+    //endregion RENDER_PASS
+/*
     // #region SHADER_MODULES
     const std::vector<char> vertexShaderSource = ResourceSystem::LoadShader("shader.vert.spv");
     vk::ShaderModuleCreateInfo createInfo {};
@@ -857,7 +849,6 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const w
 }
 
 void CRenderer::Draw(glm::mat4 /* view */) {
-
     /*
     const Vulkan::CFrameData& frameData = m_frameData[m_frameIndex];
     const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
