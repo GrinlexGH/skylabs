@@ -167,7 +167,7 @@ CInstance::CInstance(
     QueryPhysicalDevices();
 }
 
-bool CInstance::EnableExtension(const char* name) {
+auto CInstance::EnableExtension(const char* name) -> bool {
     static const std::vector<vk::ExtensionProperties>& availableExtensions = m_context.enumerateInstanceExtensionProperties();
 
     if (HasExtension(availableExtensions, name)) {
@@ -181,7 +181,7 @@ bool CInstance::EnableExtension(const char* name) {
     return true;
 }
 
-bool CInstance::EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const {
+auto CInstance::EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const -> bool {
     const static std::vector<vk::LayerProperties> availableLayers = m_context.enumerateInstanceLayerProperties();
 
     if (HasLayer(availableLayers, name)) {
@@ -195,7 +195,7 @@ bool CInstance::EnableLayer(const char* name, std::vector<const char*>& enabledL
     return true;
 }
 
-void CInstance::QueryPhysicalDevices() {
+auto CInstance::QueryPhysicalDevices() -> void {
     vk::raii::PhysicalDevices physicalDevices { m_handle };
     if (physicalDevices.empty()) {
         throw std::runtime_error("Couldn't find a physical device that supports Vulkan!");
