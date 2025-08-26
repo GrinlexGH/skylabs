@@ -11,7 +11,6 @@
 #include <format>
 #include <stdexcept>
 #include <string>
-#include <utility>
 
 using main_t = int (*)(int argc, char* argv[]);
 
@@ -68,15 +67,9 @@ public:
         }
     }
     CLibrary(const CLibrary&) = delete;
-    CLibrary(CLibrary&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
+    CLibrary(CLibrary&&) = delete;
     CLibrary& operator=(const CLibrary&) = delete;
-    CLibrary& operator=(CLibrary&& rhs) noexcept {
-        if (this != &rhs) {
-            if (m_handle) { FreeLibrary(m_handle); }
-            m_handle = std::exchange(rhs.m_handle, nullptr);
-        }
-        return *this;
-    }
+    CLibrary& operator=(CLibrary&&) = delete;
     ~CLibrary() { if (m_handle) { FreeLibrary(m_handle); } }
 
     void* GetFunctionAddress(const char* name) const {
@@ -152,9 +145,9 @@ public:
         }
     }
     CLibrary(const CLibrary&) = delete;
-    CLibrary(CLibrary&& other) = delete;
+    CLibrary(CLibrary&&) = delete;
     CLibrary& operator=(const CLibrary&) = delete;
-    CLibrary& operator=(CLibrary&& other) = delete;
+    CLibrary& operator=(CLibrary&&) = delete;
     ~CLibrary() { if(m_handle) { dlclose(m_handle); } }
 
     void* GetFunctionAddress(const char* name) const {
