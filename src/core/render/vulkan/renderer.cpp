@@ -366,11 +366,11 @@ CRenderer::CRenderer(const IWindow* const window) {
     if (window == nullptr) {
         throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
     }
-    m_context = std::make_unique<Vulkan::CRenderContext>(window);
+    m_context = std::make_unique<CRenderContext>(window);
 
-    m_surface = std::make_unique<Vulkan::CSurface>(m_context.get());
+    m_surface = std::make_unique<CSurface>(m_context.get());
 
-    m_swapchain = std::make_unique<Vulkan::CSwapchain>(
+    m_swapchain = std::make_unique<CSwapchain>(
         m_context.get(),
         m_surface->GetHandle(),
         3,
