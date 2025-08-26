@@ -113,7 +113,7 @@ CInstance::CInstance(
 
 #ifdef DEBUG
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
-        { },
+        {},
 
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |

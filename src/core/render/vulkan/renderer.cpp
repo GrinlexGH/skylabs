@@ -385,27 +385,27 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region SYNC_PRIMITIVES
     m_renderFinishedSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
     for (unsigned int i = 0; i < m_swapchain->GetInfo().m_imageCount; ++i) {
-        m_renderFinishedSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo { });
+        m_renderFinishedSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo {});
     }
     //endregion SYNC_PRIMITIVES
 
     //region RENDER_PASS
     CAttachment colorAttachment = CAttachment::ColorAttachment(m_swapchain->GetInfo().m_surfaceFormat.format);
 
-    vk::SubpassDescription subpass { };
+    vk::SubpassDescription subpass {};
     subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachment.m_reference;
 
-    vk::SubpassDependency dependency { };
+    vk::SubpassDependency dependency {};
     dependency.srcSubpass = vk::SubpassExternal;
     dependency.dstSubpass = 0;
     dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.srcAccessMask = { };
+    dependency.srcAccessMask = {};
     dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 
-    vk::RenderPassCreateInfo renderPassInfo { };
+    vk::RenderPassCreateInfo renderPassInfo {};
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments = &colorAttachment.m_description;
     renderPassInfo.subpassCount = 1;

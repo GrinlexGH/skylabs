@@ -115,7 +115,7 @@ void CSwapchain::CreateImages() {
     m_imageViews.reserve(m_info.m_imageCount);
 
     for (const auto& image : m_images) {
-        vk::ImageViewCreateInfo imageViewInfo { };
+        vk::ImageViewCreateInfo imageViewInfo {};
         imageViewInfo.image = image;
         imageViewInfo.viewType = vk::ImageViewType::e2D;
         imageViewInfo.format = m_info.m_surfaceFormat.format;

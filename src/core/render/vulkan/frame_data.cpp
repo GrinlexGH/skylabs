@@ -22,6 +22,6 @@ CFrameData::CFrameData(const CRenderContext* context) : m_context(context) {
     m_fence = deviceHandle.createFence({ vk::FenceCreateFlagBits::eSignaled });
 
     //====================
-    m_imageAvailableSemaphore = deviceHandle.createSemaphore({ });
+    m_imageAvailableSemaphore = deviceHandle.createSemaphore({});
 }
 }

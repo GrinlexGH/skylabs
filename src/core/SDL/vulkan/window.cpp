@@ -17,7 +17,7 @@ CWindow::CWindow(const char* title, const int w, const int h, const SDL_WindowFl
 
 CWindow::CWindow(CWindow&& other) noexcept :
     m_handle(std::exchange(other.m_handle, nullptr))
-{ }
+{}
 
 CWindow& CWindow::operator=(CWindow&& rhs) noexcept {
     if (this != &rhs) {
