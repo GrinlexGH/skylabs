@@ -177,11 +177,13 @@ auto CInstance::EnableExtension(const char* name) -> bool {
         return true;
     }
 
-    // Search extension in available layers
-    for (const vk::LayerProperties& layer : GetAvailableLayers()) {
-        if (tryEnable(m_context.enumerateInstanceExtensionProperties({layer.layerName}))) {
-            return true;
+    // If any of the available layers provides this extension, enable it
+    if (std::ranges::any_of(GetAvailableLayers(),
+        [&](const vk::LayerProperties& layer) {
+            return tryEnable(m_context.enumerateInstanceExtensionProperties({ layer.layerName }));
         }
+    )) {
+        return true;
     }
 
     return false;
