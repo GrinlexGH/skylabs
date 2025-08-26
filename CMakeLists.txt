@@ -128,7 +128,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND
         add_compile_options("-stdlib=libc++")
         add_link_options("-stdlib=libc++")
     endif()
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC" OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(
         "/utf-8" # No, I don't want to use one byte encoding
         "/Zc:__cplusplus" # Idk what it is fixing, but it is definitely fixing something
