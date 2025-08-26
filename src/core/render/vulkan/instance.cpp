@@ -59,20 +59,6 @@ CInstance::CInstance(
     //====================
 #ifdef DEBUG
     bool isDebugUtilsAvailable = EnableExtension(vk::EXTDebugUtilsExtensionName);
-    std::vector<vk::LayerProperties> layerProperties = m_context.enumerateInstanceLayerProperties();
-    if (!isDebugUtilsAvailable) {
-        for (const vk::LayerProperties& layer: layerProperties) {
-            auto layer_exts = m_context.enumerateInstanceExtensionProperties({layer.layerName});
-            isDebugUtilsAvailable = layer_exts.begin() != std::find_if(
-              layer_exts.begin(), layer_exts.end(),[](vk::ExtensionProperties extensionProperties) {
-                return strcmp(extensionProperties.extensionName,
-                vk::EXTDebugUtilsExtensionName) == 0;
-              });
-            if (isDebugUtilsAvailable) {
-                break;
-            }
-        }
-    }
 #endif
 
     // if required extension is missing, put it into error message
@@ -167,32 +153,51 @@ CInstance::CInstance(
     QueryPhysicalDevices();
 }
 
-auto CInstance::EnableExtension(const char* name) -> bool {
-    static const std::vector<vk::ExtensionProperties>& availableExtensions = m_context.enumerateInstanceExtensionProperties();
+auto CInstance::GetAvailableLayers() const -> std::vector<vk::LayerProperties> {
+    const static std::vector<vk::LayerProperties> layers = m_context.enumerateInstanceLayerProperties();
+    return layers;
+}
 
-    if (HasExtension(availableExtensions, name)) {
-        if (!HasExtension(m_enabledExtensions, name)) {
-            m_enabledExtensions.emplace_back(name);
-        }
-    } else {
-        return false;
+auto CInstance::EnableExtension(const char* name) -> bool {
+    static const std::vector<vk::ExtensionProperties>& availableGlobalExtensions = m_context.enumerateInstanceExtensionProperties();
+
+    if (HasExtension(m_enabledExtensions, name)) {
+        return true;
     }
 
-    return true;
+    const auto tryEnable = [&](const std::vector<vk::ExtensionProperties>& availableExtensions) -> bool {
+        if (HasExtension(availableExtensions, name) ) {
+            m_enabledExtensions.emplace_back(name);
+            return true;
+        }
+        return false;
+    };
+
+    if (tryEnable(availableGlobalExtensions)) {
+        return true;
+    }
+
+    // Search extension in available layers
+    for (const vk::LayerProperties& layer : GetAvailableLayers()) {
+        if (tryEnable(m_context.enumerateInstanceExtensionProperties({layer.layerName}))) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 auto CInstance::EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const -> bool {
-    const static std::vector<vk::LayerProperties> availableLayers = m_context.enumerateInstanceLayerProperties();
-
-    if (HasLayer(availableLayers, name)) {
-        if (!HasLayer(enabledLayers, name)) {
-            enabledLayers.emplace_back(name);
-        }
-    } else {
-        return false;
+    if (HasLayer(enabledLayers, name)) {
+        return true;
     }
 
-    return true;
+    if (HasLayer(GetAvailableLayers(), name)) {
+        enabledLayers.emplace_back(name);
+        return true;
+    }
+
+    return false;
 }
 
 auto CInstance::QueryPhysicalDevices() -> void {

@@ -30,6 +30,7 @@ public:
     [[nodiscard]] auto GetPhysicalDevices() const -> const std::vector<std::unique_ptr<CPhysicalDevice>>& { return m_physicalDevices; }
 
 private:
+    [[nodiscard]] auto GetAvailableLayers() const -> std::vector<vk::LayerProperties>;
     auto EnableExtension(const char* name) -> bool;
     auto EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const -> bool;
     auto QueryPhysicalDevices() -> void;
