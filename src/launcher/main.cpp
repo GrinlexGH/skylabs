@@ -100,7 +100,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
         // converts wide argv to narrow argv
         int argc = 0;
         char** argv = nullptr;
-        nowide::args fix(argc, argv);
+        const nowide::args fix(argc, argv);
 
         try {
             // call real main with normal arguments, not schizophrenia from windows

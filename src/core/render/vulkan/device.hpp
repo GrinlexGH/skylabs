@@ -5,13 +5,14 @@
 namespace Vulkan {
 struct CQueue
 {
-    vk::raii::Queue m_handle = VK_NULL_HANDLE;
+    vk::raii::Queue m_handle = nullptr;
     std::uint32_t m_familyIndex = std::numeric_limits<std::uint32_t>::max();
 };
 
 class CDevice
 {
 public:
+    explicit CDevice(std::nullptr_t);
     explicit CDevice(
         const CInstance& instance,
         const CPhysicalDevice& physicalDevice,
@@ -24,15 +25,15 @@ public:
     CDevice& operator=(CDevice&&) noexcept = default;
     ~CDevice() = default;
 
-    [[nodiscard]] const CQueue& GetGraphicsQueue() const { return m_graphicsQueue; }
-    [[nodiscard]] const CQueue& GetPresentQueue() const { return m_presentQueue; }
-    [[nodiscard]] const CQueue& GetTransferQueue() const { return m_transferQueue; }
-    [[nodiscard]] const CQueue& GetComputeQueue() const { return m_computeQueue; }
+    [[nodiscard]] auto GetGraphicsQueue() const -> const CQueue&  { return m_graphicsQueue; }
+    [[nodiscard]] auto GetPresentQueue() const -> const CQueue& { return m_presentQueue; }
+    [[nodiscard]] auto GetTransferQueue() const ->const CQueue& { return m_transferQueue; }
+    [[nodiscard]] auto GetComputeQueue() const -> const CQueue& { return m_computeQueue; }
 
-    [[nodiscard]] const vk::raii::Device& GetHandle() const { return m_handle; }
+    [[nodiscard]] auto GetHandle() const -> const vk::raii::Device& { return m_handle; }
 
 private:
-    vk::raii::Device m_handle = VK_NULL_HANDLE;
+    vk::raii::Device m_handle = nullptr;
 
     CQueue m_graphicsQueue;
     CQueue m_presentQueue;

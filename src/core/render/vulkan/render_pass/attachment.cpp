@@ -1,7 +1,7 @@
 #include "attachment.hpp"
 
 namespace Vulkan {
-CAttachment::CAttachment(const vk::AttachmentDescription description, const vk::AttachmentReference reference) :
+CAttachment::CAttachment(const vk::AttachmentDescription& description, const vk::AttachmentReference& reference) :
     m_description(description), m_reference(reference)
 {}
 
@@ -18,11 +18,7 @@ auto CAttachment::ColorAttachment(vk::Format swapchainFormat) -> CAttachment {
             vk::ImageLayout::eUndefined,
             vk::ImageLayout::ePresentSrcKHR,
         },
-        {
-            0,
-            vk::ImageLayout::eColorAttachmentOptimal,
-
-        }
+        { 0, vk::ImageLayout::eColorAttachmentOptimal, }
     };
 }
 }
