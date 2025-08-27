@@ -4,7 +4,7 @@
 #include "render_context.hpp"
 
 namespace {
-vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+auto ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) -> vk::SurfaceFormatKHR {
     constexpr vk::SurfaceFormatKHR preferredSurfaceFormat { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear };
 
     const auto formatIt = std::ranges::find(availableFormats, preferredSurfaceFormat);
@@ -25,6 +25,8 @@ vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>
 }
 
 namespace Vulkan {
+CSwapchain::CSwapchain(std::nullptr_t) {}
+
 CSwapchain::CSwapchain(
     const CRenderContext* context,
     const vk::SurfaceKHR& surface,
@@ -34,12 +36,12 @@ CSwapchain::CSwapchain(
     Recreate(surface, imageCount, presentMode);
 }
 
-void CSwapchain::CreateSwapchain(
+auto CSwapchain::CreateSwapchain(
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     vk::PresentModeKHR presentMode,
     const vk::raii::SwapchainKHR& oldSwapchain
-) {
+) -> void {
     const CDevice& device = m_context->GetDevice();
     const vk::raii::Device& deviceHandle = device.GetHandle();
     const vk::raii::PhysicalDevice physicalDevice = m_context->GetPhysicalDevice()->GetHandle();
@@ -107,7 +109,7 @@ void CSwapchain::CreateSwapchain(
     m_handle = deviceHandle.createSwapchainKHR(createInfo);
 }
 
-void CSwapchain::CreateImages() {
+auto CSwapchain::CreateImages() -> void {
     const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
 
     m_images = m_handle.getImages();
@@ -133,15 +135,19 @@ void CSwapchain::CreateImages() {
     }
 }
 
-void CSwapchain::DestroyImages() {
+auto CSwapchain::DestroyImages() -> void {
     m_imageViews.clear();
 }
 
-void CSwapchain::Recreate() {
+auto CSwapchain::Recreate() -> void {
     Recreate(m_info.m_associatedSurface, m_info.m_imageCount, m_info.m_presentMode);
 }
 
-void CSwapchain::Recreate(const vk::SurfaceKHR& surface, const std::uint32_t imageCount, const vk::PresentModeKHR presentMode) {
+auto CSwapchain::Recreate(
+    const vk::SurfaceKHR& surface,
+    const std::uint32_t imageCount,
+    const vk::PresentModeKHR presentMode
+) -> void {
     const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
 
     deviceHandle.waitIdle(); // TODO: Wait for fence, not idle
@@ -152,7 +158,7 @@ void CSwapchain::Recreate(const vk::SurfaceKHR& surface, const std::uint32_t ima
     CreateImages();
 }
 
-vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const {
+auto CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const -> vk::Extent2D {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     }

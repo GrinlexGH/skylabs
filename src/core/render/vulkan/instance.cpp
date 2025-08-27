@@ -87,7 +87,7 @@ CInstance::CInstance(
 
     //====================
 #ifdef DEBUG
-    bool isDebugUtilsAvailable = EnableExtension(vk::EXTDebugUtilsExtensionName);
+    const bool isDebugUtilsAvailable = EnableExtension(vk::EXTDebugUtilsExtensionName);
 #endif
 
     // if required extension is missing, put it into error message
@@ -168,7 +168,7 @@ auto CInstance::EnableExtension(const char* name) -> bool {
     }
 
     const auto tryEnable = [&](const std::vector<vk::ExtensionProperties>& availableExtensions) -> bool {
-        if (HasExtension(availableExtensions, name) ) {
+        if (HasExtension(availableExtensions, name)) {
             m_enabledExtensions.emplace_back(name);
             return true;
         }

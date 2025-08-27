@@ -12,5 +12,5 @@ public:
     IRenderer& operator=(IRenderer&&) noexcept = default;
     virtual ~IRenderer() = default;
 
-    virtual void Draw(glm::mat4) = 0;
+    virtual auto Draw(glm::mat4) -> void = 0;
 };

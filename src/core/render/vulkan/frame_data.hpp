@@ -12,10 +12,10 @@ public:
     CFrameData& operator=(CFrameData&&) noexcept = default;
     ~CFrameData() = default;
 
-    [[nodiscard]] const vk::raii::CommandPool& GetCommandPool() const { return m_commandPool; }
-    [[nodiscard]] const vk::raii::CommandBuffers& GetCommandBuffers() const { return m_commandBuffer; }
-    [[nodiscard]] const vk::raii::Fence& GetFence() const { return m_fence; }
-    [[nodiscard]] const vk::raii::Semaphore& GetImageAvailableSemaphore() const { return m_imageAvailableSemaphore; }
+    [[nodiscard]] auto GetCommandPool() const -> const vk::raii::CommandPool& { return m_commandPool; }
+    [[nodiscard]] auto GetCommandBuffers() const -> const vk::raii::CommandBuffers& { return m_commandBuffer; }
+    [[nodiscard]] auto GetFence() const -> const vk::raii::Fence& { return m_fence; }
+    [[nodiscard]] auto GetImageAvailableSemaphore() const -> const vk::raii::Semaphore& { return m_imageAvailableSemaphore; }
 
 private:
     vk::raii::CommandPool m_commandPool = nullptr;

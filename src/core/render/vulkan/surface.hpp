@@ -5,6 +5,7 @@ namespace Vulkan {
 class CSurface
 {
 public:
+    explicit CSurface(std::nullptr_t);
     explicit CSurface(const CRenderContext* context);
     CSurface(const CSurface&) = delete;
     CSurface(CSurface&& other) noexcept;
@@ -12,13 +13,13 @@ public:
     CSurface& operator=(CSurface&& rhs) noexcept;
     ~CSurface();
 
-    [[nodiscard]] vk::SurfaceKHR GetHandle() const { return m_handle; }
+    [[nodiscard]] auto GetHandle() const -> vk::SurfaceKHR { return m_handle; }
 
 private:
-    vk::SurfaceKHR m_handle = VK_NULL_HANDLE;
+    vk::SurfaceKHR m_handle = nullptr;
 
     const CRenderContext* m_context;
 
-    void Destroy();
+    auto Destroy() -> void;
 };
 }

@@ -22,6 +22,8 @@ auto GetDeviceTypeScore(const vk::PhysicalDeviceType type) -> int {
 }
 
 namespace Vulkan {
+CRenderContext::CRenderContext(std::nullptr_t) {}
+
 CRenderContext::CRenderContext(const IWindow* const window) : m_window(window) {
     CreateInstance();
     SelectPhysicalDevice();
@@ -81,8 +83,8 @@ auto CRenderContext::GetSuitablePhysicalDevice() -> CPhysicalDevice* {
     }
 
     if (selectedDevice == nullptr) {
-        Log::Warning("No suitable GPU was found! Picking default GPU: {}", *physicalDevices[0].GetProperties().deviceName);
-        return &physicalDevices[0];
+        Log::Warning("No suitable GPU was found! Picking first GPU: {}", *physicalDevices[0].GetProperties().deviceName);
+        return physicalDevices.data();
     }
 
     return selectedDevice;
