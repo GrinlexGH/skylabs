@@ -2,13 +2,13 @@
 
 namespace Vulkan {
 CFrameData::CFrameData(const CRenderContext* context) : m_context(context) {
-    const vk::raii::Device& deviceHandle = context->GetDevice()->GetHandle();
+    const vk::raii::Device& deviceHandle = context->GetDevice().GetHandle();
 
     //====================
     m_commandPool = deviceHandle.createCommandPool(
         {
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            m_context->GetDevice()->GetGraphicsQueue().m_familyIndex
+            m_context->GetDevice().GetGraphicsQueue().m_familyIndex
         }
     );
 

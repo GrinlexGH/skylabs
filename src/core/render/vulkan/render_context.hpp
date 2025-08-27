@@ -18,8 +18,8 @@ public:
     ~CRenderContext() = default;
 
     [[nodiscard]] const IWindow* GetWindow() const { return m_window; }
-    [[nodiscard]] const CInstance* GetInstance() const { return m_instance.get(); }
-    [[nodiscard]] const CDevice* GetDevice() const { return m_device.get(); }
+    [[nodiscard]] const CInstance& GetInstance() const { return m_instance; }
+    [[nodiscard]] const CDevice& GetDevice() const { return m_device; }
     [[nodiscard]] const CPhysicalDevice* GetPhysicalDevice() const { return m_selectedPhysicalDevice; }
 
 private:
@@ -27,11 +27,11 @@ private:
     void SelectPhysicalDevice();
     void CreateLogicalDevice();
 
-    [[nodiscard]] bool IsDeviceSuitable(const CPhysicalDevice* physicalDevice) const;
-    [[nodiscard]] CPhysicalDevice* GetSuitablePhysicalDevice() const;
+    [[nodiscard]] auto IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool;
+    [[nodiscard]] auto GetSuitablePhysicalDevice() -> CPhysicalDevice*;
 
-    std::unique_ptr<CInstance> m_instance;
-    std::unique_ptr<CDevice> m_device;
+    CInstance m_instance { nullptr };
+    CDevice m_device { nullptr };
     CPhysicalDevice* m_selectedPhysicalDevice;
     const IWindow* m_window;
 };

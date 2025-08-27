@@ -10,6 +10,6 @@ CRenderPass::CRenderPass(const CRenderContext* context) : m_context(context) {
     createInfo.dependencyCount = 1;
     // createInfo.pDependencies = &dependencies;
 
-    m_context->GetDevice()->GetHandle().createRenderPass(createInfo);
+    m_context->GetDevice().GetHandle().createRenderPass(createInfo);
 }
 }

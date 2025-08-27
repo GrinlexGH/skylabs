@@ -15,12 +15,12 @@ struct CQueueFamilies
     std::uint32_t m_compute;
 };
 
-void ThrowIfMissing(
+auto ThrowIfMissing(
     const std::optional<std::uint32_t>& graphicsIndex,
     const std::optional<std::uint32_t>& presentIndex,
     const std::optional<std::uint32_t>& transferIndex,
     const std::optional<std::uint32_t>& computeIndex
-) {
+) -> void {
     const std::array<std::pair<const char*, bool>, 4> checks = {
         {
             { "graphics", graphicsIndex.has_value() },
@@ -48,11 +48,11 @@ void ThrowIfMissing(
     }
 }
 
-CQueueFamilies GetQueueFamilies(
+auto GetQueueFamilies(
     const vk::Instance& instance,
     const Vulkan::CPhysicalDevice& physicalDevice,
     const Vulkan::IWindow* window
-) {
+) -> CQueueFamilies {
     const std::vector<vk::QueueFamilyProperties>& queueFamilies = physicalDevice.GetQueueFamilies();
     const vk::PhysicalDevice physicalDeviceHandle = physicalDevice.GetHandle();
 
@@ -113,11 +113,11 @@ CQueueFamilies GetQueueFamilies(
     };
 }
 
-bool EnableExtension(
+auto EnableExtension(
     const std::vector<vk::ExtensionProperties>& availableExtensions,
     const char* name,
     std::vector<const char*>& enabledExtensions
-) {
+) -> bool {
     if (HasExtension(enabledExtensions, name)) {
         return true;
     }
@@ -132,6 +132,8 @@ bool EnableExtension(
 }
 
 namespace Vulkan {
+CDevice::CDevice(std::nullptr_t) {}
+
 CDevice::CDevice(
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice,

@@ -1,12 +1,12 @@
 #pragma once
 
 namespace Skylabs {
-    constexpr const char* NAME = "@APP_NAME@";
-    constexpr const char* GAME_NAME = "@APP_GAME_NAME@";
-    constexpr const char* COMPANY = "@APP_COMPANY@";
-    constexpr const char* COPYRIGHT = "@APP_COPYRIGHT@";
-    constexpr const char* VERSION = "@APP_VERSION@";
-    constexpr const char* HOMEPAGE = "@APP_HOMEPAGE@";
+    constexpr auto NAME = "@APP_NAME@";
+    constexpr auto GAME_NAME = "@APP_GAME_NAME@";
+    constexpr auto COMPANY = "@APP_COMPANY@";
+    constexpr auto COPYRIGHT = "@APP_COPYRIGHT@";
+    constexpr auto VERSION = "@APP_VERSION@";
+    constexpr auto HOMEPAGE = "@APP_HOMEPAGE@";
 
     constexpr int VERSION_MAJOR = @APP_VERSION_MAJOR@;
     constexpr int VERSION_MINOR = @APP_VERSION_MINOR@;

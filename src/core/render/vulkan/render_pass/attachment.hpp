@@ -5,7 +5,7 @@ namespace Vulkan {
 class CAttachment
 {
 public:
-    explicit CAttachment(vk::AttachmentDescription description, vk::AttachmentReference reference);
+    explicit CAttachment(const vk::AttachmentDescription& description, const vk::AttachmentReference& reference);
     static auto ColorAttachment(vk::Format swapchainFormat) -> CAttachment;
 
 //private:

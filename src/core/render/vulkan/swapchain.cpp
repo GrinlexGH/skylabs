@@ -40,8 +40,8 @@ void CSwapchain::CreateSwapchain(
     vk::PresentModeKHR presentMode,
     const vk::raii::SwapchainKHR& oldSwapchain
 ) {
-    const CDevice* device = m_context->GetDevice();
-    const vk::raii::Device& deviceHandle = device->GetHandle();
+    const CDevice& device = m_context->GetDevice();
+    const vk::raii::Device& deviceHandle = device.GetHandle();
     const vk::raii::PhysicalDevice physicalDevice = m_context->GetPhysicalDevice()->GetHandle();
 
     //====================
@@ -69,11 +69,11 @@ void CSwapchain::CreateSwapchain(
 
     //====================
     const std::array queueFamilyIndices {
-        device->GetGraphicsQueue().m_familyIndex,
-        device->GetPresentQueue().m_familyIndex
+        device.GetGraphicsQueue().m_familyIndex,
+        device.GetPresentQueue().m_familyIndex
     };
 
-    if (device->GetGraphicsQueue().m_familyIndex != device->GetPresentQueue().m_familyIndex) {
+    if (device.GetGraphicsQueue().m_familyIndex != device.GetPresentQueue().m_familyIndex) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = static_cast<std::uint32_t>(queueFamilyIndices.size());
         createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
@@ -108,7 +108,7 @@ void CSwapchain::CreateSwapchain(
 }
 
 void CSwapchain::CreateImages() {
-    const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
+    const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
 
     m_images = m_handle.getImages();
     m_info.m_imageCount = static_cast<std::uint32_t>(m_images.size());
@@ -142,7 +142,7 @@ void CSwapchain::Recreate() {
 }
 
 void CSwapchain::Recreate(const vk::SurfaceKHR& surface, const std::uint32_t imageCount, const vk::PresentModeKHR presentMode) {
-    const vk::raii::Device& deviceHandle = m_context->GetDevice()->GetHandle();
+    const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
 
     deviceHandle.waitIdle(); // TODO: Wait for fence, not idle
 

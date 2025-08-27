@@ -32,6 +32,8 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 }
 
 namespace Vulkan {
+CInstance::CInstance(std::nullptr_t) {}
+
 CInstance::CInstance(
     const std::unordered_map<const char*, bool>& extensions,
     const std::vector<const char*>& layers
@@ -57,6 +59,33 @@ CInstance::CInstance(
     appInfo.apiVersion = m_apiVersion;
 
     //====================
+    m_enabledLayers.reserve(layers.size());
+    std::vector<const char*> missingLayers;
+    missingLayers.reserve(layers.size());
+
+    // Currently (27.08.2025) validation layer cause sigsegv with gdb on windows, so don't use gdb on windows
+#ifdef DEBUG
+    if (!EnableLayer("VK_LAYER_KHRONOS_validation", m_enabledLayers)) {
+        missingLayers.push_back("VK_LAYER_KHRONOS_validation");
+    }
+#endif
+
+    for (const auto& name : layers) {
+        if (!EnableLayer(name, m_enabledLayers)) {
+            missingLayers.push_back(name);
+        }
+    }
+
+    if (!missingLayers.empty()) {
+        std::ostringstream error;
+        error << "System doesn't have vulkan layers:\n";
+        for (const char* const name : missingLayers) {
+            error << '\t' << name << '\n';
+        }
+        Log::Debug("{}", error.str());
+    }
+
+    //====================
 #ifdef DEBUG
     bool isDebugUtilsAvailable = EnableExtension(vk::EXTDebugUtilsExtensionName);
 #endif
@@ -79,33 +108,6 @@ CInstance::CInstance(
             error << '\t' << name << '\n';
         }
         throw std::runtime_error(error.str());
-    }
-
-    //====================
-    std::vector<const char*> enabledLayers;
-    enabledLayers.reserve(layers.size());
-    std::vector<const char*> missingLayers;
-    missingLayers.reserve(layers.size());
-
-#ifdef DEBUG
-    if (!EnableLayer("VK_LAYER_KHRONOS_validation", enabledLayers)) {
-        missingLayers.push_back("VK_LAYER_KHRONOS_validation");
-    }
-#endif
-
-    for (const auto& name : layers) {
-        if (!EnableLayer(name, enabledLayers)) {
-            missingLayers.push_back(name);
-        }
-    }
-
-    if (!missingLayers.empty()) {
-        std::ostringstream error;
-        error << "System doesn't have vulkan layers:\n";
-        for (const char* const name : missingLayers) {
-            error << '\t' << name << '\n';
-        }
-        Log::Debug("{}", error.str());
     }
 
     //====================
@@ -137,8 +139,8 @@ CInstance::CInstance(
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount = static_cast<std::uint32_t>(m_enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
-    createInfo.enabledLayerCount = static_cast<std::uint32_t>(enabledLayers.size());
-    createInfo.ppEnabledLayerNames = enabledLayers.data();
+    createInfo.enabledLayerCount = static_cast<std::uint32_t>(m_enabledLayers.size());
+    createInfo.ppEnabledLayerNames = m_enabledLayers.data();
     createInfo.pNext = pNext;
 
     m_handle = m_context.createInstance(createInfo);
@@ -178,9 +180,9 @@ auto CInstance::EnableExtension(const char* name) -> bool {
     }
 
     // If any of the available layers provides this extension, enable it
-    if (std::ranges::any_of(GetAvailableLayers(),
-        [&](const vk::LayerProperties& layer) {
-            return tryEnable(m_context.enumerateInstanceExtensionProperties({ layer.layerName }));
+    if (std::ranges::any_of(m_enabledLayers,
+        [&](const char* layerName) {
+            return tryEnable(m_context.enumerateInstanceExtensionProperties({ layerName }));
         }
     )) {
         return true;
@@ -208,8 +210,9 @@ auto CInstance::QueryPhysicalDevices() -> void {
         throw std::runtime_error("Couldn't find a physical device that supports Vulkan!");
     }
 
+    m_physicalDevices.reserve(physicalDevices.size());
     for (vk::raii::PhysicalDevice& physicalDevice : physicalDevices) {
-        m_physicalDevices.push_back(std::make_unique<CPhysicalDevice>(std::move(physicalDevice)));
+        m_physicalDevices.emplace_back(std::move(physicalDevice));
     }
 }
 }

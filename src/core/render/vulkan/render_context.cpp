@@ -3,7 +3,7 @@
 #include "logging.hpp"
 
 namespace {
-int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
+auto GetDeviceTypeScore(const vk::PhysicalDeviceType type) -> int {
     switch (type) {
         case vk::PhysicalDeviceType::eDiscreteGpu:
             return 5;
@@ -28,7 +28,7 @@ CRenderContext::CRenderContext(const IWindow* const window) : m_window(window) {
     CreateLogicalDevice();
 }
 
-void CRenderContext::CreateInstance() {
+auto CRenderContext::CreateInstance() -> void {
     std::unordered_map<const char*, bool> instanceExtensions {
         { vk::KHRGetPhysicalDeviceProperties2ExtensionName, true }
     };
@@ -40,15 +40,15 @@ void CRenderContext::CreateInstance() {
         instanceExtensions[extension] = true;
     }
 
-    m_instance = std::make_unique<CInstance>(instanceExtensions);
+    m_instance = CInstance { instanceExtensions };
 }
 
-bool CRenderContext::IsDeviceSuitable(const CPhysicalDevice* const physicalDevice) const {
+auto CRenderContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool {
     bool hasPresentQueue = false;
     bool hasGraphicsQueue = false;
 
-    for (std::uint32_t i = 0; const auto& queue : physicalDevice->GetQueueFamilies()) {
-        if (m_window->IsQueueFamilyPresentSupport(m_instance->GetHandle(), physicalDevice->GetHandle(), i)) {
+    for (std::uint32_t i = 0; const auto& queue : physicalDevice.GetQueueFamilies()) {
+        if (m_window->IsQueueFamilyPresentSupport(m_instance.GetHandle(), physicalDevice.GetHandle(), i)) {
             hasPresentQueue = true;
         }
 
@@ -66,35 +66,35 @@ bool CRenderContext::IsDeviceSuitable(const CPhysicalDevice* const physicalDevic
     return false;
 }
 
-CPhysicalDevice* CRenderContext::GetSuitablePhysicalDevice() const {
+auto CRenderContext::GetSuitablePhysicalDevice() -> CPhysicalDevice* {
     CPhysicalDevice* selectedDevice = nullptr;
-    const std::vector<std::unique_ptr<CPhysicalDevice>>& physicalDevices = m_instance->GetPhysicalDevices();
+    std::vector<CPhysicalDevice>& physicalDevices = m_instance.GetPhysicalDevices();
 
     int deviceTypeScore = 0;
-    for (const auto& physicalDevice : physicalDevices) {
-        if (IsDeviceSuitable(physicalDevice.get())) {
-            if (const int optionScore = GetDeviceTypeScore(physicalDevice->GetProperties().deviceType); optionScore > deviceTypeScore) {
-                selectedDevice = physicalDevice.get();
+    for (auto& physicalDevice : physicalDevices) {
+        if (IsDeviceSuitable(physicalDevice)) {
+            if (const int optionScore = GetDeviceTypeScore(physicalDevice.GetProperties().deviceType); optionScore > deviceTypeScore) {
+                selectedDevice = &physicalDevice;
                 deviceTypeScore = optionScore;
             }
         }
     }
 
     if (selectedDevice == nullptr) {
-        Log::Warning("No suitable GPU was found! Picking default GPU: {}", *physicalDevices[0]->GetProperties().deviceName);
-        return physicalDevices[0].get();
+        Log::Warning("No suitable GPU was found! Picking default GPU: {}", *physicalDevices[0].GetProperties().deviceName);
+        return &physicalDevices[0];
     }
 
     return selectedDevice;
 }
 
-void CRenderContext::SelectPhysicalDevice() {
+auto CRenderContext::SelectPhysicalDevice() -> void {
     m_selectedPhysicalDevice = GetSuitablePhysicalDevice();
 
     Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->GetProperties().deviceName });
 }
 
-void CRenderContext::CreateLogicalDevice() {
+auto CRenderContext::CreateLogicalDevice() -> void {
     std::unordered_map<const char*, bool> deviceExtensions {
         // VMA
         { vk::KHRDedicatedAllocationExtensionName, false },
@@ -124,11 +124,11 @@ void CRenderContext::CreateLogicalDevice() {
         REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
     }
 
-    m_device = std::make_unique<CDevice>(
-        *m_instance,
+    m_device = CDevice {
+        m_instance,
         *m_selectedPhysicalDevice,
         m_window,
         deviceExtensions
-    );
+    };
 }
 }

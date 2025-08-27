@@ -378,19 +378,22 @@ CRenderer::CRenderer(const IWindow* const window) {
     );
 
     // Слава богу c++23 слава комитету слава ISO IEC
-    for (auto _ : std::views::iota(0, FRAMES_IN_FLIGHT_COUNT)) {
-        m_frameData.emplace_back(m_context.get());
-    }
+    m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
+    m_frameData = std::views::iota(0, FRAMES_IN_FLIGHT_COUNT)
+            | std::views::transform([&](auto){ return CFrameData(m_context.get()); })
+            | std::ranges::to<std::vector>();
 
     //region SYNC_PRIMITIVES
-    m_renderFinishedSemaphores.resize(m_swapchain->GetInfo().m_imageCount);
-    for (unsigned int i = 0; i < m_swapchain->GetInfo().m_imageCount; ++i) {
-        m_renderFinishedSemaphores[i] = m_context->GetDevice()->GetHandle().createSemaphore(vk::SemaphoreCreateInfo {});
+    const std::uint32_t imageCount = m_swapchain->GetInfo().m_imageCount;
+    m_renderFinishedSemaphores.reserve(imageCount);
+    for ([[maybe_unused]] auto _ : std::views::iota(0u, imageCount)) {
+        m_renderFinishedSemaphores.emplace_back(m_context->GetDevice().GetHandle().createSemaphore({}));
     }
+
     //endregion SYNC_PRIMITIVES
 
     //region RENDER_PASS
-    CAttachment colorAttachment = CAttachment::ColorAttachment(m_swapchain->GetInfo().m_surfaceFormat.format);
+    const CAttachment colorAttachment = CAttachment::ColorAttachment(m_swapchain->GetInfo().m_surfaceFormat.format);
 
     vk::SubpassDescription subpass {};
     subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
@@ -412,7 +415,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-    m_renderPass = m_context->GetDevice()->GetHandle().createRenderPass(renderPassInfo);
+    m_renderPass = m_context->GetDevice().GetHandle().createRenderPass(renderPassInfo);
     //endregion RENDER_PASS
 /*
     // #region SHADER_MODULES
