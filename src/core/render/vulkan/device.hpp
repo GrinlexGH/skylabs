@@ -25,9 +25,9 @@ public:
     CDevice& operator=(CDevice&&) noexcept = default;
     ~CDevice() = default;
 
-    [[nodiscard]] auto GetGraphicsQueue() const -> const CQueue&  { return m_graphicsQueue; }
+    [[nodiscard]] auto GetGraphicsQueue() const -> const CQueue& { return m_graphicsQueue; }
     [[nodiscard]] auto GetPresentQueue() const -> const CQueue& { return m_presentQueue; }
-    [[nodiscard]] auto GetTransferQueue() const ->const CQueue& { return m_transferQueue; }
+    [[nodiscard]] auto GetTransferQueue() const -> const CQueue& { return m_transferQueue; }
     [[nodiscard]] auto GetComputeQueue() const -> const CQueue& { return m_computeQueue; }
 
     [[nodiscard]] auto GetHandle() const -> const vk::raii::Device& { return m_handle; }

@@ -1,8 +1,8 @@
 #include "renderer.hpp"
 
 #include "logging.hpp"
-#include "resource_system.hpp"
 #include "render_pass/attachment.hpp"
+#include "resource_system.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
@@ -366,34 +366,28 @@ CRenderer::CRenderer(const IWindow* const window) {
     if (window == nullptr) {
         throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
     }
-    m_context = std::make_unique<CRenderContext>(window);
+    m_context = CRenderContext { window };
 
-    m_surface = std::make_unique<CSurface>(m_context.get());
+    m_surface = CSurface { &m_context };
 
-    m_swapchain = std::make_unique<CSwapchain>(
-        m_context.get(),
-        m_surface->GetHandle(),
-        3,
-        vk::PresentModeKHR::eImmediate
-    );
+    m_swapchain = CSwapchain { &m_context, m_surface.GetHandle(), 3, vk::PresentModeKHR::eImmediate };
 
     // Слава богу c++23 слава комитету слава ISO IEC
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
     m_frameData = std::views::iota(0, FRAMES_IN_FLIGHT_COUNT)
-            | std::views::transform([&](auto){ return CFrameData(m_context.get()); })
+            | std::views::transform([&](auto) { return CFrameData(&m_context); })
             | std::ranges::to<std::vector>();
 
     //region SYNC_PRIMITIVES
-    const std::uint32_t imageCount = m_swapchain->GetInfo().m_imageCount;
+    const std::uint32_t imageCount = m_swapchain.GetInfo().m_imageCount;
     m_renderFinishedSemaphores.reserve(imageCount);
     for ([[maybe_unused]] auto _ : std::views::iota(0u, imageCount)) {
-        m_renderFinishedSemaphores.emplace_back(m_context->GetDevice().GetHandle().createSemaphore({}));
+        m_renderFinishedSemaphores.emplace_back(m_context.GetDevice().GetHandle().createSemaphore({}));
     }
-
     //endregion SYNC_PRIMITIVES
 
     //region RENDER_PASS
-    const CAttachment colorAttachment = CAttachment::ColorAttachment(m_swapchain->GetInfo().m_surfaceFormat.format);
+    const CAttachment colorAttachment = CAttachment::ColorAttachment(m_swapchain.GetInfo().m_surfaceFormat.format);
 
     vk::SubpassDescription subpass {};
     subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
@@ -415,9 +409,9 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-    m_renderPass = m_context->GetDevice().GetHandle().createRenderPass(renderPassInfo);
+    m_renderPass = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
     //endregion RENDER_PASS
-/*
+    /*
     // #region SHADER_MODULES
     const std::vector<char> vertexShaderSource = ResourceSystem::LoadShader("shader.vert.spv");
     vk::ShaderModuleCreateInfo createInfo {};

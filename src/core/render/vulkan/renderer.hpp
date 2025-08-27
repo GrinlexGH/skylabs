@@ -19,20 +19,20 @@ public:
     CRenderer& operator=(CRenderer&&) noexcept = default;
     ~CRenderer() override;
 
-    static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window);
-    void Draw(glm::mat4 view_mat) override;
+    static auto TryToCreate(const IWindow* window) -> std::unique_ptr<CRenderer>;
+    auto Draw(glm::mat4 view_mat) -> void override;
 
 private:
     static constexpr int FRAMES_IN_FLIGHT_COUNT = 3;
 
-    std::unique_ptr<CRenderContext> m_context;
+    CRenderContext m_context { nullptr };
 
-    std::unique_ptr<CSurface> m_surface;
-    std::unique_ptr<CSwapchain> m_swapchain;
+    CSurface m_surface { nullptr };
+    CSwapchain m_swapchain { nullptr };
 
     std::vector<CFrameData> m_frameData;
 
-    vk::raii::RenderPass m_renderPass = VK_NULL_HANDLE;
+    vk::raii::RenderPass m_renderPass = nullptr;
 
 
     std::vector<vk::Framebuffer> m_frameBuffers;

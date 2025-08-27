@@ -5,6 +5,7 @@ namespace Vulkan {
 class CSwapchain
 {
 public:
+    explicit CSwapchain(std::nullptr_t);
     explicit CSwapchain(
         const CRenderContext* context,
         const vk::SurfaceKHR& surface,
@@ -12,9 +13,9 @@ public:
         vk::PresentModeKHR presentMode
     );
     CSwapchain(const CSwapchain&) = delete;
-    CSwapchain(CSwapchain&&) = delete;
+    CSwapchain(CSwapchain&&) noexcept = default;
     CSwapchain& operator=(const CSwapchain&) = delete;
-    CSwapchain& operator=(CSwapchain&&) = delete;
+    CSwapchain& operator=(CSwapchain&&) noexcept = default;
     ~CSwapchain() = default;
 
     struct CInfo
@@ -26,25 +27,25 @@ public:
         vk::SurfaceKHR m_associatedSurface;
     };
 
-    [[nodiscard]] const vk::raii::SwapchainKHR& GetHandle() const { return m_handle; }
-    [[nodiscard]] const CInfo& GetInfo() const { return m_info; }
-    [[nodiscard]] const std::vector<vk::Image>& GetImages() const { return m_images; }
-    [[nodiscard]] const std::vector<vk::raii::ImageView>& GetImageViews() const { return m_imageViews; }
+    [[nodiscard]] auto GetHandle() const -> const vk::raii::SwapchainKHR& { return m_handle; }
+    [[nodiscard]] auto GetInfo() const -> const CInfo& { return m_info; }
+    [[nodiscard]] auto GetImages() const -> const std::vector<vk::Image>& { return m_images; }
+    [[nodiscard]] auto GetImageViews() const -> const std::vector<vk::raii::ImageView>& { return m_imageViews; }
 
-    void Recreate();
-    void Recreate(const vk::SurfaceKHR& surface, std::uint32_t imageCount, vk::PresentModeKHR presentMode);
+    auto Recreate() -> void;
+    auto Recreate(const vk::SurfaceKHR& surface, std::uint32_t imageCount, vk::PresentModeKHR presentMode) -> void;
 
 private:
-    void CreateSwapchain(
+    auto CreateSwapchain(
         const vk::SurfaceKHR& surface,
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode,
         const vk::raii::SwapchainKHR& oldSwapchain = nullptr
-    );
-    void CreateImages();
-    void DestroyImages();
+    ) -> void;
+    auto CreateImages() -> void;
+    auto DestroyImages() -> void;
 
-    [[nodiscard]] vk::Extent2D ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
+    [[nodiscard]] auto ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const -> vk::Extent2D;
 
     vk::raii::SwapchainKHR m_handle = nullptr;
 

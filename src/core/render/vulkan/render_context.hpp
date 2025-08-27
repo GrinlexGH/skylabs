@@ -10,6 +10,7 @@ namespace Vulkan {
 class CRenderContext
 {
 public:
+    explicit CRenderContext(std::nullptr_t);
     explicit CRenderContext(const IWindow* window);
     CRenderContext(const CRenderContext&) = delete;
     CRenderContext(CRenderContext&&) noexcept = default;
@@ -17,15 +18,15 @@ public:
     CRenderContext& operator=(CRenderContext&&) noexcept = default;
     ~CRenderContext() = default;
 
-    [[nodiscard]] const IWindow* GetWindow() const { return m_window; }
-    [[nodiscard]] const CInstance& GetInstance() const { return m_instance; }
-    [[nodiscard]] const CDevice& GetDevice() const { return m_device; }
-    [[nodiscard]] const CPhysicalDevice* GetPhysicalDevice() const { return m_selectedPhysicalDevice; }
+    [[nodiscard]] auto GetWindow() const -> const IWindow* { return m_window; }
+    [[nodiscard]] auto GetInstance() const -> const CInstance& { return m_instance; }
+    [[nodiscard]] auto GetDevice() const -> const CDevice& { return m_device; }
+    [[nodiscard]] auto GetPhysicalDevice() const -> const CPhysicalDevice* { return m_selectedPhysicalDevice; }
 
 private:
-    void CreateInstance();
-    void SelectPhysicalDevice();
-    void CreateLogicalDevice();
+    auto CreateInstance() -> void;
+    auto SelectPhysicalDevice() -> void;
+    auto CreateLogicalDevice() -> void;
 
     [[nodiscard]] auto IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool;
     [[nodiscard]] auto GetSuitablePhysicalDevice() -> CPhysicalDevice*;

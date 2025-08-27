@@ -1,8 +1,8 @@
 #include "device.hpp"
 
+#include <optional>
 #include <set>
 #include <sstream>
-#include <optional>
 
 #include "physical_device.hpp"
 
@@ -21,13 +21,11 @@ auto ThrowIfMissing(
     const std::optional<std::uint32_t>& transferIndex,
     const std::optional<std::uint32_t>& computeIndex
 ) -> void {
-    const std::array<std::pair<const char*, bool>, 4> checks = {
-        {
-            { "graphics", graphicsIndex.has_value() },
-            { "present", presentIndex.has_value() },
-            { "transfer", transferIndex.has_value() },
-            { "compute", computeIndex.has_value() }
-        }
+    const std::array<std::pair<const char*, bool>, 4> checks = {{
+        {"graphics", graphicsIndex.has_value()},
+        {"present", presentIndex.has_value()},
+        {"transfer", transferIndex.has_value()},
+        {"compute", computeIndex.has_value()}}
     };
 
     std::stringstream error;
@@ -88,7 +86,8 @@ auto GetQueueFamilies(
         if (graphicsIndex.has_value() &&
             presentIndex.has_value() &&
             transferIndex.has_value() &&
-            computeIndex.has_value()) {
+            computeIndex.has_value()
+        ) {
             allQueuesFound = true;
             break;
         }
