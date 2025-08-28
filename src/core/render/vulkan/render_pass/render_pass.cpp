@@ -1,7 +1,7 @@
 #include "render_pass.hpp"
 
 namespace Vulkan {
-CRenderPass::CRenderPass(const CRenderContext* context) : m_context(context) {
+CRenderPass::CRenderPass(const CContext* context) : m_context(context) {
     vk::RenderPassCreateInfo createInfo {};
     createInfo.attachmentCount = 1;
     // createInfo.pAttachments = &colorAttachment;

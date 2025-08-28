@@ -1,7 +1,7 @@
 #include "frame_data.hpp"
 
 namespace Vulkan {
-CFrameData::CFrameData(const CRenderContext* context) : m_context(context) {
+CFrameData::CFrameData(const CContext* context) : m_context(context) {
     const vk::raii::Device& deviceHandle = context->GetDevice().GetHandle();
 
     //====================

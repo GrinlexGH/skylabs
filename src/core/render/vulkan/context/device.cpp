@@ -1,10 +1,12 @@
 #include "device.hpp"
 
+#include <array>
 #include <optional>
 #include <set>
 #include <sstream>
 
 #include "physical_device.hpp"
+#include "../window.hpp"
 
 namespace {
 struct CQueueFamilies
@@ -22,10 +24,10 @@ auto ThrowIfMissing(
     const std::optional<std::uint32_t>& computeIndex
 ) -> void {
     const std::array<std::pair<const char*, bool>, 4> checks = {{
-        {"graphics", graphicsIndex.has_value()},
-        {"present", presentIndex.has_value()},
-        {"transfer", transferIndex.has_value()},
-        {"compute", computeIndex.has_value()}}
+        { "graphics", graphicsIndex.has_value() },
+        { "present", presentIndex.has_value() },
+        { "transfer", transferIndex.has_value() },
+        { "compute", computeIndex.has_value()} }
     };
 
     std::stringstream error;

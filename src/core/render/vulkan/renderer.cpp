@@ -8,7 +8,6 @@
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
 #include <SDL3_image/SDL_image.h>
 
 #include <chrono>
@@ -366,25 +365,20 @@ CRenderer::CRenderer(const IWindow* const window) {
     if (window == nullptr) {
         throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
     }
-    m_context = CRenderContext { window };
+    m_context = CContext { window };
 
     m_surface = CSurface { &m_context };
 
     m_swapchain = CSwapchain { &m_context, m_surface.GetHandle(), 3, vk::PresentModeKHR::eImmediate };
 
     // Слава богу c++23 слава комитету слава ISO IEC
-    m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
     m_frameData = std::views::iota(0, FRAMES_IN_FLIGHT_COUNT)
-            | std::views::transform([&](auto) { return CFrameData(&m_context); })
-            | std::ranges::to<std::vector>();
+        | std::views::transform([&](auto) { return CFrameData(&m_context); })
+        | std::ranges::to<std::vector>();
 
-    //region SYNC_PRIMITIVES
-    const std::uint32_t imageCount = m_swapchain.GetInfo().m_imageCount;
-    m_renderFinishedSemaphores.reserve(imageCount);
-    for ([[maybe_unused]] auto _ : std::views::iota(0u, imageCount)) {
-        m_renderFinishedSemaphores.emplace_back(m_context.GetDevice().GetHandle().createSemaphore({}));
-    }
-    //endregion SYNC_PRIMITIVES
+    m_renderFinishedSemaphores = std::views::iota(0u, m_swapchain.GetInfo().m_imageCount)
+        | std::views::transform([&](auto) { return vk::Semaphore { m_context.GetDevice().GetHandle().createSemaphore({}) }; })
+        | std::ranges::to<std::vector>();
 
     //region RENDER_PASS
     const CAttachment colorAttachment = CAttachment::ColorAttachment(m_swapchain.GetInfo().m_surfaceFormat.format);

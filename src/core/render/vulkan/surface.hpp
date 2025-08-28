@@ -1,12 +1,12 @@
 #pragma once
-#include "render_context.hpp"
+#include "context/context.hpp"
 
 namespace Vulkan {
 class CSurface
 {
 public:
     explicit CSurface(std::nullptr_t);
-    explicit CSurface(const CRenderContext* context);
+    explicit CSurface(const CContext* context);
     CSurface(const CSurface&) = delete;
     CSurface(CSurface&& other) noexcept;
     CSurface& operator=(const CSurface&) = delete;
@@ -18,7 +18,7 @@ public:
 private:
     vk::SurfaceKHR m_handle = nullptr;
 
-    const CRenderContext* m_context;
+    const CContext* m_context;
 
     auto Destroy() -> void;
 };

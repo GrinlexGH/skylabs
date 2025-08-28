@@ -1,6 +1,6 @@
 #pragma once
+#include "../window.hpp"
 #include "instance.hpp"
-#include "window.hpp"
 
 namespace Vulkan {
 struct CQueue

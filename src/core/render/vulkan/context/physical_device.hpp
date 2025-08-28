@@ -1,7 +1,9 @@
 #pragma once
 #include "extensions.hpp"
-#include "instance.hpp"
 #include "logging.hpp"
+
+#include <unordered_map>
+#include <vulkan/vulkan_raii.hpp>
 
 namespace Vulkan {
 class CPhysicalDevice

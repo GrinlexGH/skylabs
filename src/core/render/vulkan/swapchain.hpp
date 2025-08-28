@@ -1,5 +1,5 @@
 #pragma once
-#include "render_context.hpp"
+#include "context/context.hpp"
 
 namespace Vulkan {
 class CSwapchain
@@ -7,7 +7,7 @@ class CSwapchain
 public:
     explicit CSwapchain(std::nullptr_t);
     explicit CSwapchain(
-        const CRenderContext* context,
+        const CContext* context,
         const vk::SurfaceKHR& surface,
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode
@@ -53,6 +53,6 @@ private:
     std::vector<vk::Image> m_images;
     std::vector<vk::raii::ImageView> m_imageViews;
 
-    const CRenderContext* m_context;
+    const CContext* m_context;
 };
 }
