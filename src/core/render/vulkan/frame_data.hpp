@@ -1,11 +1,11 @@
 #pragma once
-#include "render_context.hpp"
+#include "context/context.hpp"
 
 namespace Vulkan {
 class CFrameData
 {
 public:
-    explicit CFrameData(const CRenderContext* context);
+    explicit CFrameData(const CContext* context);
     CFrameData(const CFrameData&) = delete;
     CFrameData(CFrameData&&) noexcept = default;
     CFrameData& operator=(const CFrameData&) = delete;
@@ -23,6 +23,6 @@ private:
     vk::raii::Fence m_fence = nullptr;
     vk::raii::Semaphore m_imageAvailableSemaphore = nullptr;
 
-    const CRenderContext* m_context;
+    const CContext* m_context;
 };
 }

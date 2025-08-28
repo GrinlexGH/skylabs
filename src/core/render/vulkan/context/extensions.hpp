@@ -1,5 +1,4 @@
 #pragma once
-
 #include <vulkan/vulkan.hpp>
 
 inline bool HasExtension(const std::vector<const char*>& set, const std::string_view target) {

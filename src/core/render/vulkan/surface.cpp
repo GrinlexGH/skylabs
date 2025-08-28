@@ -3,7 +3,7 @@
 namespace Vulkan {
 CSurface::CSurface(std::nullptr_t) {}
 
-CSurface::CSurface(const CRenderContext* context) : m_context(context) {
+CSurface::CSurface(const CContext* context) : m_context(context) {
     const vk::Instance instanceHandle = m_context->GetInstance().GetHandle();
     const IWindow* window = m_context->GetWindow();
     m_handle = window->CreateSurface(instanceHandle);

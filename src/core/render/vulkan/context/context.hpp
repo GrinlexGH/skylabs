@@ -7,16 +7,16 @@ namespace Vulkan {
 //====================
 // Context stores vulkan globals needed to create vulkan objects
 //====================
-class CRenderContext
+class CContext
 {
 public:
-    explicit CRenderContext(std::nullptr_t);
-    explicit CRenderContext(const IWindow* window);
-    CRenderContext(const CRenderContext&) = delete;
-    CRenderContext(CRenderContext&&) noexcept = default;
-    CRenderContext& operator=(const CRenderContext&) = delete;
-    CRenderContext& operator=(CRenderContext&&) noexcept = default;
-    ~CRenderContext() = default;
+    explicit CContext(std::nullptr_t);
+    explicit CContext(const IWindow* window);
+    CContext(const CContext&) = delete;
+    CContext(CContext&&) noexcept = default;
+    CContext& operator=(const CContext&) = delete;
+    CContext& operator=(CContext&&) noexcept = default;
+    ~CContext() = default;
 
     [[nodiscard]] auto GetWindow() const -> const IWindow* { return m_window; }
     [[nodiscard]] auto GetInstance() const -> const CInstance& { return m_instance; }

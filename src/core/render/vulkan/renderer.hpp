@@ -2,9 +2,9 @@
 #include "../renderer.hpp"
 
 #include "frame_data.hpp"
-#include "render_context.hpp"
 #include "surface.hpp"
 #include "swapchain.hpp"
+
 #include <glm/glm.hpp>
 
 namespace Vulkan {
@@ -25,7 +25,7 @@ public:
 private:
     static constexpr int FRAMES_IN_FLIGHT_COUNT = 3;
 
-    CRenderContext m_context { nullptr };
+    CContext m_context { nullptr };
 
     CSurface m_surface { nullptr };
     CSwapchain m_swapchain { nullptr };

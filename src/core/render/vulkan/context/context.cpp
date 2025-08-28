@@ -1,4 +1,4 @@
-#include "render_context.hpp"
+#include "context.hpp"
 
 #include "logging.hpp"
 
@@ -22,15 +22,15 @@ auto GetDeviceTypeScore(const vk::PhysicalDeviceType type) -> int {
 }
 
 namespace Vulkan {
-CRenderContext::CRenderContext(std::nullptr_t) {}
+CContext::CContext(std::nullptr_t) {}
 
-CRenderContext::CRenderContext(const IWindow* const window) : m_window(window) {
+CContext::CContext(const IWindow* const window) : m_window(window) {
     CreateInstance();
     SelectPhysicalDevice();
     CreateLogicalDevice();
 }
 
-auto CRenderContext::CreateInstance() -> void {
+auto CContext::CreateInstance() -> void {
     std::unordered_map<const char*, bool> instanceExtensions {
         { vk::KHRGetPhysicalDeviceProperties2ExtensionName, true }
     };
@@ -45,7 +45,7 @@ auto CRenderContext::CreateInstance() -> void {
     m_instance = CInstance { instanceExtensions };
 }
 
-auto CRenderContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool {
+auto CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool {
     bool hasPresentQueue = false;
     bool hasGraphicsQueue = false;
 
@@ -68,7 +68,7 @@ auto CRenderContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) con
     return false;
 }
 
-auto CRenderContext::GetSuitablePhysicalDevice() -> CPhysicalDevice* {
+auto CContext::GetSuitablePhysicalDevice() -> CPhysicalDevice* {
     CPhysicalDevice* selectedDevice = nullptr;
     std::vector<CPhysicalDevice>& physicalDevices = m_instance.GetPhysicalDevices();
 
@@ -90,13 +90,13 @@ auto CRenderContext::GetSuitablePhysicalDevice() -> CPhysicalDevice* {
     return selectedDevice;
 }
 
-auto CRenderContext::SelectPhysicalDevice() -> void {
+auto CContext::SelectPhysicalDevice() -> void {
     m_selectedPhysicalDevice = GetSuitablePhysicalDevice();
 
     Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->GetProperties().deviceName });
 }
 
-auto CRenderContext::CreateLogicalDevice() -> void {
+auto CContext::CreateLogicalDevice() -> void {
     std::unordered_map<const char*, bool> deviceExtensions {
         // VMA
         { vk::KHRDedicatedAllocationExtensionName, false },

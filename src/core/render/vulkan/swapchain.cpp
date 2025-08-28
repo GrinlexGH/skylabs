@@ -1,7 +1,6 @@
 #include "swapchain.hpp"
 
 #include "logging.hpp"
-#include "render_context.hpp"
 
 namespace {
 auto ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) -> vk::SurfaceFormatKHR {
@@ -28,7 +27,7 @@ namespace Vulkan {
 CSwapchain::CSwapchain(std::nullptr_t) {}
 
 CSwapchain::CSwapchain(
-    const CRenderContext* context,
+    const CContext* context,
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode

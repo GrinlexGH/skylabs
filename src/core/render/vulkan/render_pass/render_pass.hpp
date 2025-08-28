@@ -1,17 +1,15 @@
 #pragma once
-#include "../render_context.hpp"
-
-#include <vulkan/vulkan_raii.hpp>
+#include "../context/context.hpp"
 
 namespace Vulkan {
 class CRenderPass
 {
 public:
-    explicit CRenderPass(const CRenderContext* context);
+    explicit CRenderPass(const CContext* context);
 
 private:
     vk::raii::RenderPass m_renderPass = nullptr;
 
-    const CRenderContext* m_context;
+    const CContext* m_context;
 };
 }

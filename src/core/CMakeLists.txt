@@ -12,15 +12,15 @@ set(SOURCES
     render/vulkan/window.hpp
     render/vulkan/renderer.hpp
     render/vulkan/renderer.cpp
-    render/vulkan/instance.hpp
-    render/vulkan/instance.cpp
-    render/vulkan/extensions.hpp
-    render/vulkan/physical_device.hpp
-    render/vulkan/physical_device.cpp
-    render/vulkan/device.hpp
-    render/vulkan/device.cpp
-    render/vulkan/render_context.hpp
-    render/vulkan/render_context.cpp
+    render/vulkan/context/instance.hpp
+    render/vulkan/context/instance.cpp
+    render/vulkan/context/extensions.hpp
+    render/vulkan/context/physical_device.hpp
+    render/vulkan/context/physical_device.cpp
+    render/vulkan/context/device.hpp
+    render/vulkan/context/device.cpp
+    render/vulkan/context/context.hpp
+    render/vulkan/context/context.cpp
     render/vulkan/surface.hpp
     render/vulkan/surface.cpp
     render/vulkan/swapchain.hpp
