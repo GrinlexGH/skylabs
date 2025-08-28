@@ -137,6 +137,14 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     )
 endif()
 
+# Enabling LTO
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result)
+if(result)
+    message(STATUS "LTO has been enabled")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 if(WIN32)
     add_compile_definitions(UNICODE _UNICODE)
 endif()
