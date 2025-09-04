@@ -121,7 +121,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND
     endif()
 
     # Use libc++ on linux or msys2 just because I can
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND ((WIN32 AND MINGW) OR NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC"))
         if(NOT ANDROID) # Android SDK doesn't support explicitly setting lld
             set(CMAKE_LINKER_TYPE LLD)
         endif()
@@ -142,7 +142,9 @@ include(CheckIPOSupported)
 check_ipo_supported(RESULT result)
 if(result)
     message(STATUS "LTO has been enabled")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    if(WIN32 AND NOT MINGW)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
 endif()
 
 if(WIN32)
