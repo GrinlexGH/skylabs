@@ -33,6 +33,8 @@ set(SOURCES
     render/vulkan/render_pass/attachment.hpp
     render/vulkan/render_pass/render_pass.cpp
     render/vulkan/render_pass/render_pass.hpp
+    render/vulkan/shader.hpp
+    render/vulkan/shader.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan/vulkan.hpp
