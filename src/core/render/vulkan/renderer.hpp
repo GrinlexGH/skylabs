@@ -7,6 +7,9 @@
 
 #include <glm/glm.hpp>
 
+void MoveForward();
+void MoveBackward();
+
 namespace Vulkan {
 class CRenderer final : public IRenderer
 {
@@ -20,7 +23,7 @@ public:
     ~CRenderer() override;
 
     static auto TryToCreate(const IWindow* window) -> std::unique_ptr<CRenderer>;
-    auto Draw(glm::mat4 view_mat) -> void override;
+    auto Draw(glm::mat4 view_mat, float deltaTime) -> void override;
 
 private:
     static constexpr int FRAMES_IN_FLIGHT_COUNT = 3;
@@ -32,33 +35,38 @@ private:
 
     std::vector<CFrameData> m_frameData;
 
-    vk::raii::RenderPass m_renderPass = nullptr;
+
+    vk::raii::PipelineLayout m_pipelineLayout { nullptr };
+    vk::raii::Pipeline m_pipeline { nullptr };
 
 
-    std::vector<vk::Framebuffer> m_frameBuffers;
+    vk::raii::RenderPass m_renderPass { nullptr };
+    std::vector<vk::raii::Framebuffer> m_frameBuffers;
 
-    vk::DescriptorSetLayout m_descriptorSetLayout;
-    vk::DescriptorPool m_descriptorPool;
-    std::vector<vk::DescriptorSet> m_descriptorSets;
+    vk::raii::DescriptorSetLayout m_descriptorSetLayout { nullptr };
+    vk::raii::DescriptorPool m_descriptorPool { nullptr };
+    std::vector<vk::DescriptorSet> m_descriptorSets { nullptr };
 
-    vk::PipelineLayout m_pipelineLayout;
-    vk::Pipeline m_pipeline;
 
-    std::vector<vk::Semaphore> m_renderFinishedSemaphores;
+    std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
-    vk::Buffer m_vertexBuffer;
-    vk::DeviceMemory m_vertexBufferMemory;
-    vk::Buffer m_indexBuffer;
-    vk::DeviceMemory m_indexBufferMemory;
+    vk::raii::Image m_depthBuffer { nullptr };
+    vk::raii::DeviceMemory m_depthBufferMemory { nullptr };
+    vk::raii::ImageView m_depthBufferView { nullptr };
 
-    std::vector<vk::Buffer> m_uniformBuffers;
-    std::vector<vk::DeviceMemory> m_uniformBuffersMemory;
+    vk::raii::Buffer m_vertexBuffer { nullptr };
+    vk::raii::DeviceMemory m_vertexBufferMemory { nullptr };
+    vk::raii::Buffer m_indexBuffer { nullptr };
+    vk::raii::DeviceMemory m_indexBufferMemory { nullptr };
+
+    std::vector<vk::raii::Buffer> m_uniformBuffers;
+    std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
     std::vector<void*> m_uniformBuffersMapped;
 
-    vk::Image m_texture;
-    vk::DeviceMemory m_textureMemory;
-    vk::ImageView m_textureView;
-    vk::Sampler m_textureSampler;
+    vk::raii::Image m_texture { nullptr };
+    vk::raii::DeviceMemory m_textureMemory { nullptr };
+    vk::raii::ImageView m_textureView { nullptr };
+    vk::raii::Sampler m_textureSampler { nullptr };
 
     std::uint32_t m_frameIndex = 0;
 };

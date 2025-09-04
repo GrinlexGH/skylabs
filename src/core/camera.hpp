@@ -17,7 +17,7 @@ enum CameraMovement
 
 constexpr float YAW = -90.0f;
 constexpr float PITCH = 0.0f;
-constexpr float SPEED = 0.001f;
+constexpr float SPEED = 1;
 constexpr float SENSITIVITY = 0.1f;
 constexpr float FOV = 45.0f;
 

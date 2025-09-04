@@ -29,10 +29,6 @@ set(SOURCES
     render/vulkan/allocator.cpp
     render/vulkan/frame_data.hpp
     render/vulkan/frame_data.cpp
-    render/vulkan/render_pass/attachment.cpp
-    render/vulkan/render_pass/attachment.hpp
-    render/vulkan/render_pass/render_pass.cpp
-    render/vulkan/render_pass/render_pass.hpp
     render/vulkan/shader.hpp
     render/vulkan/shader.cpp
     SDL/context.cpp
