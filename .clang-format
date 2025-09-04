@@ -2,7 +2,7 @@
 Language: Cpp
 BasedOnStyle: LLVM
 
-DisableFormat: true
+# DisableFormat: true
 
 AccessModifierOffset: -4
 AlignAfterOpenBracket: BlockIndent
