@@ -109,7 +109,7 @@ find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 # Global options
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
     add_compile_options(
-        "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray backgroud
+        "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray background
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
     )
 
