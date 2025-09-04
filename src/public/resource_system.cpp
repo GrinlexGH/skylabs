@@ -26,7 +26,7 @@ namespace ResourceSystem {
     file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
 
     if (!file.is_open()) {
-        throw std::runtime_error("failed to open file!");
+        throw std::runtime_error("Failed to open file!");
     }
 
     const std::streampos fileSize = file.tellg();

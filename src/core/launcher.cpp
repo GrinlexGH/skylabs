@@ -14,14 +14,14 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
         static float lastFrame = 0.0f;
 
         const Uint64 currentFrame = SDL_GetTicks();
-        deltaTime = static_cast<float>(currentFrame) - lastFrame;
+        deltaTime = (static_cast<float>(currentFrame) - lastFrame) / 1000.0f;
         lastFrame = static_cast<float>(currentFrame);
 
         static int frameCount = 0;
         static float elapsedTime = 0.0f;
 
         frameCount++;
-        elapsedTime += deltaTime / 1000.0f;
+        elapsedTime += deltaTime;
 
         if (elapsedTime >= 1.0f) {
             const float fps = static_cast<float>(frameCount) / elapsedTime;
@@ -85,6 +85,12 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
                         case SDLK_LSHIFT: {
                             g_camera.MoveFaster();
                         } break;
+                        case SDLK_UP: {
+                            MoveForward();
+                        } break;
+                        case SDLK_DOWN: {
+                            MoveBackward();
+                        } break;
                         default:
                             break;
                     }
@@ -102,8 +108,23 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
             }
         }
 
+        const bool* keyboardState = SDL_GetKeyboardState(nullptr);
+
+        if (keyboardState[SDL_SCANCODE_W]) {
+            g_camera.ProcessKeyboard(FORWARD, deltaTime);
+        }
+        if (keyboardState[SDL_SCANCODE_A]) {
+            g_camera.ProcessKeyboard(LEFT, deltaTime);
+        }
+        if (keyboardState[SDL_SCANCODE_S]) {
+            g_camera.ProcessKeyboard(BACKWARD, deltaTime);
+        }
+        if (keyboardState[SDL_SCANCODE_D]) {
+            g_camera.ProcessKeyboard(RIGHT, deltaTime);
+        }
+
         if (!minimized) {
-            renderer->Draw(g_camera.GetViewMatrix());
+            renderer->Draw(g_camera.GetViewMatrix(), deltaTime);
         }
     }
 }

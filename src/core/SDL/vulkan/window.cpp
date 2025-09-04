@@ -28,7 +28,7 @@ CWindow& CWindow::operator=(CWindow&& rhs) noexcept {
 }
 
 auto CWindow::GetRequiredInstanceExtensions() const -> std::vector<const char*> {
-    return Vulkan::GetInstanceExtensions();
+    return GetInstanceExtensions();
 }
 
 auto CWindow::IsQueueFamilyPresentSupport(
@@ -36,7 +36,7 @@ auto CWindow::IsQueueFamilyPresentSupport(
     const vk::PhysicalDevice& physicalDevice,
     const uint32_t index
 ) const -> bool {
-    return Vulkan::GetPresentationSupport(instance, physicalDevice, index);
+    return GetPresentationSupport(instance, physicalDevice, index);
 }
 
 auto CWindow::CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR {
@@ -45,7 +45,7 @@ auto CWindow::CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKH
 
 auto CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void {
     Vulkan::DestroySurface(instance, surface);
-    surface = VK_NULL_HANDLE;
+    surface = nullptr;
 }
 
 auto CWindow::GetDrawableSize(int& w, int& h) const -> void {

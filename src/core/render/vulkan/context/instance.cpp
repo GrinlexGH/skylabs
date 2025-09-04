@@ -38,6 +38,8 @@ CInstance::CInstance(
     const std::unordered_map<const char*, bool>& extensions,
     const std::vector<const char*>& layers
 ) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.init();
+
     if (m_context.getDispatcher()->vkEnumerateInstanceVersion) {
         m_apiVersion = m_context.enumerateInstanceVersion();
     }
@@ -137,13 +139,14 @@ CInstance::CInstance(
     //====================
     vk::InstanceCreateInfo createInfo;
     createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = static_cast<std::uint32_t>(m_enabledExtensions.size());
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(m_enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
-    createInfo.enabledLayerCount = static_cast<std::uint32_t>(m_enabledLayers.size());
+    createInfo.enabledLayerCount = static_cast<uint32_t>(m_enabledLayers.size());
     createInfo.ppEnabledLayerNames = m_enabledLayers.data();
     createInfo.pNext = pNext;
 
     m_handle = m_context.createInstance(createInfo);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
     //====================
 #ifdef DEBUG

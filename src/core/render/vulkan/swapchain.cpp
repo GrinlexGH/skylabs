@@ -76,7 +76,7 @@ auto CSwapchain::CreateSwapchain(
 
     if (device.GetGraphicsQueue().m_familyIndex != device.GetPresentQueue().m_familyIndex) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        createInfo.queueFamilyIndexCount = static_cast<std::uint32_t>(queueFamilyIndices.size());
+        createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
         createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
     } else {
         createInfo.imageSharingMode = vk::SharingMode::eExclusive;
@@ -166,8 +166,8 @@ auto CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilit
     m_context->GetWindow()->GetDrawableSize(width, height);
 
     vk::Extent2D actualExtent = {
-        static_cast<std::uint32_t>(width),
-        static_cast<std::uint32_t>(height)
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height)
     };
 
     actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
