@@ -22,7 +22,5 @@ private:
     vk::raii::CommandBuffers m_commandBuffer = nullptr;
     vk::raii::Fence m_fence = nullptr;
     vk::raii::Semaphore m_imageAvailableSemaphore = nullptr;
-
-    const CContext* m_context;
 };
 }

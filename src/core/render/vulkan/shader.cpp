@@ -3,7 +3,7 @@
 #include "resource_system.hpp"
 
 namespace Vulkan {
-CShader::CShader(const CContext* context, Type type, const char* name) : m_type(type), m_context(context) {
+CShader::CShader(const CContext* context, Type type, const char* name) : m_type(type){
     vk::ShaderModuleCreateInfo createInfo {};
 
     const std::vector<char> vertexShaderSource = ResourceSystem::LoadShader(name);
@@ -11,7 +11,7 @@ CShader::CShader(const CContext* context, Type type, const char* name) : m_type(
     createInfo.codeSize = vertexShaderSource.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(vertexShaderSource.data());
 
-    m_handle = vk::raii::ShaderModule(context->GetDevice().GetHandle(), createInfo);
+    m_handle = vk::raii::ShaderModule { context->GetDevice().GetHandle(), createInfo };
 
     m_shaderCreateInfo.stage = ToVkStage(type);
     m_shaderCreateInfo.module = m_handle;
