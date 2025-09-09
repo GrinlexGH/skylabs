@@ -39,7 +39,5 @@ private:
     vk::raii::ShaderModule m_handle = nullptr;
     vk::PipelineShaderStageCreateInfo m_shaderCreateInfo;
     Type m_type;
-
-    const CContext* m_context;
 };
 }
