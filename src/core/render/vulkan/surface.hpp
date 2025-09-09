@@ -16,10 +16,10 @@ public:
     [[nodiscard]] auto GetHandle() const -> vk::SurfaceKHR { return m_handle; }
 
 private:
+    auto Destroy() -> void;
+
     vk::SurfaceKHR m_handle = nullptr;
 
     const CContext* m_context;
-
-    auto Destroy() -> void;
 };
 }
