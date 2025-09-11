@@ -52,7 +52,7 @@ auto CSwapchain::CreateSwapchain(
 
     //====================
     const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
-    createInfo.minImageCount = m_imageCount = std::clamp(
+    createInfo.minImageCount = std::clamp(
         imageCount,
         surfaceCapabilities.minImageCount,
         surfaceCapabilities.maxImageCount ? surfaceCapabilities.maxImageCount : std::numeric_limits<std::uint32_t>::max()
@@ -112,8 +112,7 @@ auto CSwapchain::CreateImages() -> void {
     const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
 
     m_images = m_handle.getImages();
-    m_imageCount = static_cast<std::uint32_t>(m_images.size());
-    m_imageViews.reserve(m_imageCount);
+    m_imageViews.reserve(m_images.size());
 
     for (const auto& image : m_images) {
         vk::ImageViewCreateInfo imageViewInfo {};
@@ -132,6 +131,8 @@ auto CSwapchain::CreateImages() -> void {
 
         m_imageViews.emplace_back(deviceHandle.createImageView(imageViewInfo));
     }
+
+    assert(m_images.size() == m_imageViews.size());
 }
 
 auto CSwapchain::DestroyImages() -> void {
@@ -139,7 +140,7 @@ auto CSwapchain::DestroyImages() -> void {
 }
 
 auto CSwapchain::Recreate() -> void {
-    Recreate(m_associatedSurface, m_imageCount, m_presentMode);
+    Recreate(m_associatedSurface, GetImageCount(), m_presentMode);
 }
 
 auto CSwapchain::Recreate(

@@ -22,12 +22,12 @@ public:
 
     [[nodiscard]] auto GetSurfaceFormat() const -> vk::SurfaceFormatKHR { return m_surfaceFormat; }
     [[nodiscard]] auto GetExtent() const -> vk::Extent2D { return m_extent; }
-    [[nodiscard]] auto GetImageCount() const -> std::uint32_t { return m_imageCount; }
     [[nodiscard]] auto GetPresentMode() const -> vk::PresentModeKHR { return m_presentMode; }
     [[nodiscard]] auto GetSurface() const -> vk::SurfaceKHR { return m_associatedSurface; }
 
     [[nodiscard]] auto GetImages() const -> const std::vector<vk::Image>& { return m_images; }
     [[nodiscard]] auto GetImageViews() const -> const std::vector<vk::raii::ImageView>& { return m_imageViews; }
+    [[nodiscard]] auto GetImageCount() const -> std::uint32_t { assert(m_images.size() == m_imageViews.size()); return m_images.size(); }
 
     auto Recreate() -> void;
     auto Recreate(const vk::SurfaceKHR& surface, std::uint32_t imageCount, vk::PresentModeKHR presentMode) -> void;
@@ -48,7 +48,6 @@ private:
 
     vk::SurfaceFormatKHR m_surfaceFormat;
     vk::Extent2D m_extent;
-    std::uint32_t m_imageCount;
     vk::PresentModeKHR m_presentMode;
     vk::SurfaceKHR m_associatedSurface;
 
