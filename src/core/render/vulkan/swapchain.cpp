@@ -48,23 +48,23 @@ auto CSwapchain::CreateSwapchain(
     //====================
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.pNext = nullptr;
-    createInfo.surface = m_info.m_associatedSurface = surface;
+    createInfo.surface = m_associatedSurface = surface;
 
     //====================
     const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
-    createInfo.minImageCount = m_info.m_imageCount = std::clamp(
+    createInfo.minImageCount = m_imageCount = std::clamp(
         imageCount,
         surfaceCapabilities.minImageCount,
         surfaceCapabilities.maxImageCount ? surfaceCapabilities.maxImageCount : std::numeric_limits<std::uint32_t>::max()
     );
 
     //====================
-    m_info.m_surfaceFormat = ChooseSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
-    createInfo.imageFormat = m_info.m_surfaceFormat.format;
-    createInfo.imageColorSpace = m_info.m_surfaceFormat.colorSpace;
+    m_surfaceFormat = ChooseSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
+    createInfo.imageFormat = m_surfaceFormat.format;
+    createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
 
-    m_info.m_extent = ChooseSurfaceExtent(surfaceCapabilities);
-    createInfo.imageExtent = m_info.m_extent;
+    m_extent = ChooseSurfaceExtent(surfaceCapabilities);
+    createInfo.imageExtent = m_extent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
@@ -98,7 +98,7 @@ auto CSwapchain::CreateSwapchain(
         presentMode = presentModes[0];
     }
 
-    createInfo.presentMode = m_info.m_presentMode = presentMode; // VSync
+    createInfo.presentMode = m_presentMode = presentMode; // VSync
 
     //====================
     createInfo.clipped = vk::True;
@@ -112,14 +112,14 @@ auto CSwapchain::CreateImages() -> void {
     const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
 
     m_images = m_handle.getImages();
-    m_info.m_imageCount = static_cast<std::uint32_t>(m_images.size());
-    m_imageViews.reserve(m_info.m_imageCount);
+    m_imageCount = static_cast<std::uint32_t>(m_images.size());
+    m_imageViews.reserve(m_imageCount);
 
     for (const auto& image : m_images) {
         vk::ImageViewCreateInfo imageViewInfo {};
         imageViewInfo.image = image;
         imageViewInfo.viewType = vk::ImageViewType::e2D;
-        imageViewInfo.format = m_info.m_surfaceFormat.format;
+        imageViewInfo.format = m_surfaceFormat.format;
         imageViewInfo.components.r = vk::ComponentSwizzle::eIdentity;
         imageViewInfo.components.g = vk::ComponentSwizzle::eIdentity;
         imageViewInfo.components.b = vk::ComponentSwizzle::eIdentity;
@@ -139,7 +139,7 @@ auto CSwapchain::DestroyImages() -> void {
 }
 
 auto CSwapchain::Recreate() -> void {
-    Recreate(m_info.m_associatedSurface, m_info.m_imageCount, m_info.m_presentMode);
+    Recreate(m_associatedSurface, m_imageCount, m_presentMode);
 }
 
 auto CSwapchain::Recreate(

@@ -88,11 +88,9 @@ auto CreateFrameBuffers(
     const vk::raii::RenderPass& renderPass,
     const vk::raii::ImageView& depthImageView
 ) -> std::vector<vk::raii::Framebuffer> {
-    const Vulkan::CSwapchain::CInfo& swapchainInfo = swapchain.GetInfo();
-
     std::vector<vk::raii::Framebuffer> out;
 
-    out.reserve(swapchainInfo.m_imageCount);
+    out.reserve(swapchain.GetImageCount());
     for (const auto& imageView : swapchain.GetImageViews()) {
         std::array attachments = {
             *imageView,
@@ -103,8 +101,8 @@ auto CreateFrameBuffers(
         framebufferInfo.renderPass = renderPass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = swapchainInfo.m_extent.width;
-        framebufferInfo.height = swapchainInfo.m_extent.height;
+        framebufferInfo.width = swapchain.GetExtent().width;
+        framebufferInfo.height = swapchain.GetExtent().height;
         framebufferInfo.layers = 1;
 
         out.emplace_back(device, framebufferInfo);
@@ -253,7 +251,7 @@ void CreateImage(
 
     texture = device.createImage(imageInfo);
 
-    vk::MemoryRequirements memRequirements = texture.getMemoryRequirements();
+    const vk::MemoryRequirements memRequirements = texture.getMemoryRequirements();
 
     vk::MemoryAllocateInfo allocInfo {};
     allocInfo.allocationSize = memRequirements.size;
@@ -383,7 +381,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         return CFrameData(&m_context);
     });
 
-    const std::uint32_t imageCount = m_swapchain.GetInfo().m_imageCount;
+    const std::uint32_t imageCount = m_swapchain.GetImageCount();
     m_renderFinishedSemaphores.reserve(imageCount);
     std::generate_n(std::back_inserter(m_renderFinishedSemaphores), imageCount, [&] {
         return vk::raii::Semaphore { m_context.GetDevice().GetHandle(), vk::SemaphoreCreateInfo {} };
@@ -395,8 +393,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region Depth Stencil
     //region Format
     auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
-        for (vk::Format format : candidates) {
-            vk::FormatProperties props = m_context.GetPhysicalDevice()->GetHandle().getFormatProperties(format);
+        for (const vk::Format format : candidates) {
+            const vk::FormatProperties props = m_context.GetPhysicalDevice()->GetHandle().getFormatProperties(format);
 
             if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
                 return format;
@@ -421,8 +419,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     CreateImage(
         m_context.GetPhysicalDevice()->GetHandle(),
         m_context.GetDevice().GetHandle(),
-        m_swapchain.GetInfo().m_extent.width,
-        m_swapchain.GetInfo().m_extent.height,
+        m_swapchain.GetExtent().width,
+        m_swapchain.GetExtent().height,
         findDepthFormat(),
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -460,7 +458,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     // Этот аттачмент будем использовать как colorAttachment,
     // то есть шейдер в него будет писать
     vk::AttachmentDescription colorAttachment {};
-    colorAttachment.format = m_swapchain.GetInfo().m_surfaceFormat.format;
+    colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
     colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -925,7 +923,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain.GetHandle();
 
 
-    UpdateUniformBuffer(m_swapchain.GetInfo().m_extent, m_uniformBuffersMapped, m_frameIndex, view, deltaTime);
+    UpdateUniformBuffer(m_swapchain.GetExtent(), m_uniformBuffersMapped, m_frameIndex, view, deltaTime);
 
     // #region ACQUIRE_IMAGE
     vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -963,7 +961,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     renderPassInfo.renderPass = m_renderPass;
     renderPassInfo.framebuffer = m_frameBuffers[imageIndex];
     renderPassInfo.renderArea.offset = { { 0, 0 } };
-    renderPassInfo.renderArea.extent = m_swapchain.GetInfo().m_extent;
+    renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
 
     std::array<vk::ClearValue, 2> clearValues{};
     clearValues[0].color = vk::ClearColorValue { 0.2f, 0.3f, 0.6f, 1.0f };
@@ -980,15 +978,15 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     vk::Viewport viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapchain.GetInfo().m_extent.width);
-    viewport.height = static_cast<float>(m_swapchain.GetInfo().m_extent.height);
+    viewport.width = static_cast<float>(m_swapchain.GetExtent().width);
+    viewport.height = static_cast<float>(m_swapchain.GetExtent().height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     frameData.GetCommandBuffers()[0].setViewport(0, viewport);
 
     vk::Rect2D scissor {};
     scissor.offset = { { 0, 0 } };
-    scissor.extent = m_swapchain.GetInfo().m_extent;
+    scissor.extent = m_swapchain.GetExtent();
     frameData.GetCommandBuffers()[0].setScissor(0, scissor);
 
     vk::Buffer vertexBuffers[] = { m_vertexBuffer };

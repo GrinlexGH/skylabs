@@ -18,17 +18,14 @@ public:
     CSwapchain& operator=(CSwapchain&&) noexcept = default;
     ~CSwapchain() = default;
 
-    struct CInfo
-    {
-        vk::SurfaceFormatKHR m_surfaceFormat;
-        vk::Extent2D m_extent;
-        std::uint32_t m_imageCount;
-        vk::PresentModeKHR m_presentMode;
-        vk::SurfaceKHR m_associatedSurface;
-    };
-
     [[nodiscard]] auto GetHandle() const -> const vk::raii::SwapchainKHR& { return m_handle; }
-    [[nodiscard]] auto GetInfo() const -> const CInfo& { return m_info; }
+
+    [[nodiscard]] auto GetSurfaceFormat() const -> vk::SurfaceFormatKHR { return m_surfaceFormat; }
+    [[nodiscard]] auto GetExtent() const -> vk::Extent2D { return m_extent; }
+    [[nodiscard]] auto GetImageCount() const -> std::uint32_t { return m_imageCount; }
+    [[nodiscard]] auto GetPresentMode() const -> vk::PresentModeKHR { return m_presentMode; }
+    [[nodiscard]] auto GetSurface() const -> vk::SurfaceKHR { return m_associatedSurface; }
+
     [[nodiscard]] auto GetImages() const -> const std::vector<vk::Image>& { return m_images; }
     [[nodiscard]] auto GetImageViews() const -> const std::vector<vk::raii::ImageView>& { return m_imageViews; }
 
@@ -49,7 +46,12 @@ private:
 
     vk::raii::SwapchainKHR m_handle = nullptr;
 
-    CInfo m_info;
+    vk::SurfaceFormatKHR m_surfaceFormat;
+    vk::Extent2D m_extent;
+    std::uint32_t m_imageCount;
+    vk::PresentModeKHR m_presentMode;
+    vk::SurfaceKHR m_associatedSurface;
+
     std::vector<vk::Image> m_images;
     std::vector<vk::raii::ImageView> m_imageViews;
 
