@@ -25,6 +25,11 @@ public:
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
 
     auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
+    auto CopyBufferToImage(
+        const vk::raii::CommandBuffer& commandBuffer,
+        const vk::raii::Buffer& buffer,
+        vk::Extent3D extent
+    ) -> void;
 
 private:
     vk::raii::Image m_handle = nullptr;

@@ -141,4 +141,26 @@ auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::
 
     m_layout = newLayout;
 }
+
+auto CImage::CopyBufferToImage(
+    const vk::raii::CommandBuffer& commandBuffer,
+    const vk::raii::Buffer& buffer,
+    vk::Extent3D extent
+) -> void {
+    vk::BufferImageCopy region {};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+
+    region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+
+    region.imageOffset = vk::Offset3D {0, 0, 0};
+    region.imageExtent = extent;
+
+    commandBuffer.copyBufferToImage(buffer, m_handle, vk::ImageLayout::eTransferDstOptimal, region);
+}
+
 }

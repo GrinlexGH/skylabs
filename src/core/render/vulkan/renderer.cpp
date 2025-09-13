@@ -222,34 +222,6 @@ void CopyBuffer(
     EndSingleTimeCommands(device, commandBuffer);
 }
 
-void CopyBufferToImage(
-    const Vulkan::CDevice& device,
-    const vk::CommandPool& commandPool,
-    const vk::raii::Buffer& buffer,
-    vk::Image image,
-    uint32_t width,
-    uint32_t height
-) {
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(device.GetHandle(), commandPool);
-
-    vk::BufferImageCopy region {};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = vk::Offset3D {0, 0, 0};
-    region.imageExtent = vk::Extent3D { width, height, 1 };
-
-    commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, region);
-
-    EndSingleTimeCommands(device, commandBuffer);
-}
-
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDemensions,
     std::vector<void*>& uniformBuffersMapped,
@@ -465,20 +437,11 @@ CRenderer::CRenderer(const IWindow* const window) {
     });
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(m_context.GetDevice().GetHandle(), commandPool);
+
     m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-    EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
-
-    CopyBufferToImage(
-        m_context.GetDevice(),
-        commandPool,
-        stagingBuffer,
-        m_texture.GetHandle(),
-        static_cast<uint32_t>(image->w),
-        static_cast<uint32_t>(image->h)
-    );
-
-    commandBuffer = BeginSingleTimeCommands(m_context.GetDevice().GetHandle(), commandPool);
+    m_texture.CopyBufferToImage(commandBuffer, stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
     m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+
     EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
 
 
