@@ -24,9 +24,15 @@ public:
     [[nodiscard]] auto GetHandle() const -> const vk::raii::Image& { return m_handle; }
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
 
+    auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
+
 private:
     vk::raii::Image m_handle = nullptr;
     vk::raii::DeviceMemory m_memory = nullptr;
     vk::raii::ImageView m_view = nullptr;
+
+    vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;
+
+    const CContext* m_context;
 };
 }
