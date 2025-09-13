@@ -4,6 +4,7 @@
 #include "frame_data.hpp"
 #include "surface.hpp"
 #include "swapchain.hpp"
+#include "image.hpp"
 
 #include <glm/glm.hpp>
 
@@ -50,9 +51,7 @@ private:
 
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
-    vk::raii::Image m_depthBuffer { nullptr };
-    vk::raii::DeviceMemory m_depthBufferMemory { nullptr };
-    vk::raii::ImageView m_depthBufferView { nullptr };
+    CImage m_depthBuffer { nullptr };
 
     vk::raii::Buffer m_vertexBuffer { nullptr };
     vk::raii::DeviceMemory m_vertexBufferMemory { nullptr };
@@ -63,9 +62,7 @@ private:
     std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
     std::vector<void*> m_uniformBuffersMapped;
 
-    vk::raii::Image m_texture { nullptr };
-    vk::raii::DeviceMemory m_textureMemory { nullptr };
-    vk::raii::ImageView m_textureView { nullptr };
+    CImage m_texture { nullptr };
     vk::raii::Sampler m_textureSampler { nullptr };
 
     std::uint32_t m_frameIndex = 0;
