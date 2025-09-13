@@ -31,6 +31,8 @@ set(SOURCES
     render/vulkan/frame_data.cpp
     render/vulkan/shader.hpp
     render/vulkan/shader.cpp
+    render/vulkan/image.hpp
+    render/vulkan/image.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan/vulkan.hpp

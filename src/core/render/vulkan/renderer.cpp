@@ -222,49 +222,6 @@ void CopyBuffer(
     EndSingleTimeCommands(device, commandBuffer);
 }
 
-void CreateImage(
-    const vk::raii::PhysicalDevice& physicalDevice,
-    const vk::raii::Device& device,
-    std::uint32_t width,
-    std::uint32_t height,
-    vk::Format format,
-    vk::ImageTiling tiling,
-    vk::ImageUsageFlags usage,
-    vk::MemoryPropertyFlags properties,
-    vk::raii::Image& texture,
-    vk::raii::DeviceMemory& textureMemory
-) {
-    vk::ImageCreateInfo imageInfo{};
-    imageInfo.imageType = vk::ImageType::e2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
-    imageInfo.initialLayout = vk::ImageLayout::eUndefined;
-    imageInfo.usage = usage;
-    imageInfo.sharingMode = vk::SharingMode::eExclusive;
-    imageInfo.samples = vk::SampleCountFlagBits::e1;
-    imageInfo.flags = {};
-
-    texture = device.createImage(imageInfo);
-
-    const vk::MemoryRequirements memRequirements = texture.getMemoryRequirements();
-
-    vk::MemoryAllocateInfo allocInfo {};
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(
-        physicalDevice,
-        memRequirements.memoryTypeBits,
-        properties
-    );
-
-    textureMemory = device.allocateMemory(allocInfo);
-    texture.bindMemory(textureMemory, 0);
-}
-
 void CopyBufferToImage(
     const Vulkan::CDevice& device,
     const vk::CommandPool& commandPool,
@@ -416,29 +373,15 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
     //endregion Format
 
-    CreateImage(
-        m_context.GetPhysicalDevice()->GetHandle(),
-        m_context.GetDevice().GetHandle(),
-        m_swapchain.GetExtent().width,
-        m_swapchain.GetExtent().height,
+    m_depthBuffer = CImage {
+        &m_context,
+        { m_swapchain.GetExtent().width, m_swapchain.GetExtent().height, 1 },
         findDepthFormat(),
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        m_depthBuffer,
-        m_depthBufferMemory
-    );
-
-    vk::ImageViewCreateInfo depthBufferViewInfo {};
-    depthBufferViewInfo.image = m_depthBuffer;
-    depthBufferViewInfo.viewType = vk::ImageViewType::e2D;
-    depthBufferViewInfo.format = findDepthFormat();
-    depthBufferViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-    depthBufferViewInfo.subresourceRange.baseMipLevel = 0;
-    depthBufferViewInfo.subresourceRange.levelCount = 1;
-    depthBufferViewInfo.subresourceRange.baseArrayLayer = 0;
-    depthBufferViewInfo.subresourceRange.layerCount = 1;
-    m_depthBufferView = vk::raii::ImageView { m_context.GetDevice().GetHandle(), depthBufferViewInfo };
+        vk::ImageAspectFlagBits::eDepth,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    };
 
     vk::AttachmentDescription depthAttachment {};
     depthAttachment.format = findDepthFormat();
@@ -518,7 +461,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region TEXTURE
     (void)(0);
     //region LOAD TEXTURE
-    SDL_Surface* imageRaw = IMG_Load("texture.jpg");
+    SDL_Surface* imageRaw = IMG_Load("assets/texture.jpg");
     if (!imageRaw) {
         throw std::runtime_error("failed to load texture image!");
     }
@@ -550,18 +493,15 @@ CRenderer::CRenderer(const IWindow* const window) {
     //endregion LOAD TEXTURE
 
     //region COPY TO IMAGE
-    CreateImage(
-        m_context.GetPhysicalDevice()->GetHandle(),
-        m_context.GetDevice().GetHandle(),
-        image->w,
-        image->h,
+    m_texture = CImage {
+        &m_context,
+        { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        m_texture,
-        m_textureMemory
-    );
+        vk::ImageAspectFlagBits::eColor,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    };
 
     auto m_commandPool = m_context.GetDevice().GetHandle().createCommandPool({
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
@@ -571,7 +511,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     TransitionImageLayout(
         m_context.GetDevice(),
         m_commandPool,
-        m_texture,
+        m_texture.GetHandle(),
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eTransferDstOptimal
@@ -580,14 +520,14 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context.GetDevice(),
         m_commandPool,
         stagingBuffer,
-        m_texture,
+        m_texture.GetHandle(),
         static_cast<uint32_t>(image->w),
         static_cast<uint32_t>(image->h)
     );
     TransitionImageLayout(
         m_context.GetDevice(),
         m_commandPool,
-        m_texture,
+        m_texture.GetHandle(),
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageLayout::eTransferDstOptimal,
         vk::ImageLayout::eShaderReadOnlyOptimal
@@ -597,19 +537,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     SDL_DestroySurface(image);
     image = nullptr;
     //endregion COPY TO IMAGE
-
-    //region IMAGE VIEW
-    vk::ImageViewCreateInfo textureViewInfo {};
-    textureViewInfo.image = m_texture;
-    textureViewInfo.viewType = vk::ImageViewType::e2D;
-    textureViewInfo.format = vk::Format::eR8G8B8A8Srgb;
-    textureViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-    textureViewInfo.subresourceRange.baseMipLevel = 0;
-    textureViewInfo.subresourceRange.levelCount = 1;
-    textureViewInfo.subresourceRange.baseArrayLayer = 0;
-    textureViewInfo.subresourceRange.layerCount = 1;
-    m_textureView = vk::raii::ImageView { m_context.GetDevice().GetHandle(), textureViewInfo };
-    //endregion IMAGE VIEW
 
     //endregion TEXTURE
 
@@ -716,7 +643,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
         vk::DescriptorImageInfo imageInfo {};
         imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_textureView;
+        imageInfo.imageView = m_texture.GetView();
         imageInfo.sampler = m_textureSampler;
 
         std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
@@ -827,7 +754,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_pipeline = m_context.GetDevice().GetHandle().createGraphicsPipeline(nullptr, pipelineInfo);
     //endregion PIPELINE
 
-    m_frameBuffers = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPass, m_depthBufferView);
+    m_frameBuffers = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPass, m_depthBuffer.GetView());
 
     //region VERTEX BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
@@ -942,7 +869,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     deviceHandle.resetFences({ frameData.GetFence() });
 
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
-        Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBufferView, m_swapchain, m_frameBuffers);
+        Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBuffer.GetView(), m_swapchain, m_frameBuffers);
         return;
     }
     if (result != vk::Result::eSuccess) {
@@ -1039,7 +966,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     result = m_context.GetDevice().GetPresentQueue().m_handle.presentKHR(presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR) {
-        Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBufferView, m_swapchain, m_frameBuffers);
+        Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBuffer.GetView(), m_swapchain, m_frameBuffers);
         return;
     }
     // #endregion PRESENT
