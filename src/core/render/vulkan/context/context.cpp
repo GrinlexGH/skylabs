@@ -126,6 +126,11 @@ auto CContext::CreateLogicalDevice() -> void {
         REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
     }
 
+    if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, synchronization2)) {
+        deviceExtensions[vk::KHRSynchronization2ExtensionName] = true;
+        REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceSynchronization2Features, synchronization2);
+    }
+
     m_device = CDevice {
         m_instance,
         *m_selectedPhysicalDevice,

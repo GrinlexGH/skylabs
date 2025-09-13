@@ -250,50 +250,6 @@ void CopyBufferToImage(
     EndSingleTimeCommands(device, commandBuffer);
 }
 
-void TransitionImageLayout(
-    const Vulkan::CDevice& device,
-    const vk::CommandPool& commandPool,
-    vk::Image image,
-    vk::Format /*format*/,
-    vk::ImageLayout oldLayout,
-    vk::ImageLayout newLayout
-) {
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(device.GetHandle(), commandPool);
-
-    vk::ImageMemoryBarrier barrier {};   // todo: sync2
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
-    barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    vk::PipelineStageFlags sourceStage;
-    vk::PipelineStageFlags destinationStage;
-
-    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
-        barrier.srcAccessMask = {};
-        barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-        sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
-        destinationStage = vk::PipelineStageFlagBits::eTransfer;
-    } else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-        sourceStage = vk::PipelineStageFlagBits::eTransfer;
-        destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-    } else {
-        throw std::invalid_argument("unsupported layout transition!");
-    }
-    commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, {}, barrier);
-
-    EndSingleTimeCommands(device, commandBuffer);
-}
-
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDemensions,
     std::vector<void*>& uniformBuffersMapped,
@@ -503,35 +459,29 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::MemoryPropertyFlagBits::eDeviceLocal
     };
 
-    auto m_commandPool = m_context.GetDevice().GetHandle().createCommandPool({
+    auto commandPool = m_context.GetDevice().GetHandle().createCommandPool({
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             m_context.GetDevice().GetGraphicsQueue().m_familyIndex
     });
 
-    TransitionImageLayout(
-        m_context.GetDevice(),
-        m_commandPool,
-        m_texture.GetHandle(),
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal
-    );
+    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(m_context.GetDevice().GetHandle(), commandPool);
+    m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
+    EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
+
     CopyBufferToImage(
         m_context.GetDevice(),
-        m_commandPool,
+        commandPool,
         stagingBuffer,
         m_texture.GetHandle(),
         static_cast<uint32_t>(image->w),
         static_cast<uint32_t>(image->h)
     );
-    TransitionImageLayout(
-        m_context.GetDevice(),
-        m_commandPool,
-        m_texture.GetHandle(),
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageLayout::eTransferDstOptimal,
-        vk::ImageLayout::eShaderReadOnlyOptimal
-    );
+
+    commandBuffer = BeginSingleTimeCommands(m_context.GetDevice().GetHandle(), commandPool);
+    m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+    EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
+
+
     stagingBuffer.clear();
     stagingBufferMemory.clear();
     SDL_DestroySurface(image);
@@ -785,7 +735,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     CopyBuffer(
         m_context.GetDevice(),
-        m_commandPool,
+        commandPool,
         stagingBuffer,
         m_vertexBuffer,
         vertexBufferSize
@@ -824,7 +774,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     CopyBuffer(
         m_context.GetDevice(),
-        m_commandPool,
+        commandPool,
         stagingBuffer,
         m_indexBuffer,
         indexBufferSize
