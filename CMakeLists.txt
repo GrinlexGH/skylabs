@@ -23,19 +23,19 @@ set(SKYLABS_ANDROID_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android)
 set(SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android/app/src/main/assets)
 
 # Build and install third party shared libraries
-macro(set_from_env_or_default VAR ENV_NAME DEFAULT)
+macro(set_from_env_or_default VAR DEFAULT)
     if(NOT ${VAR})
-        if(DEFINED ENV{${ENV_NAME}})
-            set(${VAR} $ENV{${ENV_NAME}})
+        if(DEFINED ENV{${VAR}})
+            set(${VAR} $ENV{${VAR}})
         else()
             set(${VAR} ${DEFAULT})
         endif()
     endif()
 endmacro()
 
-set_from_env_or_default(DEPS_TARGET_SYSTEM DEPS_TARGET_SYSTEM ${CMAKE_SYSTEM_NAME})
-set_from_env_or_default(DEPS_TARGET_ARCH DEPS_TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
-set_from_env_or_default(DEPS_SUBFOLDER DEPS_SUBFOLDER "")
+set_from_env_or_default(DEPS_TARGET_SYSTEM ${CMAKE_SYSTEM_NAME})
+set_from_env_or_default(DEPS_TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+set_from_env_or_default(DEPS_SUBFOLDER "")
 
 set(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/libs/bin/${DEPS_TARGET_SYSTEM}-${DEPS_TARGET_ARCH}/${DEPS_SUBFOLDER}")
 
