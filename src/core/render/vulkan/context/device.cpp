@@ -27,8 +27,8 @@ auto ThrowIfMissing(
         { "graphics", graphicsIndex.has_value() },
         { "present", presentIndex.has_value() },
         { "transfer", transferIndex.has_value() },
-        { "compute", computeIndex.has_value()} }
-    };
+        { "compute", computeIndex.has_value() }
+    }};
 
     std::stringstream error;
     bool first = true;
@@ -115,7 +115,7 @@ auto GetQueueFamilies(
 }
 
 auto EnableExtension(
-    const std::vector<vk::ExtensionProperties>& availableExtensions,
+    const Vulkan::CPhysicalDevice& physicalDevice,
     const char* name,
     std::vector<const char*>& enabledExtensions
 ) -> bool {
@@ -123,7 +123,7 @@ auto EnableExtension(
         return true;
     }
 
-    if (HasExtension(availableExtensions, name)) {
+    if (physicalDevice.IsExtensionSupported(name)) {
         enabledExtensions.emplace_back(name);
         return true;
     }
@@ -133,8 +133,6 @@ auto EnableExtension(
 }
 
 namespace Vulkan {
-CDevice::CDevice(std::nullptr_t) {}
-
 CDevice::CDevice(
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice,
@@ -163,13 +161,12 @@ CDevice::CDevice(
     }
 
     //====================
-    std::vector<const char*> enabledExtensions;
-    enabledExtensions.reserve(extensions.size());
+    m_enabledExtensions.reserve(extensions.size());
     std::vector<const char*> missingExtensions;
     missingExtensions.reserve(extensions.size());
 
     for (const auto& [name, required] : extensions) {
-        if (!EnableExtension(physicalDevice.GetExtensions(), name, enabledExtensions) && required) {
+        if (!EnableExtension(physicalDevice, name, m_enabledExtensions) && required) {
             missingExtensions.push_back(name);
         }
     }
@@ -199,11 +196,12 @@ CDevice::CDevice(
     createInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext()
         ? nullptr
         : &physicalDevice.GetRequiredFeatures();
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(m_enabledExtensions.size());
+    createInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
     createInfo.pNext = pNext;
 
     m_handle = physicalDevice.GetHandle().createDevice(createInfo);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
     m_graphicsQueue = { .m_handle = m_handle.getQueue(graphicsFamily, 0), .m_familyIndex = graphicsFamily };
     m_presentQueue = { .m_handle = m_handle.getQueue(presentFamily, 0), .m_familyIndex = presentFamily };

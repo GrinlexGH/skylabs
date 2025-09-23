@@ -2,6 +2,7 @@
 #include "device.hpp"
 #include "instance.hpp"
 #include "physical_device.hpp"
+#include "allocator.hpp"
 
 namespace Vulkan {
 //====================
@@ -10,7 +11,7 @@ namespace Vulkan {
 class CContext
 {
 public:
-    explicit CContext(std::nullptr_t);
+    explicit CContext(std::nullptr_t) {}
     explicit CContext(const IWindow* window);
     CContext(const CContext&) = delete;
     CContext(CContext&&) noexcept = default;
@@ -22,18 +23,21 @@ public:
     [[nodiscard]] auto GetInstance() const -> const CInstance& { return m_instance; }
     [[nodiscard]] auto GetDevice() const -> const CDevice& { return m_device; }
     [[nodiscard]] auto GetPhysicalDevice() const -> const CPhysicalDevice* { return m_selectedPhysicalDevice; }
+    [[nodiscard]] auto GetAllocator() const -> const CAllocator& { return m_allocator; }
 
 private:
     auto CreateInstance() -> void;
     auto SelectPhysicalDevice() -> void;
     auto CreateLogicalDevice() -> void;
+    auto CreateAllocator() -> void;
 
     [[nodiscard]] auto IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool;
     [[nodiscard]] auto GetSuitablePhysicalDevice() -> CPhysicalDevice*;
 
     CInstance m_instance { nullptr };
     CDevice m_device { nullptr };
-    CPhysicalDevice* m_selectedPhysicalDevice;
-    const IWindow* m_window;
+    CPhysicalDevice* m_selectedPhysicalDevice = nullptr;
+    CAllocator m_allocator { nullptr };
+    const IWindow* m_window = nullptr;
 };
 }

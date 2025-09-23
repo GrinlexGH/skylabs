@@ -12,6 +12,8 @@ set(SOURCES
     render/vulkan/window.hpp
     render/vulkan/renderer.hpp
     render/vulkan/renderer.cpp
+    render/vulkan/context/allocator.hpp
+    render/vulkan/context/allocator.cpp
     render/vulkan/context/instance.hpp
     render/vulkan/context/instance.cpp
     render/vulkan/context/extensions.hpp
@@ -25,8 +27,6 @@ set(SOURCES
     render/vulkan/surface.cpp
     render/vulkan/swapchain.hpp
     render/vulkan/swapchain.cpp
-    render/vulkan/allocator.hpp
-    render/vulkan/allocator.cpp
     render/vulkan/frame_data.hpp
     render/vulkan/frame_data.cpp
     render/vulkan/shader.hpp

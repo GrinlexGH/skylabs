@@ -3,22 +3,6 @@
 #include <map>
 
 namespace {
-auto FindMemoryType(
-    const vk::raii::PhysicalDevice& physicalDevice,
-    const std::uint32_t typeFilter,
-    vk::MemoryPropertyFlags properties
-) -> std::uint32_t {
-    const static vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
-
-    for (std::uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type!");
-}
-
 struct TransitionRule
 {
     vk::AccessFlags2KHR m_srcAccessMask;
@@ -65,8 +49,6 @@ CImage::CImage(
     vk::ImageAspectFlags imageAspectFlags,
     vk::MemoryPropertyFlags memoryProperties
 ) : m_context(context) {
-    const vk::raii::Device& deviceHandle = context->GetDevice().GetHandle();
-
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
     imageInfo.extent = extent;
@@ -80,20 +62,11 @@ CImage::CImage(
     imageInfo.samples = vk::SampleCountFlagBits::e1;
     imageInfo.flags = {};
 
-    m_handle = deviceHandle.createImage(imageInfo);
+    vma::AllocationCreateInfo allocInfo{};
+    allocInfo.usage = vma::MemoryUsage::eAuto;
+    allocInfo.requiredFlags = memoryProperties;
 
-    const vk::MemoryRequirements memRequirements = m_handle.getMemoryRequirements();
-
-    vk::MemoryAllocateInfo allocInfo {};
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(
-        context->GetPhysicalDevice()->GetHandle(),
-        memRequirements.memoryTypeBits,
-        memoryProperties
-    );
-
-    m_memory = deviceHandle.allocateMemory(allocInfo);
-    m_handle.bindMemory(m_memory, 0);
+    std::tie(m_handle, m_allocation) = m_context->GetAllocator().GetHandle().createImage(imageInfo, allocInfo);
 
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = m_handle;
@@ -105,7 +78,7 @@ CImage::CImage(
     imageViewInfo.subresourceRange.baseArrayLayer = 0;
     imageViewInfo.subresourceRange.layerCount = 1;
 
-    m_view = deviceHandle.createImageView(imageViewInfo);
+    m_view = context->GetDevice().GetHandle().createImageView(imageViewInfo);
 }
 
 auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void {
@@ -133,7 +106,7 @@ auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
 
-    vk::DependencyInfoKHR dependencyInfo{};
+    vk::DependencyInfoKHR dependencyInfo {};
     dependencyInfo.imageMemoryBarrierCount = 1;
     dependencyInfo.pImageMemoryBarriers = &barrier;
 
@@ -163,4 +136,16 @@ auto CImage::CopyBufferToImage(
     commandBuffer.copyBufferToImage(buffer, m_handle, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
+auto CImage::Destroy() -> void {
+    m_context->GetAllocator().GetHandle().destroyImage(m_handle, m_allocation);
+    m_handle = nullptr;
+    m_allocation = nullptr;
+    m_view.clear();
+    m_layout = vk::ImageLayout::eUndefined;
+    m_context = nullptr;
+}
+
+CImage::~CImage() {
+    if (m_handle && m_allocation) { Destroy(); }
+}
 }

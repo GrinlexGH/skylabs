@@ -8,6 +8,10 @@ CPhysicalDevice::CPhysicalDevice(vk::raii::PhysicalDevice&& physicalDevice) :
     m_queueFamilies(m_handle.getQueueFamilyProperties()),
     m_extensions(m_handle.enumerateDeviceExtensionProperties())
 {
+    for (const auto& extension : m_extensions) {
+        m_availableExtensionsMap.emplace(extension.extensionName, true);
+    }
+
     Log::Info("Found GPU: {}", m_properties.deviceName.data());
 }
 }
