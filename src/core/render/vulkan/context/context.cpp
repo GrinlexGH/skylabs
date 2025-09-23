@@ -22,12 +22,11 @@ auto GetDeviceTypeScore(const vk::PhysicalDeviceType type) -> int {
 }
 
 namespace Vulkan {
-CContext::CContext(std::nullptr_t) {}
-
 CContext::CContext(const IWindow* const window) : m_window(window) {
     CreateInstance();
     SelectPhysicalDevice();
     CreateLogicalDevice();
+    CreateAllocator();
 }
 
 auto CContext::CreateInstance() -> void {
@@ -97,6 +96,7 @@ auto CContext::SelectPhysicalDevice() -> void {
 }
 
 auto CContext::CreateLogicalDevice() -> void {
+    // deviceExtensions[name] -> isRequired
     std::unordered_map<const char*, bool> deviceExtensions {
         // VMA
         { vk::KHRDedicatedAllocationExtensionName, false },
@@ -107,6 +107,7 @@ auto CContext::CreateLogicalDevice() -> void {
         { vk::KHRBufferDeviceAddressExtensionName, false },
         { vk::EXTMemoryPriorityExtensionName, false },
         { vk::AMDDeviceCoherentMemoryExtensionName, false },
+
 #ifdef PLATFORM_WINDOWS
         { vk::KHRExternalMemoryWin32ExtensionName, false },
 #endif
@@ -131,11 +132,20 @@ auto CContext::CreateLogicalDevice() -> void {
         REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceSynchronization2Features, synchronization2);
     }
 
+    if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan12Features, bufferDeviceAddress)) {
+        deviceExtensions[vk::KHRBufferDeviceAddressExtensionName] = true;
+        REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceBufferDeviceAddressFeatures, bufferDeviceAddress);
+    }
+
     m_device = CDevice {
         m_instance,
         *m_selectedPhysicalDevice,
         m_window,
         deviceExtensions
     };
+}
+
+auto CContext::CreateAllocator() -> void {
+    m_allocator = CAllocator { m_instance, m_selectedPhysicalDevice->GetHandle(), m_device };
 }
 }

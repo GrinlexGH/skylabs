@@ -23,7 +23,7 @@ public:
     [[nodiscard]] auto GetExtensions() const -> const std::vector<vk::ExtensionProperties>& { return m_extensions; }
     [[nodiscard]] auto GetQueueFamilies() const -> const std::vector<vk::QueueFamilyProperties>& { return m_queueFamilies; }
 
-    [[nodiscard]] auto IsExtensionSupported(const char* name) const -> bool { return HasExtension(m_extensions, name); }
+    [[nodiscard]] auto IsExtensionSupported(const std::string_view name) const -> bool { return m_availableExtensionsMap.contains(name); }
 
     [[nodiscard]] auto GetRequiredFeatures() const -> const vk::PhysicalDeviceFeatures& { return m_requiredFeatures; }
     [[nodiscard]] auto GetExtensionFeaturePNext() const -> void* { return m_extensionFeaturePNext; }
@@ -55,7 +55,7 @@ public:
     }
 
     template <typename Feature>
-    auto RequestRequiredExtensionFeature(vk::Bool32 Feature::* flag, const char* featureName, const char* flagName) -> void {
+    auto RequestRequiredExtensionFeature(vk::Bool32 Feature::* flag, std::string_view featureName, std::string_view flagName) -> void {
         if (GetExtensionFeatures<Feature>().*flag) {
             AddExtensionFeatures<Feature>().*flag = vk::True;
         } else {
@@ -64,7 +64,7 @@ public:
     }
 
     template <typename Feature>
-    auto RequestOptionalExtensionFeature(vk::Bool32 Feature::* flag, const char* featureName, const char* flagName) -> vk::Bool32 {
+    auto RequestOptionalExtensionFeature(vk::Bool32 Feature::* flag, std::string_view featureName, std::string_view flagName) -> vk::Bool32 {
         const vk::Bool32 supported = GetExtensionFeatures<Feature>().*flag;
         if (supported) {
             AddExtensionFeatures<Feature>().*flag = vk::True;
@@ -75,7 +75,7 @@ public:
         return supported;
     }
 
-    auto RequestRequiredFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, const char* flagName) -> void {
+    auto RequestRequiredFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, std::string_view flagName) -> void {
         if (m_features.*flag) {
             m_requiredFeatures.*flag = vk::True;
         } else {
@@ -83,7 +83,7 @@ public:
         }
     }
 
-    auto RequestOptionalFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, const char* flagName) -> vk::Bool32 {
+    auto RequestOptionalFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, std::string_view flagName) -> vk::Bool32 {
         const vk::Bool32 supported = m_features.*flag;
         if (supported) {
             m_requiredFeatures.*flag = vk::True;
@@ -102,6 +102,8 @@ private:
     vk::PhysicalDeviceFeatures m_features;
     std::vector<vk::QueueFamilyProperties> m_queueFamilies;
     std::vector<vk::ExtensionProperties> m_extensions;
+
+    std::unordered_map<std::string_view, bool> m_availableExtensionsMap;
 
     // Extensions features
     std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures;

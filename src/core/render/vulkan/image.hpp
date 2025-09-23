@@ -18,10 +18,20 @@ public:
     CImage(const CImage&) = delete;
     CImage(CImage&&) noexcept = default;
     CImage& operator=(const CImage&) = delete;
-    CImage& operator=(CImage&&) noexcept = default;
-    ~CImage() = default;
+    CImage& operator=(CImage&& rhs) noexcept {
+        if (this != &rhs) {
+            if (m_handle) { Destroy(); }
+            m_handle = std::exchange(rhs.m_handle, nullptr);
+            m_allocation = std::exchange(rhs.m_allocation, nullptr);
+            m_view = std::exchange(rhs.m_view, nullptr);
+            m_layout = std::exchange(rhs.m_layout, vk::ImageLayout::eUndefined);
+            m_context = std::exchange(rhs.m_context, nullptr);
+        }
+        return *this;
+    }
+    ~CImage();
 
-    [[nodiscard]] auto GetHandle() const -> const vk::raii::Image& { return m_handle; }
+    [[nodiscard]] auto GetHandle() const -> vk::Image { return m_handle; }
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
 
     auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
@@ -32,8 +42,10 @@ public:
     ) -> void;
 
 private:
-    vk::raii::Image m_handle = nullptr;
-    vk::raii::DeviceMemory m_memory = nullptr;
+    auto Destroy() -> void;
+
+    vk::Image m_handle = nullptr;
+    vma::Allocation m_allocation = nullptr;
     vk::raii::ImageView m_view = nullptr;
 
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;

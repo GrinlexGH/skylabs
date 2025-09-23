@@ -21,6 +21,7 @@ public:
     CInstance& operator=(CInstance&&) noexcept = default;
     ~CInstance() = default;
 
+    auto operator*() const noexcept -> const vk::raii::Instance& { return m_handle; }
     [[nodiscard]] auto GetHandle() const -> const vk::raii::Instance& { return m_handle; }
 
     [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return HasExtension(m_enabledExtensions, name); }
