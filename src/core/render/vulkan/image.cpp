@@ -38,8 +38,6 @@ auto GetTransitionRules() -> auto& {
 }
 
 namespace Vulkan {
-CImage::CImage(std::nullptr_t) {}
-
 CImage::CImage(
     const CContext* context,
     vk::Extent3D extent,
@@ -81,6 +79,24 @@ CImage::CImage(
     m_view = context->GetDevice().GetHandle().createImageView(imageViewInfo);
 }
 
+CImage::CImage(CImage&& other) noexcept :
+    m_handle(std::exchange(other.m_handle, nullptr)),
+    m_allocation(std::exchange(other.m_allocation, nullptr)),
+    m_view(std::move(other.m_view)),
+    m_layout(std::exchange(other.m_layout, vk::ImageLayout::eUndefined)),
+    m_context(std::move(other.m_context)) {}
+
+CImage& CImage::operator=(CImage&& rhs) noexcept {
+    if (this != &rhs) {
+        std::swap(m_handle, rhs.m_handle);
+        std::swap(m_allocation, rhs.m_allocation);
+        m_view = std::move(rhs.m_view);
+        std::swap(m_layout, rhs.m_layout);
+        std::swap(m_context, rhs.m_context);
+    }
+    return *this;
+}
+
 auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void {
     auto key = std::make_pair(m_layout, newLayout);
     auto it = GetTransitionRules().find(key);
@@ -118,7 +134,7 @@ auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::
 auto CImage::CopyBufferToImage(
     const vk::raii::CommandBuffer& commandBuffer,
     const vk::raii::Buffer& buffer,
-    vk::Extent3D extent
+    const vk::Extent3D extent
 ) -> void {
     vk::BufferImageCopy region {};
     region.bufferOffset = 0;
@@ -136,16 +152,14 @@ auto CImage::CopyBufferToImage(
     commandBuffer.copyBufferToImage(buffer, m_handle, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
-auto CImage::Destroy() -> void {
-    m_context->GetAllocator().GetHandle().destroyImage(m_handle, m_allocation);
-    m_handle = nullptr;
-    m_allocation = nullptr;
-    m_view.clear();
-    m_layout = vk::ImageLayout::eUndefined;
-    m_context = nullptr;
-}
-
 CImage::~CImage() {
-    if (m_handle && m_allocation) { Destroy(); }
+    if (m_handle && m_allocation) {
+        m_context->GetAllocator().GetHandle().destroyImage(m_handle, m_allocation);
+        m_handle = nullptr;
+        m_allocation = nullptr;
+        m_view.clear();
+        m_layout = vk::ImageLayout::eUndefined;
+        m_context = nullptr;
+    }
 }
 }

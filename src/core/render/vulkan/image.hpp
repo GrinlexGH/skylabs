@@ -5,7 +5,7 @@ namespace Vulkan {
 class CImage
 {
 public:
-    explicit CImage(std::nullptr_t);
+    explicit CImage(std::nullptr_t) {}
     CImage(
         const CContext* context,
         vk::Extent3D extent,
@@ -16,22 +16,14 @@ public:
         vk::MemoryPropertyFlags memoryProperties
     );
     CImage(const CImage&) = delete;
-    CImage(CImage&&) noexcept = default;
+    CImage(CImage&& other) noexcept;
     CImage& operator=(const CImage&) = delete;
-    CImage& operator=(CImage&& rhs) noexcept {
-        if (this != &rhs) {
-            if (m_handle) { Destroy(); }
-            m_handle = std::exchange(rhs.m_handle, nullptr);
-            m_allocation = std::exchange(rhs.m_allocation, nullptr);
-            m_view = std::exchange(rhs.m_view, nullptr);
-            m_layout = std::exchange(rhs.m_layout, vk::ImageLayout::eUndefined);
-            m_context = std::exchange(rhs.m_context, nullptr);
-        }
-        return *this;
-    }
+    CImage& operator=(CImage&& rhs) noexcept;
     ~CImage();
 
+    auto operator*() const noexcept -> vk::Image { return m_handle; }
     [[nodiscard]] auto GetHandle() const -> vk::Image { return m_handle; }
+
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
 
     auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
@@ -42,8 +34,6 @@ public:
     ) -> void;
 
 private:
-    auto Destroy() -> void;
-
     vk::Image m_handle = nullptr;
     vma::Allocation m_allocation = nullptr;
     vk::raii::ImageView m_view = nullptr;
