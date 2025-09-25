@@ -3,8 +3,6 @@
 #include "physical_device.hpp"
 #include "project_info.hpp"
 
-#include <sstream>
-
 namespace {
 #ifdef DEBUG
 VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
@@ -79,12 +77,15 @@ CInstance::CInstance(
     }
 
     if (!missingLayers.empty()) {
-        std::ostringstream error;
-        error << "System doesn't have vulkan layers:\n";
+        std::string error;
+        error.reserve(missingLayers.size() * 20 + 40);
+        error += "System doesn't have vulkan layers:\n";
         for (const char* const name : missingLayers) {
-            error << '\t' << name << '\n';
+            error += '\t';
+            error += name;
+            error += '\n';
         }
-        Log::Debug("{}", error.str());
+        Log::Debug("{}", error);
     }
 
     //====================
@@ -104,12 +105,15 @@ CInstance::CInstance(
     }
 
     if (!missingExtensions.empty()) {
-        std::ostringstream error;
-        error << "System doesn't have required instance extensions:\n";
+        std::string error;
+        error.reserve(missingExtensions.size() * 20 + 50);
+        error += "System doesn't have required instance extensions:\n";
         for (const auto name : missingExtensions) {
-            error << '\t' << name << '\n';
+            error += '\t';
+            error += name;
+            error += '\n';
         }
-        throw std::runtime_error(error.str());
+        throw std::runtime_error(error);
     }
 
     //====================

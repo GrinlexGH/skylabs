@@ -3,7 +3,6 @@
 #include <array>
 #include <optional>
 #include <set>
-#include <sstream>
 
 #include "physical_device.hpp"
 #include "../window.hpp"
@@ -30,21 +29,22 @@ auto ThrowIfMissing(
         { "compute", computeIndex.has_value() }
     }};
 
-    std::stringstream error;
+    std::string error;
+    error.reserve(checks.size() * 10);
     bool first = true;
 
     for (const auto& [name, hasValue] : checks) {
         if (!hasValue) {
             if (!first) {
-                error << " | ";
+                error += " | ";
             }
-            error << name;
+            error += name;
             first = false;
         }
     }
 
     if (!first) {
-        throw std::runtime_error("System doesn't have required Vulkan queue families: [" + error.str() + "]!");
+        throw std::runtime_error("System doesn't have required Vulkan queue families: [" + error + "]!");
     }
 }
 
@@ -172,12 +172,15 @@ CDevice::CDevice(
     }
 
     if (!missingExtensions.empty()) {
-        std::ostringstream error;
-        error << "System doesn't have required device extensions:\n";
+        std::string error;
+        error.reserve(missingExtensions.size() * 20 + 50);
+        error += "System doesn't have required device extensions:\n";
         for (const auto name : missingExtensions) {
-            error << '\t' << name << '\n';
+            error += '\t';
+            error += name;
+            error += '\n';
         }
-        throw std::runtime_error(error.str());
+        throw std::runtime_error(error);
     }
 
     //====================
