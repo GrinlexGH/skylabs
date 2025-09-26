@@ -360,7 +360,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     vk::SubpassDependency dependency {};
     dependency.srcSubpass = vk::SubpassExternal; // Пустой внешний сабпасс
     dependency.dstSubpass = 0; // Описание применяется к первому (нулевому) сабпассу
-    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // Ждём когда на этой стадии закончаться операции
+    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // Ждём когда на этой стадии закончатся операции
     dependency.srcAccessMask = {}; // Какие конкретно операции. Пустое значит все операции
     dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // На какую стадию идём
     dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Что делаем

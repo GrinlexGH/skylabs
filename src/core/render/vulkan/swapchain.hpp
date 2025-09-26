@@ -27,7 +27,10 @@ public:
 
     [[nodiscard]] auto GetImages() const -> const std::vector<vk::Image>& { return m_images; }
     [[nodiscard]] auto GetImageViews() const -> const std::vector<vk::raii::ImageView>& { return m_imageViews; }
-    [[nodiscard]] auto GetImageCount() const -> std::uint32_t { assert(m_images.size() == m_imageViews.size()); return m_images.size(); }
+    [[nodiscard]] auto GetImageCount() const -> std::uint32_t {
+        assert(m_images.size() == m_imageViews.size());
+        return static_cast<std::uint32_t>(m_images.size());
+    }
 
     auto Recreate() -> void;
     auto Recreate(const vk::SurfaceKHR& surface, std::uint32_t imageCount, vk::PresentModeKHR presentMode) -> void;
