@@ -34,7 +34,12 @@ CAllocator::CAllocator(
     allocatorCreateInfo.device = *device;
     allocatorCreateInfo.instance = *instance;
 
-    const vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher((*instance).getDispatcher(), (*device).getDispatcher());
+    vma::VulkanFunctions vulkanFunctions = vma::functionsFromDispatcher((*instance).getDispatcher(), (*device).getDispatcher());
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    vulkanFunctions.vkGetMemoryWin32HandleKHR = (*device).getDispatcher()->vkGetMemoryWin32HandleKHR;
+#endif
+
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
     m_handle = vma::createAllocator(allocatorCreateInfo);

@@ -108,7 +108,7 @@ auto CContext::CreateLogicalDevice() -> void {
         { vk::EXTMemoryPriorityExtensionName, false },
         { vk::AMDDeviceCoherentMemoryExtensionName, false },
 
-#ifdef PLATFORM_WINDOWS
+#ifdef VK_USE_PLATFORM_WIN32_KHR
         { vk::KHRExternalMemoryWin32ExtensionName, false },
 #endif
 
