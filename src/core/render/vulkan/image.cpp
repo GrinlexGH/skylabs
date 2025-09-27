@@ -40,12 +40,12 @@ auto GetTransitionRules() -> auto& {
 namespace Vulkan {
 CImage::CImage(
     const CContext* context,
-    vk::Extent3D extent,
-    vk::Format format,
-    vk::ImageTiling tiling,
-    vk::ImageUsageFlags usage,
-    vk::ImageAspectFlags imageAspectFlags,
-    vk::MemoryPropertyFlags memoryProperties
+    const vk::Extent3D& extent,
+    const vk::Format format,
+    const vk::ImageTiling tiling,
+    const vk::ImageUsageFlags& usage,
+    const vk::ImageAspectFlags& imageAspectFlags,
+    const vk::MemoryPropertyFlags& memoryProperties
 ) : m_context(context) {
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
@@ -60,14 +60,14 @@ CImage::CImage(
     imageInfo.samples = vk::SampleCountFlagBits::e1;
     imageInfo.flags = {};
 
-    vma::AllocationCreateInfo allocInfo{};
+    vma::AllocationCreateInfo allocInfo {};
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.requiredFlags = memoryProperties;
 
-    std::tie(m_handle, m_allocation) = m_context->GetAllocator().GetHandle().createImage(imageInfo, allocInfo);
+    std::tie(m_handle, m_allocation) = m_context->GetAllocator().GetHandle().createImageUnique(imageInfo, allocInfo);
 
     vk::ImageViewCreateInfo imageViewInfo {};
-    imageViewInfo.image = m_handle;
+    imageViewInfo.image = *m_handle;
     imageViewInfo.viewType = vk::ImageViewType::e2D;
     imageViewInfo.format = format;
     imageViewInfo.subresourceRange.aspectMask = imageAspectFlags;
@@ -79,43 +79,30 @@ CImage::CImage(
     m_view = context->GetDevice().GetHandle().createImageView(imageViewInfo);
 }
 
-CImage::CImage(CImage&& other) noexcept :
-    m_handle(std::exchange(other.m_handle, nullptr)),
-    m_allocation(std::exchange(other.m_allocation, nullptr)),
-    m_view(std::move(other.m_view)),
-    m_layout(std::exchange(other.m_layout, vk::ImageLayout::eUndefined)),
-    m_context(std::move(other.m_context)) {}
-
-CImage& CImage::operator=(CImage&& rhs) noexcept {
-    if (this != &rhs) {
-        std::swap(m_handle, rhs.m_handle);
-        std::swap(m_allocation, rhs.m_allocation);
-        m_view = std::move(rhs.m_view);
-        std::swap(m_layout, rhs.m_layout);
-        std::swap(m_context, rhs.m_context);
-    }
-    return *this;
-}
-
 auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void {
-    auto key = std::make_pair(m_layout, newLayout);
-    auto it = GetTransitionRules().find(key);
+    const auto key = std::make_pair(m_layout, newLayout);
+    const auto it = GetTransitionRules().find(key);
     if (it == GetTransitionRules().end()) {
         throw std::invalid_argument("Unsupported layout transition!");
     }
 
-    const auto& rule = it->second;
+    const auto& [
+        srcAccessMask,
+        dstAccessMask,
+        srcStageMask,
+        dstStageMask
+    ] = it->second;
 
     vk::ImageMemoryBarrier2KHR barrier {};
-    barrier.srcStageMask = rule.m_srcStageMask;
-    barrier.srcAccessMask = rule.m_srcAccessMask;
-    barrier.dstStageMask = rule.m_dstStageMask;
-    barrier.dstAccessMask = rule.m_dstAccessMask;
+    barrier.srcStageMask = srcStageMask;
+    barrier.srcAccessMask = srcAccessMask;
+    barrier.dstStageMask = dstStageMask;
+    barrier.dstAccessMask = dstAccessMask;
     barrier.oldLayout = m_layout;
     barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
     barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
-    barrier.image = m_handle;
+    barrier.image = *m_handle;
     barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
@@ -134,9 +121,9 @@ auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::
 auto CImage::CopyBufferToImage(
     const vk::raii::CommandBuffer& commandBuffer,
     const vk::raii::Buffer& buffer,
-    const vk::Extent3D extent
+    const vk::Extent3D& extent
 ) -> void {
-    vk::BufferImageCopy region {};
+    vk::BufferImageCopy region;
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
@@ -149,17 +136,11 @@ auto CImage::CopyBufferToImage(
     region.imageOffset = vk::Offset3D {0, 0, 0};
     region.imageExtent = extent;
 
-    commandBuffer.copyBufferToImage(buffer, m_handle, vk::ImageLayout::eTransferDstOptimal, region);
+    commandBuffer.copyBufferToImage(buffer, *m_handle, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
 CImage::~CImage() {
-    if (m_handle && m_allocation) {
-        m_context->GetAllocator().GetHandle().destroyImage(m_handle, m_allocation);
-        m_handle = nullptr;
-        m_allocation = nullptr;
-        m_view.clear();
-        m_layout = vk::ImageLayout::eUndefined;
-        m_context = nullptr;
-    }
+    m_layout = vk::ImageLayout::eUndefined;
+    m_context = nullptr;
 }
 }

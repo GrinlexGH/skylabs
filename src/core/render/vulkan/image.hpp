@@ -8,21 +8,21 @@ public:
     explicit CImage(std::nullptr_t) {}
     CImage(
         const CContext* context,
-        vk::Extent3D extent,
+        const vk::Extent3D& extent,
         vk::Format format,
         vk::ImageTiling tiling,
-        vk::ImageUsageFlags usage,
-        vk::ImageAspectFlags imageAspectFlags,
-        vk::MemoryPropertyFlags memoryProperties
+        const vk::ImageUsageFlags& usage,
+        const vk::ImageAspectFlags& imageAspectFlags,
+        const vk::MemoryPropertyFlags& memoryProperties
     );
     CImage(const CImage&) = delete;
-    CImage(CImage&& other) noexcept;
+    CImage(CImage&&) noexcept = default;
     CImage& operator=(const CImage&) = delete;
-    CImage& operator=(CImage&& rhs) noexcept;
+    CImage& operator=(CImage&&) noexcept = default;
     ~CImage();
 
-    auto operator*() const noexcept -> vk::Image { return m_handle; }
-    [[nodiscard]] auto GetHandle() const -> vk::Image { return m_handle; }
+    auto operator*() const noexcept -> vk::Image { return *m_handle; }
+    [[nodiscard]] auto GetHandle() const -> vk::Image { return *m_handle; }
 
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
 
@@ -30,12 +30,12 @@ public:
     auto CopyBufferToImage(
         const vk::raii::CommandBuffer& commandBuffer,
         const vk::raii::Buffer& buffer,
-        vk::Extent3D extent
+        const vk::Extent3D& extent
     ) -> void;
 
 private:
-    vk::Image m_handle = nullptr;
-    vma::Allocation m_allocation = nullptr;
+    vma::UniqueImage m_handle;
+    vma::UniqueAllocation m_allocation;
     vk::raii::ImageView m_view = nullptr;
 
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;
