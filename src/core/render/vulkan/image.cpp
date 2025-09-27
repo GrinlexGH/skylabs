@@ -79,6 +79,14 @@ CImage::CImage(
     m_view = context->GetDevice().GetHandle().createImageView(imageViewInfo);
 }
 
+auto CImage::Clear() -> void {
+    m_handle.reset();
+    m_allocation.reset();
+    m_view.clear();
+    m_layout = vk::ImageLayout::eUndefined;
+    m_context = nullptr;
+}
+
 auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void {
     const auto key = std::make_pair(m_layout, newLayout);
     const auto it = GetTransitionRules().find(key);
@@ -120,7 +128,7 @@ auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::
 
 auto CImage::CopyBufferToImage(
     const vk::raii::CommandBuffer& commandBuffer,
-    const vk::raii::Buffer& buffer,
+    const vk::Buffer& buffer,
     const vk::Extent3D& extent
 ) -> void {
     vk::BufferImageCopy region;

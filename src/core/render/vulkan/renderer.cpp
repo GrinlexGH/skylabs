@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 
+#include "buffer.hpp"
 #include "logging.hpp"
 #include "shader.hpp"
 
@@ -331,7 +332,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     vk::AttachmentDescription colorAttachment {};
     colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
-    colorAttachment.loadOp = vk::AttachmentLoadOp::eDontCare;
+    colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
     colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
     colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
@@ -396,26 +397,20 @@ CRenderer::CRenderer(const IWindow* const window) {
     SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
     SDL_DestroySurface(imageRaw);
     vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
-    vk::raii::Buffer stagingBuffer = nullptr;
-    vk::raii::DeviceMemory stagingBufferMemory = nullptr;
-    void* data;
-    CreateBuffer(
-        m_context.GetPhysicalDevice()->GetHandle(),
-        m_context.GetDevice().GetHandle(),
+
+    CBuffer stagingBuffer(
+        &m_context,
         imageSize,
         vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-        stagingBuffer,
-        stagingBufferMemory
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
     );
 
     int b = imageSize / 3;
     char* a = new char[b];
-    data = nullptr;
-    data = stagingBufferMemory.mapMemory(0, imageSize);
-    std::memcpy(data, image->pixels, static_cast<size_t>(imageSize / 1));
-    std::memcpy((char*)data + (3 * imageSize / 4), a, imageSize / 4);
-    stagingBufferMemory.unmapMemory();
+    stagingBuffer.WithMappedMemory([&](void* data) {
+        std::memcpy(data, image->pixels, imageSize / 1);
+        std::memcpy((char*)data + (3 * imageSize / 4), a, imageSize / 4);
+    });
     delete[] a;
 
     //endregion LOAD TEXTURE
@@ -439,14 +434,13 @@ CRenderer::CRenderer(const IWindow* const window) {
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(m_context.GetDevice().GetHandle(), commandPool);
 
     m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-    m_texture.CopyBufferToImage(commandBuffer, stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
+    m_texture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
     m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
 
 
-    stagingBuffer.clear();
-    stagingBufferMemory.clear();
+    stagingBuffer.Clear();
     SDL_DestroySurface(image);
     image = nullptr;
     //endregion COPY TO IMAGE
@@ -672,19 +666,14 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region VERTEX BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
 
-    CreateBuffer(
-        m_context.GetPhysicalDevice()->GetHandle(),
-        m_context.GetDevice().GetHandle(),
+    stagingBuffer = CBuffer {
+        &m_context,
         vertexBufferSize,
         vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-        stagingBuffer,
-        stagingBufferMemory
-    );
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+    };
 
-    data = stagingBufferMemory.mapMemory(0, vertexBufferSize);
-        memcpy(data, vertices.data(), vertexBufferSize);
-    stagingBufferMemory.unmapMemory();
+    stagingBuffer.CopyFromHost(vertices.data(), vertexBufferSize);
 
     CreateBuffer(
         m_context.GetPhysicalDevice()->GetHandle(),
@@ -699,31 +688,25 @@ CRenderer::CRenderer(const IWindow* const window) {
     CopyBuffer(
         m_context.GetDevice(),
         commandPool,
-        stagingBuffer,
+        *stagingBuffer,
         m_vertexBuffer,
         vertexBufferSize
     );
 
-    stagingBuffer.clear();
-    stagingBufferMemory.clear();
+    stagingBuffer.Clear();
     //endregion VERTEX BUFFER
 
     //region INDEX BUFFER
     vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
 
-    CreateBuffer(
-        m_context.GetPhysicalDevice()->GetHandle(),
-        m_context.GetDevice().GetHandle(),
-        indexBufferSize,
+    stagingBuffer = CBuffer {
+        &m_context,
+        vertexBufferSize,
         vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-        stagingBuffer,
-        stagingBufferMemory
-    );
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+    };
 
-    data = stagingBufferMemory.mapMemory(0, indexBufferSize);
-        memcpy(data, indices.data(), indexBufferSize);
-    stagingBufferMemory.unmapMemory();
+    stagingBuffer.CopyFromHost(indices.data(), indexBufferSize);
 
     CreateBuffer(
         m_context.GetPhysicalDevice()->GetHandle(),
@@ -738,13 +721,12 @@ CRenderer::CRenderer(const IWindow* const window) {
     CopyBuffer(
         m_context.GetDevice(),
         commandPool,
-        stagingBuffer,
+        *stagingBuffer,
         m_indexBuffer,
         indexBufferSize
     );
 
-    stagingBuffer.clear();
-    stagingBufferMemory.clear();
+    stagingBuffer.Clear();
     //endregion INDEX BUFFER
 }
 

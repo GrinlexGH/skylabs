@@ -33,6 +33,8 @@ set(SOURCES
     render/vulkan/shader.cpp
     render/vulkan/image.hpp
     render/vulkan/image.cpp
+    render/vulkan/buffer.hpp
+    render/vulkan/buffer.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan/vulkan.hpp
