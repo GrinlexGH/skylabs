@@ -212,7 +212,7 @@ void CopyBuffer(
 ) {
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(device.GetHandle(), commandPool);
 
-    vk::BufferCopy copyRegion {};
+    vk::BufferCopy copyRegion;
     copyRegion.srcOffset = 0;
     copyRegion.dstOffset = 0;
     copyRegion.size = size;
