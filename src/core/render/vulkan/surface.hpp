@@ -19,6 +19,6 @@ public:
 private:
     vk::SurfaceKHR m_handle = nullptr;
 
-    const CContext* m_context;
+    const CContext* m_context = nullptr;
 };
 }
