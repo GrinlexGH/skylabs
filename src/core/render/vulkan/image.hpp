@@ -40,6 +40,6 @@ private:
 
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;
 
-    const CContext* m_context;
+    const CContext* m_context = nullptr;
 };
 }

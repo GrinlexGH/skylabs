@@ -331,7 +331,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     vk::AttachmentDescription colorAttachment {};
     colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
-    colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+    colorAttachment.loadOp = vk::AttachmentLoadOp::eDontCare;
     colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
     colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
     colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
@@ -768,7 +768,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     // #region ACQUIRE_IMAGE
     vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
     if (result != vk::Result::eSuccess) {
-        throw std::runtime_error(std::format("Failed to wait for fence: {}", vk::to_string(result)));
+        throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
     }
 
     std::uint32_t imageIndex;
@@ -786,7 +786,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         return;
     }
     if (result != vk::Result::eSuccess) {
-        throw std::runtime_error(std::format("Failed to acquire swapchain image: {}", vk::to_string(result)));
+        throw std::runtime_error("Failed to acquire swapchain image: " + vk::to_string(result));
     }
     // #endregion ACQUIRE_IMAGE
 

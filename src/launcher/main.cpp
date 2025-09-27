@@ -61,9 +61,9 @@ public:
     CLibrary() = delete;
     explicit CLibrary(const wchar_t* path) : m_handle(LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH)) {
         if (!m_handle) {
-            throw std::runtime_error {
-                std::format("Failed to load library:\n{}\n\n{}\n", nowide::narrow(path), GetLastErrorMessage())
-            };
+            throw std::runtime_error(
+                std::format("Failed to load library:\n{}\n{}\n", nowide::narrow(path), GetLastErrorMessage())
+            );
         }
     }
     CLibrary(const CLibrary&) = delete;
@@ -75,9 +75,9 @@ public:
     void* GetFunctionAddress(const char* name) const {
         const auto func = reinterpret_cast<void*>(GetProcAddress(m_handle, name));
         if (!func) {
-            throw std::runtime_error {
-                std::format("Failed to load library function:\n{}\n\n{}\n", name, GetLastErrorMessage())
-            };
+            throw std::runtime_error(
+                std::format("Failed to load library function:\n{}\n{}\n", name, GetLastErrorMessage())
+            );
         }
         return func;
     }
@@ -139,9 +139,9 @@ public:
     CLibrary() = delete;
     explicit CLibrary(const char* path) : m_handle(dlopen(path, RTLD_LAZY)) {
         if (!m_handle) {
-            throw std::runtime_error {
+            throw std::runtime_error(
                 std::format("Failed to load library:\n{}\n", dlerror())
-            };
+            );
         }
     }
     CLibrary(const CLibrary&) = delete;
@@ -153,9 +153,9 @@ public:
     void* GetFunctionAddress(const char* name) const {
         void* const func = dlsym(m_handle, name);
         if (const char* error = dlerror(); error != nullptr) {
-            throw std::runtime_error {
+            throw std::runtime_error(
                 std::format("Failed to load library function:\n{}\n", error)
-            };
+            );
         }
         return func;
     }
