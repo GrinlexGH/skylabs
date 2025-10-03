@@ -1,10 +1,12 @@
 #pragma once
 #include "../renderer.hpp"
 
+#include "device_buffer.hpp"
 #include "frame_data.hpp"
+#include "host_buffer.hpp"
+#include "image.hpp"
 #include "surface.hpp"
 #include "swapchain.hpp"
-#include "image.hpp"
 
 #include <glm/glm.hpp>
 
@@ -53,14 +55,11 @@ private:
 
     CImage m_depthBuffer { nullptr };
 
-    vk::raii::Buffer m_vertexBuffer { nullptr };
-    vk::raii::DeviceMemory m_vertexBufferMemory { nullptr };
-    vk::raii::Buffer m_indexBuffer { nullptr };
-    vk::raii::DeviceMemory m_indexBufferMemory { nullptr };
+    CDeviceBuffer m_vertexBuffer { nullptr };
+    CDeviceBuffer m_indexBuffer { nullptr };
 
-    std::vector<vk::raii::Buffer> m_uniformBuffers;
-    std::vector<vk::raii::DeviceMemory> m_uniformBuffersMemory;
-    std::vector<void*> m_uniformBuffersMapped;
+    std::vector<CHostBuffer> m_uniformBuffers;
+    std::vector<CMemoryMapping> m_uniformBuffersMapped;
 
     CImage m_texture { nullptr };
     vk::raii::Sampler m_textureSampler { nullptr };

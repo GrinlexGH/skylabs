@@ -42,23 +42,6 @@ CAllocator::CAllocator(
 
     allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
-    m_handle = vma::createAllocator(allocatorCreateInfo);
-}
-
-CAllocator::CAllocator(CAllocator&& other) noexcept :
-    m_handle(std::exchange(other.m_handle, nullptr)) {}
-
-CAllocator& CAllocator::operator=(CAllocator&& rhs) noexcept {
-    if (this != &rhs) {
-        std::swap(m_handle, rhs.m_handle);
-    }
-    return *this;
-}
-
-CAllocator::~CAllocator() {
-    if (m_handle) {
-        m_handle.destroy();
-        m_handle = nullptr;
-    }
+    m_handle = vma::UniqueAllocator{ vma::createAllocator(allocatorCreateInfo) };
 }
 }

@@ -15,15 +15,15 @@ public:
         const CDevice& device
     );
     CAllocator(const CAllocator&) = delete;
-    CAllocator(CAllocator&& other) noexcept;
+    CAllocator(CAllocator&& other) noexcept = default;
     CAllocator& operator=(const CAllocator&) = delete;
-    CAllocator& operator=(CAllocator&& rhs) noexcept;
-    ~CAllocator();
+    CAllocator& operator=(CAllocator&& rhs) noexcept = default;
+    ~CAllocator() = default;
 
-    auto operator*() const noexcept -> const vma::Allocator& { return m_handle; }
-    [[nodiscard]] auto GetHandle() const -> vma::Allocator { return m_handle; }
+    auto operator*() const noexcept -> const vma::UniqueAllocator& { return m_handle; }
+    [[nodiscard]] auto GetHandle() const -> const vma::UniqueAllocator& { return m_handle; }
 
 private:
-    vma::Allocator m_handle = nullptr;
+    vma::UniqueAllocator m_handle;
 };
 }

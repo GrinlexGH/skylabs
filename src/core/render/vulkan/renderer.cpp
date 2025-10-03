@@ -1,6 +1,5 @@
 #include "renderer.hpp"
 
-#include "buffer.hpp"
 #include "logging.hpp"
 #include "shader.hpp"
 
@@ -158,52 +157,6 @@ auto EndSingleTimeCommands(
     commandBuffer.clear();
 }
 
-auto FindMemoryType(
-    const vk::raii::PhysicalDevice& physicalDevice,
-    const std::uint32_t typeFilter,
-    vk::MemoryPropertyFlags properties
-) -> std::uint32_t {
-    const static vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
-
-    for (std::uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("Failed to find suitable memory type!");
-}
-
-auto CreateBuffer(
-    const vk::raii::PhysicalDevice& physicalDevice,
-    const vk::raii::Device& device,
-    vk::DeviceSize size,
-    vk::BufferUsageFlags usage,
-    vk::MemoryPropertyFlags properties,
-    vk::raii::Buffer& buffer,
-    vk::raii::DeviceMemory& bufferMemory
-) -> void {
-    vk::BufferCreateInfo bufferInfo {};
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = vk::SharingMode::eExclusive;
-
-    buffer = vk::raii::Buffer { device, bufferInfo };
-
-    vk::MemoryRequirements memRequirements =  buffer.getMemoryRequirements();
-
-    vk::MemoryAllocateInfo allocInfo {};
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(
-        physicalDevice,
-        memRequirements.memoryTypeBits,
-        properties
-    );
-
-    bufferMemory = vk::raii::DeviceMemory { device, allocInfo };
-    buffer.bindMemory(bufferMemory, 0);
-}
-
 void CopyBuffer(
     const Vulkan::CDevice& device,
     const vk::raii::CommandPool& commandPool,
@@ -225,7 +178,7 @@ void CopyBuffer(
 
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDemensions,
-    std::vector<void*>& uniformBuffersMapped,
+    std::vector<Vulkan::CMemoryMapping>& uniformBuffersMapped,
     std::uint32_t currentImage,
     glm::mat4 view,
     float deltaTime
@@ -246,7 +199,7 @@ void UpdateUniformBuffer(
     }
     ubo.offset = offset;
 
-    std::memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    std::memcpy(*uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 }
 
@@ -278,7 +231,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     //region Depth Stencil
     //region Format
-    auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling& tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
+    auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
         for (const vk::Format format : candidates) {
             const vk::FormatProperties props = m_context.GetPhysicalDevice()->GetHandle().getFormatProperties(format);
 
@@ -388,7 +341,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     //endregion Shaders
 
     //region TEXTURE
-    (void)(0);
     //region LOAD TEXTURE
     SDL_Surface* imageRaw = IMG_Load("assets/texture.jpg");
     if (!imageRaw) {
@@ -398,19 +350,19 @@ CRenderer::CRenderer(const IWindow* const window) {
     SDL_DestroySurface(imageRaw);
     vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 
-    CBuffer stagingBuffer(
+    CHostBuffer stagingBuffer(
         &m_context,
         imageSize,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+        vk::BufferUsageFlagBits::eTransferSrc
     );
 
     int b = imageSize / 3;
     char* a = new char[b];
-    stagingBuffer.WithMappedMemory([&](void* data) {
-        std::memcpy(data, image->pixels, imageSize / 1);
-        std::memcpy((char*)data + (3 * imageSize / 4), a, imageSize / 4);
-    });
+    {
+        CMemoryMapping mapping = stagingBuffer.Map();
+        std::memcpy(mapping.GetData(), image->pixels, imageSize / 1);
+        std::memcpy((char*)mapping.GetData() + (3 * imageSize / 4), a, imageSize / 4);
+    }
     delete[] a;
 
     //endregion LOAD TEXTURE
@@ -426,12 +378,14 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::MemoryPropertyFlagBits::eDeviceLocal
     };
 
-    auto commandPool = m_context.GetDevice().GetHandle().createCommandPool({
+    const vk::raii::Device& deviceHandle = *m_context.GetDevice();
+
+    auto commandPool = deviceHandle.createCommandPool({
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             m_context.GetDevice().GetGraphicsQueue().m_familyIndex
     });
 
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(m_context.GetDevice().GetHandle(), commandPool);
+    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(deviceHandle, commandPool);
 
     m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
     m_texture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
@@ -467,29 +421,24 @@ CRenderer::CRenderer(const IWindow* const window) {
     samplerInfo.maxLod = 0.0f;
     m_textureSampler = vk::raii::Sampler { m_context.GetDevice().GetHandle(), samplerInfo };
     //endregion SAMPLER
-
+    std::vector<int> numbers = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<int> processed_numbers_view = numbers
+                                | std::views::filter([](int n) { return n % 2 == 0; })
+                                | std::views::transform([](int n) { return n * n; })
+                                | std::ranges::to<std::vector>();
     //region UBO
     vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
 
     m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
-    m_uniformBuffersMemory.reserve(FRAMES_IN_FLIGHT_COUNT);
     m_uniformBuffersMapped.reserve(FRAMES_IN_FLIGHT_COUNT);
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::raii::Buffer buffer { nullptr };
-        vk::raii::DeviceMemory bufferMemory { nullptr };
-        CreateBuffer(
-            m_context.GetPhysicalDevice()->GetHandle(),
-            m_context.GetDevice().GetHandle(),
+        m_uniformBuffers.emplace_back(
+            &m_context,
             bufferSize,
-            vk::BufferUsageFlagBits::eUniformBuffer,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            buffer,
-            bufferMemory
+            vk::BufferUsageFlagBits::eUniformBuffer
         );
-        m_uniformBuffers.emplace_back(std::move(buffer));
-        m_uniformBuffersMemory.emplace_back(std::move(bufferMemory));
-        m_uniformBuffersMapped.emplace_back(m_uniformBuffersMemory[i].mapMemory(0, bufferSize));
+        m_uniformBuffersMapped.emplace_back(m_uniformBuffers[i].Map());
     }
     //endregion UBO
 
@@ -544,7 +493,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = m_uniformBuffers[i];
+        bufferInfo.buffer = *m_uniformBuffers[i];
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -666,30 +615,28 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region VERTEX BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
 
-    stagingBuffer = CBuffer {
+    stagingBuffer = CHostBuffer {
         &m_context,
         vertexBufferSize,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+        vk::BufferUsageFlagBits::eTransferSrc
     };
 
-    stagingBuffer.CopyFromHost(vertices.data(), vertexBufferSize);
+    {
+        CMemoryMapping mapping = stagingBuffer.Map();
+        std::memcpy(mapping.GetData(), vertices.data(), vertexBufferSize);
+    }
 
-    CreateBuffer(
-        m_context.GetPhysicalDevice()->GetHandle(),
-        m_context.GetDevice().GetHandle(),
+    m_vertexBuffer = CDeviceBuffer {
+        &m_context,
         vertexBufferSize,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        m_vertexBuffer,
-        m_vertexBufferMemory
-    );
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer
+    };
 
     CopyBuffer(
         m_context.GetDevice(),
         commandPool,
         *stagingBuffer,
-        m_vertexBuffer,
+        *m_vertexBuffer,
         vertexBufferSize
     );
 
@@ -699,30 +646,28 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region INDEX BUFFER
     vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
 
-    stagingBuffer = CBuffer {
+    stagingBuffer = CHostBuffer{
         &m_context,
-        vertexBufferSize,
-        vk::BufferUsageFlagBits::eTransferSrc,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+        indexBufferSize,
+        vk::BufferUsageFlagBits::eTransferSrc
     };
 
-    stagingBuffer.CopyFromHost(indices.data(), indexBufferSize);
+    {
+        CMemoryMapping mapping = stagingBuffer.Map();
+        std::memcpy(mapping.GetData(), indices.data(), indexBufferSize);
+    }
 
-    CreateBuffer(
-        m_context.GetPhysicalDevice()->GetHandle(),
-        m_context.GetDevice().GetHandle(),
+    m_indexBuffer = CDeviceBuffer {
+        &m_context,
         indexBufferSize,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        m_indexBuffer,
-        m_indexBufferMemory
-    );
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer
+    };
 
     CopyBuffer(
         m_context.GetDevice(),
         commandPool,
         *stagingBuffer,
-        m_indexBuffer,
+        *m_indexBuffer,
         indexBufferSize
     );
 
@@ -811,10 +756,10 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     scissor.extent = m_swapchain.GetExtent();
     frameData.GetCommandBuffers()[0].setScissor(0, scissor);
 
-    vk::Buffer vertexBuffers[] = { m_vertexBuffer };
+    vk::Buffer vertexBuffers[] = { *m_vertexBuffer };
     vk::DeviceSize offsets[] = { 0 };
     frameData.GetCommandBuffers()[0].bindVertexBuffers(0, vertexBuffers, offsets);
-    frameData.GetCommandBuffers()[0].bindIndexBuffer(m_indexBuffer, 0, vk::IndexType::eUint16);
+    frameData.GetCommandBuffers()[0].bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
 
     frameData.GetCommandBuffers()[0].bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
@@ -845,7 +790,8 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    m_context.GetDevice().GetGraphicsQueue().m_handle.submit(submitInfo, frameData.GetFence());
+    const CDevice& device = m_context.GetDevice();
+    device.GetGraphicsQueue().m_handle.submit(submitInfo, frameData.GetFence());
     // #endregion COMMAND_RECORD
 
     // #region PRESENT
@@ -859,7 +805,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     presentInfo.pImageIndices = &imageIndex;
 
-    result = m_context.GetDevice().GetPresentQueue().m_handle.presentKHR(presentInfo);
+    result = device.GetPresentQueue().m_handle.presentKHR(presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR) {
         Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBuffer.GetView(), m_swapchain, m_frameBuffers);
         return;
