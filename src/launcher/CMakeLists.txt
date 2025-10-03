@@ -29,6 +29,8 @@ set_target_properties(${CURRENT_TARGET_NAME}
     WIN32_EXECUTABLE $<CONFIG:Release> # Do not show console in release
 )
 
+add_dependencies(${CURRENT_TARGET_NAME} core)
+
 # Set project as startup project
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 

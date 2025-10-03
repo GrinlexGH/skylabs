@@ -33,8 +33,12 @@ set(SOURCES
     render/vulkan/shader.cpp
     render/vulkan/image.hpp
     render/vulkan/image.cpp
-    render/vulkan/buffer.hpp
-    render/vulkan/buffer.cpp
+    render/vulkan/device_buffer.hpp
+    render/vulkan/device_buffer.cpp
+    render/vulkan/host_buffer.hpp
+    render/vulkan/host_buffer.cpp
+    render/vulkan/memory_mapping.hpp
+    render/vulkan/memory_mapping.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan/vulkan.hpp

@@ -1,7 +1,7 @@
 # src
 set(PROJECTS
-    launcher
     core
+    launcher
     public
 )
 
