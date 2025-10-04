@@ -12,7 +12,7 @@ public:
         eCount,
     };
 
-    explicit CShader(const CContext* context, Type type, const char* name);
+    explicit CShader(const CContext& context, Type type, const char* name);
     CShader(const CShader&) = delete;
     CShader(CShader&&) noexcept = default;
     CShader& operator=(const CShader&) = delete;
@@ -40,6 +40,5 @@ private:
 
     vk::raii::ShaderModule m_handle = nullptr;
     vk::PipelineShaderStageCreateInfo m_shaderCreateInfo;
-    Type m_type;
 };
 }

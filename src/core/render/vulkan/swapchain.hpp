@@ -5,9 +5,9 @@ namespace Vulkan {
 class CSwapchain
 {
 public:
-    explicit CSwapchain(std::nullptr_t);
+    explicit CSwapchain(std::nullptr_t) {}
     explicit CSwapchain(
-        const CContext* context,
+        const CContext& context,
         const vk::SurfaceKHR& surface,
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode
@@ -52,12 +52,12 @@ private:
 
     vk::SurfaceFormatKHR m_surfaceFormat;
     vk::Extent2D m_extent;
-    vk::PresentModeKHR m_presentMode;
+    vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eImmediate;
     vk::SurfaceKHR m_associatedSurface;
 
     std::vector<vk::Image> m_images;
     std::vector<vk::raii::ImageView> m_imageViews;
 
-    const CContext* m_context;
+    const CContext* m_context = nullptr;
 };
 }

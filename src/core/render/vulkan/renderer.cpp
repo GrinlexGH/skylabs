@@ -210,20 +210,20 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
     m_context = CContext { window };
 
-    m_surface = CSurface { &m_context };
+    m_surface = CSurface { m_context };
 
-    m_swapchain = CSwapchain { &m_context, m_surface.GetHandle(), 3, vk::PresentModeKHR::eImmediate };
+    m_swapchain = CSwapchain { m_context, *m_surface, 3, vk::PresentModeKHR::eImmediate };
 
     // Слава богу c++23 слава комитету слава ISO IEC
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
     std::generate_n(std::back_inserter(m_frameData), FRAMES_IN_FLIGHT_COUNT, [&] {
-        return CFrameData(&m_context);
+        return CFrameData(m_context);
     });
 
     const std::uint32_t imageCount = m_swapchain.GetImageCount();
     m_renderFinishedSemaphores.reserve(imageCount);
     std::generate_n(std::back_inserter(m_renderFinishedSemaphores), imageCount, [&] {
-        return vk::raii::Semaphore { m_context.GetDevice().GetHandle(), vk::SemaphoreCreateInfo {} };
+        return vk::raii::Semaphore { *m_context.GetDevice(), vk::SemaphoreCreateInfo {} };
     });
 
     //region Subpasses
@@ -256,7 +256,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     //endregion Format
 
     m_depthBuffer = CImage {
-        &m_context,
+        m_context,
         { m_swapchain.GetExtent().width, m_swapchain.GetExtent().height, 1 },
         findDepthFormat(),
         vk::ImageTiling::eOptimal,
@@ -331,8 +331,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     //endregion Subpasses
 
     //region Shaders
-    const CShader vertexShader(&m_context, CShader::Type::eVertex, "shader.vert.spv");
-    const CShader fragmentShader(&m_context, CShader::Type::eFragment, "shader.frag.spv");
+    const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
+    const CShader fragmentShader(m_context, CShader::Type::eFragment, "shader.frag.spv");
 
     const std::array shaderStages = {
         vertexShader.GetPipelineShaderCreateInfo(),
@@ -351,7 +351,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 
     CHostBuffer stagingBuffer(
-        &m_context,
+        m_context,
         imageSize,
         vk::BufferUsageFlagBits::eTransferSrc
     );
@@ -369,7 +369,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     //region COPY TO IMAGE
     m_texture = CImage {
-        &m_context,
+        m_context,
         { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
@@ -419,13 +419,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
-    m_textureSampler = vk::raii::Sampler { m_context.GetDevice().GetHandle(), samplerInfo };
+    m_textureSampler = vk::raii::Sampler { *m_context.GetDevice(), samplerInfo };
     //endregion SAMPLER
-    std::vector<int> numbers = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    std::vector<int> processed_numbers_view = numbers
-                                | std::views::filter([](int n) { return n % 2 == 0; })
-                                | std::views::transform([](int n) { return n * n; })
-                                | std::ranges::to<std::vector>();
     //region UBO
     vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
 
@@ -434,7 +429,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         m_uniformBuffers.emplace_back(
-            &m_context,
+            m_context,
             bufferSize,
             vk::BufferUsageFlagBits::eUniformBuffer
         );
@@ -616,7 +611,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
 
     stagingBuffer = CHostBuffer {
-        &m_context,
+        m_context,
         vertexBufferSize,
         vk::BufferUsageFlagBits::eTransferSrc
     };
@@ -627,7 +622,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     m_vertexBuffer = CDeviceBuffer {
-        &m_context,
+        m_context,
         vertexBufferSize,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer
     };
@@ -646,8 +641,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     //region INDEX BUFFER
     vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
 
-    stagingBuffer = CHostBuffer{
-        &m_context,
+    stagingBuffer = CHostBuffer {
+        m_context,
         indexBufferSize,
         vk::BufferUsageFlagBits::eTransferSrc
     };
@@ -658,7 +653,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     m_indexBuffer = CDeviceBuffer {
-        &m_context,
+        m_context,
         indexBufferSize,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer
     };

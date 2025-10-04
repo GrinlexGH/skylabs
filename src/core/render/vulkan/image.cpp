@@ -39,14 +39,14 @@ auto GetTransitionRules() -> auto& {
 
 namespace Vulkan {
 CImage::CImage(
-    const CContext* context,
+    const CContext& context,
     const vk::Extent3D& extent,
     const vk::Format format,
     const vk::ImageTiling tiling,
     const vk::ImageUsageFlags& usage,
     const vk::ImageAspectFlags& imageAspectFlags,
     const vk::MemoryPropertyFlags& memoryProperties
-) : m_context(context) {
+) : m_context(&context) {
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
     imageInfo.extent = extent;
@@ -76,7 +76,7 @@ CImage::CImage(
     imageViewInfo.subresourceRange.baseArrayLayer = 0;
     imageViewInfo.subresourceRange.layerCount = 1;
 
-    m_view = context->GetDevice().GetHandle().createImageView(imageViewInfo);
+    m_view = (*context.GetDevice()).createImageView(imageViewInfo);
 }
 
 auto CImage::Clear() -> void {
