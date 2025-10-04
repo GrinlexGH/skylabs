@@ -1,8 +1,8 @@
 #include "surface.hpp"
 
 namespace Vulkan {
-CSurface::CSurface(const CContext* context) : m_context(context) {
-    const vk::Instance instanceHandle = m_context->GetInstance().GetHandle();
+CSurface::CSurface(const CContext& context) : m_context(&context) {
+    const vk::Instance instanceHandle = *m_context->GetInstance();
     const IWindow* window = m_context->GetWindow();
     m_handle = window->CreateSurface(instanceHandle);
 }
@@ -21,7 +21,7 @@ CSurface& CSurface::operator=(CSurface&& rhs) noexcept {
 
 CSurface::~CSurface() {
     if (m_handle) {
-        const vk::Instance instanceHandle = m_context->GetInstance().GetHandle();
+        const vk::Instance instanceHandle = *m_context->GetInstance();
         const IWindow* window = m_context->GetWindow();
         window->DestroySurface(instanceHandle, m_handle);
     }

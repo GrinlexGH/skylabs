@@ -7,7 +7,7 @@ class CImage
 public:
     explicit CImage(std::nullptr_t) {}
     CImage(
-        const CContext* context,
+        const CContext& context,
         const vk::Extent3D& extent,
         vk::Format format,
         vk::ImageTiling tiling,

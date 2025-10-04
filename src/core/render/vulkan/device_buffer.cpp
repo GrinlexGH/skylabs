@@ -2,10 +2,10 @@
 
 namespace Vulkan {
 CDeviceBuffer::CDeviceBuffer(
-    const CContext* context,
+    const CContext& context,
     const vk::DeviceSize size,
     const vk::BufferUsageFlags& usage
-) : m_context(context) {
+) : m_context(&context) {
     vk::BufferCreateInfo bufferInfo {};
     bufferInfo.size = size;
     bufferInfo.usage = usage;

@@ -8,7 +8,7 @@ class CHostBuffer
 public:
     explicit CHostBuffer(std::nullptr_t) {}
     CHostBuffer(
-        const CContext* context,
+        const CContext& context,
         vk::DeviceSize size,
         const vk::BufferUsageFlags& usage
     );

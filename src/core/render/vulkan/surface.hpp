@@ -6,7 +6,7 @@ class CSurface
 {
 public:
     explicit CSurface(std::nullptr_t) {}
-    explicit CSurface(const CContext* context);
+    explicit CSurface(const CContext& context);
     CSurface(const CSurface&) = delete;
     CSurface(CSurface&& other) noexcept;
     CSurface& operator=(const CSurface&) = delete;

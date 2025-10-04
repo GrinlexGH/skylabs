@@ -24,14 +24,12 @@ auto ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableForma
 }
 
 namespace Vulkan {
-CSwapchain::CSwapchain(std::nullptr_t) {}
-
 CSwapchain::CSwapchain(
-    const CContext* context,
+    const CContext& context,
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
-) : m_context(context) {
+) : m_context(&context) {
     Recreate(surface, imageCount, presentMode);
 }
 

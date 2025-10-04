@@ -7,7 +7,7 @@ class CDeviceBuffer
 public:
     explicit CDeviceBuffer(std::nullptr_t) {}
     CDeviceBuffer(
-        const CContext* context,
+        const CContext& context,
         vk::DeviceSize size,
         const vk::BufferUsageFlags& usage
     );
