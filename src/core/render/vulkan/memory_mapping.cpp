@@ -2,11 +2,11 @@
 
 namespace Vulkan {
 CMemoryMapping::CMemoryMapping(
-    const vma::UniqueAllocator* allocator,
-    const vma::UniqueAllocation* allocation
+    const vma::Allocator& allocator,
+    const vma::Allocation& allocation
 ) : m_allocator(allocator), m_allocation(allocation) {
     if (m_allocation && m_allocator) {
-        m_data = m_allocator->get().mapMemory(**m_allocation);
+        m_data = m_allocator.mapMemory(m_allocation);
     }
 }
 
@@ -25,8 +25,10 @@ CMemoryMapping& CMemoryMapping::operator=(CMemoryMapping&& rhs) noexcept {
 }
 
 auto CMemoryMapping::Clear() -> void {
-    m_allocator->get().unmapMemory(**m_allocation);
+    m_allocator.unmapMemory(m_allocation);
     m_data = nullptr;
+    m_allocation = nullptr;
+    m_allocator = nullptr;
 }
 
 CMemoryMapping::~CMemoryMapping() {

@@ -19,7 +19,9 @@ public:
     CShader& operator=(CShader&&) noexcept = default;
     ~CShader() = default;
 
+    auto operator*() const noexcept -> const vk::raii::ShaderModule& { return m_handle; }
     [[nodiscard]] auto GetHandle() -> const vk::raii::ShaderModule& { return m_handle; }
+
     [[nodiscard]] auto GetPipelineShaderCreateInfo() const -> vk::PipelineShaderStageCreateInfo { return m_shaderCreateInfo; }
 
 private:

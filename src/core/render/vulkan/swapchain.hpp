@@ -18,6 +18,7 @@ public:
     CSwapchain& operator=(CSwapchain&&) noexcept = default;
     ~CSwapchain() = default;
 
+    auto operator*() const noexcept -> const vk::raii::SwapchainKHR& { return m_handle; }
     [[nodiscard]] auto GetHandle() const -> const vk::raii::SwapchainKHR& { return m_handle; }
 
     [[nodiscard]] auto GetSurfaceFormat() const -> vk::SurfaceFormatKHR { return m_surfaceFormat; }
