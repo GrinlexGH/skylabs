@@ -23,7 +23,7 @@ public:
     [[nodiscard]] auto GetInstance() const -> const CInstance& { return m_instance; }
     [[nodiscard]] auto GetDevice() const -> const CDevice& { return m_device; }
     [[nodiscard]] auto GetPhysicalDevice() const -> const CPhysicalDevice* { return m_selectedPhysicalDevice; }
-    [[nodiscard]] auto GetAllocator() const -> const CAllocator& { return m_allocator; }
+    [[nodiscard]] auto GetAllocator() const -> vma::Allocator { return *m_allocator; }
 
 private:
     auto CreateInstance() -> void;

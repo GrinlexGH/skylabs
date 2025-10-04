@@ -1,6 +1,6 @@
 #pragma once
-#include "context/context.hpp"
 #include "memory_mapping.hpp"
+#include "context/context.hpp"
 
 namespace Vulkan {
 class CHostBuffer
@@ -16,10 +16,10 @@ public:
     CHostBuffer(CHostBuffer&&) noexcept = default;
     CHostBuffer& operator=(const CHostBuffer&) = delete;
     CHostBuffer& operator=(CHostBuffer&&) noexcept = default;
-    ~CHostBuffer();
+    ~CHostBuffer() = default;
 
-    auto operator*() const noexcept -> vk::Buffer { return *m_handle; }
-    [[nodiscard]] auto GetHandle() const -> vk::Buffer { return *m_handle; }
+    auto operator*() const noexcept -> vk::Buffer { assert(m_handle); return *m_handle; }
+    [[nodiscard]] auto GetHandle() const -> vk::Buffer { assert(m_handle); return *m_handle; }
 
     auto Clear() -> void;
 

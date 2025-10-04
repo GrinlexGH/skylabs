@@ -6,8 +6,8 @@ class CMemoryMapping
 {
 public:
     CMemoryMapping(
-        const vma::UniqueAllocator* allocator,
-        const vma::UniqueAllocation* allocation
+        const vma::Allocator& allocator,
+        const vma::Allocation& allocation
     );
     CMemoryMapping(const CMemoryMapping&) = delete;
     CMemoryMapping(CMemoryMapping&&) noexcept;
@@ -18,13 +18,13 @@ public:
     auto operator*() const noexcept -> void* { return m_data; }
     [[nodiscard]] auto GetData() const -> void* { return m_data; }
 
-    // TODO: simple copying function
-
     auto Clear() -> void;
 
+    // TODO: simple copying function?
+
 private:
-    const vma::UniqueAllocator* m_allocator = nullptr;
-    const vma::UniqueAllocation* m_allocation = nullptr;
+    vma::Allocator m_allocator = nullptr;
+    vma::Allocation m_allocation = nullptr;
     void* m_data = nullptr;
 };
 }

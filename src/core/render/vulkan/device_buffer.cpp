@@ -14,7 +14,7 @@ CDeviceBuffer::CDeviceBuffer(
     vma::AllocationCreateInfo allocInfo {};
     allocInfo.usage = vma::MemoryUsage::eAuto;
 
-    std::tie(m_handle, m_allocation) = m_context->GetAllocator().GetHandle()->createBufferUnique(bufferInfo, allocInfo);
+    std::tie(m_handle, m_allocation) = m_context->GetAllocator().createBufferUnique(bufferInfo, allocInfo);
 }
 
 auto CDeviceBuffer::Clear() -> void {
