@@ -33,6 +33,7 @@ add_dependencies(${CURRENT_TARGET_NAME} core)
 
 # Set project as startup project
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
+set_property(TARGET ${CURRENT_TARGET_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE nowide::nowide)
 

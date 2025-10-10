@@ -16,11 +16,11 @@ layout(location = 1) out vec2 fragTexCoord;
 
 void main() {
     mat4 pvm = ubo.proj * ubo.view * ubo.model;
-    if (gl_VertexIndex >= 4) {
-        gl_Position = pvm * vec4(inPosition + ubo.offset, 1.0);
-    } else {
+    //if (gl_VertexIndex >= 4) {
+    //    gl_Position = pvm * vec4(inPosition + ubo.offset, 1.0);
+    //} else {
         gl_Position = pvm * vec4(inPosition, 1.0);
-    }
+    //}
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 }

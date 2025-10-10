@@ -5,10 +5,13 @@ CFrameData::CFrameData(const CContext& context) {
     const vk::raii::Device& deviceHandle = context.GetDevice().GetHandle();
 
     //====================
-    m_commandPool = deviceHandle.createCommandPool({
+    m_commandPool = vk::raii::CommandPool {
+            deviceHandle,
+        {
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             context.GetDevice().GetGraphicsQueue().m_familyIndex
-    });
+        }
+    };
 
     //====================
     m_commandBuffer = vk::raii::CommandBuffers {
@@ -17,9 +20,12 @@ CFrameData::CFrameData(const CContext& context) {
     };
 
     //====================
-    m_fence = deviceHandle.createFence({ vk::FenceCreateFlagBits::eSignaled });
+    m_fence = vk::raii::Fence {
+        deviceHandle,
+        { vk::FenceCreateFlagBits::eSignaled }
+    };
 
     //====================
-    m_imageAvailableSemaphore = deviceHandle.createSemaphore({});
+    m_imageAvailableSemaphore = vk::raii::Semaphore { deviceHandle, vk::SemaphoreCreateInfo { } };
 }
 }
