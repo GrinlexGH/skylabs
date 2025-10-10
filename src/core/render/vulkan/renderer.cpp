@@ -82,6 +82,27 @@ const std::array<std::uint16_t, 12> indices = {
 };
 
 namespace {
+std::pair<vk::Result, uint32_t> SwapchainNextImageWrapper(
+    const vk::raii::SwapchainKHR& swapchain,
+    uint64_t timeout,
+    vk::Semaphore semaphore,
+    vk::Fence fence
+) {
+    uint32_t image_index;
+    vk::Result result = static_cast<vk::Result>(swapchain.getDispatcher()->vkAcquireNextImageKHR(
+        static_cast<VkDevice>(swapchain.getDevice()), static_cast<VkSwapchainKHR>(*swapchain),
+        timeout, static_cast<VkSemaphore>(semaphore), static_cast<VkFence>(fence), &image_index));
+    return std::make_pair(result, image_index);
+}
+
+vk::Result QueuePresentWrapper(
+    const vk::raii::Queue& queue,
+    const vk::PresentInfoKHR& present_info
+) {
+    return static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
+        static_cast<VkQueue>(*queue), reinterpret_cast<const VkPresentInfoKHR*>(&present_info)));
+}
+
 auto CreateFrameBuffers(
     const vk::raii::Device& device,
     const Vulkan::CSwapchain& swapchain,
@@ -217,7 +238,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     // Слава богу c++23 слава комитету слава ISO IEC
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
     std::generate_n(std::back_inserter(m_frameData), FRAMES_IN_FLIGHT_COUNT, [&] {
-        return CFrameData(m_context);
+        return CFrameData { m_context };
     });
 
     const std::uint32_t imageCount = m_swapchain.GetImageCount();
@@ -443,7 +464,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
     uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+    uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
     uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
     vk::DescriptorSetLayoutBinding samplerLayoutBinding {};
@@ -552,7 +573,14 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
     colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
-    colorBlendAttachment.blendEnable = vk::False;
+    colorBlendAttachment.blendEnable = vk::True;
+    colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+    colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
+
+    colorBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
 
     vk::PipelineColorBlendStateCreateInfo colorBlending {};
     colorBlending.logicOpEnable = vk::False;
@@ -680,7 +708,7 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const w
 }
 
 void CRenderer::Draw(glm::mat4 view, float deltaTime) {
-    const Vulkan::CFrameData& frameData = m_frameData[m_frameIndex];
+    const CFrameData& frameData = m_frameData[m_frameIndex];
     const vk::raii::Device& deviceHandle = m_context.GetDevice().GetHandle();
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain.GetHandle();
 
@@ -694,10 +722,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     }
 
     std::uint32_t imageIndex;
-    std::tie(result, imageIndex) = swapchainHandle.acquireNextImage(
+    std::tie(result, imageIndex) = SwapchainNextImageWrapper(
+        swapchainHandle,
         std::numeric_limits<std::uint64_t>::max(),
         *frameData.GetImageAvailableSemaphore(),
-        VK_NULL_HANDLE
+        nullptr
     );
 
     // Reset fence before we can return from function to avoid deadlock
@@ -800,7 +829,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     presentInfo.pImageIndices = &imageIndex;
 
-    result = device.GetPresentQueue().m_handle.presentKHR(presentInfo);
+    result = QueuePresentWrapper(device.GetPresentQueue().m_handle, presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR) {
         Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBuffer.GetView(), m_swapchain, m_frameBuffers);
         return;
