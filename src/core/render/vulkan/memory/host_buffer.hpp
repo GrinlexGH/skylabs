@@ -1,26 +1,29 @@
 #pragma once
-#include "context/context.hpp"
+#include "memory_mapping.hpp"
+#include "../context/context.hpp"
 
 namespace Vulkan {
-class CDeviceBuffer
+class CHostBuffer
 {
 public:
-    explicit CDeviceBuffer(std::nullptr_t) {}
-    CDeviceBuffer(
+    explicit CHostBuffer(std::nullptr_t) {}
+    CHostBuffer(
         const CContext& context,
         vk::DeviceSize size,
         const vk::BufferUsageFlags& usage
     );
-    CDeviceBuffer(const CDeviceBuffer&) = delete;
-    CDeviceBuffer(CDeviceBuffer&&) noexcept = default;
-    CDeviceBuffer& operator=(const CDeviceBuffer&) = delete;
-    CDeviceBuffer& operator=(CDeviceBuffer&&) noexcept = default;
-    ~CDeviceBuffer();
+    CHostBuffer(const CHostBuffer&) = delete;
+    CHostBuffer(CHostBuffer&&) noexcept = default;
+    CHostBuffer& operator=(const CHostBuffer&) = delete;
+    CHostBuffer& operator=(CHostBuffer&&) noexcept = default;
+    ~CHostBuffer() = default;
 
     auto operator*() const noexcept -> vk::Buffer { assert(m_handle); return *m_handle; }
     [[nodiscard]] auto GetHandle() const -> vk::Buffer { assert(m_handle); return *m_handle; }
 
     auto Clear() -> void;
+
+    auto Map() -> CMemoryMapping;
 
 private:
     vma::UniqueBuffer m_handle;
