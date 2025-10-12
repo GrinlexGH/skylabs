@@ -1,12 +1,12 @@
 #pragma once
 #include "../renderer.hpp"
 
-#include "device_buffer.hpp"
 #include "frame_data.hpp"
-#include "host_buffer.hpp"
-#include "image.hpp"
 #include "surface.hpp"
 #include "swapchain.hpp"
+#include "memory/device_buffer.hpp"
+#include "memory/host_buffer.hpp"
+#include "memory/image.hpp"
 
 #include <glm/glm.hpp>
 

@@ -31,14 +31,14 @@ set(SOURCES
     render/vulkan/frame_data.cpp
     render/vulkan/shader.hpp
     render/vulkan/shader.cpp
-    render/vulkan/image.hpp
-    render/vulkan/image.cpp
-    render/vulkan/device_buffer.hpp
-    render/vulkan/device_buffer.cpp
-    render/vulkan/host_buffer.hpp
-    render/vulkan/host_buffer.cpp
-    render/vulkan/memory_mapping.hpp
-    render/vulkan/memory_mapping.cpp
+    render/vulkan/memory/image.hpp
+    render/vulkan/memory/image.cpp
+    render/vulkan/memory/device_buffer.hpp
+    render/vulkan/memory/device_buffer.cpp
+    render/vulkan/memory/host_buffer.hpp
+    render/vulkan/memory/host_buffer.cpp
+    render/vulkan/memory/memory_mapping.hpp
+    render/vulkan/memory/memory_mapping.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan/vulkan.hpp
