@@ -152,9 +152,9 @@ if(WIN32)
 endif()
 
 # Third party static libraries
-add_subdirectory(libs/sources/Boost.Nowide EXCLUDE_FROM_ALL SYSTEM)
+add_subdirectory(libs/src/Boost.Nowide EXCLUDE_FROM_ALL SYSTEM)
 set(GLM_ENABLE_CXX_20 ON)
-add_subdirectory(libs/sources/glm EXCLUDE_FROM_ALL SYSTEM)
+add_subdirectory(libs/src/glm EXCLUDE_FROM_ALL SYSTEM)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(nowide glm PROPERTIES FOLDER "third_party")
