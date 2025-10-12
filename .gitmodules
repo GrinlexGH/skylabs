@@ -1,24 +1,24 @@
-[submodule "libs/sources/SDL"]
+[submodule "libs/src/SDL"]
 	path = libs/src/SDL
 	url = https://github.com/libsdl-org/SDL.git
-[submodule "libs/sources/Boost.Nowide"]
+[submodule "libs/src/Boost.Nowide"]
 	path = libs/src/Boost.Nowide
 	url = https://github.com/boostorg/nowide.git
-[submodule "libs/sources/SDL_Image"]
+[submodule "libs/src/SDL_Image"]
 	path = libs/src/SDL_image
 	url = https://github.com/libsdl-org/SDL_image.git
-[submodule "libs/sources/glm"]
+[submodule "libs/src/glm"]
 	path = libs/src/glm
 	url = https://github.com/g-truc/glm.git
-[submodule "libs/sources/VulkanMemoryAllocator-Hpp"]
+[submodule "libs/src/VulkanMemoryAllocator-Hpp"]
 	path = libs/src/VulkanMemoryAllocator-Hpp
 	url = https://github.com/YaaZ/VulkanMemoryAllocator-Hpp.git
-[submodule "libs/sources/tinyobjloader"]
+[submodule "libs/src/tinyobjloader"]
 	path = libs/src/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
-[submodule "libs/sources/simple_term_colors"]
+[submodule "libs/src/simple_term_colors"]
 	path = libs/src/simple_term_colors
 	url = https://github.com/illyigan/simple_term_colors.git
-[submodule "libs/sources/SteamworksSDK"]
+[submodule "libs/src/SteamworksSDK"]
 	path = libs/src/SteamworksSDK
 	url = https://github.com/rlabrecque/SteamworksSDK.git
