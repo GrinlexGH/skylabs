@@ -355,7 +355,7 @@ def main():
         description="Build and install project dependencies using CMake with optional per-library arguments."
     )
     parser.add_argument(
-        "--sources-dir", type=Path, default=Path("sources"),
+        "--sources-dir", type=Path, default=Path("src"),
         help="Path to directory containing library subfolders. Default: ./sources"
     )
     parser.add_argument(
