@@ -356,7 +356,7 @@ def main():
     )
     parser.add_argument(
         "--sources-dir", type=Path, default=Path("src"),
-        help="Path to directory containing library subfolders. Default: ./sources"
+        help="Path to directory containing library subfolders. Default: ./src"
     )
     parser.add_argument(
         "--install-dir", type=Path, default=Path("bin") / platform.system(),
