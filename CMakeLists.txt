@@ -6,15 +6,11 @@ project(${PROJECT_NAME} HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 L
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
-# Options and defaults
-if(ANDROID)
-    set(DEFAULT_ENABLE_STEAM OFF)
-else()
-    set(DEFAULT_ENABLE_STEAM ON)
-endif()
-
-option(ENABLE_STEAM "Enable steamapi" ${DEFAULT_ENABLE_STEAM})
+# Options
+option(ENABLE_STEAM "Enable steamapi" $<NOT:$<BOOL:${ANDROID}>>)
 
 # Skylabs directories
 set(SKYLABS_ROOT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -22,80 +18,56 @@ set(SKYLABS_ASSETS_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/assets)
 set(SKYLABS_ANDROID_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android)
 set(SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android/app/src/main/assets)
 
-# Build and install third party shared libraries
-macro(set_from_env_or_default VAR DEFAULT)
-    if(NOT ${VAR})
-        if(DEFINED ENV{${VAR}})
-            set(${VAR} $ENV{${VAR}})
-        else()
-            set(${VAR} ${DEFAULT})
-        endif()
-    endif()
-endmacro()
+include(InstallDependencies)
 
-set_from_env_or_default(DEPS_TARGET_SYSTEM ${CMAKE_SYSTEM_NAME})
-set_from_env_or_default(DEPS_TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
-set_from_env_or_default(DEPS_SUBFOLDER "")
-
-set(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/libs/bin/${DEPS_TARGET_SYSTEM}-${DEPS_TARGET_ARCH}/${DEPS_SUBFOLDER}")
-
-set(DEPS_CMAKE_ARGS CACHE STRING "Global cmake arguments for all libraries.")
-set(DEPS_CMAKE_LIB_ARGS CACHE STRING "Library-specific cmake arguments. Use format: name=(args). Example: zlib=(-DSKIP_EXAMPLES=ON) SDL=(-DOPTION=VALUE)")
-
-find_package(Python COMPONENTS Interpreter)
-
-set(DEPS_INSTALL_CMD
-    ${Python_EXECUTABLE}
-    ${PROJECT_SOURCE_DIR}/libs/install_dependencies.py
-    "--install-dir"
-    "${DEPS_INSTALL_DIR}"
-)
-
-macro(set_env_if_unset VAR)
-    if(NOT ${VAR} AND DEFINED ENV{${VAR}})
-        set(${VAR} $ENV{${VAR}})
-    endif()
-endmacro()
-
-set_env_if_unset(DEPS_CMAKE_ARGS)
-set_env_if_unset(DEPS_CMAKE_LIB_ARGS)
-
-# Manually set android abi
-macro(append_deps_cmake_args_if_defined VAR)
-    if(DEFINED ${VAR})
-        string(APPEND DEPS_CMAKE_ARGS " -D${VAR}=\"${${VAR}}\"")
-    endif()
-endmacro()
+deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
 if(ANDROID)
-    append_deps_cmake_args_if_defined(ANDROID_ABI)
-    append_deps_cmake_args_if_defined(CMAKE_ANDROID_ARCH_ABI)
+    deps_append_cmake_define(ANDROID_ABI)
+    deps_append_cmake_define(CMAKE_ANDROID_ARCH_ABI)
 endif()
 
-if(DEPS_CMAKE_ARGS)
-    list(APPEND DEPS_INSTALL_CMD "--cmake-args=${DEPS_CMAKE_ARGS}")
-endif()
-
-if(DEPS_CMAKE_LIB_ARGS)
-    list(APPEND DEPS_INSTALL_CMD "--cmake-lib-args=${DEPS_CMAKE_LIB_ARGS}")
-endif()
-
-execute_process(
-    COMMAND ${DEPS_INSTALL_CMD}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libs
-    RESULT_VARIABLE ret
+# Compilation of libraries
+deps_add_cmake_project(
+    "VulkanMemoryAllocator-Hpp/Vulkan-Headers" INSTALL_SUBDIR "VulkanHeaders"
+    CMAKE_ARGS
+    "-DVULKAN_HEADERS_ENABLE_TESTS=OFF -DVULKAN_HEADERS_ENABLE_MODULE=ON"
+)
+deps_add_cmake_project(
+    "VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator"
+    CMAKE_ARGS
+    "-DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DVMA_ENABLE_INSTALL=ON"
+)
+deps_add_cmake_project("VulkanMemoryAllocator-Hpp" CMAKE_ARGS "-DVMA_HPP_ENABLE_INSTALL=ON")
+deps_add_cmake_project("SDL" INSTALL_SUBDIR "SDL3" CMAKE_ARGS "-DSDL_TEST_LIBRARY=OFF")
+deps_add_cmake_project(
+    "SDL_image" INSTALL_SUBDIR "SDL3_image"
+    CMAKE_ARGS
+    "-DSDLIMAGE_AVIF=OFF -DSDLIMAGE_LBM=OFF -DSDLIMAGE_PCX=OFF -DSDLIMAGE_TIF=OFF"
+    "-DSDLIMAGE_XCF=OFF -DSDLIMAGE_XPM=OFF -DSDLIMAGE_XV=OFF -DSDLIMAGE_WEBP=OFF"
 )
 
-if(NOT(ret EQUAL 0))
-    message(FATAL_ERROR "Error when building or installing dependencies!")
-endif()
+deps_add_header_only("tinyobjloader" HEADERS "tiny_obj_loader.h")
+deps_add_header_only("simple_term_colors" HEADERS "include/stc.hpp")
+
+deps_add_manual_install(
+    "SteamworksSDK"
+    RULES
+    "redistributable_bin/**/*.dll"      "bin"
+    "public/steam/lib/**/*.dll"         "bin"
+    "public/steam/*.h"                  "include/steam"
+    "redistributable_bin/**/*.lib"      "lib"
+    "redistributable_bin/**/*.so"       "lib"
+    "redistributable_bin/**/*.dylib"    "lib"
+    "public/steam/lib/**/*.lib"         "lib"
+    "public/steam/lib/**/*.so"          "lib"
+    "public/steam/lib/**/*.dylib"       "lib"
+)
+
+deps_build_all()
 
 # Find these libraries
-include_directories(SYSTEM "${DEPS_INSTALL_DIR}/header-only")
-list(APPEND CMAKE_PREFIX_PATH "${DEPS_INSTALL_DIR}")
-
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
+include_directories(SYSTEM "${DEPS_HEADER_ONLY_INCLUDE_DIR}")
 
 find_package(SteamworksSDK)
 find_package(SDL3 REQUIRED)
@@ -106,14 +78,14 @@ find_package(Vulkan COMPONENTS glslc REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 
-# Global options
+# Global compilation options
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
     add_compile_options(
         "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray background
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
     )
 
-    # Android SDK doesn't support march native. Kind of logical
+    # Android SDK doesn't support march native. Kinda logical
     if(NOT ANDROID)
         add_compile_options(
             "-march=native" "-mtune=native"
@@ -137,6 +109,10 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     )
 endif()
 
+if(WIN32)
+    add_compile_definitions(UNICODE _UNICODE)
+endif()
+
 # Enabling LTO
 include(CheckIPOSupported)
 check_ipo_supported(RESULT result)
@@ -145,10 +121,6 @@ if(result)
         message(STATUS "LTO has been enabled")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
     endif()
-endif()
-
-if(WIN32)
-    add_compile_definitions(UNICODE _UNICODE)
 endif()
 
 # Third party static libraries
