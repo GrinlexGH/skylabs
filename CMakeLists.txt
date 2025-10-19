@@ -10,13 +10,19 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
 # Options
-option(ENABLE_STEAM "Enable steamapi" $<NOT:$<BOOL:${ANDROID}>>)
+if(ANDROID)
+    set(enable_steam_default OFF)
+else()
+    set(enable_steam_default ON)
+endif()
+
+option(SKYLABS_ENABLE_STEAM "Enable Steamworks SDK" ${enable_steam_default})
 
 # Skylabs directories
-set(SKYLABS_ROOT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-set(SKYLABS_ASSETS_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/assets)
-set(SKYLABS_ANDROID_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android)
-set(SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY ${SKYLABS_ROOT_DIRECTORY}/android/app/src/main/assets)
+set(SKYLABS_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(SKYLABS_ASSETS_DIR ${SKYLABS_ROOT_DIR}/assets)
+set(SKYLABS_ANDROID_DIR ${SKYLABS_ROOT_DIR}/android)
+set(SKYLABS_ANDROID_GENERATED_ASSETS_DIR ${SKYLABS_ROOT_DIR}/android/app/src/main/assets)
 
 include(InstallDependencies)
 

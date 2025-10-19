@@ -9,7 +9,7 @@ CPhysicalDevice::CPhysicalDevice(vk::raii::PhysicalDevice&& physicalDevice) :
     m_extensions(m_handle.enumerateDeviceExtensionProperties())
 {
     for (const auto& extension : m_extensions) {
-        m_availableExtensionsMap.emplace(extension.extensionName, true);
+        m_availableExtensionsMap.try_emplace(extension.extensionName, true);
     }
 
     Log::Info("Found GPU: {}", m_properties.deviceName.data());

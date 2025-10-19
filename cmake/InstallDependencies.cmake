@@ -49,10 +49,10 @@ endif()
 #   - Double quotes in the chosen value are escaped.
 #
 # Example:
-#   deps_append_cmake_define(FOO "custom")    # -> appends: -DFOO="custom"
+#   deps_append_cmake_define(FOO "custom") # -> appends: -DFOO="custom"
 #
 #   set(FOO "custom")
-#   deps_append_cmake_define(FOO)             # -> appends: -DFOO="custom"
+#   deps_append_cmake_define(FOO) # -> appends: -DFOO="custom"
 macro(deps_append_cmake_define VAR)
     if(${ARGV1})
         string(APPEND DEPS_CMAKE_GLOBAL_ARGS " -D${VAR}=\"${ARGV1}\"")
@@ -144,7 +144,7 @@ function(deps_add_header_only SOURCE_SUBDIR)
     set(_deps_internal_cmd_args "${_deps_cmd_args}" PARENT_SCOPE)
 endfunction()
 
-# deps_add_manual_install(<SOURCE_SUBDIR> [INSTALL_SUBDIR <dir>] [RULES <pattern> <dst> ...])
+# deps_add_manual_install(<SOURCE_SUBDIR> [INSTALL_SUBDIR <dir>] [RULES <pattern> <dst>...])
 #
 # Define manual copy/install rules. This option may be repeated.
 #
@@ -190,60 +190,6 @@ function(deps_add_manual_install SOURCE_SUBDIR)
     set(_deps_internal_cmd_args "${_deps_cmd_args}" PARENT_SCOPE)
 endfunction()
 
-# deps_copy_runtime_binaries(<TARGET> TARGETS <lib> [<lib>...])
-#
-# Copies runtime binaries (DLLs/.so files) of dependent targets next to the given target
-# after build. On UNIX, also creates symbolic links for .so and .so.0.
-#
-# Arguments:
-#   TARGET   - The main target that depends on the libraries
-#   TARGETS  - List of library targets whose runtime files should be copied
-#
-# Behavior:
-#   - Skips INTERFACE libraries.
-#   - Copies each runtime binary into $<TARGET_FILE_DIR:${TARGET}>.
-#   - On UNIX systems, creates symbolic links:
-#       libname.so  -> actual file
-#       libname.so.0 -> actual file
-#
-# Example:
-# deps_copy_runtime_binaries(MyApp TARGETS MyLib)
-#
-# Copies MyLib binaries to MyApp’s output directory and, on UNIX, creates .so symlinks.
-function(deps_copy_runtime_binaries TARGET)
-    set(multi_value_args TARGETS)
-    cmake_parse_arguments(ARG "" "" "${multi_value_args}" ${ARGN})
-
-    foreach(lib ${ARG_TARGETS})
-        get_target_property(lib_type ${lib} TYPE)
-        if(NOT lib_type OR lib_type STREQUAL "INTERFACE_LIBRARY")
-            continue()
-        endif()
-
-        set(target_dir $<TARGET_FILE_DIR:${TARGET}>)
-
-        add_custom_command(
-            TARGET ${TARGET} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_FILE:${lib}> ${target_dir}
-            WORKING_DIRECTORY ${target_dir}
-            COMMENT "Copying runtime for ${lib}"
-        )
-
-        if(UNIX)
-            add_custom_command(
-                TARGET ${TARGET} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E create_symlink
-                    $<TARGET_FILE_NAME:${lib}> $<PATH:GET_STEM,$<TARGET_FILE_NAME:${lib}>>.so
-                COMMAND ${CMAKE_COMMAND} -E create_symlink
-                    $<TARGET_FILE_NAME:${lib}> $<PATH:GET_STEM,$<TARGET_FILE_NAME:${lib}>>.so.0
-                WORKING_DIRECTORY ${target_dir}
-                COMMENT "Creating symlinks for ${lib}"
-            )
-        endif()
-    endforeach()
-endfunction()
-
 # deps_build_all()
 #
 # Builds and installs all registered dependencies using the Python helper script.
@@ -283,12 +229,94 @@ function(deps_build_all)
     execute_process(
         COMMAND ${DEPS_INSTALL_CMD}
         WORKING_DIRECTORY ${_script_dir}
-        RESULT_VARIABLE ret
     )
+endfunction()
 
-    if(NOT ret EQUAL 0)
-        message(FATAL_ERROR "Dependencies build failed!")
-    else()
-        message(STATUS "Dependencies build succeeded.")
+# deps_copy_runtime_binaries(<TARGET> [TARGETS <lib>...])
+#
+# Copies runtime binaries (DLLs/.so files) of dependent targets next to the given target
+# after build. On UNIX, also creates symbolic links for .so and .so.0.
+#
+# Arguments:
+#   TARGET   - The main target that depends on the libraries
+#   TARGETS  - List of library targets whose runtime files should be copied
+#
+# Behavior:
+#   - Skips INTERFACE libraries.
+#   - Copies each runtime binary into $<TARGET_FILE_DIR:${TARGET}>.
+#   - On UNIX systems, creates symbolic links:
+#       libname.so -> actual file
+#       libname.so.0 -> actual file
+#
+# Example:
+# deps_copy_runtime_binaries(MyApp TARGETS MyLib)
+#
+# Copies MyLib binaries to MyApp's output directory and, on UNIX, creates .so symlinks.
+function(deps_copy_runtime_binaries TARGET)
+    set(multi_value_args TARGETS)
+    cmake_parse_arguments(ARG "" "" "${multi_value_args}" ${ARGN})
+
+    foreach(lib ${ARG_TARGETS})
+        if(NOT TARGET ${lib})
+            continue()
+        endif()
+
+        get_target_property(lib_type ${lib} TYPE)
+        if(NOT lib_type OR (NOT(lib_type MATCHES "SHARED_LIBRARY|MODULE_LIBRARY|EXECUTABLE")))
+            continue()
+        endif()
+
+        set(target_dir $<TARGET_FILE_DIR:${TARGET}>)
+
+        add_custom_command(
+            TARGET ${TARGET} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:${lib}> ${target_dir}
+            WORKING_DIRECTORY ${target_dir}
+            COMMENT "Copying runtime for ${lib}"
+        )
+
+        if(UNIX)
+            add_custom_command(
+                TARGET ${TARGET} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E create_symlink
+                    $<TARGET_FILE_NAME:${lib}> $<PATH:GET_STEM,$<TARGET_FILE_NAME:${lib}>>.so
+                COMMAND ${CMAKE_COMMAND} -E create_symlink
+                    $<TARGET_FILE_NAME:${lib}> $<PATH:GET_STEM,$<TARGET_FILE_NAME:${lib}>>.so.0
+                WORKING_DIRECTORY ${target_dir}
+                COMMENT "Creating symlinks for ${lib}"
+            )
+        endif()
+    endforeach()
+endfunction()
+
+# deps_target_link_and_copy_runtime(<target> ... <item>... ...)
+# deps_target_link_and_copy_runtime(<target> <PRIVATE|PUBLIC|INTERFACE> <item>... [<PRIVATE|PUBLIC|INTERFACE> <item>...]...)
+# deps_target_link_and_copy_runtime(<target> <item>...)
+# deps_target_link_and_copy_runtime(<target> <LINK_PRIVATE|LINK_PUBLIC> <lib>... [<LINK_PRIVATE|LINK_PUBLIC> <lib>...]...)
+# deps_target_link_and_copy_runtime(<target> LINK_INTERFACE_LIBRARIES <item>...)
+#
+# Exactly the same as target_link_libraries, but it also calls deps_copy_runtime_binaries
+# for all linked libraries.
+function(deps_target_link_and_copy_runtime TARGET)
+    target_link_libraries(${TARGET} ${ARGN})
+
+    set(linked_libs "")
+
+    foreach(arg IN LISTS ARGN)
+        if(
+            NOT(arg STREQUAL "PRIVATE") AND
+            NOT(arg STREQUAL "PUBLIC") AND
+            NOT(arg STREQUAL "INTERFACE") AND
+            NOT(arg STREQUAL "LINK_PRIVATE") AND
+            NOT(arg STREQUAL "LINK_PUBLIC") AND
+            NOT(arg STREQUAL "LINK_INTERFACE_LIBRARIES")
+        )
+            list(APPEND linked_libs ${arg})
+        endif()
+    endforeach()
+
+    if(linked_libs)
+        deps_copy_runtime_binaries(${TARGET} TARGETS ${linked_libs})
     endif()
 endfunction()
