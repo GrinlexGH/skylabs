@@ -1,14 +1,15 @@
 #pragma once
 
 namespace Skylabs {
-    constexpr auto NAME = "@APP_NAME@";
-    constexpr auto GAME_NAME = "@APP_GAME_NAME@";
-    constexpr auto COMPANY = "@APP_COMPANY@";
-    constexpr auto COPYRIGHT = "@APP_COPYRIGHT@";
-    constexpr auto VERSION = "@APP_VERSION@";
-    constexpr auto HOMEPAGE = "@APP_HOMEPAGE@";
+    constexpr auto NAME = "@SKYLABS_NAME@";
+    constexpr auto GAME_NAME = "@SKYLABS_GAME_NAME@";
+    constexpr auto COMPANY = "@SKYLABS_COMPANY@";
+    constexpr auto COPYRIGHT = "@SKYLABS_COPYRIGHT@";
+    constexpr auto HOMEPAGE = "@SKYLABS_HOMEPAGE@";
 
-    constexpr int VERSION_MAJOR = @APP_VERSION_MAJOR@;
-    constexpr int VERSION_MINOR = @APP_VERSION_MINOR@;
-    constexpr int VERSION_PATCH = @APP_VERSION_PATCH@;
+    constexpr auto VERSION = "@SKYLABS_VERSION@";
+    constexpr int VERSION_MAJOR = @SKYLABS_VERSION_MAJOR@;
+    constexpr int VERSION_MINOR = @SKYLABS_VERSION_MINOR@;
+    constexpr int VERSION_PATCH = @SKYLABS_VERSION_PATCH@;
+    constexpr auto VERSION_WORD = "@SKYLABS_VERSION_WORD@";
 }

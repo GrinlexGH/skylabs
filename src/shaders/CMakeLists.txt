@@ -1,26 +1,25 @@
 # shaders
 set(CURRENT_TARGET_NAME shaders)
 
-set(SHADERS
+set(SOURCES
     shader.frag.glsl
     shader.vert.glsl
     shader.comp.glsl
 )
 
-foreach(SHADER ${SHADERS})
-    get_filename_component(SHADER_NAME "${SHADER}" NAME)
-    get_filename_component(SHADER_NAME_WE "${SHADER}" NAME_WE)
-    get_filename_component(SHADER_DIR "${SHADER}" DIRECTORY)
+foreach(shader ${SOURCES})
+    cmake_path(GET shader FILENAME shader_name)
+    cmake_path(GET shader STEM LAST_ONLY shader_name_we)
+    cmake_path(GET shader_name_we EXTENSION LAST_ONLY shader_stage)
+    string(REGEX REPLACE "^\\." "" shader_stage "${shader_stage}") # remove the first . character
+    cmake_path(GET shader PARENT_PATH shader_dir)
 
-    set(SHADER_OUT_DIR "${SHADERS_OUTPUT_DIRECTORY}/${SHADER_DIR}")
+    set(shader_out_dir "${SKYLABS_SHADER_OUTPUT_DIRECTORY}/${shader_dir}")
 
-    # Get shader stage suffix from extension
-    # shader.comp.glsl -> comp
-    string(REGEX REPLACE ".*\\.([^.]+)\\.glsl$" "\\1" SHADER_STAGE_SUFFIX "${SHADER_NAME}")
-    string(TOLOWER "${SHADER_STAGE_SUFFIX}" SHADER_STAGE_SUFFIX)
+    string(TOLOWER "${shader_stage}" shader_stage)
 
     # Same as [ "vert", "vertex",  "frag", "fragment" ]
-    set(STAGE_MAP
+    set(stage_map
         "vert;vertex"
         "frag;fragment"
         "comp;compute"
@@ -32,42 +31,41 @@ foreach(SHADER ${SHADERS})
         "rgen;rgen"
     )
 
-    list(FIND STAGE_MAP "${SHADER_STAGE_SUFFIX}" STAGE_INDEX)
+    list(FIND stage_map "${shader_stage}" stage_index)
 
-    if(NOT STAGE_INDEX EQUAL -1)
+    if(NOT stage_index EQUAL -1)
         # Get list element after stage suffix
-        math(EXPR STAGE_INDEX "${STAGE_INDEX} + 1")
-        list(GET STAGE_MAP ${STAGE_INDEX} SHADER_STAGE)
+        math(EXPR stage_index "${stage_index} + 1")
+        list(GET stage_map ${stage_index} shader_stage_name)
     else()
-        message(WARNING "Unknown shader stage suffix: ${SHADER_STAGE_SUFFIX}")
+        message(WARNING "Unknown shader stage suffix: ${shader_stage}")
         continue()
     endif()
 
-    set(SHADER_OUT_NAME "${SHADER_OUT_DIR}/${SHADER_NAME_WE}.${SHADER_STAGE_SUFFIX}.spv")
-    list(APPEND SHADER_OUT_NAMES "${SHADER_OUT_NAME}")
+    set(shader_out_path "${shader_out_dir}/${shader_name_we}.${shader_stage}.spv")
+    list(APPEND shader_out_names "${shader_out_path}")
 
     add_custom_command(
-        OUTPUT "${SHADER_OUT_NAME}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUT_DIR}
+        OUTPUT "${shader_out_path}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${shader_out_dir}
         COMMAND Vulkan::glslc
-            "-fshader-stage=${SHADER_STAGE}"
-            "${SHADER}"
-            -o "${SHADER_OUT_NAME}"
-        DEPENDS "${SHADER}"
+            "-fshader-stage=${shader_stage_name}"
+            "${shader}"
+            -o "${shader_out_path}"
+        DEPENDS "${shader}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Compiling ${SHADER} [${SHADER_STAGE}]"
+        COMMENT "Compiling ${shader} [${shader_stage_name}]"
     )
 endforeach()
 
 add_custom_target(${CURRENT_TARGET_NAME}
-    DEPENDS ${SHADER_OUT_NAMES}
-    SOURCES ${SHADERS}
+    DEPENDS ${shader_out_names}
+    SOURCES ${SOURCES}
 )
 
-foreach(FILE IN LISTS SHADERS)
-    get_filename_component(SOURCE_PATH "${FILE}" PATH)
-    string(REPLACE "/" "\\" SOURCE_PATH_GROUP "${SOURCE_PATH}")
-    source_group("Source Files\\${SOURCE_PATH_GROUP}" FILES "${FILE}")
+foreach(source IN LISTS SOURCES)
+    cmake_path(GET source PARENT_PATH source_directory)
+    source_group("Source Files/${source_directory}" FILES "${source}")
 endforeach()
 
 if(ANDROID)
@@ -75,9 +73,9 @@ if(ANDROID)
     add_custom_command(
         TARGET ${CURRENT_TARGET_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-        ${SHADERS_OUTPUT_DIRECTORY}
+        ${SHADER_OUTPUT_DIRECTORY}
         ${SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY}/shaders
-        WORKING_DIRECTORY ${SHADERS_OUTPUT_DIRECTORY}
+        WORKING_DIRECTORY ${SHADER_OUTPUT_DIRECTORY}
         COMMENT "Copying shaders to apk"
     )
 endif()

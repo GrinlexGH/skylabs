@@ -49,21 +49,14 @@ set(SOURCES
 
 add_library(${CURRENT_TARGET_NAME} MODULE ${SOURCES})
 
-foreach(FILE IN LISTS SOURCES)
-    get_filename_component(SOURCE_PATH "${FILE}" PATH)
-    string(REPLACE "/" "\\" SOURCE_PATH_GROUP "${SOURCE_PATH}")
-    source_group("Source Files\\${SOURCE_PATH_GROUP}" FILES "${FILE}")
+foreach(source IN LISTS SOURCES)
+    cmake_path(GET source PARENT_PATH source_directory)
+    source_group("Source Files/${source_directory}" FILES "${source}")
 endforeach()
 
-set_target_properties(${CURRENT_TARGET_NAME}
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${LIBS_OUTPUT_DIRECTORY}/
-    RUNTIME_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
-    LIBRARY_OUTPUT_DIRECTORY ${DLLS_OUTPUT_DIRECTORY}/
-)
-
 add_dependencies(${CURRENT_TARGET_NAME} public shaders)
-target_link_libraries(${CURRENT_TARGET_NAME}
+
+deps_target_link_and_copy_runtime(${CURRENT_TARGET_NAME}
     PRIVATE
     public
     SDL3::SDL3
@@ -74,8 +67,8 @@ target_link_libraries(${CURRENT_TARGET_NAME}
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
 )
 
-if(ENABLE_STEAM)
-    target_link_libraries(${CURRENT_TARGET_NAME}
+if(SKYLABS_ENABLE_STEAM)
+    deps_target_link_and_copy_runtime(${CURRENT_TARGET_NAME}
         PRIVATE
         SteamworksSDK::SteamAPI
         SteamworksSDK::AppTicket
