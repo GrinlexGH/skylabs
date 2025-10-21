@@ -40,10 +40,9 @@
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "env":
-                {
-                    "PATH":"${env:PATH}:${command:cmake.getLaunchTargetDirectory}"
-                },
+            "env": {
+                "PATH": "${env:PATH}:${command:cmake.getLaunchTargetDirectory}"
+            },
             "console": "integratedTerminal",
             "initCommands": [
                 "settings set target.x86-disassembly-flavor intel"
