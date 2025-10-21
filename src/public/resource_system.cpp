@@ -1,6 +1,7 @@
 #include "resource_system.hpp"
 
 #include "os.hpp"
+#include "logging.hpp"
 
 #include <nowide/fstream.hpp>
 
@@ -23,10 +24,13 @@ namespace ResourceSystem {
     const std::string path = GetRelativeResourcePath(type, relativePath);
 
     nowide::ifstream file(path.c_str(), std::ios_base::ate | std::ios_base::binary);
-    file.exceptions(std::ios_base::failbit | std::ios_base::badbit);
 
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file!");
+        if (file.fail()) {
+            throw std::runtime_error("Failed to open file: " + path);
+        }
+        Log::Warning("Couldn't open file: {}", path);
+        return {};
     }
 
     const std::streampos fileSize = file.tellg();
