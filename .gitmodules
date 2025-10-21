@@ -1,8 +1,8 @@
 [submodule "libs/src/SDL"]
 	path = libs/src/SDL
 	url = https://github.com/libsdl-org/SDL.git
-[submodule "libs/src/Boost.Nowide"]
-	path = libs/src/Boost.Nowide
+[submodule "libs/src/nowide"]
+	path = libs/src/nowide
 	url = https://github.com/boostorg/nowide.git
 [submodule "libs/src/SDL_Image"]
 	path = libs/src/SDL_image

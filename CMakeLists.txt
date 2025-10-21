@@ -130,7 +130,7 @@ if(result)
 endif()
 
 # Third party static libraries
-add_subdirectory(libs/src/Boost.Nowide EXCLUDE_FROM_ALL SYSTEM)
+add_subdirectory(libs/src/nowide EXCLUDE_FROM_ALL SYSTEM)
 set(GLM_ENABLE_CXX_20 ON)
 add_subdirectory(libs/src/glm EXCLUDE_FROM_ALL SYSTEM)
 
