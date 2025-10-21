@@ -42,7 +42,7 @@ foreach(shader ${SOURCES})
         continue()
     endif()
 
-    set(shader_out_path "${shader_out_dir}/${shader_name_we}.${shader_stage}.spv")
+    set(shader_out_path "${shader_out_dir}/${shader_name_we}.spv")
     list(APPEND shader_out_names "${shader_out_path}")
 
     add_custom_command(
