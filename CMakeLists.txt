@@ -84,30 +84,46 @@ find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 
 # Global compilation options
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
+set(IS_GNU_LIKE FALSE)
+set(IS_MSVC_LIKE FALSE)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(IS_MSVC_LIKE TRUE)
+    else()
+        set(IS_GNU_LIKE TRUE)
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(IS_MSVC_LIKE TRUE)
+endif()
+
+if(IS_GNU_LIKE)
     add_compile_options(
         "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray background
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
     )
 
-    # Android SDK doesn't support march native. Kinda logical
     if(NOT ANDROID)
-        add_compile_options(
-            "-march=native" "-mtune=native"
-        )
+        add_compile_options("-march=native" "-mtune=native")
     endif()
 
-    # Use libc++ on linux or msys2 just because I can
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND ((WIN32 AND MINGW) OR NOT CMAKE_CXX_SIMULATE_ID MATCHES "MSVC"))
-        if(NOT ANDROID) # Android SDK doesn't support explicitly setting lld
-            set(CMAKE_LINKER_TYPE LLD)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        # Use libc++ on linux or msys2 just because I can
+        if(UNIX OR (WIN32 AND MINGW))
+            if(NOT ANDROID) # Android SDK doesn't support explicitly setting lld
+                set(CMAKE_LINKER_TYPE LLD)
+            endif()
+            add_compile_options("-stdlib=libc++")
+            add_link_options("-stdlib=libc++")
         endif()
-        add_compile_options("-stdlib=libc++")
-        add_link_options("-stdlib=libc++")
+
+        if(WIN32)
+            add_compile_options("-fansi-escape-codes") # Enable color output on windows
+        endif()
     endif()
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+elseif(IS_MSVC_LIKE)
     add_compile_options(
-        "/utf-8" # No, I don't want to use one byte encoding
+        "/utf-8" # No, I don't want to use one byte encoding in source files
         "/Zc:__cplusplus" # Idk what it is fixing, but it is definitely fixing something
         "/MP" # Multithreading
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
