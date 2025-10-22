@@ -125,9 +125,11 @@ elseif(IS_MSVC_LIKE)
     add_compile_options(
         "/utf-8" # No, I don't want to use one byte encoding in source files
         "/Zc:__cplusplus" # Idk what it is fixing, but it is definitely fixing something
-        "/MP" # Multithreading
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
     )
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        add_compile_definitions("/MP") # Clang-cl doesn't support multithreading option
+    endif()
 endif()
 
 if(WIN32)
