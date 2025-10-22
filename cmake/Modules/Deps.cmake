@@ -127,7 +127,6 @@ macro(deps_append_cmake_define VAR)
             string(APPEND DEPS_CMAKE_GLOBAL_ARGS " -D${VAR}=\"${${VAR}}\"")
         endif()
     endif()
-    unset(_deps_append_cmake_define_argv1)
 endmacro()
 
 # deps_add_cmake_project(<SOURCE_SUBDIR> [CMAKE_ARGS <args>...] [INSTALL_SUBDIR <dir>] [BUILD_FOLDER <dir>])
