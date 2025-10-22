@@ -1,3 +1,69 @@
+# ===============================================================================================
+# Dependency Installer for CMake Projects
+# Author: Grinlex
+# -----------------------------------------------------------------------------------------------
+# Overview:
+#
+# This module provides an autonomous way to build and install external dependencies during
+# CMake configuration. It allows a project to remain self-contained without requiring
+# preinstalled SDKs or system-wide packages.
+#
+# -----------------------------------------------------------------------------------------------
+# Usage example:
+#
+#   # linux-arm.cmake toolchain file
+#   set(CMAKE_SYSTEM_NAME Linux)    # DEPS_TARGET_SYSTEM will be equal to CMAKE_SYSTEM_NAME
+#   set(CMAKE_SYSTEM_PROCESSOR arm) # DEPS_TARGET_ARCH will be equal to CMAKE_SYSTEM_PROCESSOR
+#
+#   set(tools /home/devel/gcc-4.7-linaro-rpi-gnueabihf)
+#   set(CMAKE_C_COMPILER ${tools}/bin/arm-linux-gnueabihf-gcc)
+#   set(CMAKE_CXX_COMPILER ${tools}/bin/arm-linux-gnueabihf-g++)
+#
+#   include(deps)
+#   set(DEPS_SUBFOLDER "libstdcxx")
+#   deps_append_cmake_define(CMAKE_SYSTEM_NAME)
+#   deps_append_cmake_define(CMAKE_SYSTEM_PROCESSOR)
+#   deps_append_cmake_define(CMAKE_C_COMPILER)
+#   deps_append_cmake_define(CMAKE_CXX_COMPILER)
+#
+#   # CMakeLists.txt
+#   cmake_minimum_required(VERSION 3.26)
+#   project("Skylabs" LANGUAGES CXX C)
+#
+#   list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
+#   include(Deps)
+#
+#   deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+#   if(ANDROID)
+#       deps_append_cmake_define(ANDROID_ABI)
+#       deps_append_cmake_define(CMAKE_ANDROID_ARCH_ABI)
+#   endif()
+#
+#   deps_add_cmake_project("SDL" INSTALL_SUBDIR "SDL3" CMAKE_ARGS -DSDL_TEST_LIBRARY=OFF)
+#   deps_add_header_only("tinyobjloader" HEADERS "tiny_obj_loader.h")
+#   deps_add_manual_install(
+#     "SteamworksSDK"
+#     INSTALL_SUBDIR "SteamworksSDK"
+#     RULES
+#       "public/steam/*.h"              "include/steam"
+#       "redistributable_bin/**/*.dll"  "bin"
+#   )
+#   deps_build_all()
+#
+#   include_directories(SYSTEM "${DEPS_HEADER_ONLY_INCLUDE_DIR}")
+#   find_package(SDL3 REQUIRED)
+#   find_package(SteamworksSDK REQUIRED)
+#
+#   add_subdirectory(libs/src/glm EXCLUDE_FROM_ALL SYSTEM)
+#
+#   add_executable(skylabs src/main.cpp)
+#   deps_target_link_and_copy_runtime(skylabs PRIVATE
+#       SDL3::SDL3
+#       SteamworksSDK::SteamAPI
+#       glm::glm
+#   )
+#
+# ===============================================================================================
 macro(_deps_internal_set_cache_from_env_or_default VAR DEFAULT TYPE DESCRIPTION)
     if(NOT DEFINED ${VAR})
         if(DEFINED ENV{${VAR}})
@@ -21,13 +87,13 @@ endmacro()
 _deps_internal_set_from_env_or_default(DEPS_TARGET_SYSTEM ${CMAKE_SYSTEM_NAME})
 _deps_internal_set_from_env_or_default(DEPS_TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
 _deps_internal_set_from_env_or_default(DEPS_SUBFOLDER "")
+_deps_internal_set_from_env_or_default(DEPS_CMAKE_GLOBAL_ARGS "")
 
-_deps_internal_set_cache_from_env_or_default(DEPS_SOURCES_DIR "${CMAKE_SOURCE_DIR}/libs/src" PATH "Directory with source libraries")
-_deps_internal_set_cache_from_env_or_default(DEPS_INSTALL_DIR "${CMAKE_SOURCE_DIR}/libs/bin/${DEPS_TARGET_SYSTEM}-${DEPS_TARGET_ARCH}/${DEPS_SUBFOLDER}" PATH "Directory to install libraries")
+_deps_internal_set_cache_from_env_or_default(DEPS_SOURCES_DIR "${PROJECT_SOURCE_DIR}/libs/src" PATH "Directory with source libraries")
+_deps_internal_set_cache_from_env_or_default(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/libs/bin/${DEPS_TARGET_SYSTEM}-${DEPS_TARGET_ARCH}/${DEPS_SUBFOLDER}" PATH "Directory to install libraries")
 _deps_internal_set_cache_from_env_or_default(DEPS_CACHE_DIR "${DEPS_INSTALL_DIR}/cache" PATH "Directory with git hash")
 _deps_internal_set_cache_from_env_or_default(DEPS_PYTHON "" FILEPATH "Python interpreter executable")
-_deps_internal_set_cache_from_env_or_default(DEPS_SCRIPT_PATH "${CMAKE_SOURCE_DIR}/libs/install_dependencies.py" FILEPATH "Python helper script path")
-_deps_internal_set_cache_from_env_or_default(DEPS_CMAKE_GLOBAL_ARGS "" STRING "Global cmake arguments for all libraries")
+_deps_internal_set_cache_from_env_or_default(DEPS_SCRIPT_PATH "${PROJECT_SOURCE_DIR}/libs/install_dependencies.py" FILEPATH "Python helper script path")
 _deps_internal_set_cache_from_env_or_default(DEPS_HEADER_SUBDIR "header-only" STRING "Subdirectory name for header-only libraries")
 set(DEPS_HEADER_ONLY_INCLUDE_DIR "${DEPS_INSTALL_DIR}/${DEPS_HEADER_SUBDIR}")
 set(_deps_internal_cmd_args "")
@@ -54,13 +120,14 @@ endif()
 #   set(FOO "custom")
 #   deps_append_cmake_define(FOO) # -> appends: -DFOO="custom"
 macro(deps_append_cmake_define VAR)
-    if(${ARGV1})
+    if(NOT "${ARGV1}" STREQUAL "")
         string(APPEND DEPS_CMAKE_GLOBAL_ARGS " -D${VAR}=\"${ARGV1}\"")
     else()
         if(DEFINED ${VAR})
             string(APPEND DEPS_CMAKE_GLOBAL_ARGS " -D${VAR}=\"${${VAR}}\"")
         endif()
     endif()
+    unset(_deps_append_cmake_define_argv1)
 endmacro()
 
 # deps_add_cmake_project(<SOURCE_SUBDIR> [CMAKE_ARGS <args>...] [INSTALL_SUBDIR <dir>] [BUILD_FOLDER <dir>])
@@ -218,6 +285,7 @@ function(deps_build_all)
 
     if(DEPS_CMAKE_GLOBAL_ARGS)
         list(APPEND DEPS_INSTALL_CMD "--cmake-args=${DEPS_CMAKE_GLOBAL_ARGS}")
+        message(STATUS "${DEPS_CMAKE_GLOBAL_ARGS}")
     endif()
 
     if(DEPS_HEADER_SUBDIR)
@@ -234,7 +302,7 @@ endfunction()
 
 # deps_copy_runtime_binaries(<TARGET> [TARGETS <lib>...])
 #
-# Copies runtime binaries (DLLs/.so files) of dependent targets next to the given target
+# Copies runtime binaries (DLLs/.so files) of TARGETS next to the TARGET
 # after build. On UNIX, also creates symbolic links for .so and .so.0.
 #
 # Arguments:

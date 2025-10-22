@@ -6,7 +6,6 @@ project(${PROJECT_NAME} HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 L
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
 # Options
@@ -24,7 +23,7 @@ set(SKYLABS_ASSETS_DIR ${SKYLABS_ROOT_DIR}/assets)
 set(SKYLABS_ANDROID_DIR ${SKYLABS_ROOT_DIR}/android)
 set(SKYLABS_ANDROID_GENERATED_ASSETS_DIR ${SKYLABS_ROOT_DIR}/android/app/src/main/assets)
 
-include(InstallDependencies)
+include(Deps)
 
 deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
