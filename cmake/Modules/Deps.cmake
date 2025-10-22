@@ -284,7 +284,6 @@ function(deps_build_all)
 
     if(DEPS_CMAKE_GLOBAL_ARGS)
         list(APPEND DEPS_INSTALL_CMD "--cmake-args=${DEPS_CMAKE_GLOBAL_ARGS}")
-        message(STATUS "${DEPS_CMAKE_GLOBAL_ARGS}")
     endif()
 
     if(DEPS_HEADER_SUBDIR)
