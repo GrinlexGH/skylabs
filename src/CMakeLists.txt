@@ -47,12 +47,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Warnings
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+if(IS_GNU_LIKE)
     add_compile_options(
         "-Wall" "-Wextra" "-Wpedantic"
         #"$<$<CONFIG:Release>:-Werror>"
     )
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+elseif(IS_MSVC_LIKE)
     add_compile_options(
         "/W4"
         #"$<$<CONFIG:Release>:/WX>"
