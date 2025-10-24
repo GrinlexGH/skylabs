@@ -128,7 +128,7 @@ elseif(IS_MSVC_LIKE)
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
     )
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        add_compile_definitions("/MP") # Clang-cl doesn't support multithreading option
+        add_compile_options("/MP") # Clang-cl doesn't support multithreading option
     endif()
 endif()
 
