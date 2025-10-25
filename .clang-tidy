@@ -32,7 +32,9 @@ Checks: >
   modernize-use-trailing-return-type,
   -misc-include-cleaner
 WarningsAsErrors: ''
-HeaderFilterRegex: '.*'
+UseColor: true
+HeaderFilterRegex: 'src/'
 FormatStyle: file
+SystemHeaders: false
 CheckOptions:
   misc-include-cleaner.UnusedIncludes: 'false'
