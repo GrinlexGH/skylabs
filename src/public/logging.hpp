@@ -32,7 +32,7 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
 
     #ifdef PLATFORM_ANDROID
 
-    std::lock_guard lock(g_mutex);
+    const std::scoped_lock lock(g_mutex);
     switch (type) {
         case Type::eDebug:
             SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;168;228;160m%s\033[0m", std::format(fmt, std::forward<Args>(args)...).c_str());
@@ -78,7 +78,7 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
             break;
     }
 
-    const std::lock_guard lock(g_mutex);
+    const std::scoped_lock lock(g_mutex);
     std::cout << prefix
               << stc::true_color
               << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "
