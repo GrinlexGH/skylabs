@@ -12,9 +12,9 @@ Requirements:
 
 CMake uses python script to install all third-party libraries.
 
-For more info see [**this cmake script**](cmake/InstallDependencies.cmake).
+For more info see [**this repository**](https://github.com/GrinlexGH/deps).
 
-Set `DEPS_TARGET_SYSTEM`, `DEPS_TARGET_ARCH` and `DEPS_SUBFOLDER` variables or env variables to control `DEPS_INSTALL_DIR` path (e.g. `libs/bin/Linux-x86_64/libcxx/`) - useful for cross-compilation via `CMAKE_TOOLCHAIN_FILE`, or for [`cmake-tools-kits.json`](https://gist.github.com/GrinlexGH/cffbe9727b7183d7044e2c4af378ffd2) from vscode extension.
+Set `DEPS_TARGET_SYSTEM`, `DEPS_TARGET_ARCH` and `DEPS_SUBDIR` variables or env variables to control `DEPS_INSTALL_DIR` path (e.g. `third_party/bin/Linux-x86_64/libcxx/`) - useful for cross-compilation via `CMAKE_TOOLCHAIN_FILE`, or for [`cmake-tools-kits.json`](https://gist.github.com/GrinlexGH/cffbe9727b7183d7044e2c4af378ffd2) from vscode extension.
 
 
 **You need to install the dependencies to build these libraries yourself**, but usually everything should work without problems.
