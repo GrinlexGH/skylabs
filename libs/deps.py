@@ -41,9 +41,6 @@ HEADER_SUBDIR: Path
 CMAKE: str
 CMAKE_GLOBAL_ARGS: list[str]
 
-# ========================================================================================
-# region ====== Logging and terminal colors ==============================================
-
 class LogLevel(IntEnum):
     Info = 0
     Success = 1
@@ -67,8 +64,6 @@ def log(message, log_level:LogLevel=LogLevel.Info):
     else:
         print(f"{TerminalColors.OKBLUE}{message}{TerminalColors.ENDC}", flush=True)
 
-# endregion === Logging and terminal colors ==============================================
-# ========================================================================================
 
 # ? maybe I should add compilation argument hash or file hash?
 def get_git_hash(source_dir: Path) -> str:
@@ -88,6 +83,7 @@ def check_git_hash_match(source_dir: Path, hash_file: Path) -> bool:
     except subprocess.CalledProcessError as e:
         log(f"Failed to get git hash for {source_dir}: {e}", LogLevel.Error)
     return False
+
 
 class InstallingLibrary(object):
     lib_name: str
@@ -352,6 +348,7 @@ def parse_manual_install_libs(args_list: list[list[str]]) -> list[ManualLibrary]
         libs.append(ManualLibrary(Path(source_subdir), Path(install_subdir), pairs))
 
     return libs
+
 
 # todo: add --parallel argument for parallel build
 def main():
