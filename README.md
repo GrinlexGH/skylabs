@@ -1,4 +1,6 @@
 # About
+[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)]([https://discordapp.com/users/481061464342265856](https://discord.gg/WX9HSAmPDF))
+
 This is my sandbox, where I test some c++ features, project architectures and much more.
 
 Abstract goal is to make some kind of 3D game from scratch on c++.
@@ -29,9 +31,6 @@ cmake --build .
 ```
 
 Binaries will be located in the `.output` folder.
-
-
-Discord: [grinlex](https://discord.gg/WX9HSAmPDF)
 
 ## Cloning
 This repository contains submodules for external dependencies, so when doing a fresh clone you need to clone recursively:
