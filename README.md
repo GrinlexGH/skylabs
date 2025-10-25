@@ -1,5 +1,5 @@
 # About
-[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)]([https://discordapp.com/users/481061464342265856](https://discord.gg/WX9HSAmPDF))
+[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/WX9HSAmPDF)
 
 This is my sandbox, where I test some c++ features, project architectures and much more.
 
