@@ -147,9 +147,9 @@ if(result)
 endif()
 
 # Third party static libraries
-add_subdirectory(libs/src/nowide EXCLUDE_FROM_ALL SYSTEM)
+add_subdirectory(third_party/src/nowide EXCLUDE_FROM_ALL SYSTEM)
 set(GLM_ENABLE_CXX_20 ON)
-add_subdirectory(libs/src/glm EXCLUDE_FROM_ALL SYSTEM)
+add_subdirectory(third_party/src/glm EXCLUDE_FROM_ALL SYSTEM)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(nowide glm PROPERTIES FOLDER "third_party")
