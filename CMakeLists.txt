@@ -155,4 +155,5 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(nowide glm PROPERTIES FOLDER "third_party")
 
 # Skylabs
-add_subdirectory(src)
+include_directories("${PROJECT_SOURCE_DIR}")
+add_subdirectory(skylabs)

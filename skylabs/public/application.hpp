@@ -1,0 +1,32 @@
+#pragma once
+#include <skylabs/public/dll_export.hpp>
+
+class PUBLIC_CLASS IApplication
+{
+public:
+    IApplication() = default;
+    IApplication(const IApplication&) = delete;
+    IApplication(IApplication&&) = delete;
+    IApplication& operator=(const IApplication&) = delete;
+    IApplication& operator=(IApplication&&) = delete;
+    virtual ~IApplication() = default;
+
+    virtual void Create() = 0;
+    virtual void Main() = 0;
+    virtual void Destroy() = 0;
+};
+
+class PUBLIC_CLASS CBaseApplication : public IApplication
+{
+public:
+    virtual void PreCreate() {}
+    void Create() override {}
+    virtual void PostCreate() {}
+
+    virtual void Run();
+    void Main() override {}
+
+    virtual void PreDestroy() {}
+    void Destroy() override {}
+    virtual void PostDestroy() {}
+};
