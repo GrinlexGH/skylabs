@@ -1,24 +1,24 @@
-[submodule "libs/src/SDL"]
-	path = libs/src/SDL
+[submodule "third_party/src/SDL"]
+	path = third_party/src/SDL
 	url = https://github.com/libsdl-org/SDL.git
-[submodule "libs/src/nowide"]
-	path = libs/src/nowide
+[submodule "third_party/src/nowide"]
+	path = third_party/src/nowide
 	url = https://github.com/boostorg/nowide.git
-[submodule "libs/src/SDL_Image"]
-	path = libs/src/SDL_image
+[submodule "third_party/src/SDL_Image"]
+	path = third_party/src/SDL_image
 	url = https://github.com/libsdl-org/SDL_image.git
-[submodule "libs/src/glm"]
-	path = libs/src/glm
+[submodule "third_party/src/glm"]
+	path = third_party/src/glm
 	url = https://github.com/g-truc/glm.git
-[submodule "libs/src/VulkanMemoryAllocator-Hpp"]
-	path = libs/src/VulkanMemoryAllocator-Hpp
+[submodule "third_party/src/VulkanMemoryAllocator-Hpp"]
+	path = third_party/src/VulkanMemoryAllocator-Hpp
 	url = https://github.com/YaaZ/VulkanMemoryAllocator-Hpp.git
-[submodule "libs/src/tinyobjloader"]
-	path = libs/src/tinyobjloader
+[submodule "third_party/src/tinyobjloader"]
+	path = third_party/src/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
-[submodule "libs/src/simple_term_colors"]
-	path = libs/src/simple_term_colors
+[submodule "third_party/src/simple_term_colors"]
+	path = third_party/src/simple_term_colors
 	url = https://github.com/illyigan/simple_term_colors.git
-[submodule "libs/src/SteamworksSDK"]
-	path = libs/src/SteamworksSDK
+[submodule "third_party/src/SteamworksSDK"]
+	path = third_party/src/SteamworksSDK
 	url = https://github.com/rlabrecque/SteamworksSDK.git
