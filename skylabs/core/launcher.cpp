@@ -1,6 +1,7 @@
 #include <skylabs/core/launcher.hpp>
 
 #include <skylabs/core/SDL/context.hpp>
+#include <skylabs/core/SDL/keyboard.hpp>
 #include <skylabs/core/SDL/vulkan/window.hpp>
 #include <skylabs/core/camera.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
@@ -110,10 +111,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
             }
         }
 
-        // TODO: get keyboard state wrapper
-        int keyboardStateSize = 0;
-        SDL_GetKeyboardState(&keyboardStateSize);
-        const std::span keyboardState(SDL_GetKeyboardState(nullptr), keyboardStateSize);
+        const std::span keyboardState = SDL::GetKeyboardState();
 
         if (keyboardState[SDL_SCANCODE_W]) {
             g_camera.ProcessKeyboard(FORWARD, deltaTime);
