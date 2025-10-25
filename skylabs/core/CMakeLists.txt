@@ -45,6 +45,7 @@ set(SOURCES
     SDL/vulkan/window.cpp
     SDL/vulkan/window.hpp
     SDL/video.hpp
+    SDL/keyboard.hpp
 )
 
 add_library(${CURRENT_TARGET_NAME} MODULE ${SOURCES})
