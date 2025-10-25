@@ -10,7 +10,7 @@
 #include <SDL3_image/SDL_image.h>
 
 #include <chrono>
-#include <ranges>
+#include <span>
 
 struct Vertex
 {
@@ -49,16 +49,16 @@ struct Vertex
     }
 };
 
-std::array vertices {
-    Vertex { { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } },
-    Vertex { {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-    Vertex { {  0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-    Vertex { { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } },
+constexpr std::array vertices {
+    Vertex { .pos = { -0.5f, -0.5f, 0.0f }, .color = { 1.0f, 0.0f, 0.0f }, .texCoord = { 1.0f, 0.0f } },
+    Vertex { .pos = {  0.5f, -0.5f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f }, .texCoord = { 0.0f, 0.0f } },
+    Vertex { .pos = {  0.5f,  0.5f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } },
+    Vertex { .pos = { -0.5f,  0.5f, 0.0f }, .color = { 1.0f, 1.0f, 1.0f }, .texCoord = { 1.0f, 1.0f } },
 
-    Vertex { { -0.5f, -0.5f, 0.5f }, { 1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-    Vertex { {  0.5f, -0.5f, 0.5f }, { 0.0f, 1.0f, 1.0f }, { 0.0f, 1.0f } },
-    Vertex { {  0.5f,  0.5f, 0.5f }, { 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-    Vertex { { -0.5f,  0.5f, 0.5f }, { 0.5f, 0.5f, 0.5f }, { 1.0f, 0.0f } },
+    Vertex { .pos = { -0.5f, -0.5f, 0.5f }, .color = { 1.0f, 1.0f, 0.0f }, .texCoord = { 0.0f, 0.0f } },
+    Vertex { .pos = {  0.5f, -0.5f, 0.5f }, .color = { 0.0f, 1.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } },
+    Vertex { .pos = {  0.5f,  0.5f, 0.5f }, .color = { 1.0f, 0.0f, 1.0f }, .texCoord = { 1.0f, 1.0f } },
+    Vertex { .pos = { -0.5f,  0.5f, 0.5f }, .color = { 0.5f, 0.5f, 0.5f }, .texCoord = { 1.0f, 0.0f } },
 };
 
 struct UniformBufferObject {
@@ -71,7 +71,7 @@ struct UniformBufferObject {
 glm::vec3 offset = {0.0f, 0.0f, 0.0f}; // то что реально уходит в UBO
 glm::vec3 targetOffset  = {0.0f, 0.0f, 0.0f}; // то куда хотим прийти
 
-float lerpSpeed = 5.0f; // чем больше, тем быстрее двигается
+constexpr float lerpSpeed = 5.0f; // чем больше, тем быстрее двигается
 
 void MoveForward()  { targetOffset.z += 0.1f; }
 void MoveBackward() { targetOffset.z -= 0.1f; }
@@ -377,8 +377,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::BufferUsageFlagBits::eTransferSrc
     );
 
-    int b = imageSize / 3;
-    char* a = new char[b];
+    std::byte* a = new std::byte[imageSize / 3];
     {
         CMemoryMapping mapping = stagingBuffer.Map();
         std::memcpy(mapping.GetData(), image->pixels, imageSize / 1);

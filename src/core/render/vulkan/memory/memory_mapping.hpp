@@ -17,6 +17,7 @@ public:
 
     auto operator*() const noexcept -> void* { return m_data; }
     [[nodiscard]] auto GetData() const -> void* { return m_data; }
+    [[nodiscard]] auto GetSize() const -> size_t { return m_size; }
 
     auto Clear() -> void;
 
@@ -26,5 +27,6 @@ private:
     vma::Allocator m_allocator = nullptr;
     vma::Allocation m_allocation = nullptr;
     void* m_data = nullptr;
+    vk::DeviceSize m_size = 0;
 };
 }

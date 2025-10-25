@@ -7,6 +7,7 @@ CMemoryMapping::CMemoryMapping(
 ) : m_allocator(allocator), m_allocation(allocation) {
     if (m_allocation && m_allocator) {
         m_data = m_allocator.mapMemory(m_allocation);
+        m_size = m_allocator.getAllocationInfo(m_allocation).size;
     }
 }
 
