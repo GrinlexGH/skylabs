@@ -1,6 +1,6 @@
 {
   "paths": [
-    "skylabs\\core\\launcher.cpp"
+    "skylabs/**/*.{cpp,hpp}"
   ],
   "buildRoot": "build"
 }

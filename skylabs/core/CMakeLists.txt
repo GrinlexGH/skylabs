@@ -50,6 +50,15 @@ set(SOURCES
 
 add_library(${CURRENT_TARGET_NAME} MODULE ${SOURCES})
 
+# No warnings in header factory file because of LTO in msvc
+if(IS_MSVC_LIKE)
+    set_source_files_properties(
+        header_factory.cpp
+        PROPERTIES COMPILE_OPTIONS
+        "/W1"
+    )
+endif()
+
 foreach(source IN LISTS SOURCES)
     cmake_path(GET source PARENT_PATH source_directory)
     source_group("Source Files/${source_directory}" FILES "${source}")

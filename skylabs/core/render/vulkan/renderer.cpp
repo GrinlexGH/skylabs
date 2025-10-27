@@ -406,14 +406,16 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(deviceHandle, commandPool);
 
-    m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-    m_texture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
-    m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
-
+    {
+        m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
+        m_texture.CopyBufferToImage(commandBuffer, *stagingBuffer, {static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1});
+        m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+    }
     EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
 
-
-    stagingBuffer.Clear();
+    {
+        stagingBuffer.Clear();
+    }
     SDL_DestroySurface(image);
     image = nullptr;
     //endregion COPY TO IMAGE
@@ -661,7 +663,9 @@ CRenderer::CRenderer(const IWindow* const window) {
         vertexBufferSize
     );
 
-    stagingBuffer.Clear();
+    {
+        stagingBuffer.Clear();
+    }
     //endregion VERTEX BUFFER
 
     //region INDEX BUFFER
@@ -692,7 +696,9 @@ CRenderer::CRenderer(const IWindow* const window) {
         indexBufferSize
     );
 
-    stagingBuffer.Clear();
+    {
+        stagingBuffer.Clear();
+    }
     //endregion INDEX BUFFER
 }
 
