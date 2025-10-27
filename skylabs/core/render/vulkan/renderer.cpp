@@ -197,7 +197,7 @@ void CopyBuffer(
 }
 
 void UpdateUniformBuffer(
-    const vk::Extent2D& cameraDemensions,
+    const vk::Extent2D& cameraDimensions,
     std::vector<Vulkan::CMemoryMapping>& uniformBuffersMapped,
     std::uint32_t currentImage,
     glm::mat4 view,
@@ -211,7 +211,7 @@ void UpdateUniformBuffer(
     UniformBufferObject ubo {};
     ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     ubo.view = view;
-    ubo.proj = glm::perspective(glm::radians(90.0f), (float) cameraDemensions.width / (float) cameraDemensions.height, 0.01f, 10.0f);
+    ubo.proj = glm::perspective(glm::radians(90.0f), (float) cameraDimensions.width / (float) cameraDimensions.height, 0.01f, 10.0f);
     ubo.proj[1][1] *= -1;
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
     if (glm::length(targetOffset - offset) < 0.0001) {
@@ -312,7 +312,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
     colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
-    // Аттачмнет референс, который описывает просто layout аттачмента
+    // Аттачмент референс, который описывает просто layout аттачмента
     vk::AttachmentReference colorAttachmentRef {};
     colorAttachmentRef.attachment = 0; // Индекс в vk::SubpassDescription
     colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
