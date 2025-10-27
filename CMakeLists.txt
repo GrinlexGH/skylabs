@@ -84,6 +84,17 @@ find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
 
 # Global compilation options
+# Enabling LTO
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result)
+if(result)
+    if(NOT (WIN32 AND MINGW))
+        message(STATUS "LTO has been enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+endif()
+
+# Compiler types
 set(IS_GNU_LIKE FALSE)
 set(IS_MSVC_LIKE FALSE)
 
@@ -118,32 +129,35 @@ if(IS_GNU_LIKE)
         endif()
 
         if(WIN32)
-            add_compile_options("-fansi-escape-codes") # Enable color output on windows
+            add_compile_options("-fansi-escape-codes")
         endif()
     endif()
 elseif(IS_MSVC_LIKE)
     add_compile_options(
         "/utf-8" # No, I don't want to use one byte encoding in source files
-        "/Zc:__cplusplus" # Idk what it is fixing, but it is definitely fixing something
+        "/Zc:__cplusplus"
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
     )
+    
+    if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+        add_compile_options("/Gy" "/Gw")
+    endif()
+
+    # Clang-cl doesn't support much options
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        add_compile_options("/MP") # Clang-cl doesn't support multithreading option
+        add_compile_options(
+            "/MP"
+            "/analyze:external-"
+        )
+
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.35)
+            add_compile_options("/Zc:checkGwOdr")
+        endif()
     endif()
 endif()
 
 if(WIN32)
     add_compile_definitions(UNICODE _UNICODE)
-endif()
-
-# Enabling LTO
-include(CheckIPOSupported)
-check_ipo_supported(RESULT result)
-if(result)
-    if(NOT (WIN32 AND MINGW))
-        message(STATUS "LTO has been enabled")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-    endif()
 endif()
 
 # Third party static libraries
