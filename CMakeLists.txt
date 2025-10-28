@@ -52,7 +52,7 @@ else()
 endif()
 
 # Subdir to separate runtimes
-set(DEPS_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${STD_RUNTIME}/$ENV{DEPS_SUBDIR}")
+set(DEPS_OUT_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${STD_RUNTIME}/$ENV{DEPS_SUBDIR}")
 
 # Global compilation options
 include(Deps)
