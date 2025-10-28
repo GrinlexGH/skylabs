@@ -10,7 +10,7 @@ build/*
 out/
 
 # Third party compiled libs
-libs/bin/*
+third_party/bin/*
 **/build/
 
 # Generated files
