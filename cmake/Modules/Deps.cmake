@@ -19,8 +19,9 @@
 #   set(CMAKE_C_COMPILER ${tools}/bin/arm-linux-gnueabihf-gcc)
 #   set(CMAKE_CXX_COMPILER ${tools}/bin/arm-linux-gnueabihf-g++)
 #
+#   set(DEPS_OUT_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-libstdcxx")
+#
 #   include(deps)
-#   set(DEPS_SUBFOLDER "libstdcxx")
 #   deps_append_cmake_define(CMAKE_SYSTEM_NAME)
 #   deps_append_cmake_define(CMAKE_SYSTEM_PROCESSOR)
 #   deps_append_cmake_define(CMAKE_C_COMPILER)
@@ -42,11 +43,18 @@
 #   deps_add_cmake_project("SDL" INSTALL_SUBDIR "SDL3" CMAKE_ARGS -DSDL_TEST_LIBRARY=OFF)
 #   deps_add_header_only("tinyobjloader" HEADERS "tiny_obj_loader.h")
 #   deps_add_manual_install(
-#     "SteamworksSDK"
-#     INSTALL_SUBDIR "SteamworksSDK"
-#     RULES
-#       "public/steam/*.h"              "include/steam"
-#       "redistributable_bin/**/*.dll"  "bin"
+#       "SteamworksSDK"
+#       INSTALL_SUBDIR "SteamworksSDK"
+#       RULES
+#         "redistributable_bin/**/*.dll"      "bin"
+#         "public/steam/lib/**/*.dll"         "bin"
+#         "public/steam/*.h"                  "include/steam"
+#         "redistributable_bin/**/*.lib"      "lib"
+#         "redistributable_bin/**/*.so"       "lib"
+#         "redistributable_bin/**/*.dylib"    "lib"
+#         "public/steam/lib/**/*.lib"         "lib"
+#         "public/steam/lib/**/*.so"          "lib"
+#         "public/steam/lib/**/*.dylib"       "lib"
 #   )
 #   deps_build_all()
 #
@@ -84,18 +92,23 @@ macro(_deps_internal_set_from_env_or_default VAR DEFAULT)
     endif()
 endmacro()
 
-_deps_internal_set_from_env_or_default(DEPS_TARGET_SYSTEM ${CMAKE_SYSTEM_NAME})
-_deps_internal_set_from_env_or_default(DEPS_TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
-_deps_internal_set_from_env_or_default(DEPS_SUBDIR "")
+_deps_internal_set_from_env_or_default(DEPS_OUT_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 _deps_internal_set_from_env_or_default(DEPS_CMAKE_GLOBAL_ARGS "")
 _deps_internal_set_from_env_or_default(DEPS_THIRD_PARTY_SUBDIR "third_party")
 
 _deps_internal_set_cache_from_env_or_default(DEPS_SOURCES_DIR "${PROJECT_SOURCE_DIR}/${DEPS_THIRD_PARTY_SUBDIR}/src" PATH "Directory with source libraries")
-_deps_internal_set_cache_from_env_or_default(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/${DEPS_THIRD_PARTY_SUBDIR}/bin/${DEPS_TARGET_SYSTEM}-${DEPS_TARGET_ARCH}/${DEPS_SUBDIR}" PATH "Directory to install libraries")
+_deps_internal_set_cache_from_env_or_default(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/${DEPS_THIRD_PARTY_SUBDIR}/bin/${DEPS_OUT_SUBDIR}" PATH "Directory to install libraries")
+
+_deps_internal_set_cache_from_env_or_default(DEPS_HEADER_SUBDIR "header-only" STRING "Subdirectory name for header-only libraries")
 _deps_internal_set_cache_from_env_or_default(DEPS_CACHE_DIR "${DEPS_INSTALL_DIR}/cache" PATH "Directory with git hash")
 _deps_internal_set_cache_from_env_or_default(DEPS_PYTHON_PATH "" FILEPATH "Python interpreter executable")
 _deps_internal_set_cache_from_env_or_default(DEPS_SCRIPT_PATH "${PROJECT_SOURCE_DIR}/${DEPS_THIRD_PARTY_SUBDIR}/deps.py" FILEPATH "Python helper script path")
-_deps_internal_set_cache_from_env_or_default(DEPS_HEADER_SUBDIR "header-only" STRING "Subdirectory name for header-only libraries")
+
+mark_as_advanced(DEPS_HEADER_SUBDIR)
+mark_as_advanced(DEPS_CACHE_DIR)
+mark_as_advanced(DEPS_PYTHON_PATH)
+mark_as_advanced(DEPS_SCRIPT_PATH)
+
 set(DEPS_HEADER_ONLY_INCLUDE_DIR "${DEPS_INSTALL_DIR}/${DEPS_HEADER_SUBDIR}")
 set(_deps_internal_cmd_args "")
 

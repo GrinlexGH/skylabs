@@ -16,6 +16,7 @@ else()
 endif()
 
 option(SKYLABS_ENABLE_STEAM "Enable Steamworks SDK" ${enable_steam_default})
+option(SKYLABS_TRY_TO_USE_LIBCXX "Try to use libc++ in skylabs and its dependencies" ON)
 
 # Skylabs directories
 set(SKYLABS_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
@@ -23,9 +24,110 @@ set(SKYLABS_ASSETS_DIR ${SKYLABS_ROOT_DIR}/assets)
 set(SKYLABS_ANDROID_DIR ${SKYLABS_ROOT_DIR}/android)
 set(SKYLABS_ANDROID_GENERATED_ASSETS_DIR ${SKYLABS_ROOT_DIR}/android/app/src/main/assets)
 
+# Compiler types
+set(IS_GNU_LIKE FALSE)
+set(IS_MSVC_LIKE FALSE)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(IS_MSVC_LIKE TRUE)
+    else()
+        set(IS_GNU_LIKE TRUE)
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(IS_MSVC_LIKE TRUE)
+endif()
+
+# Choosing a runtime
+if(IS_GNU_LIKE)
+    # GCC implementation by default
+    set(STD_RUNTIME "libstdcxx")
+
+    # Use libc++ on linux or msys2 just because I can
+    if(SKYLABS_TRY_TO_USE_LIBCXX AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") AND (UNIX OR (WIN32 AND MINGW)))
+        set(STD_RUNTIME "libcxx")
+    endif()
+else()
+    set(STD_RUNTIME "vcruntime")
+endif()
+
+# Subdir to separate runtimes
+set(DEPS_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${STD_RUNTIME}/$ENV{DEPS_SUBDIR}")
+
+# Global compilation options
 include(Deps)
 
-deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+deps_append_cmake_define(CMAKE_GENERATOR)
+deps_append_cmake_define(CMAKE_GENERATOR_PLATFORM)
+deps_append_cmake_define(CMAKE_C_COMPILER)
+deps_append_cmake_define(CMAKE_CXX_COMPILER)
+
+# Build with libcxx
+if(STD_RUNTIME STREQUAL "libcxx")
+    if(NOT ANDROID) # Android SDK doesn't support explicitly setting lld
+        set(CMAKE_LINKER_TYPE LLD)
+    endif()
+    add_compile_options("-stdlib=libc++")
+    add_link_options("-stdlib=libc++")
+
+    # Compile dependencies with libc++
+    deps_append_cmake_define(CMAKE_CXX_FLAGS "-stdlib=libc++")
+    deps_append_cmake_define(CMAKE_SHARED_LINKER_FLAGS -stdlib=libc++)
+    deps_append_cmake_define(CMAKE_MODULE_LINKER_FLAGS -stdlib=libc++)
+    deps_append_cmake_define(CMAKE_EXE_LINKER_FLAGS -stdlib=libc++)
+endif()
+
+if(IS_GNU_LIKE)
+    add_compile_options(
+        "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray background
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
+    )
+
+    if(NOT ANDROID)
+        add_compile_options("-march=native" "-mtune=native")
+    endif()
+
+    if(WIN32 AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+        add_compile_options("-fansi-escape-codes")
+    endif()
+elseif(IS_MSVC_LIKE)
+    add_compile_options(
+        "/utf-8" # No, I don't want to use one byte encoding in source files
+        "/Zc:__cplusplus"
+        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
+    )
+
+    if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+        add_compile_options("/Gy" "/Gw")
+    endif()
+
+    # Clang-cl doesn't support much options
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        add_compile_options(
+            "/MP"
+            "/analyze:external-"
+        )
+
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.35)
+            add_compile_options("/Zc:checkGwOdr")
+        endif()
+    endif()
+endif()
+
+# Enabling LTO
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result)
+if(result AND NOT(WIN32 AND MINGW))
+    message(STATUS "LTO has been enabled")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
+if(WIN32)
+    add_compile_definitions(UNICODE _UNICODE)
+endif()
+
+# Third party shared libraries
+deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY)
 
 if(ANDROID)
     deps_append_cmake_define(ANDROID_ABI)
@@ -82,83 +184,6 @@ find_package(VulkanHeaders REQUIRED)
 find_package(Vulkan COMPONENTS glslc REQUIRED)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
-
-# Global compilation options
-# Enabling LTO
-include(CheckIPOSupported)
-check_ipo_supported(RESULT result)
-if(result)
-    if(NOT (WIN32 AND MINGW))
-        message(STATUS "LTO has been enabled")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-    endif()
-endif()
-
-# Compiler types
-set(IS_GNU_LIKE FALSE)
-set(IS_MSVC_LIKE FALSE)
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        set(IS_MSVC_LIKE TRUE)
-    else()
-        set(IS_GNU_LIKE TRUE)
-    endif()
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(IS_MSVC_LIKE TRUE)
-endif()
-
-if(IS_GNU_LIKE)
-    add_compile_options(
-        "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray background
-        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
-    )
-
-    if(NOT ANDROID)
-        add_compile_options("-march=native" "-mtune=native")
-    endif()
-
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        # Use libc++ on linux or msys2 just because I can
-        if(UNIX OR (WIN32 AND MINGW))
-            if(NOT ANDROID) # Android SDK doesn't support explicitly setting lld
-                set(CMAKE_LINKER_TYPE LLD)
-            endif()
-            add_compile_options("-stdlib=libc++")
-            add_link_options("-stdlib=libc++")
-        endif()
-
-        if(WIN32)
-            add_compile_options("-fansi-escape-codes")
-        endif()
-    endif()
-elseif(IS_MSVC_LIKE)
-    add_compile_options(
-        "/utf-8" # No, I don't want to use one byte encoding in source files
-        "/Zc:__cplusplus"
-        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
-    )
-    
-    if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
-        add_compile_options("/Gy" "/Gw")
-    endif()
-
-    # Clang-cl doesn't support much options
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        add_compile_options(
-            "/MP"
-            "/analyze:external-"
-        )
-
-        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.35)
-            add_compile_options("/Zc:checkGwOdr")
-        endif()
-    endif()
-endif()
-
-if(WIN32)
-    add_compile_definitions(UNICODE _UNICODE)
-endif()
 
 # Third party static libraries
 add_subdirectory(third_party/src/nowide EXCLUDE_FROM_ALL SYSTEM)
