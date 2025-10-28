@@ -39,16 +39,20 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 # Choosing a runtime
-if(IS_GNU_LIKE)
-    # GCC implementation by default
+if(IS_MSVC_LIKE)
+    set(STD_RUNTIME "vcruntime")
+elseif(IS_GNU_LIKE)
     set(STD_RUNTIME "libstdcxx")
 
     # Use libc++ on linux or msys2 just because I can
     if(SKYLABS_TRY_TO_USE_LIBCXX AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") AND (UNIX OR (WIN32 AND MINGW)))
         set(STD_RUNTIME "libcxx")
     endif()
-else()
-    set(STD_RUNTIME "vcruntime")
+
+    # Use vcruntime for non mingw clang on windows
+    if((WIN32 AND NOT MINGW) AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+        set(STD_RUNTIME "vcruntime")
+    endif()
 endif()
 
 # Subdir to separate runtimes
