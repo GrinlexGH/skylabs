@@ -142,14 +142,19 @@ endif()
 deps_add_cmake_project(
     "VulkanMemoryAllocator-Hpp/Vulkan-Headers" INSTALL_SUBDIR "VulkanHeaders"
     CMAKE_ARGS
-    "-DVULKAN_HEADERS_ENABLE_TESTS=OFF -DVULKAN_HEADERS_ENABLE_MODULE=ON"
+    "-DVULKAN_HEADERS_ENABLE_TESTS=OFF -DVULKAN_HEADERS_ENABLE_INSTALL=ON"
+    "-DVULKAN_HEADERS_ENABLE_MODULE=ON -DVULKAN_HEADERS_DISABLE_MODULE_STD=ON"
 )
 deps_add_cmake_project(
     "VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator"
     CMAKE_ARGS
     "-DVMA_BUILD_DOCUMENTATION=OFF -DVMA_BUILD_SAMPLES=OFF -DVMA_ENABLE_INSTALL=ON"
 )
-deps_add_cmake_project("VulkanMemoryAllocator-Hpp" CMAKE_ARGS "-DVMA_HPP_ENABLE_INSTALL=ON")
+deps_add_cmake_project(
+    "VulkanMemoryAllocator-Hpp"
+    CMAKE_ARGS
+    "-DVMA_HPP_ENABLE_INSTALL=ON -DVMA_BUILD_CXX_MODULE=OFF"
+)
 deps_add_cmake_project("SDL" INSTALL_SUBDIR "SDL3" CMAKE_ARGS "-DSDL_TEST_LIBRARY=OFF")
 deps_add_cmake_project(
     "SDL_image" INSTALL_SUBDIR "SDL3_image"
