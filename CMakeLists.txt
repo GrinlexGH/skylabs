@@ -56,7 +56,7 @@ elseif(IS_GNU_LIKE)
 endif()
 
 # Subdir to separate runtimes
-set(DEPS_OUT_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${STD_RUNTIME}/$ENV{DEPS_SUBDIR}")
+set(DEPS_OUT_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}/${STD_RUNTIME}/$ENV{DEPS_OUT_SUBDIR}")
 
 # Global compilation options
 include(Deps)
@@ -143,7 +143,6 @@ deps_add_cmake_project(
     "VulkanMemoryAllocator-Hpp/Vulkan-Headers" INSTALL_SUBDIR "VulkanHeaders"
     CMAKE_ARGS
     "-DVULKAN_HEADERS_ENABLE_TESTS=OFF -DVULKAN_HEADERS_ENABLE_INSTALL=ON"
-    "-DVULKAN_HEADERS_ENABLE_MODULE=ON -DVULKAN_HEADERS_DISABLE_MODULE_STD=ON"
 )
 deps_add_cmake_project(
     "VulkanMemoryAllocator-Hpp/VulkanMemoryAllocator"
