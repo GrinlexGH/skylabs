@@ -309,7 +309,12 @@ function(deps_build_all)
     execute_process(
         COMMAND ${DEPS_INSTALL_CMD}
         WORKING_DIRECTORY ${_script_dir}
+        RESULT_VARIABLE _result
     )
+
+    if(_result)
+        message(FATAL_ERROR "Failed to build libraries!")
+    endif()
 endfunction()
 
 # deps_copy_runtime_binaries(<TARGET> [TARGETS <lib>...])
