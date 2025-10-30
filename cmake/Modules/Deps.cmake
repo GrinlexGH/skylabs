@@ -275,7 +275,7 @@ endfunction()
 # Builds and installs all registered dependencies using the Python helper script.
 #
 # Behavior:
-#   - Invokes `install_dependencies.py` with collected dependency definitions.
+#   - Invokes Python helper script with collected dependency definitions.
 #   - Passes directories, cache, and global CMake arguments as parameters.
 #   - Fails the configure step if dependency installation returns a non-zero code.
 #

@@ -24,7 +24,7 @@ set(SKYLABS_ASSETS_DIR ${SKYLABS_ROOT_DIR}/assets)
 set(SKYLABS_ANDROID_DIR ${SKYLABS_ROOT_DIR}/android)
 set(SKYLABS_ANDROID_GENERATED_ASSETS_DIR ${SKYLABS_ROOT_DIR}/android/app/src/main/assets)
 
-# Compiler types
+# Determine a compiler type
 set(IS_GNU_LIKE FALSE)
 set(IS_MSVC_LIKE FALSE)
 
@@ -66,6 +66,8 @@ deps_append_cmake_define(CMAKE_GENERATOR_PLATFORM)
 deps_append_cmake_define(CMAKE_C_COMPILER)
 deps_append_cmake_define(CMAKE_CXX_COMPILER)
 
+deps_append_cmake_define(CMAKE_TOOLCHAIN_FILE)
+
 # Build with libcxx
 if(STD_RUNTIME STREQUAL "libcxx")
     if(NOT ANDROID) # Android SDK doesn't support explicitly setting lld
@@ -76,9 +78,9 @@ if(STD_RUNTIME STREQUAL "libcxx")
 
     # Compile dependencies with libc++
     deps_append_cmake_define(CMAKE_CXX_FLAGS "-stdlib=libc++")
-    deps_append_cmake_define(CMAKE_SHARED_LINKER_FLAGS -stdlib=libc++)
-    deps_append_cmake_define(CMAKE_MODULE_LINKER_FLAGS -stdlib=libc++)
-    deps_append_cmake_define(CMAKE_EXE_LINKER_FLAGS -stdlib=libc++)
+    deps_append_cmake_define(CMAKE_SHARED_LINKER_FLAGS "-stdlib=libc++")
+    deps_append_cmake_define(CMAKE_MODULE_LINKER_FLAGS "-stdlib=libc++")
+    deps_append_cmake_define(CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++")
 endif()
 
 if(IS_GNU_LIKE)
@@ -126,6 +128,7 @@ if(result AND NOT(WIN32 AND MINGW))
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
 
+# Global compile definitions
 if(WIN32)
     add_compile_definitions(UNICODE _UNICODE)
 endif()
