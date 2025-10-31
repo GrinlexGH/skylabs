@@ -100,7 +100,7 @@ _deps_internal_set_cache_from_env_or_default(DEPS_SOURCES_DIR "${PROJECT_SOURCE_
 _deps_internal_set_cache_from_env_or_default(DEPS_INSTALL_DIR "${PROJECT_SOURCE_DIR}/${DEPS_THIRD_PARTY_SUBDIR}/bin/${DEPS_OUT_SUBDIR}" PATH "Directory to install libraries")
 
 _deps_internal_set_cache_from_env_or_default(DEPS_HEADER_SUBDIR "header-only" STRING "Subdirectory name for header-only libraries")
-_deps_internal_set_cache_from_env_or_default(DEPS_CACHE_DIR "${DEPS_INSTALL_DIR}/cache" PATH "Directory with git hash")
+_deps_internal_set_cache_from_env_or_default(DEPS_CACHE_DIR "" PATH "Directory with git hash (left empty to use library directory)")
 _deps_internal_set_cache_from_env_or_default(DEPS_PYTHON_PATH "" FILEPATH "Python interpreter executable")
 _deps_internal_set_cache_from_env_or_default(DEPS_SCRIPT_PATH "${PROJECT_SOURCE_DIR}/${DEPS_THIRD_PARTY_SUBDIR}/deps.py" FILEPATH "Python helper script path")
 
