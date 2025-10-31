@@ -39,6 +39,8 @@ set(SOURCES
     render/vulkan/memory/host_buffer.cpp
     render/vulkan/memory/memory_mapping.hpp
     render/vulkan/memory/memory_mapping.cpp
+    render/vulkan/sampler.hpp
+    render/vulkan/sampler.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan/vulkan.hpp

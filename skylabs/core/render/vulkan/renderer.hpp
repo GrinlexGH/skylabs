@@ -4,6 +4,7 @@
 #include <skylabs/core/render/vulkan/frame_data.hpp>
 #include <skylabs/core/render/vulkan/surface.hpp>
 #include <skylabs/core/render/vulkan/swapchain.hpp>
+#include <skylabs/core/render/vulkan/sampler.hpp>
 #include <skylabs/core/render/vulkan/memory/device_buffer.hpp>
 #include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
@@ -62,7 +63,7 @@ private:
     std::vector<CMemoryMapping> m_uniformBuffersMapped;
 
     CImage m_texture { nullptr };
-    vk::raii::Sampler m_textureSampler { nullptr };
+    CSampler m_textureSampler { nullptr };
 
     std::uint32_t m_frameIndex = 0;
 };
