@@ -376,13 +376,12 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::BufferUsageFlagBits::eTransferSrc
     );
 
-    std::byte* a = new std::byte[imageSize / 3];
     {
+        std::unique_ptr a = std::make_unique<std::byte[]>(imageSize / 3);
         CMemoryMapping mapping = stagingBuffer.Map();
         std::memcpy(mapping.GetData(), image->pixels, imageSize / 1);
-        std::memcpy((char*)mapping.GetData() + (3 * imageSize / 4), a, imageSize / 4);
+        std::memcpy((char*)mapping.GetData() + (3 * imageSize / 4), a.get(), imageSize / 4);
     }
-    delete[] a;
 
     //endregion LOAD TEXTURE
 
@@ -405,7 +404,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     });
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(deviceHandle, commandPool);
-
     {
         m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
         m_texture.CopyBufferToImage(commandBuffer, *stagingBuffer, {static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1});
