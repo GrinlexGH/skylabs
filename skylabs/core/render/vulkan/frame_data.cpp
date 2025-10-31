@@ -11,11 +11,10 @@ CFrameData::CFrameData(const CContext& context) {
     );
 
     //====================
-    m_commandBuffer = (*context.GetDevice()).allocateCommandBuffers(
-        {
-            m_commandPool, vk::CommandBufferLevel::ePrimary, 1
-        }
-    );
+    m_commandBuffer = vk::raii::CommandBuffers {
+        *context.GetDevice(),
+        {m_commandPool, vk::CommandBufferLevel::ePrimary, 1}
+    };
 
     //====================
     m_fence = (*context.GetDevice()).createFence({ vk::FenceCreateFlagBits::eSignaled });
