@@ -64,7 +64,7 @@ CImage::CImage(
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.requiredFlags = memoryProperties;
 
-    std::tie(m_handle, m_allocation) = m_context->GetAllocator().createImageUnique(imageInfo, allocInfo);
+    std::tie(m_allocation, m_handle) = m_context->GetAllocator().createImageUnique(imageInfo, allocInfo);
 
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = *m_handle;

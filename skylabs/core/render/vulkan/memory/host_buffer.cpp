@@ -15,7 +15,7 @@ CHostBuffer::CHostBuffer(
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.flags = vma::AllocationCreateFlagBits::eHostAccessSequentialWrite;
 
-    std::tie(m_handle, m_allocation) = m_context->GetAllocator().createBufferUnique(bufferInfo, allocInfo);
+    std::tie(m_allocation, m_handle) = m_context->GetAllocator().createBufferUnique(bufferInfo, allocInfo);
 }
 
 auto CHostBuffer::Clear() -> void {

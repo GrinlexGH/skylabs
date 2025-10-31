@@ -1,3 +1,11 @@
+# Enabling LTO
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result)
+if(result AND NOT(WIN32 AND MINGW))
+    message(STATUS "LTO has been enabled")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 # Global compilation options
 if(IS_GNU_LIKE)
     add_compile_options(
@@ -34,14 +42,6 @@ elseif(IS_MSVC_LIKE)
             add_compile_options("/Zc:checkGwOdr")
         endif()
     endif()
-endif()
-
-# Enabling LTO
-include(CheckIPOSupported)
-check_ipo_supported(RESULT result)
-if(result AND NOT(WIN32 AND MINGW))
-    message(STATUS "LTO has been enabled")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
 
 # Global compile definitions

@@ -22,7 +22,8 @@ deps_add_cmake_project(
 deps_add_cmake_project(
     "VulkanMemoryAllocator-Hpp"
     CMAKE_ARGS
-    "-DVMA_HPP_ENABLE_INSTALL=ON -DVMA_BUILD_CXX_MODULE=OFF"
+    "-DVMA_HPP_ENABLE_INSTALL=ON -DVMA_HPP_ENABLE_MODULE=OFF"
+    "-DVMA_HPP_GENERATOR_BUILD=OFF -DVMA_HPP_RUN_GENERATOR=OFF -DVMA_HPP_SAMPLES_BUILD=OFF"
 )
 deps_add_cmake_project("SDL" INSTALL_SUBDIR "SDL3" CMAKE_ARGS "-DSDL_TEST_LIBRARY=OFF")
 deps_add_cmake_project(
