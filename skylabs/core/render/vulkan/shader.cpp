@@ -11,7 +11,7 @@ CShader::CShader(const CContext& context, const Type type, const char* name) {
     createInfo.codeSize = vertexShaderSource.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(vertexShaderSource.data());
 
-    m_handle = vk::raii::ShaderModule { context.GetDevice().GetHandle(), createInfo };
+    m_handle = (*context.GetDevice()).createShaderModule(createInfo);
 
     m_shaderCreateInfo.stage = ToVkStage(type);
     m_shaderCreateInfo.module = m_handle;

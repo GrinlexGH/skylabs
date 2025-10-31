@@ -40,7 +40,6 @@ auto CSwapchain::CreateSwapchain(
     const vk::raii::SwapchainKHR& oldSwapchain
 ) -> void {
     const CDevice& device = m_context->GetDevice();
-    const vk::raii::Device& deviceHandle = device.GetHandle();
     const vk::raii::PhysicalDevice physicalDevice = m_context->GetPhysicalDevice()->GetHandle();
 
     //====================
@@ -103,12 +102,10 @@ auto CSwapchain::CreateSwapchain(
     createInfo.oldSwapchain = oldSwapchain;
 
     //====================
-    m_handle = deviceHandle.createSwapchainKHR(createInfo);
+    m_handle = (*device).createSwapchainKHR(createInfo);
 }
 
 auto CSwapchain::CreateImages() -> void {
-    const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
-
     m_images = m_handle.getImages();
     m_imageViews.reserve(m_images.size());
 
@@ -127,7 +124,7 @@ auto CSwapchain::CreateImages() -> void {
         imageViewInfo.subresourceRange.baseArrayLayer = 0;
         imageViewInfo.subresourceRange.layerCount = 1;
 
-        m_imageViews.emplace_back(deviceHandle.createImageView(imageViewInfo));
+        m_imageViews.emplace_back((*m_context->GetDevice()).createImageView(imageViewInfo));
     }
 
     assert(m_images.size() == m_imageViews.size());
@@ -146,9 +143,7 @@ auto CSwapchain::Recreate(
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
 ) -> void {
-    const vk::raii::Device& deviceHandle = m_context->GetDevice().GetHandle();
-
-    deviceHandle.waitIdle(); // TODO: Wait for fence, not idle
+    (*m_context->GetDevice()).waitIdle(); // TODO: Wait for fence, not idle
 
     CreateSwapchain(surface, imageCount, presentMode, vk::raii::SwapchainKHR { std::move(m_handle) });
 
