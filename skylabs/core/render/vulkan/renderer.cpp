@@ -496,7 +496,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::DescriptorImageInfo imageInfo {};
         imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
         imageInfo.imageView = m_texture.GetView();
-        imageInfo.sampler = m_textureSampler;
+        imageInfo.sampler = *m_textureSampler;
 
         std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
         descriptorWrites[0].dstSet = m_descriptorSets[i];
