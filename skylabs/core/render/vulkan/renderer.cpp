@@ -420,26 +420,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     //endregion TEXTURE
 
+    m_textureSampler = CSampler { m_context };
 
-    //region SAMPLER
-    vk::SamplerCreateInfo samplerInfo {};
-    samplerInfo.magFilter = vk::Filter::eNearest;
-    samplerInfo.minFilter = vk::Filter::eNearest;
-    samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.anisotropyEnable = vk::True;
-    samplerInfo.maxAnisotropy = m_context.GetPhysicalDevice()->GetProperties().limits.maxSamplerAnisotropy;
-    samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
-    samplerInfo.unnormalizedCoordinates = vk::False;
-    samplerInfo.compareEnable = vk::False;
-    samplerInfo.compareOp = vk::CompareOp::eAlways;
-    samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
-    m_textureSampler = vk::raii::Sampler { *m_context.GetDevice(), samplerInfo };
-    //endregion SAMPLER
     //region UBO
     vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
 
