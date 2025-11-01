@@ -1,7 +1,6 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
-
 #include <skylabs/public/project_info.hpp>
 
 namespace {
@@ -114,7 +113,7 @@ CInstance::CInstance(
             error += name;
             error += '\n';
         }
-        throw std::runtime_error(error);
+        throw std::runtime_error { error };
     }
 
     //====================
@@ -150,13 +149,13 @@ CInstance::CInstance(
     createInfo.ppEnabledLayerNames = m_enabledLayers.data();
     createInfo.pNext = pNext;
 
-    m_handle = m_context.createInstance(createInfo);
+    m_handle = vk::raii::Instance { m_context, createInfo };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
     //====================
 #ifdef DEBUG
     if (isDebugUtilsAvailable) {
-        m_debugUtilsMessenger = m_handle.createDebugUtilsMessengerEXT(debugUtilsCreateInfo);
+        m_debugUtilsMessenger = vk::raii::DebugUtilsMessengerEXT { m_handle, debugUtilsCreateInfo };
     }
 #endif
 
@@ -215,7 +214,7 @@ auto CInstance::EnableLayer(const char* name, std::vector<const char*>& enabledL
 auto CInstance::QueryPhysicalDevices() -> void {
     vk::raii::PhysicalDevices physicalDevices { m_handle };
     if (physicalDevices.empty()) {
-        throw std::runtime_error("Couldn't find a physical device that supports Vulkan!");
+        throw std::runtime_error { "Couldn't find a physical device that supports Vulkan!" };
     }
 
     m_physicalDevices.reserve(physicalDevices.size());

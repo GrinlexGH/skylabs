@@ -34,7 +34,7 @@ auto CContext::CreateInstance() -> void {
         { vk::KHRGetPhysicalDeviceProperties2ExtensionName, true }
     };
 
-    const std::span requiredExtensions = m_window->GetRequiredInstanceExtensions();
+    const std::span requiredExtensions { m_window->GetRequiredInstanceExtensions() };
     instanceExtensions.reserve(requiredExtensions.size());
 
     for (const auto& extension : requiredExtensions) {

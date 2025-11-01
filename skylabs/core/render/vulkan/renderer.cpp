@@ -350,7 +350,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_renderPass = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
     //endregion Subpasses
 
-    //region Shaders
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
     const CShader fragmentShader(m_context, CShader::Type::eFragment, "shader.frag.spv");
 
@@ -358,7 +357,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         vertexShader.GetPipelineShaderCreateInfo(),
         fragmentShader.GetPipelineShaderCreateInfo(),
     };
-    //endregion Shaders
 
     //region TEXTURE
     //region LOAD TEXTURE
@@ -449,10 +447,10 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     vk::DescriptorSetLayoutBinding samplerLayoutBinding {};
     samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorCount = 1;
     samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.descriptorCount = 1;
     samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
 
     std::array bindings = { uboLayoutBinding, samplerLayoutBinding };
 
@@ -485,7 +483,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
     descriptorAllocInfo.pSetLayouts = layouts.data();
 
-    m_descriptorSets = (*m_context.GetDevice().GetHandle()).allocateDescriptorSets(descriptorAllocInfo);
+    m_descriptorSets = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorBufferInfo bufferInfo {};

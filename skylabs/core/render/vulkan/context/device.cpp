@@ -44,7 +44,7 @@ auto ThrowIfMissing(
     }
 
     if (!first) {
-        throw std::runtime_error("System doesn't have required Vulkan queue families: [" + error + "]!");
+        throw std::runtime_error { "System doesn't have required Vulkan queue families: [" + error + "]!" };
     }
 }
 
@@ -180,7 +180,7 @@ CDevice::CDevice(
             error += name;
             error += '\n';
         }
-        throw std::runtime_error(error);
+        throw std::runtime_error { error };
     }
 
     //====================
@@ -203,7 +203,7 @@ CDevice::CDevice(
     createInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
     createInfo.pNext = pNext;
 
-    m_handle = physicalDevice.GetHandle().createDevice(createInfo);
+    m_handle = vk::raii::Device { *physicalDevice, createInfo };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
     m_graphicsQueue = { .m_handle = m_handle.getQueue(graphicsFamily, 0), .m_familyIndex = graphicsFamily };

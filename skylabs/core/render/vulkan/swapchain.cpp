@@ -102,7 +102,7 @@ auto CSwapchain::CreateSwapchain(
     createInfo.oldSwapchain = oldSwapchain;
 
     //====================
-    m_handle = (*device).createSwapchainKHR(createInfo);
+    m_handle = vk::raii::SwapchainKHR { *device, createInfo };
 }
 
 auto CSwapchain::CreateImages() -> void {
