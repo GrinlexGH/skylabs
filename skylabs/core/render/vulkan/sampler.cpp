@@ -18,6 +18,6 @@ CSampler::CSampler(const CContext& context) {
     createInfo.mipLodBias = 0.0f;
     createInfo.minLod = 0.0f;
     createInfo.maxLod = 0.0f;
-    m_handle = (*context.GetDevice()).createSampler(createInfo);
+    m_handle = vk::raii::Sampler { *context.GetDevice(), createInfo };
 }
 }

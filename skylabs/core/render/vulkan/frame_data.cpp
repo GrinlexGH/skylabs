@@ -3,12 +3,13 @@
 namespace Vulkan {
 CFrameData::CFrameData(const CContext& context) {
     //====================
-    m_commandPool = (*context.GetDevice()).createCommandPool(
+    m_commandPool = vk::raii::CommandPool {
+        *context.GetDevice(),
         {
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             context.GetDevice().GetGraphicsQueue().m_familyIndex
         }
-    );
+    };
 
     //====================
     m_commandBuffer = vk::raii::CommandBuffers {
@@ -17,9 +18,9 @@ CFrameData::CFrameData(const CContext& context) {
     };
 
     //====================
-    m_fence = (*context.GetDevice()).createFence({ vk::FenceCreateFlagBits::eSignaled });
+    m_fence = vk::raii::Fence { *context.GetDevice(), { vk::FenceCreateFlagBits::eSignaled } };
 
     //====================
-    m_imageAvailableSemaphore = (*context.GetDevice()).createSemaphore({});
+    m_imageAvailableSemaphore = vk::raii::Semaphore { *context.GetDevice(), {} };
 }
 }
