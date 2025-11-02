@@ -206,9 +206,9 @@ CDevice::CDevice(
     m_handle = vk::raii::Device { *physicalDevice, createInfo };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
-    m_graphicsQueue = { .m_handle = m_handle.getQueue(graphicsFamily, 0), .m_familyIndex = graphicsFamily };
-    m_presentQueue = { .m_handle = m_handle.getQueue(presentFamily, 0), .m_familyIndex = presentFamily };
-    m_transferQueue = { .m_handle = m_handle.getQueue(transferFamily, 0), .m_familyIndex = transferFamily };
-    m_computeQueue = { .m_handle = m_handle.getQueue(computeFamily, 0), .m_familyIndex = computeFamily };
+    m_graphicsQueue = { .m_handle = vk::raii::Queue { m_handle, graphicsFamily, 0 }, .m_familyIndex = graphicsFamily };
+    m_presentQueue = { .m_handle = vk::raii::Queue { m_handle, presentFamily, 0 }, .m_familyIndex = presentFamily };
+    m_transferQueue = { .m_handle = vk::raii::Queue { m_handle, transferFamily, 0 }, .m_familyIndex = transferFamily };
+    m_computeQueue = { .m_handle = vk::raii::Queue { m_handle, computeFamily, 0 }, .m_familyIndex = computeFamily };
 }
 }

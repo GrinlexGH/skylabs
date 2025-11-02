@@ -41,6 +41,8 @@ set(SOURCES
     render/vulkan/memory/memory_mapping.cpp
     render/vulkan/sampler.hpp
     render/vulkan/sampler.cpp
+    render/vulkan/pipeline.hpp
+    render/vulkan/pipeline.cpp
     SDL/context.cpp
     SDL/context.hpp
     SDL/vulkan/vulkan.hpp
