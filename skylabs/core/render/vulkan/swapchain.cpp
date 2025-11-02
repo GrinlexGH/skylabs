@@ -124,7 +124,7 @@ auto CSwapchain::CreateImages() -> void {
         imageViewInfo.subresourceRange.baseArrayLayer = 0;
         imageViewInfo.subresourceRange.layerCount = 1;
 
-        m_imageViews.emplace_back((*m_context->GetDevice()).createImageView(imageViewInfo));
+        m_imageViews.emplace_back(*m_context->GetDevice(), imageViewInfo);
     }
 
     assert(m_images.size() == m_imageViews.size());

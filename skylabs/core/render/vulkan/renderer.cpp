@@ -114,7 +114,7 @@ auto CreateFrameBuffers(
     for (const auto& imageView : swapchain.GetImageViews()) {
         std::array attachments = {
             *imageView,
-            *depthImageView
+        //    *depthImageView
         };
 
         vk::FramebufferCreateInfo framebufferInfo {};
@@ -277,7 +277,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_depthBuffer = CImage {
         m_context,
-        { m_swapchain.GetExtent().width, m_swapchain.GetExtent().height, 1 },
+                             { 64, 64, 1 },
         findDepthFormat(),
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -302,15 +302,25 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Этот аттачмент будем использовать как colorAttachment,
     // то есть шейдер в него будет писать
+    m_colorBuffer = CImage {
+        m_context,
+                             { 64, 64, 1 },
+        vk::Format::eR8G8B8A8Snorm,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+        vk::ImageAspectFlagBits::eColor,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    };
+
     vk::AttachmentDescription colorAttachment {};
-    colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
+    colorAttachment.format = vk::Format::eR8G8B8A8Snorm;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
     colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
     colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
     colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
     colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-    colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+    colorAttachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
     // Аттачмент референс, который описывает просто layout аттачмента
     vk::AttachmentReference colorAttachmentRef {};
@@ -335,7 +345,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     dependency.srcSubpass = vk::SubpassExternal; // Пустой внешний сабпасс
     dependency.dstSubpass = 0; // Описание применяется к первому (нулевому) сабпассу
     dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // Ждём когда на этой стадии закончатся операции
-    dependency.srcAccessMask = {}; // Какие конкретно операции. Пустое значит все операции
+    dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Какие конкретно операции. Пустое значит все операции
     dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // На какую стадию идём
     dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Что делаем
 
@@ -347,7 +357,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-    m_renderPass = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
+    m_renderPassMain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
     //endregion Subpasses
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
@@ -458,7 +468,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    m_descriptorSetLayout = vk::raii::DescriptorSetLayout { m_context.GetDevice().GetHandle(), layoutInfo };
+    m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { m_context.GetDevice().GetHandle(), layoutInfo };
     //endregion DESCRIPTOR SET LAYOUT
 
     //region DESCRIPTOR POOL
@@ -473,17 +483,17 @@ CRenderer::CRenderer(const IWindow* const window) {
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
-    m_descriptorPool = vk::raii::DescriptorPool { m_context.GetDevice().GetHandle(), poolInfo };
+    m_descriptorPoolMain = vk::raii::DescriptorPool { m_context.GetDevice().GetHandle(), poolInfo };
     //endregion DESCRIPTOR POOL
 
     //region DESCRIPTOR SETS
-    std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayout);
+    std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutMain);
     vk::DescriptorSetAllocateInfo descriptorAllocInfo {};
-    descriptorAllocInfo.descriptorPool = m_descriptorPool;
+    descriptorAllocInfo.descriptorPool = m_descriptorPoolMain;
     descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
     descriptorAllocInfo.pSetLayouts = layouts.data();
 
-    m_descriptorSets = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
+    m_descriptorSetsMain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorBufferInfo bufferInfo {};
@@ -497,7 +507,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         imageInfo.sampler = *m_textureSampler;
 
         std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
-        descriptorWrites[0].dstSet = m_descriptorSets[i];
+        descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
         descriptorWrites[0].dstBinding = 0;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -506,7 +516,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         descriptorWrites[0].pImageInfo = nullptr;
         descriptorWrites[0].pTexelBufferView = nullptr;
 
-        descriptorWrites[1].dstSet = m_descriptorSets[i];
+        descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
         descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
@@ -587,10 +597,10 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &*m_descriptorSetLayout;
+    pipelineLayoutInfo.pSetLayouts = &*m_descriptorSetLayoutMain;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    m_pipelineLayout = m_context.GetDevice().GetHandle().createPipelineLayout(pipelineLayoutInfo);
+    m_pipelineLayoutMain = m_context.GetDevice().GetHandle().createPipelineLayout(pipelineLayoutInfo);
 
     vk::GraphicsPipelineCreateInfo pipelineInfo {};
     pipelineInfo.stageCount = shaderStages.size();
@@ -603,15 +613,186 @@ CRenderer::CRenderer(const IWindow* const window) {
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = m_pipelineLayout;
-    pipelineInfo.renderPass = m_renderPass;
+    pipelineInfo.layout = m_pipelineLayoutMain;
+    pipelineInfo.renderPass = m_renderPassMain;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    m_pipeline = m_context.GetDevice().GetHandle().createGraphicsPipeline(nullptr, pipelineInfo);
+    m_pipelineMain = m_context.GetDevice().GetHandle().createGraphicsPipeline(nullptr, pipelineInfo);
     //endregion PIPELINE
 
-    m_frameBuffers = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPass, m_depthBuffer.GetView());
+    std::array attachmentsS = { *m_colorBuffer.GetView(), *m_depthBuffer.GetView() };
+    vk::FramebufferCreateInfo framebufferInfo {};
+    framebufferInfo.renderPass = m_renderPassMain;
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentsS.size());
+    framebufferInfo.pAttachments = attachmentsS.data();
+    framebufferInfo.width = 64;
+    framebufferInfo.height = 64;
+    framebufferInfo.layers = 1;
+    m_frameBufferMain = vk::raii::Framebuffer { *m_context.GetDevice(), framebufferInfo };
+
+
+
+
+
+    vk::DescriptorSetLayoutBinding samplerBinding {};
+    samplerBinding.binding = 0;
+    samplerBinding.descriptorCount = 1;
+    samplerBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    samplerBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+    samplerBinding.pImmutableSamplers = nullptr;
+
+    std::array bindingsSwapchain = { samplerBinding };
+
+    layoutInfo = vk::DescriptorSetLayoutCreateInfo {};
+    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindingsSwapchain.size());
+    layoutInfo.pBindings = bindingsSwapchain.data();
+
+    m_descriptorSetLayoutSwapchain = vk::raii::DescriptorSetLayout { m_context.GetDevice().GetHandle(), layoutInfo };
+    //endregion DESCRIPTOR SET LAYOUT
+
+    //region DESCRIPTOR POOL
+    std::array<vk::DescriptorPoolSize, 1> poolSizesSwapchain {};
+    poolSizesSwapchain[0].type = vk::DescriptorType::eCombinedImageSampler;
+    poolSizesSwapchain[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+
+    poolInfo = vk::DescriptorPoolCreateInfo {};
+    poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizesSwapchain.size());
+    poolInfo.pPoolSizes = poolSizesSwapchain.data();
+    poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+
+    m_descriptorPoolSwapchain = vk::raii::DescriptorPool { m_context.GetDevice().GetHandle(), poolInfo };
+    //endregion DESCRIPTOR POOL
+
+    //region DESCRIPTOR SETS
+    layouts = std::vector<vk::DescriptorSetLayout>(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutSwapchain);
+    descriptorAllocInfo = vk::DescriptorSetAllocateInfo {};
+    descriptorAllocInfo.descriptorPool = m_descriptorPoolSwapchain;
+    descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+    descriptorAllocInfo.pSetLayouts = layouts.data();
+
+    m_descriptorSetsSwapchain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
+
+    m_mainSampler = CSampler {m_context};
+
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
+        vk::DescriptorImageInfo imageInfo {};
+        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfo.imageView = m_colorBuffer.GetView();
+        imageInfo.sampler = *m_mainSampler;
+
+        vk::WriteDescriptorSet descriptorWrite {};
+        descriptorWrite.dstSet = m_descriptorSetsSwapchain[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pImageInfo = &imageInfo;
+
+        (*m_context.GetDevice()).updateDescriptorSets(descriptorWrite, nullptr);
+    }
+
+
+
+    
+    colorAttachment = vk::AttachmentDescription {};
+    colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
+    colorAttachment.samples = vk::SampleCountFlagBits::e1;
+    colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+    colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+    colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
+    colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+
+    // Аттачмент референс, который описывает просто layout аттачмента
+    colorAttachmentRef = vk::AttachmentReference {};
+    colorAttachmentRef.attachment = 0; // Индекс в vk::SubpassDescription
+    colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+    // Описание сабпасса
+    subpass = vk::SubpassDescription {};
+    subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = nullptr;
+    // Аттачмент в который будем писать
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.preserveAttachmentCount = 0;
+    subpass.pPreserveAttachments = nullptr;
+    subpass.pResolveAttachments = nullptr;
+    subpass.pDepthStencilAttachment = nullptr;
+
+    // Описываем как сабпассы будут связаны
+    dependency = vk::SubpassDependency {};
+    dependency.srcSubpass = vk::SubpassExternal; // Пустой внешний сабпасс
+    dependency.dstSubpass = 0; // Описание применяется к первому (нулевому) сабпассу
+    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // Ждём когда на этой стадии закончатся операции
+    dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Какие конкретно операции. Пустое значит все операции
+    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // На какую стадию идём
+    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Что делаем
+
+    std::array attachmentsSwapchain = { colorAttachment };
+    renderPassInfo = vk::RenderPassCreateInfo {};
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentsSwapchain.size());
+    renderPassInfo.pAttachments = attachmentsSwapchain.data();
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
+    m_renderPassSwapchain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
+    //endregion Subpasses
+
+
+
+    //region PIPELINE
+    vertexInputInfo = vk::PipelineVertexInputStateCreateInfo {};
+    vertexInputInfo.vertexBindingDescriptionCount = 0;
+    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+    colorBlendAttachment.blendEnable = vk::False;
+
+    pipelineLayoutInfo = vk::PipelineLayoutCreateInfo {};
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &*m_descriptorSetLayoutSwapchain;
+    pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+    m_pipelineLayoutSwapchain = m_context.GetDevice().GetHandle().createPipelineLayout(pipelineLayoutInfo);
+
+    const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");
+    const CShader fragmentShaderSwapchain(m_context, CShader::Type::eFragment, "shaderSwapchain.frag.spv");
+
+    const std::array shaderStagesSwapchain = {
+        vertexShaderSwapchain.GetPipelineShaderCreateInfo(),
+        fragmentShaderSwapchain.GetPipelineShaderCreateInfo(),
+    };
+
+        depthStencil = vk::PipelineDepthStencilStateCreateInfo {};
+    depthStencil.depthTestEnable = vk::False;
+    depthStencil.depthWriteEnable = vk::False;
+    depthStencil.depthCompareOp = vk::CompareOp::eLess;
+    depthStencil.depthBoundsTestEnable = vk::False;
+    depthStencil.stencilTestEnable = vk::False;
+
+     pipelineInfo = vk::GraphicsPipelineCreateInfo {};
+    pipelineInfo.stageCount = shaderStagesSwapchain.size();
+     pipelineInfo.pStages = shaderStagesSwapchain.data();
+     pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.layout = m_pipelineLayoutSwapchain;
+    pipelineInfo.renderPass = m_renderPassSwapchain;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+    m_pipelineSwapchain = m_context.GetDevice().GetHandle().createGraphicsPipeline(nullptr, pipelineInfo);
+
+    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPassSwapchain, m_depthBuffer.GetView());
 
     //region VERTEX BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
@@ -715,7 +896,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     deviceHandle.resetFences({ frameData.GetFence() });
 
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
-        Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBuffer.GetView(), m_swapchain, m_frameBuffers);
+        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
         return;
     }
     if (result != vk::Result::eSuccess) {
@@ -729,16 +910,60 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     vk::CommandBufferBeginInfo beginInfo {};
     frameData.GetCommandBuffers()[0].begin(beginInfo);
 
-    // #region RENDER_PASS_BEGIN
+
     vk::RenderPassBeginInfo renderPassInfo {};
-    renderPassInfo.renderPass = m_renderPass;
-    renderPassInfo.framebuffer = m_frameBuffers[imageIndex];
+    renderPassInfo.renderPass = m_renderPassMain;
+    renderPassInfo.framebuffer = m_frameBufferMain;
+    renderPassInfo.renderArea.offset = { { 0, 0 } };
+    renderPassInfo.renderArea.extent = vk::Extent2D { 64, 64 };
+
+    std::array<vk::ClearValue, 2> clearValuesMain {};
+    clearValuesMain[0].color = vk::ClearColorValue { 0.2f, 0.3f, 0.6f, 1.0f };
+    clearValuesMain[1].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValuesMain.size());
+    renderPassInfo.pClearValues = clearValuesMain.data();
+    frameData.GetCommandBuffers()[0].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
+        frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipelineMain);
+
+    vk::Viewport viewport {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = 64;
+    viewport.height = 64;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    frameData.GetCommandBuffers()[0].setViewport(0, viewport);
+
+    vk::Rect2D scissor {};
+    scissor.offset = { { 0, 0 } };
+    scissor.extent = vk::Extent2D { 64, 64 };
+    frameData.GetCommandBuffers()[0].setScissor(0, scissor);
+
+    vk::Buffer vertexBuffers[] = { *m_vertexBuffer };
+    vk::DeviceSize offsets[] = { 0 };
+    frameData.GetCommandBuffers()[0].bindVertexBuffers(0, vertexBuffers, offsets);
+    frameData.GetCommandBuffers()[0].bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
+
+    frameData.GetCommandBuffers()[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayoutMain, 0, m_descriptorSetsMain[m_frameIndex], {});
+
+        frameData.GetCommandBuffers()[0].drawIndexed(indices.size(), 1, 0, 0, 0);
+
+
+    frameData.GetCommandBuffers()[0].endRenderPass();
+
+
+    // #region RENDER_PASS_BEGIN
+    renderPassInfo = vk::RenderPassBeginInfo {};
+    renderPassInfo.renderPass = m_renderPassSwapchain;
+    renderPassInfo.framebuffer = m_frameBuffersSwapchain[imageIndex];
     renderPassInfo.renderArea.offset = { { 0, 0 } };
     renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
 
-    std::array<vk::ClearValue, 2> clearValues{};
+    std::array<vk::ClearValue, 1> clearValues{};
     clearValues[0].color = vk::ClearColorValue { 0.2f, 0.3f, 0.6f, 1.0f };
-    clearValues[1].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
+    //clearValues[1].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
@@ -746,9 +971,9 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     frameData.GetCommandBuffers()[0].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
     // #endregion RENDER_PASS_BEGIN
 
-    frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
+    frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain);
 
-    vk::Viewport viewport {};
+     viewport = vk::Viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = static_cast<float>(m_swapchain.GetExtent().width);
@@ -757,25 +982,20 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     viewport.maxDepth = 1.0f;
     frameData.GetCommandBuffers()[0].setViewport(0, viewport);
 
-    vk::Rect2D scissor {};
+     scissor = vk::Rect2D {};
     scissor.offset = { { 0, 0 } };
     scissor.extent = m_swapchain.GetExtent();
     frameData.GetCommandBuffers()[0].setScissor(0, scissor);
 
-    vk::Buffer vertexBuffers[] = { *m_vertexBuffer };
-    vk::DeviceSize offsets[] = { 0 };
-    frameData.GetCommandBuffers()[0].bindVertexBuffers(0, vertexBuffers, offsets);
-    frameData.GetCommandBuffers()[0].bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
-
     frameData.GetCommandBuffers()[0].bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
-        m_pipelineLayout,
+        m_pipelineLayoutSwapchain,
         0,
-        m_descriptorSets[m_frameIndex],
+        m_descriptorSetsSwapchain[m_frameIndex],
         {}
     );
 
-    frameData.GetCommandBuffers()[0].drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
+    frameData.GetCommandBuffers()[0].draw(3, 1, 0, 0);
 
     frameData.GetCommandBuffers()[0].endRenderPass();
     frameData.GetCommandBuffers()[0].end();
@@ -813,7 +1033,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     result = QueuePresentWrapper(device.GetPresentQueue().m_handle, presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR) {
-        Resize(m_context.GetDevice().GetHandle(), m_renderPass, m_depthBuffer.GetView(), m_swapchain, m_frameBuffers);
+        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
         return;
     }
     // #endregion PRESENT

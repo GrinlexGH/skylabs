@@ -15,7 +15,7 @@ public:
     CDeviceBuffer(CDeviceBuffer&&) noexcept = default;
     CDeviceBuffer& operator=(const CDeviceBuffer&) = delete;
     CDeviceBuffer& operator=(CDeviceBuffer&&) noexcept = default;
-    ~CDeviceBuffer();
+    ~CDeviceBuffer() = default;
 
     auto operator*() const noexcept -> vk::Buffer { assert(m_handle); return *m_handle; }
     [[nodiscard]] auto GetHandle() const -> vk::Buffer { assert(m_handle); return *m_handle; }
@@ -25,7 +25,5 @@ public:
 private:
     vma::UniqueBuffer m_handle;
     vma::UniqueAllocation m_allocation;
-
-    const CContext* m_context = nullptr;
 };
 }

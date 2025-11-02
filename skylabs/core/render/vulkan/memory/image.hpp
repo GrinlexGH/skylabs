@@ -42,7 +42,5 @@ private:
     vk::raii::ImageView m_view = nullptr;
 
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;
-
-    const CContext* m_context = nullptr;
 };
 }

@@ -46,7 +46,7 @@ CImage::CImage(
     const vk::ImageUsageFlags& usage,
     const vk::ImageAspectFlags& imageAspectFlags,
     const vk::MemoryPropertyFlags& memoryProperties
-) : m_context(&context) {
+) {
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
     imageInfo.extent = extent;
@@ -64,7 +64,7 @@ CImage::CImage(
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.requiredFlags = memoryProperties;
 
-    std::tie(m_allocation, m_handle) = m_context->GetAllocator().createImageUnique(imageInfo, allocInfo);
+    std::tie(m_allocation, m_handle) = context.GetAllocator().createImageUnique(imageInfo, allocInfo);
 
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = *m_handle;
@@ -76,7 +76,7 @@ CImage::CImage(
     imageViewInfo.subresourceRange.baseArrayLayer = 0;
     imageViewInfo.subresourceRange.layerCount = 1;
 
-    m_view = (*context.GetDevice()).createImageView(imageViewInfo);
+    m_view = vk::raii::ImageView { *context.GetDevice(), imageViewInfo };
 }
 
 auto CImage::Clear() -> void {
@@ -84,7 +84,6 @@ auto CImage::Clear() -> void {
     m_allocation.reset();
     m_view.clear();
     m_layout = vk::ImageLayout::eUndefined;
-    m_context = nullptr;
 }
 
 auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void {
@@ -149,6 +148,5 @@ auto CImage::CopyBufferToImage(
 
 CImage::~CImage() {
     m_layout = vk::ImageLayout::eUndefined;
-    m_context = nullptr;
 }
 }

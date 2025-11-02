@@ -4,6 +4,8 @@ set(CURRENT_TARGET_NAME shaders)
 set(SOURCES
     shader.frag.glsl
     shader.vert.glsl
+    shaderSwapchain.frag.glsl
+    shaderSwapchain.vert.glsl
     shader.comp.glsl
 )
 

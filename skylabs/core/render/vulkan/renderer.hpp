@@ -40,21 +40,32 @@ private:
     std::vector<CFrameData> m_frameData;
 
 
-    vk::raii::PipelineLayout m_pipelineLayout { nullptr };
-    vk::raii::Pipeline m_pipeline { nullptr };
+    vk::raii::PipelineLayout m_pipelineLayoutMain { nullptr };
+    vk::raii::PipelineLayout m_pipelineLayoutSwapchain { nullptr };
+    vk::raii::Pipeline m_pipelineMain { nullptr };
+    vk::raii::Pipeline m_pipelineSwapchain { nullptr };
 
 
-    vk::raii::RenderPass m_renderPass { nullptr };
-    std::vector<vk::raii::Framebuffer> m_frameBuffers;
+    vk::raii::RenderPass m_renderPassMain { nullptr };
+    vk::raii::RenderPass m_renderPassSwapchain { nullptr };
+    vk::raii::Framebuffer m_frameBufferMain { nullptr };
+    std::vector<vk::raii::Framebuffer> m_frameBuffersSwapchain;
 
-    vk::raii::DescriptorSetLayout m_descriptorSetLayout { nullptr };
-    vk::raii::DescriptorPool m_descriptorPool { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSets { nullptr };
+    CSampler m_mainSampler { nullptr };
+
+    vk::raii::DescriptorSetLayout m_descriptorSetLayoutMain { nullptr };
+    vk::raii::DescriptorPool m_descriptorPoolMain { nullptr };
+    std::vector<vk::DescriptorSet> m_descriptorSetsMain { nullptr };
+
+    vk::raii::DescriptorSetLayout m_descriptorSetLayoutSwapchain { nullptr };
+    vk::raii::DescriptorPool m_descriptorPoolSwapchain { nullptr };
+    std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain { nullptr };
 
 
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
     CImage m_depthBuffer { nullptr };
+    CImage m_colorBuffer { nullptr };
 
     CDeviceBuffer m_vertexBuffer { nullptr };
     CDeviceBuffer m_indexBuffer { nullptr };

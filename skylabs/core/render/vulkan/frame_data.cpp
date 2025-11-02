@@ -21,6 +21,6 @@ CFrameData::CFrameData(const CContext& context) {
     m_fence = vk::raii::Fence { *context.GetDevice(), { vk::FenceCreateFlagBits::eSignaled } };
 
     //====================
-    m_imageAvailableSemaphore = vk::raii::Semaphore { *context.GetDevice(), {} };
+    m_imageAvailableSemaphore = vk::raii::Semaphore { *context.GetDevice(), vk::SemaphoreCreateInfo {} };
 }
 }
