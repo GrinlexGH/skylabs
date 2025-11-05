@@ -8,6 +8,7 @@
 #include <skylabs/core/render/vulkan/memory/device_buffer.hpp>
 #include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
+#include <skylabs/core/render/vulkan/pipeline.hpp>
 
 #include <glm/glm.hpp>
 
@@ -40,11 +41,8 @@ private:
     std::vector<CFrameData> m_frameData;
 
 
-    vk::raii::PipelineLayout m_pipelineLayoutMain { nullptr };
-    vk::raii::PipelineLayout m_pipelineLayoutSwapchain { nullptr };
-    vk::raii::Pipeline m_pipelineMain { nullptr };
-    vk::raii::Pipeline m_pipelineSwapchain { nullptr };
-
+    CPipeline m_pipelineMain { nullptr };
+    CPipeline m_pipelineSwapchain { nullptr };
 
     vk::raii::RenderPass m_renderPassMain { nullptr };
     vk::raii::RenderPass m_renderPassSwapchain { nullptr };

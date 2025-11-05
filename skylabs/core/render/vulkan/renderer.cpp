@@ -529,96 +529,14 @@ CRenderer::CRenderer(const IWindow* const window) {
     //endregion DESCRIPTOR SETS
 
     //region PIPELINE
-    constexpr vk::VertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
-    constexpr std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions = Vertex::GetAttributeDescriptions();
-
-    vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-    vk::PipelineInputAssemblyStateCreateInfo inputAssembly {};
-    inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
-    inputAssembly.primitiveRestartEnable = vk::False;
-
-    vk::PipelineViewportStateCreateInfo viewportState {};
-    viewportState.viewportCount = 1;
-    viewportState.scissorCount = 1;
-
-    vk::PipelineRasterizationStateCreateInfo rasterizer {};
-    rasterizer.depthClampEnable = vk::False;
-    rasterizer.rasterizerDiscardEnable = vk::False;
-    rasterizer.polygonMode = vk::PolygonMode::eFill;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = vk::CullModeFlagBits::eNone;
-    rasterizer.frontFace = vk::FrontFace::eClockwise;
-    rasterizer.depthBiasEnable = vk::False;
-
-    vk::PipelineMultisampleStateCreateInfo multisampling {};
-    multisampling.sampleShadingEnable = vk::False;
-    multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
-
-    vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
-    colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
-    colorBlendAttachment.blendEnable = vk::True;
-    colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
-    colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
-    colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
-
-    colorBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-    colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
-    colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
-
-    vk::PipelineColorBlendStateCreateInfo colorBlending {};
-    colorBlending.logicOpEnable = vk::False;
-    colorBlending.logicOp = vk::LogicOp::eCopy;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
-    colorBlending.blendConstants[0] = 0.0f;
-    colorBlending.blendConstants[1] = 0.0f;
-    colorBlending.blendConstants[2] = 0.0f;
-    colorBlending.blendConstants[3] = 0.0f;
-
-    constexpr std::array dynamicStates = {
-        vk::DynamicState::eViewport,
-        vk::DynamicState::eScissor,
+    m_pipelineMain = CPipeline {
+        m_context,
+        shaderStages,
+        std::array { *m_descriptorSetLayoutMain },
+        Vertex::GetBindingDescription(),
+        Vertex::GetAttributeDescriptions(),
+        m_renderPassMain
     };
-    vk::PipelineDynamicStateCreateInfo dynamicState {};
-    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    dynamicState.pDynamicStates = dynamicStates.data();
-
-    vk::PipelineDepthStencilStateCreateInfo depthStencil {};
-    depthStencil.depthTestEnable = vk::True;
-    depthStencil.depthWriteEnable = vk::True;
-    depthStencil.depthCompareOp = vk::CompareOp::eLess;
-    depthStencil.depthBoundsTestEnable = vk::False;
-    depthStencil.stencilTestEnable = vk::False;
-
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &*m_descriptorSetLayoutMain;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-    m_pipelineLayoutMain = m_context.GetDevice().GetHandle().createPipelineLayout(pipelineLayoutInfo);
-
-    vk::GraphicsPipelineCreateInfo pipelineInfo {};
-    pipelineInfo.stageCount = shaderStages.size();
-    pipelineInfo.pStages = shaderStages.data();
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = m_pipelineLayoutMain;
-    pipelineInfo.renderPass = m_renderPassMain;
-    pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    m_pipelineMain = m_context.GetDevice().GetHandle().createGraphicsPipeline(nullptr, pipelineInfo);
     //endregion PIPELINE
 
     std::array attachmentsS = { *m_colorBuffer.GetView(), *m_depthBuffer.GetView() };
@@ -746,19 +664,6 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 
     //region PIPELINE
-    vertexInputInfo = vk::PipelineVertexInputStateCreateInfo {};
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-
-    colorBlendAttachment.blendEnable = vk::False;
-
-    pipelineLayoutInfo = vk::PipelineLayoutCreateInfo {};
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &*m_descriptorSetLayoutSwapchain;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-    m_pipelineLayoutSwapchain = m_context.GetDevice().GetHandle().createPipelineLayout(pipelineLayoutInfo);
-
     const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");
     const CShader fragmentShaderSwapchain(m_context, CShader::Type::eFragment, "shaderSwapchain.frag.spv");
 
@@ -767,30 +672,12 @@ CRenderer::CRenderer(const IWindow* const window) {
         fragmentShaderSwapchain.GetPipelineShaderCreateInfo(),
     };
 
-        depthStencil = vk::PipelineDepthStencilStateCreateInfo {};
-    depthStencil.depthTestEnable = vk::False;
-    depthStencil.depthWriteEnable = vk::False;
-    depthStencil.depthCompareOp = vk::CompareOp::eLess;
-    depthStencil.depthBoundsTestEnable = vk::False;
-    depthStencil.stencilTestEnable = vk::False;
-
-     pipelineInfo = vk::GraphicsPipelineCreateInfo {};
-    pipelineInfo.stageCount = shaderStagesSwapchain.size();
-     pipelineInfo.pStages = shaderStagesSwapchain.data();
-     pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = m_pipelineLayoutSwapchain;
-    pipelineInfo.renderPass = m_renderPassSwapchain;
-    pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-    m_pipelineSwapchain = m_context.GetDevice().GetHandle().createGraphicsPipeline(nullptr, pipelineInfo);
+    m_pipelineSwapchain = CPipeline {
+        m_context,
+        shaderStagesSwapchain,
+        std::array { *m_descriptorSetLayoutSwapchain },
+        {}, {}, m_renderPassSwapchain
+    };
 
     m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPassSwapchain, m_depthBuffer.GetView());
 
@@ -925,7 +812,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     renderPassInfo.pClearValues = clearValuesMain.data();
     frameData.GetCommandBuffers()[0].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-        frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipelineMain);
+        frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
 
     vk::Viewport viewport {};
     viewport.x = 0.0f;
@@ -946,9 +833,9 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     frameData.GetCommandBuffers()[0].bindVertexBuffers(0, vertexBuffers, offsets);
     frameData.GetCommandBuffers()[0].bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
 
-    frameData.GetCommandBuffers()[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayoutMain, 0, m_descriptorSetsMain[m_frameIndex], {});
+    frameData.GetCommandBuffers()[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.GetLayout(), 0, m_descriptorSetsMain[m_frameIndex], {});
 
-        frameData.GetCommandBuffers()[0].drawIndexed(indices.size(), 1, 0, 0, 0);
+    frameData.GetCommandBuffers()[0].drawIndexed(indices.size(), 1, 0, 0, 0);
 
 
     frameData.GetCommandBuffers()[0].endRenderPass();
@@ -971,7 +858,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     frameData.GetCommandBuffers()[0].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
     // #endregion RENDER_PASS_BEGIN
 
-    frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain);
+    frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
 
      viewport = vk::Viewport {};
     viewport.x = 0.0f;
@@ -989,7 +876,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     frameData.GetCommandBuffers()[0].bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
-        m_pipelineLayoutSwapchain,
+        *m_pipelineSwapchain.GetLayout(),
         0,
         m_descriptorSetsSwapchain[m_frameIndex],
         {}
