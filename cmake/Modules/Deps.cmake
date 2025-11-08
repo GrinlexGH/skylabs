@@ -50,6 +50,7 @@
 #         "public/steam/lib/**/*.dll"         "bin"
 #         "public/steam/*.h"                  "include/steam"
 #         "redistributable_bin/**/*.lib"      "lib"
+#           EXCLUDE "redistributable_bin/**/{libsteam_api.so,libtier0_s.a}"
 #         "redistributable_bin/**/*.so"       "lib"
 #         "redistributable_bin/**/*.dylib"    "lib"
 #         "public/steam/lib/**/*.lib"         "lib"
@@ -176,11 +177,17 @@ function(deps_add_cmake_project SOURCE_SUBDIR)
     if(ARG_CMAKE_ARGS)
         list(JOIN ARG_CMAKE_ARGS " " _cmake_args)
     else()
-        set(_cmake_args "")
+        set(_cmake_args " ")
     endif()
 
     set(_deps_cmd_args "${_deps_internal_cmd_args}")
-    list(APPEND _deps_cmd_args "--cmake-lib" "${_source_subdir}" "${_install_subdir}" "${_build_folder}" "${_cmake_args}")
+    list(APPEND _deps_cmd_args 
+        "add-cmake-lib"
+        "--src=${_source_subdir}"
+        "--install=${_install_subdir}"
+        "--build-dir=${_build_folder}"
+        "--args=${_cmake_args}"
+    )
     set(_deps_internal_cmd_args "${_deps_cmd_args}" PARENT_SCOPE)
 endfunction()
 
@@ -217,10 +224,19 @@ function(deps_add_header_only SOURCE_SUBDIR)
     set(_install_subdir "${ARG_INSTALL_SUBDIR}")
     string(REPLACE ";" " " _install_subdir "${_install_subdir}")
 
-    set(_header_wildcards "${ARG_HEADERS}")
+    set(_header_globs "${ARG_HEADERS}")
 
     set(_deps_cmd_args "${_deps_internal_cmd_args}")
-    list(APPEND _deps_cmd_args "--header-lib" "${_source_subdir}" "${_install_subdir}" ${_header_wildcards})
+    list(APPEND _deps_cmd_args 
+        "add-header-lib"
+        "--src=${_source_subdir}"
+        "--install-subdir=${_install_subdir}"
+    )
+
+    foreach(wc IN LISTS _header_globs)
+        list(APPEND _deps_cmd_args "--glob=${wc}")
+    endforeach()
+
     set(_deps_internal_cmd_args "${_deps_cmd_args}" PARENT_SCOPE)
 endfunction()
 
@@ -235,7 +251,7 @@ endfunction()
 #   RULES          - pairs of: file glob pattern and destination subfolder
 #                    (python will find these files in DEPS_SOURCES_DIR/SOURCE_SUBDIR)
 #
-# Wildcards are supported. When copying directories that include wildcards, a constant
+# Glob is supported. When copying directories that include wildcards, a constant
 # prefix is ignored.
 #
 # Example:
@@ -254,8 +270,7 @@ function(deps_add_manual_install SOURCE_SUBDIR)
     set(multiValueArgs RULES)
     cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set(_source_subdir "${SOURCE_SUBDIR}")
-    string(REPLACE ";" " " _source_subdir "${_source_subdir}")
+    list(JOIN SOURCE_SUBDIR "/" _source_subdir)
 
     if(ARG_INSTALL_SUBDIR)
         list(JOIN ARG_INSTALL_SUBDIR "/" _install_subdir)
@@ -263,16 +278,96 @@ function(deps_add_manual_install SOURCE_SUBDIR)
         get_filename_component(_install_subdir "${_source_subdir}" NAME)
     endif()
 
-    set(_pattern_wildcards "${ARG_RULES}")
-
     set(_deps_cmd_args "${_deps_internal_cmd_args}")
-    list(APPEND _deps_cmd_args "--manual-lib" "${_source_subdir}" "${_install_subdir}" ${_pattern_wildcards})
+    list(APPEND _deps_cmd_args 
+        "add-manual-lib"
+        "--src=${_source_subdir}"
+        "--install=${_install_subdir}"
+    )
+
+    # --- Parser for RULES ---
+    # Get the flat list of all arguments that followed the 'RULES' keyword.
+    set(rule_items ${ARG_RULES})
+
+    # Initialize a manual index 'i'. We can't use 'foreach' because
+    # each rule can consume a variable number of items (2 or 4).
+    set(i 0)
+    list(LENGTH rule_items num_rule_items)
+
+    # Loop as long as our index is within the bounds of the list.
+    while(i LESS num_rule_items)
+        # --- Start processing one rule ---
+
+        # 1. Get the mandatory source pattern (e.g., "src/*.h").
+        list(GET rule_items ${i} src_pattern)
+        
+        # 2. Check if a corresponding destination item exists.
+        math(EXPR i_plus_1 "${i} + 1")
+        if(i_plus_1 GREATER_EQUAL num_rule_items)
+            # This is an error: a <src_pattern> was provided without a <dst_subdir>.
+            message(FATAL_ERROR "deps_add_manual_install: Missing destination for source pattern '${src_pattern}'")
+        endif()
+
+        # 3. Get the mandatory destination sub-directory (e.g., "include").
+        list(GET rule_items ${i_plus_1} dst_subdir)
+
+        # 4. Set defaults for this loop iteration.
+        # By default, a rule consists of 2 items (<src_pattern> <dst_subdir>).
+        set(step 2) 
+        # By default, there is no exclude argument.
+        set(exclude_arg "") 
+
+        # 5. Check for an optional [EXCLUDE <ex_pattern>] clause.
+        # Pre-calculate indices for the 'EXCLUDE' keyword (at i+2) and its pattern (at i+3).
+        math(EXPR i_plus_2 "${i} + 2")
+        math(EXPR i_plus_3 "${i} + 3")
+
+        # Check if there is at least one more item (at i+2) that *could* be the 'EXCLUDE' keyword.
+        if(i_plus_2 LESS num_rule_items)
+            # Get the item at i+2 to check if it's the keyword.
+            list(GET rule_items ${i_plus_2} maybe_exclude_keyword)
+
+            # If the item is indeed the 'EXCLUDE' keyword...
+            if(maybe_exclude_keyword STREQUAL "EXCLUDE")
+                # ...then check if the list *also* contains the pattern (at i+3).
+                if(i_plus_3 GREATER_EQUAL num_rule_items)
+                    # This is an error: found 'EXCLUDE' but no pattern followed it.
+                    message(FATAL_ERROR "deps_add_manual_install: EXCLUDE keyword found for '${src_pattern}' but no pattern follows.")
+                endif()
+
+                # Get the exclusion pattern string.
+                list(GET rule_items ${i_plus_3} ex_pattern)
+                # Format the argument for the Python script (e.g., "--ex=src/temp/**").
+                set(exclude_arg "--ex=${ex_pattern}")
+                # Update the step size to 4, as we consumed 4 items:
+                # <src_pattern> <dst_subdir> EXCLUDE <ex_pattern>
+                set(step 4)
+            endif()
+        endif()
+
+        # 6. Append the parsed rule to the main Python command list.
+        list(APPEND _deps_cmd_args "rule" "--src=${src_pattern}" "--dst=${dst_subdir}")
+
+        # If the optional exclude argument was set...
+        if(NOT "${exclude_arg}" STREQUAL "")
+            # ...append it to the command list as well (e.g., "--ex=...").
+            list(APPEND _deps_cmd_args "${exclude_arg}")
+        endif()
+
+        # 7. Advance the index 'i' by the number of items we just processed (either 2 or 4).
+        math(EXPR i "${i} + ${step}")
+    endwhile()
+    # --- End of parser ---
+
     set(_deps_internal_cmd_args "${_deps_cmd_args}" PARENT_SCOPE)
 endfunction()
 
-# deps_build_all()
+# deps_build_all([VERBOSE])
 #
 # Builds and installs all registered dependencies using the Python helper script.
+#
+# Arguments:
+#   VERBOSE - Show running command line
 #
 # Behavior:
 #   - Invokes Python helper script with collected dependency definitions.
@@ -284,12 +379,13 @@ endfunction()
 #
 # Runs dependency installation for all libraries added via deps_add_* functions.
 function(deps_build_all)
+    cmake_parse_arguments(ARG "VERBOSE" "" "" ${ARGN})
+
     set(DEPS_INSTALL_CMD
         "${DEPS_PYTHON}"
         "${DEPS_SCRIPT_PATH}"
-        "--sources-dir" "${DEPS_SOURCES_DIR}"
-        "--install-dir" "${DEPS_INSTALL_DIR}"
-        "${_deps_internal_cmd_args}"
+        "--sources-dir=${DEPS_SOURCES_DIR}"
+        "--install-dir=${DEPS_INSTALL_DIR}"
     )
 
     if(DEPS_CACHE_DIR)
@@ -304,7 +400,14 @@ function(deps_build_all)
         list(APPEND DEPS_INSTALL_CMD "--header-subdir=${DEPS_HEADER_SUBDIR}")
     endif()
 
+    list(APPEND DEPS_INSTALL_CMD "${_deps_internal_cmd_args}")
+
     cmake_path(GET DEPS_SCRIPT_PATH PARENT_PATH _script_dir)
+
+    if(ARG_VERBOSE)
+        string(JOIN "\n    " _pretty_cmd ${DEPS_INSTALL_CMD})
+        message(STATUS "Running command:\n  ${_pretty_cmd}")
+    endif()
 
     execute_process(
         COMMAND ${DEPS_INSTALL_CMD}
