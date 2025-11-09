@@ -70,7 +70,7 @@ endforeach()
 
 add_dependencies(${CURRENT_TARGET_NAME} public shaders)
 
-deps_target_link_and_copy_runtime(${CURRENT_TARGET_NAME}
+deps_target_link_libraries(${CURRENT_TARGET_NAME}
     PRIVATE
     public
     SDL3::SDL3
@@ -82,7 +82,7 @@ deps_target_link_and_copy_runtime(${CURRENT_TARGET_NAME}
 )
 
 if(SKYLABS_ENABLE_STEAM)
-    deps_target_link_and_copy_runtime(${CURRENT_TARGET_NAME}
+    deps_target_link_libraries(${CURRENT_TARGET_NAME}
         PRIVATE
         SteamworksSDK::SteamAPI
         SteamworksSDK::AppTicket

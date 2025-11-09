@@ -155,7 +155,7 @@ class InstallingLibrary(object):
         try:
             return self.GetGitHash() == self.ReadLineAt(hash_file, 1)
         except subprocess.CalledProcessError as e:
-            log(f"Failed to get git hash for {self.source_dir}: {e}", LogType.Error)
+            log(f"Failed to get git hash for {self.source_dir}!\nError: {e}", LogType.Error)
         return False
 
     def IsHashRelevant(self, hash_file: Path) -> bool:
@@ -193,12 +193,21 @@ class CMakeLibrary(InstallingLibrary):
     build_dir: Path
     extra_args: list[str]
     build_hash: Optional[str]
+    build_debug: bool
 
-    def __init__(self, source_dir_base: Path, install_dir_base: Path, build_dir: Path | None = None, extra_args: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        source_dir_base: Path,
+        install_dir_base: Path,
+        build_dir: Path | None = None,
+        extra_args: list[str] | None = None,
+        build_debug: bool = False
+    ) -> None:
         super().__init__(source_dir_base, install_dir_base)
         self.extra_args = extra_args or []
         self.build_dir = build_dir or Path("build")
         self.build_hash = None
+        self.build_debug = build_debug
 
     # For parallel work of this script we need to lock the build dir
     @staticmethod
@@ -220,6 +229,25 @@ class CMakeLibrary(InstallingLibrary):
             f.close()
             return None
 
+    @staticmethod
+    def IsGeneratorMultiConfig(build_dir: Path) -> bool:
+        try:
+            cache = build_dir / "CMakeCache.txt"
+            generator: str = ""
+
+            with cache.open() as f:
+                for line in f:
+                    if line.startswith("CMAKE_GENERATOR:"):
+                        generator = line.split("=")[1].strip()
+
+            if (generator.startswith("Visual Studio") or
+                generator in ("Ninja Multi-Config", "FASTBuild", "Xcode")
+            ):
+                return True
+        except OSError:
+            pass
+        return False
+
     def GetBuildHash(self):
         if self.build_hash is None:
             import hashlib
@@ -233,7 +261,7 @@ class CMakeLibrary(InstallingLibrary):
         try:
             return self.GetBuildHash() == self.ReadLineAt(hash_file, 2)
         except subprocess.CalledProcessError as e:
-            log(f"Failed to get git hash for {self.source_dir}: {e}", LogType.Error)
+            log(f"Failed to get git hash for {self.source_dir}!\nError: {e}", LogType.Error)
         return False
 
     def IsHashRelevant(self, hash_file) -> bool:
@@ -251,6 +279,7 @@ class CMakeLibrary(InstallingLibrary):
         n = 0
         lock = None
 
+        stage = "acquire lock file"
         try:
             # Lock directory
             while True:
@@ -272,34 +301,64 @@ class CMakeLibrary(InstallingLibrary):
                     build_dir = self.source_dir / f"{self.build_dir}-{n}"
 
             # Configure
+            stage = "configure"
             cmake_cmd = [
                 CMAKE,
-                "-DCMAKE_BUILD_TYPE=Release", # ? what if user uses multi-config generator?
+                "..",
                 f"-DCMAKE_INSTALL_PREFIX={self.install_dir}",
                 f"-DCMAKE_PREFIX_PATH={INSTALL_ROOT}",
-                ".."
             ] + self.extra_args + CMAKE_GLOBAL_ARGS
+
+            configs = ["Release"]
+            if self.build_debug:
+                configs.append("Debug")
+                cmake_cmd.append("-DCMAKE_DEBUG_POSTFIX=d")
 
             subprocess.run(cmake_cmd, cwd=build_dir, check=True)
 
-            # Build
-            build_cmd = [ CMAKE, "--build", ".", "--config", "Release", "--parallel" ] # todo: job count argument
-            subprocess.run(build_cmd, cwd=build_dir, check=True)
+            isMulti = self.IsGeneratorMultiConfig(build_dir)
+            needToCleanupInstall = True
+
+            for config in configs:
+                if isMulti:
+                    build_cmd = [ CMAKE, "--build", ".", "--config", config, "--parallel" ] # todo: job count argument
+                else:
+                    # Reconfigure
+                    cmake_cmd = [ CMAKE, f"-DCMAKE_BUILD_TYPE={config}", ".." ]
+                    stage = "reconfigure"
+                    subprocess.run(cmake_cmd, cwd=build_dir, check=True)
+                    build_cmd = [ CMAKE, "--build", ".", "--parallel" ] # todo: job count argument
+
+                # Build
+                stage = "build"
+                subprocess.run(build_cmd, cwd=build_dir, check=True)
+
+                log(f"[{self.lib_name}] successfully built" + (f" in {config} configuration." if len(configs) > 1 else "."),
+                    LogType.Success
+                )
+
+                stage = "cleanup install folder"
+                if needToCleanupInstall:
+                    if self.install_dir.exists():
+                        shutil.rmtree(self.install_dir)
+                    self.install_dir.mkdir(parents=True)
+                    needToCleanupInstall = False
+
+                # Install
+                stage = "install"
+                if isMulti:
+                    install_cmd = [ CMAKE, "--install", ".", "--config", config ]
+                    subprocess.run(install_cmd, cwd=build_dir, check=True)
+                else:
+                    install_cmd = [ CMAKE, "--install", "." ]
+                    subprocess.run(install_cmd, cwd=build_dir, check=True)
+        except Exception:
+            log(f"Failed to {stage}!", LogType.Error)
+            raise
         finally:
             if lock is not None:
                 lock.close() # Unlock the build folder
-
-        log(f"[{self.lib_name}] successfully built.", LogType.Success)
-
-        if self.install_dir.exists():
-            shutil.rmtree(self.install_dir)
-        self.install_dir.mkdir(parents=True)
-
-        # Install
-        install_cmd = [CMAKE, "--install", ".", "--config", "Release"]
-        subprocess.run(install_cmd, cwd=build_dir, check=True)
-
-        shutil.rmtree(build_dir)
+            shutil.rmtree(build_dir)
 
 
 class ManualLibrary(InstallingLibrary):
@@ -449,20 +508,24 @@ class CMakeCommand(LibraryCommand[CMakeLibrary]):
             '--args', type=str, default="",
             help="Extra CMake configure arguments (as a single quoted string)."
         )
+        parser.add_argument(
+            '--build-debug', action="store_true",
+            help="Also build Debug configuration after building Release. Useful for installing static libraries."
+        )
         return parser
 
     def _CreateLibrary(self, namespace: argparse.Namespace) -> CMakeLibrary:
         try:
             extra_cmake_args = shlex.split(namespace.args)
         except ValueError as e:
-            log(f"Failed to parse cmake args for {namespace.src}: {e}", LogType.Error)
-            sys.exit(1)
+            raise ValueError(f"Failed to parse cmake args for {namespace.src}!\nError: {e}")
 
         return CMakeLibrary(
             source_dir_base=Path(namespace.src),
             install_dir_base=Path(namespace.install),
             build_dir=Path(namespace.build_dir),
-            extra_args=extra_cmake_args
+            extra_args=extra_cmake_args,
+            build_debug=namespace.build_debug
         )
 
 
@@ -579,8 +642,7 @@ class ManualCommand(LibraryCommand[ManualLibrary]):
         rule_indices = [i for i, x in enumerate(rule_args_list) if x == 'rule']
 
         if not rule_indices or rule_args_list[0] != 'rule':
-            log(f"Invalid --manual-lib syntax for {namespace.src}. Expected 'rule' sub-commands.", LogType.Error)
-            sys.exit(1)
+            raise ValueError("Invalid --manual-lib syntax for {namespace.src}. Expected 'rule' sub-commands.")
 
         for i in range(len(rule_indices)):
             # Get one rule
@@ -592,8 +654,7 @@ class ManualCommand(LibraryCommand[ManualLibrary]):
                 rule_namespace = self.rule_parser.parse_args(rule_args)
                 rules.append((rule_namespace.src, rule_namespace.dst, rule_namespace.ex or ""))
             except Exception as e:
-                log(f"Failed to parse 'rule' args: {rule_args}. Error: {e}", LogType.Error)
-                sys.exit(1)
+                raise ValueError(f"Failed to parse 'rule' args: {rule_args}. Error: {e}")
 
         return ManualLibrary(
             source_dir_base=Path(namespace.src),
@@ -706,7 +767,7 @@ def main():
     try:
         CMAKE_GLOBAL_ARGS = shlex.split(main_namespace.cmake_args)
     except ValueError as e:
-        log(f"Failed to parse global --cmake-args: {e}", LogType.Error)
+        log(f"Failed to parse global --cmake-args!\nError: {e}", LogType.Error)
         sys.exit(1)
 
     for key, cmdline in command_groups:
@@ -720,7 +781,7 @@ def main():
             command_handler = COMMAND_MAP[cmd_name]()
             libraries.append(command_handler.CreateLibrary(cmdline[1:]))
         except Exception as e:
-            log(f"Failed to process command: {' '.join(cmdline)}. Error: {e}", LogType.Error)
+            log(f"Failed to process command: {' '.join(cmdline)}!\nError: {e}", LogType.Error)
             sys.exit(1)
 
     for library in libraries:
@@ -730,8 +791,8 @@ def main():
 
         try:
             library.InstallLibrary()
-        except subprocess.CalledProcessError:
-            log(f"Failed to build or install {library.lib_name}", LogType.Error)
+        except Exception as e:
+            log(f"Failed to process {library.lib_name}!\nError: {e}", LogType.Error)
             sys.exit(1)
 
     if not(libraries):

@@ -1,4 +1,4 @@
-# Third party shared libraries
+# Third party libraries
 include(Deps)
 
 deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY)
@@ -8,7 +8,7 @@ if(ANDROID)
     deps_append_cmake_define(CMAKE_ANDROID_ARCH_ABI)
 endif()
 
-# Compilation of libraries
+# Compilation
 deps_add_cmake_project(
     "VulkanMemoryAllocator-Hpp/Vulkan-Headers" INSTALL_SUBDIR "VulkanHeaders"
     CMAKE_ARGS
@@ -32,6 +32,9 @@ deps_add_cmake_project(
     "-DSDLIMAGE_AVIF=OFF -DSDLIMAGE_LBM=OFF -DSDLIMAGE_PCX=OFF -DSDLIMAGE_TIF=OFF"
     "-DSDLIMAGE_XCF=OFF -DSDLIMAGE_XPM=OFF -DSDLIMAGE_XV=OFF -DSDLIMAGE_WEBP=OFF"
 )
+
+deps_add_cmake_project("nowide" BUILD_DEBUG)
+deps_add_cmake_project("glm" BUILD_DEBUG CMAKE_ARGS "-DGLM_ENABLE_CXX_20=ON ")
 
 deps_add_header_only("tinyobjloader" HEADERS "tiny_obj_loader.h")
 deps_add_header_only("simple_term_colors" HEADERS "include/stc.hpp")
@@ -62,11 +65,5 @@ find_package(VulkanHeaders REQUIRED)
 find_package(Vulkan COMPONENTS glslc REQUIRED) # Use the ENTIRE fucking Vulkan SDK just for shader compiler...
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp REQUIRED)
-
-# Third party static libraries
-add_subdirectory(third_party/src/nowide EXCLUDE_FROM_ALL SYSTEM)
-set(GLM_ENABLE_CXX_20 ON)
-add_subdirectory(third_party/src/glm EXCLUDE_FROM_ALL SYSTEM)
-
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set_target_properties(nowide glm PROPERTIES FOLDER "third_party")
+find_package(nowide REQUIRED)
+find_package(glm REQUIRED)
