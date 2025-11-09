@@ -32,7 +32,7 @@ add_dependencies(${CURRENT_TARGET_NAME} core)
 # Set project as startup project
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 
-target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE nowide::nowide)
+deps_target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE nowide::nowide)
 
 if(ANDROID)
     target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE SDL3::SDL3)

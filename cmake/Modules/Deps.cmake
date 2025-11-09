@@ -144,7 +144,7 @@ macro(deps_append_cmake_define VAR)
     endif()
 endmacro()
 
-# deps_add_cmake_project(<SOURCE_SUBDIR> [CMAKE_ARGS <args>...] [INSTALL_SUBDIR <dir>] [BUILD_FOLDER <dir>])
+# deps_add_cmake_project(<SOURCE_SUBDIR> [CMAKE_ARGS <args>...] [INSTALL_SUBDIR <dir>] [BUILD_FOLDER <dir>] [BUILD_DEBUG])
 #
 # Adds a library that is built as a separate CMake project.
 #
@@ -152,13 +152,16 @@ endmacro()
 #   SOURCE_SUBDIR   - path to the library source directory
 #   CMAKE_ARGS      - additional arguments passed to CMake when building the library
 #   INSTALL_SUBDIR  - subdirectory for installation (defaults to the name of SOURCE_SUBDIR directory)
-#                     (cmake will use: DEPS_INSTALL_DIR/INSTALL_SUBDIR)
+#                     (relative to DEPS_INSTALL_DIR)
 #   BUILD_FOLDER    - path to the cmake configure directory (defaults to "build")
-#                     (cmake will use: DEPS_SOURCES_DIR/SOURCE_SUBDIR/BUILD_FOLDER)
+#                     (relative to DEPS_SOURCES_DIR/SOURCE_SUBDIR)
+#   BUILD_DEBUG     - option whether to also build Debug configuration after Release. Useful for
+#                     installing static libraries
 function(deps_add_cmake_project SOURCE_SUBDIR)
+    set(options BUILD_DEBUG)
     set(oneValueArgs INSTALL_SUBDIR BUILD_FOLDER)
     set(multiValueArgs CMAKE_ARGS)
-    cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     list(JOIN SOURCE_SUBDIR "/" _source_subdir)
 
@@ -181,13 +184,18 @@ function(deps_add_cmake_project SOURCE_SUBDIR)
     endif()
 
     set(_deps_cmd_args "${_deps_internal_cmd_args}")
-    list(APPEND _deps_cmd_args 
+    list(APPEND _deps_cmd_args
         "add-cmake-lib"
         "--src=${_source_subdir}"
         "--install=${_install_subdir}"
         "--build-dir=${_build_folder}"
         "--args=${_cmake_args}"
     )
+
+    if(ARG_BUILD_DEBUG)
+        list(APPEND _deps_cmd_args "--build-debug")
+    endif()
+
     set(_deps_internal_cmd_args "${_deps_cmd_args}" PARENT_SCOPE)
 endfunction()
 
@@ -240,7 +248,7 @@ function(deps_add_header_only SOURCE_SUBDIR)
     set(_deps_internal_cmd_args "${_deps_cmd_args}" PARENT_SCOPE)
 endfunction()
 
-# deps_add_manual_install(<SOURCE_SUBDIR> [INSTALL_SUBDIR <dir>] [RULES <pattern> <dst>...])
+# deps_add_manual_install(<SOURCE_SUBDIR> [INSTALL_SUBDIR <dir>] [RULES <pattern> <dst> [EXCLUDE <ex>]...])
 #
 # Define manual copy/install rules. This option may be repeated.
 #
@@ -248,7 +256,9 @@ endfunction()
 #   SOURCE_SUBDIR  - Source directory containing files to copy
 #   INSTALL_SUBDIR - Target subdirectory under the install root (defaults to SOURCE_SUBDIR directory name)
 #                    (python will copy all files to the DEPS_INSTALL_DIR/INSTALL_SUBDIR)
-#   RULES          - pairs of: file glob pattern and destination subfolder
+#   RULES          - pairs of: file glob pattern and destination subfolder.
+#                    You can add EXCLUDE glob right after the rule (exclude glob is
+#                    relative to the rule constant prefix before any glob char)
 #                    (python will find these files in DEPS_SOURCES_DIR/SOURCE_SUBDIR)
 #
 # Glob is supported. When copying directories that include wildcards, a constant
@@ -259,12 +269,14 @@ endfunction()
 #     "SteamworksSDK"
 #     INSTALL_SUBDIR "SteamSDK"
 #     RULES
-#     "redistributable_bin/**/*.dll"      "bin"
+#       "redistributable_bin/**/*.lib" "lib"
+#         EXCLUDE "**/{libsteam_api.so,libtier0_s.a}"
 # )
 #
-# `"redistributable_bin/**/*.dll" "bin"`
+# `"redistributable_bin/**/*.lib" "bin"`
 # copies `DEPS_SOURCES_DIR/SteamworksSDK/redistributable_bin/linux64/libsteam_api.so` into
-# `DEPS_INSTALL_DIR/SteamSDK/linux64/bin`.
+# `DEPS_INSTALL_DIR/SteamSDK/linux64/bin`, but ignores any `redistributable_bin/**/{libsteam_api.so,libtier0_s.a}`
+# files.
 function(deps_add_manual_install SOURCE_SUBDIR)
     set(oneValueArgs INSTALL_SUBDIR)
     set(multiValueArgs RULES)
@@ -478,17 +490,23 @@ function(deps_copy_runtime_binaries TARGET)
     endforeach()
 endfunction()
 
-# deps_target_link_and_copy_runtime(<target> ... <item>... ...)
-# deps_target_link_and_copy_runtime(<target> <PRIVATE|PUBLIC|INTERFACE> <item>... [<PRIVATE|PUBLIC|INTERFACE> <item>...]...)
-# deps_target_link_and_copy_runtime(<target> <item>...)
-# deps_target_link_and_copy_runtime(<target> <LINK_PRIVATE|LINK_PUBLIC> <lib>... [<LINK_PRIVATE|LINK_PUBLIC> <lib>...]...)
-# deps_target_link_and_copy_runtime(<target> LINK_INTERFACE_LIBRARIES <item>...)
+# deps_target_link_libraries(<target> [<visibility>] <item>... [<visibility> <item>...]...)
 #
-# Exactly the same as target_link_libraries, but it also calls deps_copy_runtime_binaries
-# for all linked libraries.
-function(deps_target_link_and_copy_runtime TARGET)
-    target_link_libraries(${TARGET} ${ARGN})
-
+# Wrapper for `target_link_libraries` that also copies runtime binaries
+# (DLLs / shared libraries) of all linked targets.
+#
+# This behaves the same as `target_link_libraries`, but after linking,
+# it calls `deps_copy_runtime_binaries()` to ensure dependent shared libraries
+# are copied next to the target.
+#
+# Additionally, STATIC and OBJECT library targets are patched with
+# MAP_IMPORTED_CONFIG_RELWITHDEBINFO=Release to fix configuration mismatches
+# with MSVC.
+#
+# Usage:
+#   deps_target_link_libraries(MyApp PRIVATE FooLib BarLib)
+#   deps_target_link_libraries(MyApp PUBLIC SDL2::SDL2)
+function(deps_target_link_libraries TARGET)
     set(linked_libs "")
 
     foreach(arg IN LISTS ARGN)
@@ -504,7 +522,27 @@ function(deps_target_link_and_copy_runtime TARGET)
         endif()
     endforeach()
 
-    if(linked_libs)
-        deps_copy_runtime_binaries(${TARGET} TARGETS ${linked_libs})
+    # Hack for static libraries for msvc
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        foreach(target IN LISTS linked_libs)
+            if(TARGET ${target})
+                # Resolve alias
+                get_target_property(real ${target} ALIASED_TARGET)
+                if(real)
+                    set(target ${real})
+                endif()
+
+                # Fix static libraries
+                get_target_property(target_type ${target} TYPE)
+                if("${target_type}" MATCHES "STATIC_LIBRARY|OBJECT_LIBRARY")
+                    set_target_properties(${target} PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release)
+                    target_link_options(${target} INTERFACE "/ignore:4099") # Ignore missing pdb
+                endif()
+            endif()
+        endforeach()
     endif()
+
+    target_link_libraries(${TARGET} ${ARGN})
+
+    deps_copy_runtime_binaries(${TARGET} TARGETS ${linked_libs})
 endfunction()

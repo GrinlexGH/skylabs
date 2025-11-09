@@ -31,7 +31,7 @@ set_target_properties(${CURRENT_TARGET_NAME}
     DEFINE_SYMBOL "PUBLIC_EXPORTS"
 )
 
-target_link_libraries(${CURRENT_TARGET_NAME}
+deps_target_link_libraries(${CURRENT_TARGET_NAME}
     PUBLIC
     nowide::nowide
 )
