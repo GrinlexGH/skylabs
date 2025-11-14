@@ -74,6 +74,11 @@ private:
     CImage m_texture { nullptr };
     CSampler m_textureSampler { nullptr };
 
+
+    CImage m_modelTexture { nullptr };
+    CSampler m_modelTextureSampler { nullptr };
+
+
     std::uint32_t m_frameIndex = 0;
 };
 }

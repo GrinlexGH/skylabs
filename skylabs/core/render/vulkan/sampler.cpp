@@ -5,9 +5,9 @@ CSampler::CSampler(const CContext& context) {
     vk::SamplerCreateInfo createInfo {};
     createInfo.magFilter = vk::Filter::eNearest;
     createInfo.minFilter = vk::Filter::eNearest;
-    createInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
-    createInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
-    createInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+    createInfo.addressModeU = vk::SamplerAddressMode::eClampToBorder;
+    createInfo.addressModeV = vk::SamplerAddressMode::eClampToBorder;
+    createInfo.addressModeW = vk::SamplerAddressMode::eClampToBorder;
     createInfo.anisotropyEnable = vk::True;
     createInfo.maxAnisotropy = context.GetPhysicalDevice()->GetProperties().limits.maxSamplerAnisotropy;
     createInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;

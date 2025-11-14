@@ -34,7 +34,7 @@ deps_add_cmake_project(
 )
 
 deps_add_cmake_project("nowide" BUILD_DEBUG)
-deps_add_cmake_project("glm" BUILD_DEBUG CMAKE_ARGS "-DGLM_ENABLE_CXX_20=ON ")
+deps_add_cmake_project("glm" BUILD_DEBUG CMAKE_ARGS "-DGLM_ENABLE_CXX_20=ON")
 
 deps_add_header_only("tinyobjloader" HEADERS "tiny_obj_loader.h")
 deps_add_header_only("simple_term_colors" HEADERS "include/stc.hpp")
