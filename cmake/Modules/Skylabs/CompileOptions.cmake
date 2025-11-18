@@ -38,7 +38,7 @@ elseif(IS_MSVC_LIKE)
             "/analyze:external-"
         )
 
-        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.35)
+        if(CMAKE_INTERPROCEDURAL_OPTIMIZATION AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.35)
             add_compile_options("/Zc:checkGwOdr")
         endif()
     endif()

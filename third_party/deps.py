@@ -252,8 +252,7 @@ class CMakeLibrary(InstallingLibrary):
         if self.build_hash is None:
             import hashlib
 
-            global CMAKE_GLOBAL_ARGS
-            data_str = "|".join(self.extra_args + CMAKE_GLOBAL_ARGS)
+            data_str = "|".join(self.extra_args)
             self.build_hash = hashlib.md5(data_str.encode()).hexdigest()
         return self.build_hash
 
