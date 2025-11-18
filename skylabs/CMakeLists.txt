@@ -1,4 +1,4 @@
-# src
+# skylabs
 set(PROJECTS
     launcher
     core
