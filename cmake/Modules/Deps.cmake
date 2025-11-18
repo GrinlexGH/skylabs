@@ -34,17 +34,16 @@
 #   list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
 #   include(Deps)
 #
-#   deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 #   if(ANDROID)
 #       deps_append_cmake_define(ANDROID_ABI)
 #       deps_append_cmake_define(CMAKE_ANDROID_ARCH_ABI)
 #   endif()
 #
 #   deps_add_cmake_project("SDL" INSTALL_SUBDIR "SDL3" CMAKE_ARGS -DSDL_TEST_LIBRARY=OFF)
+#   deps_add_cmake_project("glm" BUILD_DEBUG)
 #   deps_add_header_only("tinyobjloader" HEADERS "tiny_obj_loader.h")
 #   deps_add_manual_install(
 #       "SteamworksSDK"
-#       INSTALL_SUBDIR "SteamworksSDK"
 #       RULES
 #         "redistributable_bin/**/*.dll"      "bin"
 #         "public/steam/lib/**/*.dll"         "bin"
@@ -62,11 +61,10 @@
 #   include_directories(SYSTEM "${DEPS_HEADER_ONLY_INCLUDE_DIR}")
 #   find_package(SDL3 REQUIRED)
 #   find_package(SteamworksSDK REQUIRED)
-#
-#   add_subdirectory(libs/src/glm EXCLUDE_FROM_ALL SYSTEM)
+#   find_package(glm REQUIRED)
 #
 #   add_executable(skylabs src/main.cpp)
-#   deps_target_link_and_copy_runtime(skylabs PRIVATE
+#   deps_target_link_libraries(skylabs PRIVATE
 #       SDL3::SDL3
 #       SteamworksSDK::SteamAPI
 #       glm::glm
@@ -155,8 +153,8 @@ endmacro()
 #                     (relative to DEPS_INSTALL_DIR)
 #   BUILD_FOLDER    - path to the cmake configure directory (defaults to "build")
 #                     (relative to DEPS_SOURCES_DIR/SOURCE_SUBDIR)
-#   BUILD_DEBUG     - option whether to also build Debug configuration after Release. Useful for
-#                     installing static libraries
+#   BUILD_DEBUG     - option whether to also build Debug configuration after Release.
+#                     Useful for static libraries (only for windows)
 function(deps_add_cmake_project SOURCE_SUBDIR)
     set(options BUILD_DEBUG)
     set(oneValueArgs INSTALL_SUBDIR BUILD_FOLDER)
@@ -192,7 +190,7 @@ function(deps_add_cmake_project SOURCE_SUBDIR)
         "--args=${_cmake_args}"
     )
 
-    if(ARG_BUILD_DEBUG)
+    if(WIN32 AND ARG_BUILD_DEBUG)
         list(APPEND _deps_cmd_args "--build-debug")
     endif()
 
@@ -490,6 +488,83 @@ function(deps_copy_runtime_binaries TARGET)
     endforeach()
 endfunction()
 
+function(_deps_internal_add_processed_target tgt)
+    get_property(_processed_targets GLOBAL PROPERTY _deps_internal_processed_targets)
+    if(NOT _processed_targets)
+        set(_processed_targets "")
+    endif()
+
+    if(NOT ("${tgt}" IN_LIST _processed_targets))
+        list(APPEND _processed_targets "${tgt}")
+        set_property(GLOBAL PROPERTY _deps_internal_processed_targets "${_processed_targets}")
+    endif()
+endfunction()
+
+function(_deps_internal_is_processed_target tgt out_var)
+    get_property(_processed_targets GLOBAL PROPERTY _deps_internal_processed_targets)
+    if(NOT _processed_targets)
+        set(${out_var} FALSE PARENT_SCOPE)
+        return()
+    endif()
+
+    if("${tgt}" IN_LIST _processed_targets)
+        set(${out_var} TRUE PARENT_SCOPE)
+    else()
+        set(${out_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
+# Recursively go through all the dependencies for imported targets
+function(_deps_internal_map_configs target)
+    # Handle LINK_ONLY libraries
+    if("${target}" MATCHES "\\$<LINK_ONLY:([^>]+)>")
+        string(REGEX REPLACE "\\$<LINK_ONLY:([^>]+)>" "\\1" target "${target}")
+    endif()
+
+    if(NOT TARGET ${target})
+        return()
+    endif()
+
+    # Cache
+    _deps_internal_is_processed_target("${target}" already)
+    if(already)
+        return()
+    endif()
+    _deps_internal_add_processed_target("${target}")
+
+    get_target_property(target_type ${target} TYPE)
+    get_target_property(is_imported ${target} IMPORTED)
+    if(is_imported AND (target_type MATCHES "STATIC_LIBRARY|OBJECT_LIBRARY|INTERFACE_LIBRARY"))
+        # Resolve alias
+        get_target_property(real ${target} ALIASED_TARGET)
+        if(real)
+            set(target ${real})
+        endif()
+
+        # Change to release
+        set_target_properties(
+            ${target} PROPERTIES
+            MAP_IMPORTED_CONFIG_MINSIZEREL Release
+            MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+        )
+
+        # Ignore missing pdbs
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+            target_link_options(${target} INTERFACE "/ignore:4099")
+        endif()
+    endif()
+
+    # Handle dependencies
+    get_target_property(libs ${target} INTERFACE_LINK_LIBRARIES)
+    if(NOT libs)
+        return()
+    endif()
+
+    foreach(lib IN LISTS libs)
+        _deps_internal_map_configs(${lib})
+    endforeach()
+endfunction()
+
 # deps_target_link_libraries(<target> [<visibility>] <item>... [<visibility> <item>...]...)
 #
 # Wrapper for `target_link_libraries` that also copies runtime binaries
@@ -499,9 +574,9 @@ endfunction()
 # it calls `deps_copy_runtime_binaries()` to ensure dependent shared libraries
 # are copied next to the target.
 #
-# Additionally, STATIC and OBJECT library targets are patched with
-# MAP_IMPORTED_CONFIG_RELWITHDEBINFO=Release to fix configuration mismatches
-# with MSVC.
+# Additionally, STATIC, INTERFACE and OBJECT library targets are patched with
+# MAP_IMPORTED_CONFIG_RELWITHDEBINFO/MINSIZEREL=Release to fix configuration
+# mismatches.
 #
 # Usage:
 #   deps_target_link_libraries(MyApp PRIVATE FooLib BarLib)
@@ -522,25 +597,10 @@ function(deps_target_link_libraries TARGET)
         endif()
     endforeach()
 
-    # Hack for static libraries for msvc
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        foreach(target IN LISTS linked_libs)
-            if(TARGET ${target})
-                # Resolve alias
-                get_target_property(real ${target} ALIASED_TARGET)
-                if(real)
-                    set(target ${real})
-                endif()
-
-                # Fix static libraries
-                get_target_property(target_type ${target} TYPE)
-                if("${target_type}" MATCHES "STATIC_LIBRARY|OBJECT_LIBRARY")
-                    set_target_properties(${target} PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release)
-                    target_link_options(${target} INTERFACE "/ignore:4099") # Ignore missing pdb
-                endif()
-            endif()
-        endforeach()
-    endif()
+    # Hack for static libraries
+    foreach(target IN LISTS linked_libs)
+        _deps_internal_map_configs(${target})
+    endforeach()
 
     target_link_libraries(${TARGET} ${ARGN})
 
