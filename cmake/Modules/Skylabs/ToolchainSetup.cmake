@@ -30,7 +30,10 @@ elseif(IS_GNU_LIKE)
 endif()
 
 # Subdir to separate runtimes
-set(DEPS_OUT_SUBDIR "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}/${SKYLABS_STD_RUNTIME}/$ENV{DEPS_OUT_SUBDIR}")
+math(EXPR sizeof_void_pointer "${CMAKE_SIZEOF_VOID_P} * 8")
+set(DEPS_OUT_SUBDIR
+    "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-x${sizeof_void_pointer}/${SKYLABS_STD_RUNTIME}/$ENV{DEPS_OUT_SUBDIR}"
+)
 
 include(Deps)
 
