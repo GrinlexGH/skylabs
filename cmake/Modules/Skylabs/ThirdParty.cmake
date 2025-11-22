@@ -1,8 +1,6 @@
 # Third party libraries
 include(Deps)
 
-deps_append_cmake_define(CMAKE_MSVC_RUNTIME_LIBRARY)
-
 if(ANDROID)
     deps_append_cmake_define(ANDROID_ABI)
     deps_append_cmake_define(CMAKE_ANDROID_ARCH_ABI)
