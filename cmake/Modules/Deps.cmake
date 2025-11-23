@@ -475,12 +475,33 @@ function(deps_copy_runtime_binaries TARGET)
         )
 
         if(UNIX)
+            set(symlink_script "${CMAKE_BINARY_DIR}/create_symlink_if_missing.cmake")
+            if(NOT EXISTS "${symlink_script}")
+                file(WRITE "${symlink_script}"
+"if(NOT DEFINED ORIG_FILE)
+    message(FATAL_ERROR \"ORIG_FILE not defined\")
+endif()
+
+if(NOT DEFINED LINK_NAME)
+    message(FATAL_ERROR \"LINK_NAME not defined\")
+endif()
+
+get_filename_component(_orig_name \"\${ORIG_FILE}\" NAME)
+get_filename_component(_link_name \"\${LINK_NAME}\" NAME)
+
+if(NOT (_orig_name STREQUAL _link_name))
+    file(CREATE_LINK \"\${ORIG_FILE}\" \"\${LINK_NAME}\" SYMBOLIC)
+endif()
+"
+                )
+            endif()
+
+            set(stem_expr "$<PATH:GET_STEM,$<TARGET_FILE_NAME:${lib}>>")
+
             add_custom_command(
                 TARGET ${TARGET} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E create_symlink
-                    $<TARGET_FILE_NAME:${lib}> $<PATH:GET_STEM,$<TARGET_FILE_NAME:${lib}>>.so
-                COMMAND ${CMAKE_COMMAND} -E create_symlink
-                    $<TARGET_FILE_NAME:${lib}> $<PATH:GET_STEM,$<TARGET_FILE_NAME:${lib}>>.so.0
+                COMMAND ${CMAKE_COMMAND} -DORIG_FILE="$<TARGET_FILE_NAME:${lib}>" -DLINK_NAME="${stem_expr}.so" -P "${symlink_script}"
+                COMMAND ${CMAKE_COMMAND} -DORIG_FILE="$<TARGET_FILE_NAME:${lib}>" -DLINK_NAME="${stem_expr}.so.0" -P "${symlink_script}"
                 WORKING_DIRECTORY ${target_dir}
                 COMMENT "Creating symlinks for ${lib}"
             )
