@@ -2,6 +2,7 @@
 #include <skylabs/core/window.hpp>
 
 #include <span>
+#include <cstdint>
 
 #include <vulkan/vulkan.hpp>
 
