@@ -3,35 +3,38 @@ set(CURRENT_TARGET_NAME public)
 
 configure_file(
     ${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in
-    ${CMAKE_CURRENT_SOURCE_DIR}/project_info.hpp
+    project_info.hpp
     @ONLY
 )
 
-set(SOURCES
-    project_info.hpp
-    application.hpp
-    application.cpp
-    logging.hpp
-    dll_export.hpp
-    os.hpp
-    os.cpp
-    resource_system.hpp
-    resource_system.cpp
-)
+add_library(${CURRENT_TARGET_NAME})
+set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES DEFINE_SYMBOL "PUBLIC_EXPORTS")
 
-add_library(${CURRENT_TARGET_NAME} SHARED ${SOURCES})
+include(GenerateExportHeader)
+generate_export_header(${CURRENT_TARGET_NAME})
 
-foreach(source IN LISTS SOURCES)
-    cmake_path(GET source PARENT_PATH source_directory)
-    source_group("Source Files/${source_directory}" FILES "${source}")
-endforeach()
-
-set_target_properties(${CURRENT_TARGET_NAME}
-    PROPERTIES
-    DEFINE_SYMBOL "PUBLIC_EXPORTS"
-)
-
-deps_target_link_libraries(${CURRENT_TARGET_NAME}
+target_sources(
+    ${CURRENT_TARGET_NAME}
+    PRIVATE
+        application.cpp
+        os.cpp
+        resource_system.cpp
     PUBLIC
-    nowide::nowide
+    FILE_SET HEADERS
+        FILES
+            application.hpp
+            logging.hpp
+            dll_export.hpp
+            os.hpp
+            resource_system.hpp
+    FILE_SET generated_headers
+        TYPE HEADERS
+        BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
+        FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET_NAME}_export.h
+            ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
 )
+
+target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC Boost::nowide stc::stc)
+
+skylabs_dll_copy(${CURRENT_TARGET_NAME})

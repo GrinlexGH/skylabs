@@ -1,52 +1,95 @@
-# About
+# 🥼 Skylabs
+
 [![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/YqTKmA5qbf)
+[![C++](https://img.shields.io/badge/C++-23-blue.svg?style=flat&logo=c%2B%2B)](https://isocpp.org/)
+[![Vulkan](https://img.shields.io/badge/Vulkan-SDK-red.svg?style=flat&logo=vulkan)](https://vulkan.lunarg.com/)
 
-This is my sandbox, where I test some c++ features, project architectures and much more.
+> [!NOTE]
+> **About this project**
+> This is my personal sandbox for testing modern C++ features, exploring project architectures, and experimenting with graphics programming.
+>
+> 🎯 **Abstract Goal:** To build a functional 3D game engine from scratch using C++.
 
-Abstract goal is to make some kind of 3D game from scratch on c++.
+---
 
-## Build
-Requirements:
-* `CMake`
-* `MSVC` or `g++` (>=13) or `clang++` (>=15)
-* `Python` (>=3.8)
-* [`Vulkan SDK`](https://vulkan.lunarg.com/sdk/home)
+## 📥 Cloning the Repository
 
-CMake uses python script to install all third-party libraries.
+This project uses **Git Submodules**. It is crucial to include them during the clone process.
 
-For more info see [**this repository**](https://github.com/GrinlexGH/deps).
-
-Set `DEPS_TARGET_SYSTEM`, `DEPS_TARGET_ARCH` and `DEPS_SUBDIR` variables or env variables to control `DEPS_INSTALL_DIR` path (e.g. `third_party/bin/Linux-x86_64/libcxx/`) - useful for cross-compilation via `CMAKE_TOOLCHAIN_FILE`, or for [`cmake-tools-kits.json`](https://gist.github.com/GrinlexGH/cffbe9727b7183d7044e2c4af378ffd2) from vscode extension.
-
-
-**You need to install the dependencies to build these libraries yourself**, but usually everything should work without problems.
-The largest library that requires much dependencies is **SDL**. If you're on linux, check out [**this file**](libs/sources/SDL/docs/README-linux.md) to compile it.
-
-*If you have any problems with compilation, please write to issues.*
+### ✅ Correct way to clone
+Use the `--recursive` flag to ensure all dependencies are downloaded:
 
 ```bash
-mkdir build && cd build
-cmake ..
-cmake --build .
-```
+git clone --recursive https://github.com/GrinlexGH/Skylabs.git
+````
 
-Binaries will be located in the `.output` folder.
+### ⚠️ If you already cloned (without recursive)
 
-## Cloning
-This repository contains submodules for external dependencies, so when doing a fresh clone you need to clone recursively:
-
-```bash
-git clone --recursive https://github.com/GrinlexGH/skylabs.git
-```
-
-Existing repositories can be updated manually:
+If the folder is already on your disk but the `dependencies` or `submodules` folders are empty, run this command in the project root:
 
 ```bash
 git submodule update --init --recursive
 ```
 
----
-Useful links:
-- https://utf8everywhere.org/
-- https://github.com/boostorg/dll/blob/e7ad58bfb91bd8a79e0ba274f80ae6a8da9fc59e/include/boost/dll/detail/posix/program_location_impl.hpp#L25
-- https://github.com/KhronosGroup/Vulkan-Samples/tree/main
+-----
+
+## 🛠️ Build Requirements
+
+Ensure you have the following tools installed before compiling:
+
+| Tool | Version Requirement |
+| :--- | :--- |
+| **CMake** | Latest stable |
+| **Compiler** | `MSVC`, `g++` (\>=13), or `clang++` (\>=15) |
+| **Python** | \>= 3.8 |
+| **Conan** | \>= 2.0.0 |
+| **Vulkan SDK** | [Download Here](https://vulkan.lunarg.com/sdk/home) |
+
+-----
+
+## ⚙️ Configuration & Installation
+
+### 1\. Configure Conan Remotes
+
+This project relies on a custom Conan recipe repository.
+
+**Add the local recipe index:**
+
+```bash
+conan remote add skylabs ./conan/conan-recipes -t local-recipes-index -f
+```
+
+**Optional: Install Global Config**
+
+> [\!CAUTION]
+> **Read before running:** The command below will overwrite your global Conan configuration. Only use this if you want to sync with my specific environment settings.
+
+```bash
+conan config install https://github.com/GrinlexGH/conan-config.git
+```
+
+### 2\. Install Dependencies & Compile
+
+If you encounter any compilation issues, please open an [Issue](https://github.com/GrinlexGH/Skylabs/issues).
+
+```bash
+# Install dependencies
+conan install . -r skylabs -r conancenter --build=missing
+
+# Build the project
+cmake --preset conan-default
+```
+
+> [\!TIP]
+> 📂 **Output Location:**
+> All compiled binaries will be placed in the `.output` folder.
+
+-----
+
+## 📚 References & Resources
+
+Useful links regarding the tech stack and concepts used in this project:
+
+  * [UTF-8 Everywhere](https://utf8everywhere.org/)
+  * [Canonical Project Structure](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1204r0.html)
+  * [About console on Win32](https://www.devever.net/~hl/win32con)

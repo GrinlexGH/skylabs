@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
-#include <skylabs/public/project_info.hpp>
+#include "project_info.hpp"
 
 namespace {
 #ifdef DEBUG

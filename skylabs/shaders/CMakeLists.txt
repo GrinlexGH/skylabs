@@ -65,11 +65,6 @@ add_custom_target(${CURRENT_TARGET_NAME}
     SOURCES ${SOURCES}
 )
 
-foreach(source IN LISTS SOURCES)
-    cmake_path(GET source PARENT_PATH source_directory)
-    source_group("Source Files/${source_directory}" FILES "${source}")
-endforeach()
-
 if(ANDROID)
     # Copy shaders to android apk
     add_custom_command(

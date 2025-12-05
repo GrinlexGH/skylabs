@@ -4,13 +4,14 @@
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
-#include <nowide/convert.hpp>
+#include <boost/nowide/convert.hpp>
 #endif
 
 namespace OS {
 #ifdef PLATFORM_WINDOWS
+
 std::string GetProgramPath() {
-    static std::string programPath = [] {
+    static const std::string programPath = [] {
         std::wstring out(100, L'\0');
         DWORD size;
         while (true) {
@@ -20,15 +21,18 @@ std::string GetProgramPath() {
             out.resize(out.size() + 100);
         }
         out.resize(size);
-        return nowide::narrow(std::filesystem::path(std::move(out)).parent_path().wstring());
+        return boost::nowide::narrow(std::filesystem::path(std::move(out)).parent_path().wstring());
     }();
 
     return programPath;
 }
-#elif defined(PLATFORM_UNIX)
+
+#elifdef PLATFORM_UNIX
+
 std::string GetProgramPath() {
     static std::filesystem::path programPath = std::filesystem::canonical("/proc/self/exe").remove_filename();
     return programPath.string();
 }
+
 #endif
 }

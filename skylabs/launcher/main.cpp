@@ -16,8 +16,8 @@ using main_t = int (*)(int argc, char* argv[]);
 
 #ifdef PLATFORM_WINDOWS
 
-#include <nowide/args.hpp>
-#include <nowide/convert.hpp>
+#include <boost/nowide/args.hpp>
+#include <boost/nowide/convert.hpp>
 
 namespace {
 std::string GetLastErrorMessage() {
@@ -32,7 +32,7 @@ std::string GetLastErrorMessage() {
         nullptr
     );
 
-    std::string finalMsg { nowide::narrow(errorMsg) };
+    std::string finalMsg { boost::nowide::narrow(errorMsg) };
 
     LocalFree(errorMsg);
 
@@ -62,7 +62,7 @@ public:
     explicit CLibrary(const wchar_t* path) : m_handle(LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH)) {
         if (!m_handle) {
             throw std::runtime_error(
-                std::format("Failed to load library:\n{}\n{}\n", nowide::narrow(path), GetLastErrorMessage())
+                std::format("Failed to load library:\n{}\n{}\n", boost::nowide::narrow(path), GetLastErrorMessage())
             );
         }
     }
@@ -100,7 +100,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
         // converts wide argv to narrow argv
         int argc = 0;
         char** argv = nullptr;
-        const nowide::args fix(argc, argv);
+        const boost::nowide::args fix(argc, argv);
 
         try {
             // call real main with normal arguments, not schizophrenia from windows
@@ -109,7 +109,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
         } catch (const std::exception& e) {
             MessageBoxW(
                 nullptr,
-                nowide::widen(e.what()).c_str(),
+                boost::nowide::widen(e.what()).c_str(),
                 L"Error!",
                 MB_OK | MB_ICONERROR
             );
@@ -118,7 +118,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
     } catch (const std::exception& e) {
         MessageBoxW(
             nullptr,
-            nowide::widen(e.what()).c_str(),
+            boost::nowide::widen(e.what()).c_str(),
             L"Error!",
             MB_OK | MB_ICONERROR
         );
