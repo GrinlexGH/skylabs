@@ -3,7 +3,7 @@
 #include <skylabs/public/os.hpp>
 #include <skylabs/public/logging.hpp>
 
-#include <nowide/fstream.hpp>
+#include <boost/nowide/fstream.hpp>
 
 namespace {
 std::string GetRelativeResourcePath(const ResourceSystem::ResourceType type, const std::string_view relativePath) {
@@ -23,7 +23,7 @@ namespace ResourceSystem {
 [[nodiscard]] PUBLIC_CLASS std::vector<char> LoadBinary(const ResourceType type, const std::string_view relativePath) {
     const std::string path = GetRelativeResourcePath(type, relativePath);
 
-    nowide::ifstream file(path.c_str(), std::ios_base::ate | std::ios_base::binary);
+    boost::nowide::ifstream file(path.c_str(), std::ios_base::ate | std::ios_base::binary);
 
     if (!file.is_open()) {
         if (file.fail()) {

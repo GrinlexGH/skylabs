@@ -1,5 +1,6 @@
 # skylabs
 set(PROJECTS
+    shaders
     launcher
     core
     public
@@ -94,7 +95,7 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     add_compile_definitions(ARCH_32)
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC" OR CMAKE_CXX_SIMULATE_ID MATCHES "MSVC")
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_definitions(COMPILER_MSVC)
 endif()
 
@@ -106,10 +107,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
     add_compile_definitions(COMPILER_CLANG)
 endif()
 
-add_subdirectory("shaders")
 foreach(PROJECT ${PROJECTS})
     add_subdirectory("${PROJECT}")
-    if(WIN32)
-        set_target_properties(${PROJECT} PROPERTIES PREFIX "")
-    endif()
 endforeach()

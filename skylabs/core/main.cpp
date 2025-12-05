@@ -4,7 +4,7 @@
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
-#include <nowide/convert.hpp>
+#include <boost/nowide/convert.hpp>
 #include <format>
 #include <iostream>
 
@@ -21,7 +21,7 @@ std::string GetLastErrorMessage() {
         nullptr
     );
 
-    std::string finalMsg { nowide::narrow(errorMsg) };
+    std::string finalMsg { boost::nowide::narrow(errorMsg) };
 
     LocalFree(errorMsg);
 

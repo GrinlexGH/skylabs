@@ -1,7 +1,7 @@
 #include <skylabs/core/SDL/context.hpp>
-
-#include <skylabs/public/project_info.hpp>
 #include <skylabs/public/logging.hpp>
+
+#include "project_info.hpp"
 
 namespace SDL {
 int CContext::m_refCount = 0;

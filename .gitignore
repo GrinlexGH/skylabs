@@ -10,11 +10,7 @@ build/*
 out/
 
 # Third party compiled libs
-third_party/bin/*
 **/build/
-
-# Generated files
-src/public/project_info.hpp
 
 # Do not ignore vscode launch.json
 !.vscode/launch.json

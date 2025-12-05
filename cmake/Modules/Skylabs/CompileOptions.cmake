@@ -1,3 +1,17 @@
+# Determine a compiler type
+set(IS_GNU_LIKE FALSE)
+set(IS_MSVC_LIKE FALSE)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(IS_MSVC_LIKE TRUE)
+    else()
+        set(IS_GNU_LIKE TRUE)
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(IS_MSVC_LIKE TRUE)
+endif()
+
 # Enabling LTO
 include(CheckIPOSupported)
 check_ipo_supported(RESULT result)
