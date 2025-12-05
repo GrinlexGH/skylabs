@@ -10,8 +10,6 @@
 >
 > 🎯 **Abstract Goal:** To build a functional 3D game engine from scratch using C++.
 
----
-
 ## 📥 Cloning the Repository
 
 This project uses **Git Submodules**. It is crucial to include them during the clone process.
