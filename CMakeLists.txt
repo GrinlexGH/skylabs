@@ -13,7 +13,6 @@ else()
 endif()
 
 option(SKYLABS_ENABLE_STEAM "Enable Steamworks SDK" ${enable_steam_default})
-option(SKYLABS_TRY_TO_USE_LIBCXX "Try to use libc++ in skylabs and its dependencies" ON)
 
 # Global settings
 include(Skylabs/Skylabs)
