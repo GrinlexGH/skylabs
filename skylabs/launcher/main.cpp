@@ -1,10 +1,8 @@
-#if defined(PLATFORM_WINDOWS)
+#ifdef PLATFORM_WINDOWS
 #include <windows.h>
 #elifdef PLATFORM_UNIX
 #include <dlfcn.h>
 #include <iostream>
-#else
-#error
 #endif
 
 #include <filesystem>
