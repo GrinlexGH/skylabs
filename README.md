@@ -59,7 +59,7 @@ conan remote add skylabs ./conan/conan-recipes -t local-recipes-index -f
 > **Read before running:** The command below will overwrite your global Conan configuration. Only use this if you want to sync with my specific environment settings.
 
 ```bash
-conan config install https://github.com/GrinlexGH/conan-config.git
+conan config install ./conan/conan-config
 ```
 
 ### 2\. Install Dependencies & Compile
