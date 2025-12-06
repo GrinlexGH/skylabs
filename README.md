@@ -29,8 +29,6 @@ If the folder is already on your disk but the `dependencies` or `submodules` fol
 git submodule update --init --recursive
 ```
 
------
-
 ## 🛠️ Build Requirements
 
 Ensure you have the following tools installed before compiling:
@@ -42,8 +40,6 @@ Ensure you have the following tools installed before compiling:
 | **Python** | \>= 3.8 |
 | **Conan** | \>= 2.0.0 |
 | **Vulkan SDK** | [Download Here](https://vulkan.lunarg.com/sdk/home) |
-
------
 
 ## ⚙️ Configuration & Installation
 
@@ -81,8 +77,6 @@ cmake --preset conan-default
 > [\!TIP]
 > 📂 **Output Location:**
 > All compiled binaries will be placed in the `.output` folder.
-
------
 
 ## 📚 References & Resources
 
