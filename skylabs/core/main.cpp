@@ -1,6 +1,7 @@
 #include <skylabs/core/launcher.hpp>
 
 #include <skylabs/public/dll_export.hpp>
+#include <span>
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
@@ -55,7 +56,7 @@ void EnableAnsiEscapeSequences() {
 }
 #endif
 
-extern "C" DLL_EXPORT int CoreMain(const int /*argc*/, char* /*argv*/[]) {
+extern "C" DLL_EXPORT int CoreMain(std::span<char*> /*args*/) {
 #ifdef PLATFORM_WINDOWS
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);

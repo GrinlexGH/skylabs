@@ -9,8 +9,9 @@
 #include <format>
 #include <stdexcept>
 #include <string>
+#include <span>
 
-using main_t = int (*)(int argc, char* argv[]);
+using main_t = int (*)(std::span<char*> args);
 
 #ifdef PLATFORM_WINDOWS
 
@@ -102,7 +103,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
         try {
             // call real main with normal arguments, not schizophrenia from windows
-            const int ret = main(argc, argv);
+            const int ret = main(std::span(argv, argc));
             return ret;
         } catch (const std::exception& e) {
             MessageBoxW(

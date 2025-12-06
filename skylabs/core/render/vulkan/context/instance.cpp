@@ -64,6 +64,7 @@ CInstance::CInstance(
     missingLayers.reserve(layers.size());
 
     // Currently (27.08.2025) validation layer cause sigsegv with gdb on windows, so don't use gdb on windows
+    // (06.12.2025) Fixed?
 #ifdef DEBUG
     if (!EnableLayer("VK_LAYER_KHRONOS_validation", m_enabledLayers)) {
         missingLayers.push_back("VK_LAYER_KHRONOS_validation");

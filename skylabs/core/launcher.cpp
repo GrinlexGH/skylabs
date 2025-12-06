@@ -73,21 +73,6 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
                             SDL_SetWindowFullscreen(window, fullscreenSwitch);
                             fullscreenSwitch = !fullscreenSwitch;
                         } break;
-                        case SDLK_W: {
-                            g_camera.ProcessKeyboard(FORWARD, deltaTime);
-                        } break;
-                        case SDLK_A: {
-                            g_camera.ProcessKeyboard(LEFT, deltaTime);
-                        } break;
-                        case SDLK_S: {
-                            g_camera.ProcessKeyboard(BACKWARD, deltaTime);
-                        } break;
-                        case SDLK_D: {
-                            g_camera.ProcessKeyboard(RIGHT, deltaTime);
-                        } break;
-                        case SDLK_LSHIFT: {
-                            g_camera.MoveFaster();
-                        } break;
                         case SDLK_UP: {
                             MoveForward();
                         } break;
@@ -124,6 +109,9 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
         }
         if (keyboardState[SDL_SCANCODE_D]) {
             g_camera.ProcessKeyboard(RIGHT, deltaTime);
+        }
+        if (keyboardState[SDL_SCANCODE_LSHIFT]) {
+            g_camera.MoveFaster();
         }
 
         if (!minimized) {
