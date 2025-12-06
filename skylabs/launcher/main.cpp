@@ -1,6 +1,6 @@
 #if defined(PLATFORM_WINDOWS)
 #include <windows.h>
-#elif defined(PLATFORM_UNIX)
+#elifdef PLATFORM_UNIX
 #include <dlfcn.h>
 #include <iostream>
 #else
