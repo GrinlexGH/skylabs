@@ -4,6 +4,7 @@ function(skylabs_configure_target target_name)
         return()
     endif()
 
+    # Source groups
     get_target_property(sources ${target_name} SOURCES)
 
     foreach(source IN LISTS sources)
@@ -11,10 +12,11 @@ function(skylabs_configure_target target_name)
         source_group("Source Files/${source_directory}" FILES "${source}")
     endforeach()
 
+    # DLL copying
     get_target_property(target_type ${target_name} TYPE)
-    set(types_requiring_dlls "EXECUTABLE" "SHARED_LIBRARY" "MODULE_LIBRARY")
+    set(allowed_types "EXECUTABLE" "SHARED_LIBRARY" "MODULE_LIBRARY")
 
-    if(target_type IN_LIST types_requiring_dlls)
+    if(target_type IN_LIST allowed_types)
         if(NOT ANDROID)
             add_custom_command(TARGET ${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${target_name}> $<TARGET_RUNTIME_DLLS:${target_name}>
