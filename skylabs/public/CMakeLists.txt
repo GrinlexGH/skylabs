@@ -35,6 +35,10 @@ target_sources(
             ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
 )
 
-target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC Boost::nowide stc::stc)
+target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
+    Boost::nowide
+    stc::stc
+    fmt::fmt
+)
 
 skylabs_dll_copy(${CURRENT_TARGET_NAME})

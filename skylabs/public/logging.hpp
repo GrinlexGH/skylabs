@@ -1,11 +1,11 @@
 #pragma once
-#include <format>
 #include <iostream>
 #include <mutex>
 #include <array>
 #include <tuple>
 
 #include <stc.hpp>
+#include <fmt/format.h>
 
 #ifdef PLATFORM_ANDROID
     #include <SDL3/SDL.h>
@@ -26,7 +26,7 @@ inline auto g_minLogLevel = Type::eDebug;
 inline std::mutex g_mutex;
 
 template <typename... Args>
-void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args) {
+void Log(const Type type, const fmt::format_string<Args...> fmt, Args&&... args) {
     if (type < g_minLogLevel)
         return;
 
@@ -35,19 +35,19 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
     const std::scoped_lock lock(g_mutex);
     switch (type) {
         case Type::eDebug:
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;168;228;160m%s\033[0m", std::format(fmt, std::forward<Args>(args)...).c_str());
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;168;228;160m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
             break;
         case Type::eInfo:
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;114;159;207m%s\033[0m", std::format(fmt, std::forward<Args>(args)...).c_str());
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;114;159;207m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
             break;
         case Type::eWarning:
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;196;160;0m%s\033[0m", std::format(fmt, std::forward<Args>(args)...).c_str());
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;196;160;0m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
             break;
         case Type::eError:
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;204;0;0m%s\033[0m", std::format(fmt, std::forward<Args>(args)...).c_str());
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;204;0;0m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
             break;
         default:
-            SDL_Log("%s", std::format(fmt, std::forward<Args>(args)...).c_str());
+            SDL_Log("%s", fmt::format(fmt, std::forward<Args>(args)...).c_str());
             break;
     }
 
@@ -82,7 +82,7 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
     std::cout << prefix
               << stc::true_color
               << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "
-              << std::format(fmt, std::forward<Args>(args)...)
+              << fmt::format(fmt, std::forward<Args>(args)...)
               << suffix
               << std::endl;
 
@@ -90,22 +90,22 @@ void Log(const Type type, const std::format_string<Args...> fmt, Args&&... args)
 }
 
 template <class... Args>
-void Debug(const std::format_string<Args...> fmt, Args&&... args) {
+void Debug(const fmt::format_string<Args...> fmt, Args&&... args) {
     Log(Type::eDebug, fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
-void Info(const std::format_string<Args...> fmt, Args&&... args) {
+void Info(const fmt::format_string<Args...> fmt, Args&&... args) {
     Log(Type::eInfo, fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
-void Warning(const std::format_string<Args...> fmt, Args&&... args) {
+void Warning(const fmt::format_string<Args...> fmt, Args&&... args) {
     Log(Type::eWarning, fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
-void Error(const std::format_string<Args...> fmt, Args&&... args) {
+void Error(const fmt::format_string<Args...> fmt, Args&&... args) {
     Log(Type::eError, fmt, std::forward<Args>(args)...);
 }
 }
