@@ -35,4 +35,4 @@ target_sources(
 add_dependencies(${CURRENT_TARGET_NAME} core)
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE Boost::nowide)
 
-skylabs_dll_copy(${CURRENT_TARGET_NAME})
+skylabs_configure_target(${CURRENT_TARGET_NAME})

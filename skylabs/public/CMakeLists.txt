@@ -41,4 +41,4 @@ target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     fmt::fmt
 )
 
-skylabs_dll_copy(${CURRENT_TARGET_NAME})
+skylabs_configure_target(${CURRENT_TARGET_NAME})
