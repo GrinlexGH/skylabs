@@ -1,8 +1,10 @@
 #pragma once
-#include <span>
-
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
+
+#include <span>
+
+#include <fmt/format.h>
 
 namespace SDL::Vulkan {
 inline std::span<const char* const> GetInstanceExtensions() {
@@ -18,7 +20,7 @@ inline bool GetPresentationSupport(const vk::Instance& instance, const vk::Physi
 inline vk::SurfaceKHR CreateSurface(SDL_Window* window, const vk::Instance& instance) {
     VkSurfaceKHR surface {};
     if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface)) {
-        throw std::runtime_error(std::format("Failed to create vulkan surface via SDL: {}!", SDL_GetError()));
+        throw std::runtime_error(fmt::format("Failed to create vulkan surface via SDL: {}!", SDL_GetError()));
     }
     return surface;
 }
