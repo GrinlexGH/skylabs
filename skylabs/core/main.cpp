@@ -4,10 +4,12 @@
 #include <span>
 
 #ifdef PLATFORM_WINDOWS
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <boost/nowide/convert.hpp>
 #include <format>
-#include <iostream>
+
+#include <skylabs/public/logging.hpp>
 
 namespace {
 std::string GetLastErrorMessage() {
@@ -22,35 +24,30 @@ std::string GetLastErrorMessage() {
         nullptr
     );
 
-    std::string finalMsg { boost::nowide::narrow(errorMsg) };
+    std::string finalMsg = boost::nowide::narrow(errorMsg);
 
     LocalFree(errorMsg);
 
     return finalMsg;
 }
 
-void EnableAnsiEscapeSequences() {
-    const HANDLE stdoutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (stdoutHandle == INVALID_HANDLE_VALUE) {
-        std::cout << std::format("Invalid handle: {}\n", GetLastErrorMessage());
+void EnableVTP() {
+    const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (handle == INVALID_HANDLE_VALUE) {
+        Log::Error("Invalid handle for STD_OUTPUT (GetStdHandle fail): {}", GetLastErrorMessage());
         return;
     }
 
-    DWORD mode = 0;
-    if (!GetConsoleMode(stdoutHandle, &mode)) {
-        std::cout << std::format("Failed to get console mode: {}\n", GetLastErrorMessage());
+    constexpr DWORD flags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
+
+    DWORD originalMode = 0;
+    if (!GetConsoleMode(handle, &originalMode) && (originalMode & flags) == flags) {
+        Log::Debug("Virtual Terminal Processing already set for STD_OUTPUT.");
         return;
     }
 
-    const DWORD desiredFlags = ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if ((mode & desiredFlags) == desiredFlags) {
-        return;
-    }
-
-    mode |= desiredFlags;
-    if (!SetConsoleMode(stdoutHandle, mode)) {
-        std::cout << std::format("Failed to set console mode: {}\n", GetLastErrorMessage());
-        return;
+    if (!SetConsoleMode(handle, originalMode | flags)) {
+        Log::Warning("Failed to set mode for STD_OUTPUT (SetConsoleMode fail). Error: {}", GetLastErrorMessage());
     }
 }
 }
@@ -61,7 +58,7 @@ extern "C" DLL_EXPORT int CoreMain(std::span<char*> /*args*/) {
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 
-    EnableAnsiEscapeSequences();
+    EnableVTP();
 #endif
 
     CLauncher launcher;

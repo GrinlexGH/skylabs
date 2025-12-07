@@ -79,7 +79,7 @@ CInstance::CInstance(
 
     if (!missingLayers.empty()) {
         std::string error;
-        error.reserve(missingLayers.size() * 20 + 40);
+        error.reserve((missingLayers.size() * 20) + 40);
         error += "System doesn't have vulkan layers:\n";
         for (const char* const name : missingLayers) {
             error += '\t';
@@ -107,7 +107,7 @@ CInstance::CInstance(
 
     if (!missingExtensions.empty()) {
         std::string error;
-        error.reserve(missingExtensions.size() * 20 + 50);
+        error.reserve((missingExtensions.size() * 20) + 50);
         error += "System doesn't have required instance extensions:\n";
         for (const auto name : missingExtensions) {
             error += '\t';
