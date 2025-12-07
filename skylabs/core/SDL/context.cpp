@@ -1,7 +1,8 @@
 #include <skylabs/core/SDL/context.hpp>
 #include <skylabs/public/logging.hpp>
-
 #include "project_info.hpp"
+
+#include <fmt/format.h>
 
 namespace SDL {
 int CContext::m_refCount = 0;
@@ -16,9 +17,9 @@ CContext::CContext(const SDL_InitFlags flags) {
         SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING, "game");
 
         if (!SDL_InitSubSystem(flags)) {
-            CContext::m_refCount = 0;
+            m_refCount = 0;
             SDL_Quit();
-            throw std::runtime_error(std::format("Failed to initialize SDL: {}!", SDL_GetError()));
+            throw std::runtime_error(fmt::format("Failed to initialize SDL: {}!", SDL_GetError()));
         }
     } else {
         Log::Warning("SDL already initialized {} time(s). Specified subsystems have not been initialized.", m_refCount);

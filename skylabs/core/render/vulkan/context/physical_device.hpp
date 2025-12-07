@@ -62,7 +62,7 @@ public:
         if (GetExtensionFeatures<Feature>().*flag) {
             AddExtensionFeatures<Feature>().*flag = vk::True;
         } else {
-            throw std::runtime_error(std::format("Requested required feature <{}::{}> is not supported!", featureName, flagName));
+            throw std::runtime_error(fmt::format("Requested required feature <{}::{}> is not supported!", featureName, flagName));
         }
     }
 
@@ -82,7 +82,7 @@ public:
         if (m_features.*flag) {
             m_requiredFeatures.*flag = vk::True;
         } else {
-            throw std::runtime_error(std::format("Requested required feature \"{}\" is not supported!", flagName));
+            throw std::runtime_error(fmt::format("Requested required feature \"{}\" is not supported!", flagName));
         }
     }
 
