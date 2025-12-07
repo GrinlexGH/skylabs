@@ -76,3 +76,5 @@ if(ANDROID)
         COMMENT "Copying shaders to apk"
     )
 endif()
+
+skylabs_configure_target(${CURRENT_TARGET_NAME})

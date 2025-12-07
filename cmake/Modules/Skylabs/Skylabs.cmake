@@ -1,8 +1,15 @@
 # dlls copying
-function(skylabs_dll_copy target_name)
+function(skylabs_configure_target target_name)
     if(NOT TARGET ${target_name})
         return()
     endif()
+
+    get_target_property(sources ${target_name} SOURCES)
+
+    foreach(source IN LISTS sources)
+        cmake_path(GET source PARENT_PATH source_directory)
+        source_group("Source Files/${source_directory}" FILES "${source}")
+    endforeach()
 
     get_target_property(target_type ${target_name} TYPE)
     set(types_requiring_dlls "EXECUTABLE" "SHARED_LIBRARY" "MODULE_LIBRARY")
