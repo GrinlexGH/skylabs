@@ -18,6 +18,8 @@ using main_t = int (*)(std::span<char*> args);
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/convert.hpp>
 
+using namespace boost;
+
 namespace {
 std::string GetLastErrorMessage() {
     wchar_t* errorMsg = nullptr;
@@ -31,10 +33,8 @@ std::string GetLastErrorMessage() {
         nullptr
     );
 
-    std::string finalMsg { boost::nowide::narrow(errorMsg) };
-
+    std::string finalMsg { nowide::narrow(errorMsg) };
     LocalFree(errorMsg);
-
     return finalMsg;
 }
 
@@ -61,7 +61,7 @@ public:
     explicit CLibrary(const wchar_t* path) : m_handle(LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH)) {
         if (!m_handle) {
             throw std::runtime_error(
-                std::format("Failed to load library:\n{}\n{}\n", boost::nowide::narrow(path), GetLastErrorMessage())
+                std::format("Failed to load library:\n{}\n{}\n", nowide::narrow(path), GetLastErrorMessage())
             );
         }
     }
@@ -93,13 +93,13 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
         const std::filesystem::path libCorePath { rootDir / L"bin" / L"core.dll" };
 
-        const CLibrary core(libCorePath.c_str());
+        const CLibrary core { libCorePath.c_str() };
         const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         // converts wide argv to narrow argv
         int argc = 0;
         char** argv = nullptr;
-        const boost::nowide::args fix(argc, argv);
+        const nowide::args fix { argc, argv };
 
         try {
             // call real main with normal arguments, not schizophrenia from windows
@@ -108,7 +108,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
         } catch (const std::exception& e) {
             MessageBoxW(
                 nullptr,
-                boost::nowide::widen(e.what()).c_str(),
+                nowide::widen(e.what()).c_str(),
                 L"Error!",
                 MB_OK | MB_ICONERROR
             );
@@ -117,7 +117,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
     } catch (const std::exception& e) {
         MessageBoxW(
             nullptr,
-            boost::nowide::widen(e.what()).c_str(),
+            nowide::widen(e.what()).c_str(),
             L"Error!",
             MB_OK | MB_ICONERROR
         );
