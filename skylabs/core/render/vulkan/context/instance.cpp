@@ -1,7 +1,8 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
-
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 #include "project_info.hpp"
+
+#include <unordered_set>
 
 namespace {
 #ifdef DEBUG
@@ -59,6 +60,9 @@ CInstance::CInstance(
     appInfo.apiVersion = m_apiVersion;
 
     //====================
+    const std::vector availableLayers = GetAvailableLayers();
+    std::unordered_set<const char*> pendingLayers {};
+
     m_enabledLayers.reserve(layers.size());
     std::vector<const char*> missingLayers;
     missingLayers.reserve(layers.size());

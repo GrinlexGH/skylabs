@@ -6,33 +6,26 @@ class SkylabsRecipe(ConanFile):
     generators = "CMakeDeps", "CMakeToolchain"
 
     package_type = "application"
-    implements = ["auto_shared_fpic"]
-
-    options = {
-        "shared": [False, True],
-        "fPIC": [False, True],
-    }
 
     default_options = {
-        "shared": False,
-        "fPIC": False,
-
         "sdl_image/*:with_libtiff": False,
         "sdl_image/*:with_libwebp": False,
         "sdl_image/*:with_avif": False,
-        "boost/*:with_nowide": True,
 
+        "boost/*:with_nowide": True,
         "boost/*:shared": False,
+
         "glm/*:shared": False,  # shared glm does not work on windows
     }
 
     def requirements(self):
+        self.requires("fmt/12.1.0")
         self.requires("simple_term_colors/0.1")
         self.requires("tinyobjloader/2.0.0rc13")
         self.requires("glm/1.0.2")
-        self.requires("fmt/12.1.0")
         self.requires("vulkan-headers/1.4.335")
         self.requires("vulkan-memory-allocator-hpp/3.3.0-rc")
+        self.requires("benchmark/1.9.4")
         self.requires("sdl_image/3.2.4")
         self.requires("sdl/3.2.28")
         self.requires("boost/1.89.0")

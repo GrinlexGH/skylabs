@@ -1,11 +1,9 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/extensions.hpp>
-
 #include <skylabs/public/logging.hpp>
-
-#include <unordered_map>
-
 #include <vulkan/vulkan_raii.hpp>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace Vulkan {
 class CPhysicalDevice
@@ -26,7 +24,7 @@ public:
     [[nodiscard]] auto GetExtensions() const -> const std::vector<vk::ExtensionProperties>& { return m_extensions; }
     [[nodiscard]] auto GetQueueFamilies() const -> const std::vector<vk::QueueFamilyProperties>& { return m_queueFamilies; }
 
-    [[nodiscard]] auto IsExtensionSupported(const std::string_view name) const -> bool { return m_availableExtensionsMap.contains(name); }
+    [[nodiscard]] auto IsExtensionSupported(const std::string_view name) const -> bool { return m_availableExtensionsSet.contains(name); }
 
     [[nodiscard]] auto GetRequiredFeatures() const -> const vk::PhysicalDeviceFeatures& { return m_requiredFeatures; }
     [[nodiscard]] auto GetExtensionFeaturePNext() const -> void* { return m_extensionFeaturePNext; }
@@ -106,7 +104,7 @@ private:
     std::vector<vk::QueueFamilyProperties> m_queueFamilies;
     std::vector<vk::ExtensionProperties> m_extensions;
 
-    std::unordered_map<std::string_view, bool> m_availableExtensionsMap;
+    std::unordered_set<std::string_view> m_availableExtensionsSet;
 
     // Extensions features
     std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures;
