@@ -30,18 +30,18 @@ CContext::CContext(const IWindow* const window) : m_window(window) {
 }
 
 auto CContext::CreateInstance() -> void {
-    std::unordered_map<const char*, bool> instanceExtensions {
-        { vk::KHRGetPhysicalDeviceProperties2ExtensionName, true }
-    };
+    std::unordered_map<const char*, bool> instanceExtensions;
 
-    const std::span requiredExtensions { m_window->GetRequiredInstanceExtensions() };
-    instanceExtensions.reserve(requiredExtensions.size());
+    const auto required = m_window->GetRequiredInstanceExtensions();
+    instanceExtensions.reserve(required.size() + 1);
 
-    for (const auto& extension : requiredExtensions) {
-        instanceExtensions[extension] = true;
+    instanceExtensions[vk::KHRGetPhysicalDeviceProperties2ExtensionName] = true;
+
+    for (const char* ext : required) {
+        instanceExtensions[ext] = true;
     }
 
-    m_instance = CInstance { instanceExtensions };
+    m_instance = CInstance { instanceExtensions, {} };
 }
 
 auto CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool {
