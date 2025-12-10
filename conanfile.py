@@ -8,14 +8,14 @@ class SkylabsRecipe(ConanFile):
     package_type = "application"
 
     default_options = {
+        "sdl/*:shared": True,
+        "sdl_image/*:shared": True,
+
         "sdl_image/*:with_libtiff": False,
         "sdl_image/*:with_libwebp": False,
         "sdl_image/*:with_avif": False,
 
         "boost/*:with_nowide": True,
-        "boost/*:shared": False,
-
-        "glm/*:shared": False,  # shared glm does not work on windows
     }
 
     def requirements(self):
