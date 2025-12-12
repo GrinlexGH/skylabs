@@ -119,8 +119,39 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
         }
     }
 }
+#include <benchmark/benchmark.h>
+static void BM_CreateInstance(benchmark::State& state) {
+    std::unordered_map<std::string_view, bool> extensions;
+    extensions[vk::KHRSurfaceExtensionName] = true;
+    extensions[vk::EXTDebugUtilsExtensionName] = true;
+
+    std::vector<std::string_view> layers;
+    layers.emplace_back("VK_LAYER_KHRONOS_validation");
+
+    for (auto _ : state) {
+        try {
+            Vulkan::CInstance instance(extensions, layers);
+        } 
+        catch (const std::exception& e) {
+            state.SkipWithError(e.what());
+        }
+    }
+}
+
+BENCHMARK(BM_CreateInstance)->Unit(benchmark::kMillisecond)->Iterations(50);
 
 void CLauncher::Main() {
+    int argc;
+    char** argv;
+::benchmark::Initialize(&argc, argv);
+
+    if (!::benchmark::ReportUnrecognizedArguments(argc, argv)) {
+    ::benchmark::RunSpecifiedBenchmarks();
+    }
+
+    // 3. Запуск тестов
+
+
     const SDL::CContext sdl(SDL_INIT_VIDEO);
 
     const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);

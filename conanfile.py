@@ -23,6 +23,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("simple_term_colors/0.1")
         self.requires("tinyobjloader/2.0.0rc13")
         self.requires("glm/1.0.2")
+        self.requires("benchmark/1.9.4")
         self.requires("vulkan-headers/1.4.335")
         self.requires("vulkan-memory-allocator-hpp/3.3.0-rc")
         self.requires("sdl_image/3.2.4")

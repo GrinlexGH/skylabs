@@ -30,14 +30,14 @@ CContext::CContext(const IWindow* const window) : m_window(window) {
 }
 
 auto CContext::CreateInstance() -> void {
-    std::unordered_map<const char*, bool> instanceExtensions;
+    std::unordered_map<std::string_view, bool> instanceExtensions;
 
-    const auto required = m_window->GetRequiredInstanceExtensions();
+    const std::span<const char* const> required = m_window->GetRequiredInstanceExtensions();
     instanceExtensions.reserve(required.size() + 1);
 
     instanceExtensions[vk::KHRGetPhysicalDeviceProperties2ExtensionName] = true;
 
-    for (const char* ext : required) {
+    for (const std::string_view ext : required) {
         instanceExtensions[ext] = true;
     }
 

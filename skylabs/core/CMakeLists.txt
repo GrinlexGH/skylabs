@@ -72,6 +72,7 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     glm::glm
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
     tinyobjloader::tinyobjloader
+    benchmark::benchmark
 )
 
 if(SKYLABS_ENABLE_STEAM)
