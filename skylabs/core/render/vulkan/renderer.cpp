@@ -858,6 +858,8 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
         Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
+        Log::Debug("Resized");
+        (*m_context.GetDevice()).resetFences({frameData.GetFence()});
         return;
     }
     if (result != vk::Result::eSuccess) {
@@ -995,6 +997,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     result = QueuePresentWrapper(device.GetPresentQueue().m_handle, presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR) {
         Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
+        (*m_context.GetDevice()).resetFences({frameData.GetFence()});
         return;
     }
     // #endregion PRESENT

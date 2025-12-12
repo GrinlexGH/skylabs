@@ -3,6 +3,16 @@
 #include "project_info.hpp"
 
 #include <unordered_set>
+#include <ranges>
+
+namespace std {
+    template<>
+    struct hash<vk::LayerProperties> {
+        size_t operator()(vk::LayerProperties const& layer) const {
+            return hash<string_view>{}(layer.layerName);
+        }
+    };
+}
 
 namespace {
 #ifdef DEBUG
@@ -34,8 +44,8 @@ namespace Vulkan {
 CInstance::CInstance(std::nullptr_t) {}
 
 CInstance::CInstance(
-    const std::unordered_map<const char*, bool>& extensions,
-    const std::vector<const char*>& layers
+    const std::unordered_map<std::string_view, bool>& extensions,
+    const std::vector<std::string_view>& layers
 ) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
@@ -60,71 +70,17 @@ CInstance::CInstance(
     appInfo.apiVersion = m_apiVersion;
 
     //====================
-    const std::vector availableLayers = GetAvailableLayers();
-    std::unordered_set<const char*> pendingLayers {};
-
-    m_enabledLayers.reserve(layers.size());
-    std::vector<const char*> missingLayers;
-    missingLayers.reserve(layers.size());
-
-    // Currently (27.08.2025) validation layer cause sigsegv with gdb on windows, so don't use gdb on windows
-    // (06.12.2025) Fixed?
-#ifdef DEBUG
-    if (!EnableLayer("VK_LAYER_KHRONOS_validation", m_enabledLayers)) {
-        missingLayers.push_back("VK_LAYER_KHRONOS_validation");
-    }
-#endif
-
-    for (const auto& name : layers) {
-        if (!EnableLayer(name, m_enabledLayers)) {
-            missingLayers.push_back(name);
-        }
-    }
-
-    if (!missingLayers.empty()) {
-        std::string error;
-        error.reserve((missingLayers.size() * 20) + 40);
-        error += "System doesn't have vulkan layers:\n";
-        for (const char* const name : missingLayers) {
-            error += '\t';
-            error += name;
-            error += '\n';
-        }
-        Log::Debug("{}", error);
-    }
+    std::vector<const char*> enabledLayers = EnableLayers(layers);
 
     //====================
-#ifdef DEBUG
-    const bool isDebugUtilsAvailable = EnableExtension(vk::EXTDebugUtilsExtensionName);
-#endif
-
-    // if required extension is missing, put it into error message
-    std::vector<const char*> missingExtensions;
-    missingExtensions.reserve(extensions.size());
-    m_enabledExtensions.reserve(extensions.size());
-
-    for (const auto& [name, required] : extensions) {
-        if (!EnableExtension(name) && required) {
-            missingExtensions.push_back(name);
-        }
-    }
-
-    if (!missingExtensions.empty()) {
-        std::string error;
-        error.reserve((missingExtensions.size() * 20) + 50);
-        error += "System doesn't have required instance extensions:\n";
-        for (const auto name : missingExtensions) {
-            error += '\t';
-            error += name;
-            error += '\n';
-        }
-        throw std::runtime_error { error };
-    }
+    std::vector<const char*> enabledExtensions = EnableExtensions(extensions);
 
     //====================
     void* pNext = nullptr;
 
 #ifdef DEBUG
+    const bool isDebugUtilsAvailable = IsExtensionEnabled(vk::EXTDebugUtilsExtensionName);
+
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
         {},
 
@@ -149,9 +105,9 @@ CInstance::CInstance(
     vk::InstanceCreateInfo createInfo;
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount = static_cast<uint32_t>(m_enabledExtensions.size());
-    createInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
+    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
     createInfo.enabledLayerCount = static_cast<uint32_t>(m_enabledLayers.size());
-    createInfo.ppEnabledLayerNames = m_enabledLayers.data();
+    createInfo.ppEnabledLayerNames = enabledLayers.data();
     createInfo.pNext = pNext;
 
     m_handle = vk::raii::Instance { m_context, createInfo };
@@ -167,53 +123,120 @@ CInstance::CInstance(
     QueryPhysicalDevices();
 }
 
-auto CInstance::GetAvailableLayers() const -> std::vector<vk::LayerProperties> {
-    const static std::vector<vk::LayerProperties> layers = m_context.enumerateInstanceLayerProperties();
-    return layers;
+auto CInstance::GetAvailableLayers() const -> std::unordered_set<std::string_view> {
+    static const std::vector<vk::LayerProperties> layers = m_context.enumerateInstanceLayerProperties();
+    static const std::unordered_set<std::string_view> layerMap =
+        layers |
+        // Transform to pick only layer name
+        std::views::transform([](const vk::LayerProperties& layer) {
+            return std::string_view { layer.layerName };
+        }) |
+        std::ranges::to<std::unordered_set<std::string_view>>();
+
+    return layerMap;
 }
 
-auto CInstance::EnableExtension(const char* name) -> bool {
-    static const std::vector<vk::ExtensionProperties>& availableGlobalExtensions = m_context.enumerateInstanceExtensionProperties();
+auto CInstance::GetAvailableExtensions() const -> std::unordered_set<std::string_view> {
+    static const std::vector<vk::ExtensionProperties>& globalExtensions = m_context.enumerateInstanceExtensionProperties();
+    static const std::unordered_set<std::string_view> globalExtensionsMap =
+        globalExtensions |
+        // Transform to pick only extension name
+        std::views::transform([](const vk::ExtensionProperties& layer) {
+            return std::string_view { layer.extensionName };
+        }) |
+        std::ranges::to<std::unordered_set<std::string_view>>();
 
-    if (HasExtension(m_enabledExtensions, name)) {
-        return true;
-    }
-
-    const auto tryEnable = [&](const std::vector<vk::ExtensionProperties>& availableExtensions) -> bool {
-        if (HasExtension(availableExtensions, name)) {
-            m_enabledExtensions.emplace_back(name);
-            return true;
-        }
-        return false;
-    };
-
-    if (tryEnable(availableGlobalExtensions)) {
-        return true;
-    }
-
-    // If any of the available layers provides this extension, enable it
-    if (std::ranges::any_of(m_enabledLayers,
-        [&](const char* layerName) {
-            return tryEnable(m_context.enumerateInstanceExtensionProperties({ layerName }));
-        }
-    )) {
-        return true;
-    }
-
-    return false;
+    return globalExtensionsMap;
 }
 
-auto CInstance::EnableLayer(const char* name, std::vector<const char*>& enabledLayers) const -> bool {
-    if (HasLayer(enabledLayers, name)) {
-        return true;
+auto CInstance::EnableLayers(const std::vector<std::string_view>& layers) -> std::vector<const char*> {
+    const std::unordered_set<std::string_view> availableLayers = GetAvailableLayers();
+    std::unordered_set<std::string_view> pendingLayers { layers.begin(), layers.end() };
+
+    // Currently (27.08.2025) validation layer cause sigsegv with gdb on windows, so don't use gdb on windows
+    // (06.12.2025) Fixed?
+#ifdef DEBUG
+    pendingLayers.insert("VK_LAYER_KHRONOS_validation");
+#endif
+
+    std::vector<const char*> enabledLayers;
+    enabledLayers.reserve(pendingLayers.size());
+
+    m_enabledLayers.reserve(pendingLayers.size());
+
+    for (const std::string_view& layerName : pendingLayers) {
+        if (availableLayers.contains(layerName)) {
+            enabledLayers.push_back(layerName.data());
+            m_enabledLayers.insert(layerName);
+        } else {
+            Log::Debug("System doesn't have vulkan layer \"{}\"", layerName);
+        }
     }
 
-    if (HasLayer(GetAvailableLayers(), name)) {
-        enabledLayers.emplace_back(name);
-        return true;
+    return enabledLayers;
+}
+
+auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool>& extensions) -> std::vector<const char*> {
+    const std::unordered_set<std::string_view> availableExtensions = GetAvailableExtensions();
+
+    std::vector<const char*> enabledExtensions;
+    enabledExtensions.reserve(extensions.size());
+
+    std::vector<std::pair<std::string_view, bool>> missingExtensions;
+    missingExtensions.reserve(extensions.size());
+
+    m_enabledExtensions.reserve(extensions.size() + 1);
+
+    for (const auto& [extensionName, required] : extensions) {
+        if (!availableExtensions.contains(extensionName)) {
+            missingExtensions.emplace_back(extensionName, required);
+        } else {
+            enabledExtensions.push_back(extensionName.data());
+            m_enabledExtensions.insert(extensionName);
+        }
     }
 
-    return false;
+#ifdef DEBUG
+    if (availableExtensions.contains(vk::EXTDebugUtilsExtensionName)) {
+        enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+        m_enabledExtensions.insert(vk::EXTDebugUtilsExtensionName);
+    } else {
+        missingExtensions.emplace_back(vk::EXTDebugUtilsExtensionName, false);
+    }
+#endif
+
+    if (!missingExtensions.empty()) {
+        for (const std::string_view& layerName : m_enabledLayers) {
+            const std::vector<vk::ExtensionProperties> availableExtensions =
+                m_context.enumerateInstanceExtensionProperties(std::string { layerName });
+
+            std::erase_if(missingExtensions, [&](const std::pair<std::string_view, bool> extension) {
+                const auto [extensionName, required] = extension;
+                if (HasExtension(availableExtensions, extensionName)) {
+                    enabledExtensions.push_back(extensionName.data());
+                    m_enabledExtensions.insert(extensionName);
+                    return true;
+                }
+                if (!required)
+                    return true;
+                return false;
+            });
+        }
+    }
+
+    if (!missingExtensions.empty()) {
+        std::string error;
+        error.reserve((missingExtensions.size() * 20) + 50);
+        error += "System doesn't have required instance extensions:\n";
+        for (const auto [name, _] : missingExtensions) {
+            error += '\t';
+            error += name;
+            error += '\n';
+        }
+        throw std::runtime_error { error };
+    }
+
+    return enabledExtensions;
 }
 
 auto CInstance::QueryPhysicalDevices() -> void {
