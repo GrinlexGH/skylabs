@@ -31,7 +31,7 @@ public:
     auto Draw(glm::mat4 view_mat, float deltaTime) -> void override;
 
 private:
-    static constexpr int FRAMES_IN_FLIGHT_COUNT = 3;
+    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;
 
     CContext m_context { nullptr };
 
@@ -70,9 +70,6 @@ private:
 
     std::vector<CHostBuffer> m_uniformBuffers;
     std::vector<CMemoryMapping> m_uniformBuffersMapped;
-
-    CImage m_texture { nullptr };
-    CSampler m_textureSampler { nullptr };
 
 
     CImage m_modelTexture { nullptr };

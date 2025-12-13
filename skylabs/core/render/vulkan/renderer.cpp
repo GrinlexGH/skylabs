@@ -15,7 +15,6 @@
 #include <chrono>
 
 
-
 struct Vertex
 {
     glm::vec3 pos;
@@ -221,13 +220,15 @@ void UpdateUniformBuffer(
     glm::mat4 view,
     float deltaTime
 ) {
-    static auto startTime = std::chrono::high_resolution_clock::now();
+    using namespace std::chrono;
 
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::hours::period>(currentTime - startTime).count();
-    (void)time;
+    static auto startTime = high_resolution_clock::now();
+
+    auto currentTime = high_resolution_clock::now();
+    const float time = duration<float, seconds::period>(currentTime - startTime).count();
+
     UniformBufferObject ubo {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = view;
     ubo.proj = glm::perspective(glm::radians(90.0f), (float) cameraDimensions.width / (float) cameraDimensions.height, 0.01f, 10.0f);
     ubo.proj[1][1] *= -1;
@@ -258,18 +259,16 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderWidth = m_swapchain.GetExtent().width;
     renderHeight = m_swapchain.GetExtent().height;
 
-    // Слава богу c++23 слава комитету слава ISO IEC
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
-    std::generate_n(std::back_inserter(m_frameData), FRAMES_IN_FLIGHT_COUNT, [&] {
-        return CFrameData { m_context };
-    });
+    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
+        m_frameData.emplace_back(m_context);
+    }
 
     const std::uint32_t imageCount = m_swapchain.GetImageCount();
     m_renderFinishedSemaphores.reserve(imageCount);
-    std::generate_n(std::back_inserter(m_renderFinishedSemaphores), imageCount, [&] {
-        return vk::raii::Semaphore { *m_context.GetDevice(), vk::SemaphoreCreateInfo {} };
-    });
-
+    for (std::size_t i = 0; i < imageCount; ++i) {
+        m_renderFinishedSemaphores.emplace_back(*m_context.GetDevice(), vk::SemaphoreCreateInfo {});
+    }
 
     auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
         for (const vk::Format format : candidates) {
@@ -382,8 +381,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         fragmentShader.GetPipelineShaderCreateInfo(),
     };
 
-
-    SDL_Surface* imageRaw = IMG_Load("assets/texture.jpg");
+    SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
     if (!imageRaw) {
         throw std::runtime_error("Failed to load texture image!");
     }
@@ -391,68 +389,18 @@ CRenderer::CRenderer(const IWindow* const window) {
     SDL_DestroySurface(imageRaw);
     vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 
-    CHostBuffer stagingBuffer(m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc);
-
-    {
-        std::unique_ptr a = std::make_unique<std::byte[]>(imageSize / 3);
-        CMemoryMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.GetData(), image->pixels, imageSize / 1);
-        std::memcpy((char*)mapping.GetData() + (3 * imageSize / 4), a.get(), imageSize / 4);
-    }
-
-
-    m_texture = CImage {
-        m_context,
-        { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-        vk::ImageAspectFlagBits::eColor,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
-    };
-
-
+    CHostBuffer stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
     auto commandPool = (*m_context.GetDevice()).createCommandPool({
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             m_context.GetDevice().GetGraphicsQueue().m_familyIndex
     });
-
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
     {
-        m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-        m_texture.CopyBufferToImage(commandBuffer, *stagingBuffer, {static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1});
-        m_texture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+        const CMemoryMapping mapping = stagingBuffer.Map();
+        char* a = static_cast<char*>(std::malloc(imageSize));
+        std::memcpy(mapping.GetData(), a, imageSize);
+        std::free(a);
     }
-    EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
-
-    {
-        stagingBuffer.Clear();
-    }
-    SDL_DestroySurface(image);
-    image = nullptr;
-
-    m_textureSampler = CSampler { m_context };
-
-
-    
-
-
-    
-    imageRaw = IMG_Load("assets/viking_room.png");
-    if (!imageRaw) {
-        throw std::runtime_error("Failed to load texture image!");
-    }
-    image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
-    SDL_DestroySurface(imageRaw);
-    imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
-
-    stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
-
-    {
-        CMemoryMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.GetData(), image->pixels, imageSize);
-    }
-
 
     m_modelTexture = CImage { m_context,
                               { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
