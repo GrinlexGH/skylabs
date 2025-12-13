@@ -32,17 +32,35 @@ public:
     [[nodiscard]] auto GetPhysicalDevices() -> std::vector<CPhysicalDevice>& { return m_physicalDevices; }
 
 private:
-    [[nodiscard]] auto GetAvailableLayers() const -> std::unordered_set<std::string_view>;
-    [[nodiscard]] auto GetAvailableExtensions() const -> std::unordered_set<std::string_view>;
-    auto EnableLayers(const std::vector<std::string_view>& layers) -> std::vector<const char*>;
-    auto EnableExtensions(const std::unordered_map<std::string_view, bool>& extensions) -> std::vector<const char*>;
+    auto EnableLayers(const std::vector<std::string_view>& requestedLayers) -> std::vector<const char*>;
+    auto EnableExtensions(const std::unordered_map<std::string_view, bool>& requestedExtensions) -> std::vector<const char*>;
     auto QueryPhysicalDevices() -> void;
 
     vk::raii::Context m_context;
     vk::raii::Instance m_handle = nullptr;
 
-    std::unordered_set<std::string_view> m_enabledExtensions;
-    std::unordered_set<std::string_view> m_enabledLayers;
+    struct StringHash {
+        using is_transparent = void;
+
+        size_t operator()(std::string_view sv) const noexcept {
+            return std::hash<std::string_view>{}(sv);
+        }
+
+        size_t operator()(const std::string& s) const noexcept {
+            return std::hash<std::string>{}(s);
+        }
+    };
+
+    struct StringEq {
+        using is_transparent = void;
+
+        bool operator()(std::string_view a, std::string_view b) const noexcept {
+            return a == b;
+        }
+    };
+
+    std::unordered_set<std::string, StringHash, StringEq> m_enabledExtensions;
+    std::unordered_set<std::string, StringHash, StringEq> m_enabledLayers;
     std::uint32_t m_apiVersion = vk::ApiVersion10;
 
 #ifdef DEBUG

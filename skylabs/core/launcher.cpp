@@ -119,38 +119,27 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
         }
     }
 }
+
+// #define ENABLE_BENCHMARKS
 #include <benchmark/benchmark.h>
-static void BM_CreateInstance(benchmark::State& state) {
-    std::unordered_map<std::string_view, bool> extensions;
-    extensions[vk::KHRSurfaceExtensionName] = true;
-    extensions[vk::EXTDebugUtilsExtensionName] = true;
 
-    std::vector<std::string_view> layers;
-    layers.emplace_back("VK_LAYER_KHRONOS_validation");
-
+#ifdef ENABLE_BENCHMARKS
+namespace {
+void BM_CreateInstance(benchmark::State& state) {
     for (auto _ : state) {
-        try {
-            Vulkan::CInstance instance(extensions, layers);
-        } 
-        catch (const std::exception& e) {
-            state.SkipWithError(e.what());
-        }
+        Vulkan::CInstance instance({}, {});
     }
+}
 }
 
 BENCHMARK(BM_CreateInstance)->Unit(benchmark::kMillisecond)->Iterations(50);
+#endif
 
 void CLauncher::Main() {
-    int argc;
-    char** argv;
-::benchmark::Initialize(&argc, argv);
-
-    if (!::benchmark::ReportUnrecognizedArguments(argc, argv)) {
+    int argc = 0;
+    char** argv = nullptr;
+    ::benchmark::Initialize(&argc, argv);
     ::benchmark::RunSpecifiedBenchmarks();
-    }
-
-    // 3. Запуск тестов
-
 
     const SDL::CContext sdl(SDL_INIT_VIDEO);
 
