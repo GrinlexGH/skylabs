@@ -394,10 +394,10 @@ CRenderer::CRenderer(const IWindow* const window) {
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             m_context.GetDevice().GetGraphicsQueue().m_familyIndex
     });
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
     {
         const CMemoryMapping mapping = stagingBuffer.Map();
         char* a = static_cast<char*>(std::malloc(imageSize));
+        Log::Debug("{}{}", (int)a[25], (int)a[150]);
         std::memcpy(mapping.GetData(), a, imageSize);
         std::free(a);
     }
@@ -410,7 +410,7 @@ CRenderer::CRenderer(const IWindow* const window) {
                               vk::ImageAspectFlagBits::eColor,
                               vk::MemoryPropertyFlagBits::eDeviceLocal };
 
-    commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
+    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
     {
         m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
         m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
