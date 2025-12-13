@@ -128,7 +128,7 @@ auto CInstance::EnableLayers(const std::vector<std::string_view>& requestedLayer
     static const std::unordered_set<std::string_view> availableLayerNames =
         layerProps
         | std::views::transform([&](const vk::LayerProperties& layer) -> std::string_view { return layer.layerName; })
-        | std::ranges::to<std::unordered_set<std::string_view>>();
+        | std::ranges::to<std::unordered_set>();
 
     std::vector<const char*> enabledLayers;
     enabledLayers.reserve(requestedLayers.size() + 1);
@@ -162,7 +162,7 @@ auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool
     static const std::unordered_set<std::string_view> availableExtensionNames =
         extensionProps
         | std::views::transform([&](const vk::ExtensionProperties& extension) -> std::string_view { return extension.extensionName; })
-        | std::ranges::to<std::unordered_set<std::string_view>>();
+        | std::ranges::to<std::unordered_set>();
 
     std::vector<const char*> enabledExtensions;
     enabledExtensions.reserve(requestedExtensions.size() + 1);
