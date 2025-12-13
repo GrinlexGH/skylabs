@@ -123,90 +123,76 @@ CInstance::CInstance(
     QueryPhysicalDevices();
 }
 
-auto CInstance::GetAvailableLayers() const -> std::unordered_set<std::string_view> {
-    static const std::vector<vk::LayerProperties> layers = m_context.enumerateInstanceLayerProperties();
-    static const std::unordered_set<std::string_view> layerMap =
-        layers |
-        // Transform to pick only layer name
-        std::views::transform([](const vk::LayerProperties& layer) {
-            return std::string_view { layer.layerName };
-        }) |
-        std::ranges::to<std::unordered_set<std::string_view>>();
-
-    return layerMap;
-}
-
-auto CInstance::GetAvailableExtensions() const -> std::unordered_set<std::string_view> {
-    static const std::vector<vk::ExtensionProperties>& globalExtensions = m_context.enumerateInstanceExtensionProperties();
-    static const std::unordered_set<std::string_view> globalExtensionsMap =
-        globalExtensions |
-        // Transform to pick only extension name
-        std::views::transform([](const vk::ExtensionProperties& layer) {
-            return std::string_view { layer.extensionName };
-        }) |
-        std::ranges::to<std::unordered_set<std::string_view>>();
-
-    return globalExtensionsMap;
-}
-
-auto CInstance::EnableLayers(const std::vector<std::string_view>& layers) -> std::vector<const char*> {
-    const std::unordered_set<std::string_view> availableLayers = GetAvailableLayers();
-    std::unordered_set<std::string_view> pendingLayers { layers.begin(), layers.end() };
-
-    // Currently (27.08.2025) validation layer cause sigsegv with gdb on windows, so don't use gdb on windows
-    // (06.12.2025) Fixed?
-#ifdef DEBUG
-    pendingLayers.insert("VK_LAYER_KHRONOS_validation");
-#endif
+auto CInstance::EnableLayers(const std::vector<std::string_view>& requestedLayers) -> std::vector<const char*> {
+    static const std::vector<vk::LayerProperties> layerProps = m_context.enumerateInstanceLayerProperties();
+    static const std::unordered_set<std::string_view> availableLayerNames =
+        layerProps
+        | std::views::transform([&](const vk::LayerProperties& layer) -> std::string_view { return layer.layerName; })
+        | std::ranges::to<std::unordered_set<std::string_view>>();
 
     std::vector<const char*> enabledLayers;
-    enabledLayers.reserve(pendingLayers.size());
+    enabledLayers.reserve(requestedLayers.size() + 1);
 
-    m_enabledLayers.reserve(pendingLayers.size());
+    m_enabledLayers.reserve(requestedLayers.size());
 
-    for (const std::string_view& layerName : pendingLayers) {
-        if (availableLayers.contains(layerName)) {
-            enabledLayers.push_back(layerName.data());
-            m_enabledLayers.insert(layerName);
+    auto tryEnable = [&](const std::string_view name) {
+        if (availableLayerNames.contains(name)) {
+            enabledLayers.push_back(name.data());
+            m_enabledLayers.emplace(name);
         } else {
-            Log::Debug("System doesn't have vulkan layer \"{}\"", layerName);
+            Log::Debug("System doesn't have vulkan layer \"{}\"", name);
+        }
+    };
+
+#ifdef DEBUG
+    tryEnable("VK_LAYER_KHRONOS_validation");
+#endif
+
+    for (const std::string_view layerName : requestedLayers) {
+        if (!m_enabledLayers.contains(layerName)) {
+            tryEnable(layerName);
         }
     }
 
     return enabledLayers;
 }
 
-auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool>& extensions) -> std::vector<const char*> {
-    const std::unordered_set<std::string_view> availableExtensions = GetAvailableExtensions();
+auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool>& requestedExtensions) -> std::vector<const char*> {
+    static const std::vector<vk::ExtensionProperties> extensionProps = m_context.enumerateInstanceExtensionProperties();
+    static const std::unordered_set<std::string_view> availableExtensionNames =
+        extensionProps
+        | std::views::transform([&](const vk::ExtensionProperties& extension) -> std::string_view { return extension.extensionName; })
+        | std::ranges::to<std::unordered_set<std::string_view>>();
 
     std::vector<const char*> enabledExtensions;
-    enabledExtensions.reserve(extensions.size());
+    enabledExtensions.reserve(requestedExtensions.size() + 1);
 
     std::vector<std::pair<std::string_view, bool>> missingExtensions;
-    missingExtensions.reserve(extensions.size());
+    missingExtensions.reserve(4);
 
-    m_enabledExtensions.reserve(extensions.size() + 1);
+    m_enabledExtensions.reserve(requestedExtensions.size());
 
-    for (const auto& [extensionName, required] : extensions) {
-        if (!availableExtensions.contains(extensionName)) {
-            missingExtensions.emplace_back(extensionName, required);
+    auto tryEnable = [&](const std::string_view name, bool required) {
+        if (availableExtensionNames.contains(name)) {
+            enabledExtensions.push_back(name.data());
+            m_enabledExtensions.emplace(name);
         } else {
-            enabledExtensions.push_back(extensionName.data());
-            m_enabledExtensions.insert(extensionName);
+            missingExtensions.emplace_back(name, required);
+        }
+    };
+
+#ifdef DEBUG
+    tryEnable(vk::EXTDebugUtilsExtensionName, false);
+#endif
+
+    for (const auto& [extensionName, required] : requestedExtensions) {
+        if (!m_enabledExtensions.contains(extensionName)) {
+            tryEnable(extensionName, required);
         }
     }
 
-#ifdef DEBUG
-    if (availableExtensions.contains(vk::EXTDebugUtilsExtensionName)) {
-        enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
-        m_enabledExtensions.insert(vk::EXTDebugUtilsExtensionName);
-    } else {
-        missingExtensions.emplace_back(vk::EXTDebugUtilsExtensionName, false);
-    }
-#endif
-
     if (!missingExtensions.empty()) {
-        for (const std::string_view& layerName : m_enabledLayers) {
+        for (const std::string_view layerName : m_enabledLayers) {
             const std::vector<vk::ExtensionProperties> availableExtensions =
                 m_context.enumerateInstanceExtensionProperties(std::string { layerName });
 
@@ -214,7 +200,7 @@ auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool
                 const auto [extensionName, required] = extension;
                 if (HasExtension(availableExtensions, extensionName)) {
                     enabledExtensions.push_back(extensionName.data());
-                    m_enabledExtensions.insert(extensionName);
+                    m_enabledExtensions.emplace(extensionName);
                     return true;
                 }
                 if (!required)
@@ -225,15 +211,13 @@ auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool
     }
 
     if (!missingExtensions.empty()) {
-        std::string error;
-        error.reserve((missingExtensions.size() * 20) + 50);
-        error += "System doesn't have required instance extensions:\n";
+        std::string error = "System doesn't have required instance extensions:\n";
         for (const auto [name, _] : missingExtensions) {
-            error += '\t';
+            error += "\t";
             error += name;
-            error += '\n';
+            error += "\n";
         }
-        throw std::runtime_error { error };
+        throw std::runtime_error(error);
     }
 
     return enabledExtensions;
