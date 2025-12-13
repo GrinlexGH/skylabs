@@ -27,6 +27,7 @@ target_sources(
             dll_export.hpp
             os.hpp
             resource_system.hpp
+            string_utils.hpp
     FILE_SET generated_headers
         TYPE HEADERS
         BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
