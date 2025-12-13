@@ -104,9 +104,9 @@ CInstance::CInstance(
     //====================
     vk::InstanceCreateInfo createInfo;
     createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(m_enabledExtensions.size());
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-    createInfo.enabledLayerCount = static_cast<uint32_t>(m_enabledLayers.size());
+    createInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
     createInfo.ppEnabledLayerNames = enabledLayers.data();
     createInfo.pNext = pNext;
 

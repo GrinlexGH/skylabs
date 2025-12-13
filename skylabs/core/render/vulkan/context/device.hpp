@@ -1,6 +1,7 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/window.hpp>
+#include <skylabs/public/string_utils.hpp>
 
 namespace Vulkan {
 struct CQueue
@@ -17,7 +18,7 @@ public:
         const CInstance& instance,
         const CPhysicalDevice& physicalDevice,
         const IWindow* window,
-        const std::unordered_map<const char*, bool>& extensions
+        const std::unordered_map<std::string_view, bool>& extensions
     );
     CDevice(const CDevice&) = delete;
     CDevice(CDevice&&) noexcept = default;
@@ -28,9 +29,7 @@ public:
     auto operator*() const noexcept -> const vk::raii::Device& { return m_handle; }
     [[nodiscard]] auto GetHandle() const -> const vk::raii::Device& { return m_handle; }
 
-    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return HasExtension(m_enabledExtensions, name); }
-
-    [[nodiscard]] auto GetEnabledExtensions() const -> const std::vector<const char*>& { return m_enabledExtensions; }
+    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return m_enabledExtensions.contains(name); }
 
     [[nodiscard]] auto GetGraphicsQueue() const -> const CQueue& { return m_graphicsQueue; }
     [[nodiscard]] auto GetPresentQueue() const -> const CQueue& { return m_presentQueue; }
@@ -38,7 +37,12 @@ public:
     [[nodiscard]] auto GetComputeQueue() const -> const CQueue& { return m_computeQueue; }
 
 private:
-    std::vector<const char*> m_enabledExtensions;
+    auto EnableExtensions(
+        const std::unordered_map<std::string_view, bool>& requestedExtensions,
+        const CPhysicalDevice& physicalDevice
+    ) -> std::vector<const char*>;
+
+    UnorderedStringSet m_enabledExtensions;
 
     vk::raii::Device m_handle = nullptr;
 

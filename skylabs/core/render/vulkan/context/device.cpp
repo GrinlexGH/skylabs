@@ -113,23 +113,6 @@ auto GetQueueFamilies(
         .m_compute = *computeIndex
     };
 }
-
-auto EnableExtension(
-    const Vulkan::CPhysicalDevice& physicalDevice,
-    const char* name,
-    std::vector<const char*>& enabledExtensions
-) -> bool {
-    if (HasExtension(enabledExtensions, name)) {
-        return true;
-    }
-
-    if (physicalDevice.IsExtensionSupported(name)) {
-        enabledExtensions.emplace_back(name);
-        return true;
-    }
-
-    return false;
-}
 }
 
 namespace Vulkan {
@@ -137,7 +120,7 @@ CDevice::CDevice(
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice,
     const IWindow* const window,
-    const std::unordered_map<const char*, bool>& extensions
+    const std::unordered_map<std::string_view, bool>& extensions
 ) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
@@ -161,27 +144,7 @@ CDevice::CDevice(
     }
 
     //====================
-    m_enabledExtensions.reserve(extensions.size());
-    std::vector<const char*> missingExtensions;
-    missingExtensions.reserve(extensions.size());
-
-    for (const auto& [name, required] : extensions) {
-        if (!EnableExtension(physicalDevice, name, m_enabledExtensions) && required) {
-            missingExtensions.push_back(name);
-        }
-    }
-
-    if (!missingExtensions.empty()) {
-        std::string error;
-        error.reserve(missingExtensions.size() * 20 + 50);
-        error += "System doesn't have required device extensions:\n";
-        for (const auto name : missingExtensions) {
-            error += '\t';
-            error += name;
-            error += '\n';
-        }
-        throw std::runtime_error { error };
-    }
+    std::vector<const char*> enabledExtensions = EnableExtensions(extensions, physicalDevice);
 
     //====================
     void* pNext = nullptr;
@@ -199,8 +162,8 @@ CDevice::CDevice(
     createInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext()
         ? nullptr
         : &physicalDevice.GetRequiredFeatures();
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(m_enabledExtensions.size());
-    createInfo.ppEnabledExtensionNames = m_enabledExtensions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
     createInfo.pNext = pNext;
 
     m_handle = vk::raii::Device { *physicalDevice, createInfo };
@@ -210,5 +173,43 @@ CDevice::CDevice(
     m_presentQueue = { .m_handle = vk::raii::Queue { m_handle, presentFamily, 0 }, .m_familyIndex = presentFamily };
     m_transferQueue = { .m_handle = vk::raii::Queue { m_handle, transferFamily, 0 }, .m_familyIndex = transferFamily };
     m_computeQueue = { .m_handle = vk::raii::Queue { m_handle, computeFamily, 0 }, .m_familyIndex = computeFamily };
+}
+
+auto CDevice::EnableExtensions(
+    const std::unordered_map<std::string_view, bool>& requestedExtensions,
+    const CPhysicalDevice& physicalDevice
+) -> std::vector<const char*> {
+    std::vector<const char*> enabledExtensions;
+    enabledExtensions.reserve(requestedExtensions.size());
+
+    std::vector<const char*> missingExtensions;
+    missingExtensions.reserve(4);
+
+    m_enabledExtensions.reserve(requestedExtensions.size());
+
+    for (const auto& [name, required] : requestedExtensions) {
+        if (!m_enabledExtensions.contains(name)) {
+            if (physicalDevice.IsExtensionSupported(name)) {
+                enabledExtensions.emplace_back(name.data());
+                m_enabledExtensions.emplace(name);
+            }
+        } else if (required) {
+            missingExtensions.push_back(name.data());
+        }
+    }
+
+    if (!missingExtensions.empty()) {
+        std::string error;
+        error.reserve((missingExtensions.size() * 20) + 50);
+        error += "System doesn't have required device extensions:\n";
+        for (const auto name : missingExtensions) {
+            error += '\t';
+            error += name;
+            error += '\n';
+        }
+        throw std::runtime_error { error };
+    }
+
+    return enabledExtensions;
 }
 }

@@ -30,6 +30,7 @@ CContext::CContext(const IWindow* const window) : m_window(window) {
 }
 
 auto CContext::CreateInstance() -> void {
+    // instanceExtensions[name] -> isRequired
     std::unordered_map<std::string_view, bool> instanceExtensions;
 
     const std::span<const char* const> required = m_window->GetRequiredInstanceExtensions();
@@ -97,27 +98,28 @@ auto CContext::SelectPhysicalDevice() -> void {
 
 auto CContext::CreateLogicalDevice() -> void {
     // deviceExtensions[name] -> isRequired
-    std::unordered_map<const char*, bool> deviceExtensions {
-        // VMA
-        { vk::KHRDedicatedAllocationExtensionName, false },
-        { vk::KHRBindMemory2ExtensionName, false },
-        { vk::KHRMaintenance4ExtensionName, false },
-        { vk::KHRMaintenance5ExtensionName, false },
-        { vk::EXTMemoryBudgetExtensionName, false },
-        { vk::KHRBufferDeviceAddressExtensionName, false },
-        { vk::EXTMemoryPriorityExtensionName, false },
-        { vk::AMDDeviceCoherentMemoryExtensionName, false },
+    std::unordered_map<std::string_view, bool> deviceExtensions;
+    deviceExtensions.reserve(15);
+
+    // VMA
+    deviceExtensions[vk::KHRDedicatedAllocationExtensionName] = false;
+    deviceExtensions[vk::KHRBindMemory2ExtensionName] = false;
+    deviceExtensions[vk::KHRMaintenance4ExtensionName] = false;
+    deviceExtensions[vk::KHRMaintenance5ExtensionName] = false;
+    deviceExtensions[vk::EXTMemoryBudgetExtensionName] = false;
+    deviceExtensions[vk::KHRBufferDeviceAddressExtensionName] = false;
+    deviceExtensions[vk::EXTMemoryPriorityExtensionName] = false;
+    deviceExtensions[vk::AMDDeviceCoherentMemoryExtensionName] = false;
+
+    deviceExtensions[vk::KHRSwapchainExtensionName] = true;
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-        { vk::KHRExternalMemoryWin32ExtensionName, false },
+    deviceExtensions[vk::KHRExternalMemoryWin32ExtensionName] = false;
 #endif
-
-        { vk::KHRSwapchainExtensionName, true },
 
 #ifdef DEBUG
-        { vk::EXTDeviceAddressBindingReportExtensionName, false }
+    deviceExtensions[vk::EXTDeviceAddressBindingReportExtensionName] = false;
 #endif
-    };
 
     // Enable all extensions here
     REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
