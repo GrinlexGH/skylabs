@@ -172,13 +172,13 @@ __attribute__((visibility("default"))) int main(int argc, char* argv[]) {
     SDL_Log("Skylabs is starting...");
 
     try {
-        const std::string libCorePath = "libcore.so";
+        const std::string libCorePath = "core.so";
 
         const CLibrary core(libCorePath.c_str());
         const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
-            const int ret = coreMain(argc, argv);
+            const int ret = coreMain(std::span(argv, static_cast<std::size_t>(argc)));
             return ret;
         } catch (const std::exception& e) {
             SDL_LogError(0, "%s", e.what());
@@ -198,13 +198,13 @@ int main(int argc, char* argv[]) {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();
 
-        const std::string libCorePath = rootDir / "bin" / "libcore.so";
+        const std::string libCorePath = rootDir / "bin" / "core.so";
 
         const CLibrary core(libCorePath.c_str());
         const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
-            const int ret = coreMain(argc, argv);
+            const int ret = coreMain(std::span(argv, argc));
             return ret;
         } catch (const std::exception& e) {
             std::cout << e.what() << '\n' << std::flush;
