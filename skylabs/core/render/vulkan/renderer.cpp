@@ -780,7 +780,7 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const w
 }
 
 void CRenderer::Draw(glm::mat4 view, float deltaTime) {
-    const CFrameData& frameData = m_frameData[m_frameIndex];
+    CFrameData& frameData = m_frameData[m_frameIndex];
     const vk::raii::Device& deviceHandle = m_context.GetDevice().GetHandle();
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain.GetHandle();
 
@@ -801,18 +801,19 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         nullptr
     );
 
-    // Reset fence before we can return from function to avoid deadlock
-    deviceHandle.resetFences({ frameData.GetFence() });
-
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+        Log::Debug("{}", vk::to_string(result));
+        frameData.RecreateImageAvailableSemaphore();
         Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
-        Log::Debug("Resized");
-        (*m_context.GetDevice()).resetFences({frameData.GetFence()});
+
         return;
     }
     if (result != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to acquire swapchain image: " + vk::to_string(result));
     }
+
+    // Reset fence before we can return from function to avoid deadlock
+    deviceHandle.resetFences({ frameData.GetFence() });
     // #endregion ACQUIRE_IMAGE
 
 
@@ -945,7 +946,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     result = QueuePresentWrapper(device.GetPresentQueue().m_handle, presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR) {
         Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
-        (*m_context.GetDevice()).resetFences({frameData.GetFence()});
+        Log::Debug("Resized present");
         return;
     }
     // #endregion PRESENT
