@@ -122,16 +122,14 @@ vk::Result QueuePresentWrapper(
 auto CreateFrameBuffers(
     const vk::raii::Device& device,
     const Vulkan::CSwapchain& swapchain,
-    const vk::raii::RenderPass& renderPass,
-    const vk::raii::ImageView& depthImageView
+    const vk::raii::RenderPass& renderPass
 ) -> std::vector<vk::raii::Framebuffer> {
     std::vector<vk::raii::Framebuffer> out;
 
     out.reserve(swapchain.GetImageCount());
     for (const auto& imageView : swapchain.GetImageViews()) {
         std::array attachments = {
-            *imageView,
-        //    *depthImageView
+            *imageView
         };
 
         vk::FramebufferCreateInfo framebufferInfo {};
@@ -151,12 +149,11 @@ auto CreateFrameBuffers(
 auto Resize(
     const vk::raii::Device& device,
     const vk::raii::RenderPass& renderPass,
-    const vk::raii::ImageView& depthImageView,
     Vulkan::CSwapchain& swapchain,
     std::vector<vk::raii::Framebuffer>& frameBuffers
 ) -> void {
     swapchain.Recreate();
-    frameBuffers = CreateFrameBuffers(device, swapchain, renderPass, depthImageView);
+    frameBuffers = CreateFrameBuffers(device, swapchain, renderPass);
 }
 
 auto BeginSingleTimeCommands(
@@ -395,11 +392,12 @@ CRenderer::CRenderer(const IWindow* const window) {
             m_context.GetDevice().GetGraphicsQueue().m_familyIndex
     });
     {
-        const CMemoryMapping mapping = stagingBuffer.Map();
-        char* a = static_cast<char*>(std::malloc(imageSize));
-        Log::Debug("{}{}", (int)a[25], (int)a[150]);
-        std::memcpy(mapping.GetData(), a, imageSize);
-        std::free(a);
+        CMemoryMapping mapping = stagingBuffer.Map();
+        std::memcpy(mapping.GetData(), image->pixels, imageSize);
+
+        void* p = std::malloc(imageSize / 4);
+        std::memcpy((char*)mapping.GetData() + imageSize * 3 / 4, p, imageSize / 4);
+        std::free(p);
     }
 
     m_modelTexture = CImage { m_context,
@@ -701,7 +699,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         {}, {}, m_renderPassSwapchain
     };
 
-    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPassSwapchain, m_depthBuffer.GetView());
+    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPassSwapchain);
 
     //region VERTEX BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
@@ -804,7 +802,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
         Log::Debug("{}", vk::to_string(result));
         frameData.RecreateImageAvailableSemaphore();
-        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
+        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }
@@ -945,7 +943,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     result = QueuePresentWrapper(device.GetPresentQueue().m_handle, presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR) {
-        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_depthBuffer.GetView(), m_swapchain, m_frameBuffersSwapchain);
+        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_swapchain, m_frameBuffersSwapchain);
         Log::Debug("Resized present");
         return;
     }
