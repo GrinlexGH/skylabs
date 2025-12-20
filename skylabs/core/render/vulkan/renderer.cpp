@@ -799,14 +799,19 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         nullptr
     );
 
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
-        Log::Debug("{}", vk::to_string(result));
+    if (result == vk::Result::eErrorOutOfDateKHR) {
         frameData.RecreateImageAvailableSemaphore();
+        for (auto& frame : m_frameData) {
+            result = deviceHandle.waitForFences({ frame.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+            if (result != vk::Result::eSuccess) {
+                throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
+            }
+        }
         Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }
-    if (result != vk::Result::eSuccess) {
+    if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
         throw std::runtime_error("Failed to acquire swapchain image: " + vk::to_string(result));
     }
 
@@ -942,9 +947,17 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     presentInfo.pImageIndices = &imageIndex;
 
     result = QueuePresentWrapper(device.GetPresentQueue().m_handle, presentInfo);
-    if (result == vk::Result::eErrorOutOfDateKHR) {
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || GetResizedState()) {
+        SetResizedState(false);
+        frameData.RecreateImageAvailableSemaphore();
+        for (auto& frame : m_frameData) {
+            result = deviceHandle.waitForFences({ frame.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+            if (result != vk::Result::eSuccess) {
+                throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
+            }
+        }
         Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_swapchain, m_frameBuffersSwapchain);
-        Log::Debug("Resized present");
+
         return;
     }
     // #endregion PRESENT

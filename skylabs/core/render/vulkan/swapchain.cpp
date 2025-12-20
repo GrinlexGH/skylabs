@@ -143,8 +143,6 @@ auto CSwapchain::Recreate(
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
 ) -> void {
-    (*m_context->GetDevice()).waitIdle(); // TODO: Wait for fence, not idle
-
     CreateSwapchain(surface, imageCount, presentMode, vk::raii::SwapchainKHR { std::move(m_handle) });
 
     DestroyImages();

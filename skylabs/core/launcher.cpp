@@ -50,7 +50,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
                     minimized = false;
                     break;
                 case SDL_EVENT_WINDOW_RESIZED:
-                    // renderer.m_frameBufferResized = true;
+                    renderer->SetResizedState(true);
                     break;
                 case SDL_EVENT_MOUSE_MOTION:
                     g_camera.ProcessMouseMovement(e.motion.xrel, -e.motion.yrel);
