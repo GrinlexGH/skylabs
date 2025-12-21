@@ -24,12 +24,13 @@ class SkylabsRecipe(ConanFile):
         self.requires("tinyobjloader/2.0.0rc13")
         self.requires("glm/1.0.2")
         self.requires("benchmark/1.9.4")
-        self.requires("vulkan-headers/1.4.336")
+        self.requires("vulkan-headers/1.4.337")
         self.requires("vulkan-memory-allocator-hpp/3.3.0")
         self.requires("sdl_image/3.2.4")
         self.requires("sdl/3.2.28")
-        self.requires("boost/1.89.0")
-        self.requires("steamworks_sdk/1.62")
+        self.requires("boost/1.90.0")
+        self.requires("steamworks_sdk/1.63")
+        self.requires("frozen/master-20250729")
 
     def layout(self):
         cmake_layout(self)
