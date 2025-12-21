@@ -83,8 +83,8 @@ auto CImage::Clear() -> void {
 }
 
 auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void {
-    const auto it = GetTransitionRules().find(std::make_pair(m_layout, newLayout));
-    if (it == GetTransitionRules().end()) {
+    const auto it = g_transitionRules.find(std::make_pair(m_layout, newLayout));
+    if (it == g_transitionRules.end()) {
         throw std::invalid_argument("Unsupported layout transition!");
     }
 
