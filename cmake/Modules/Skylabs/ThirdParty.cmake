@@ -16,5 +16,6 @@ find_package(glm CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(simple_term_colors CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
+find_package(frozen CONFIG REQUIRED)
 
 find_package(benchmark CONFIG REQUIRED)
