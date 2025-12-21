@@ -632,7 +632,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 
 
-    
+
     colorAttachment = vk::AttachmentDescription {};
     colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
