@@ -112,6 +112,7 @@ private:
     vk::PhysicalDeviceFeatures m_requiredFeatures;
 };
 
+// TODO: C++26 reflection
 #define REQUEST_OPTIONAL_EXT_FEATURE(gpu, feature, flag) gpu->RequestOptionalExtensionFeature<feature>(&feature::flag, #feature, #flag)
 #define REQUEST_REQUIRED_EXT_FEATURE(gpu, feature, flag) gpu->RequestRequiredExtensionFeature<feature>(&feature::flag, #feature, #flag)
 #define REQUEST_OPTIONAL_FEATURE(gpu, flag) gpu->RequestOptionalFeature(&vk::PhysicalDeviceFeatures::flag, #flag)
