@@ -18,7 +18,7 @@ This project uses **Git Submodules**. It is crucial to include them during the c
 Use the `--recursive` flag to ensure all dependencies are downloaded:
 
 ```bash
-git clone --recursive https://github.com/GrinlexGH/Skylabs.git
+git clone --recursive https://github.com/GrinlexGH/skylabs.git
 ````
 
 ### ⚠️ If you already cloned (without recursive)
@@ -33,13 +33,13 @@ git submodule update --init --recursive
 
 Ensure you have the following tools installed before compiling:
 
-| Tool | Version Requirement |
-| :--- | :--- |
-| **CMake** | Latest stable |
-| **Compiler** | `MSVC`, `g++` (\>=13), or `clang++` (\>=15) |
-| **Python** | \>= 3.8 |
-| **Conan** | \>= 2.0.0 |
-| **Vulkan SDK** | [Download Here](https://vulkan.lunarg.com/sdk/home) |
+| Tool             | Requirement               |
+|------------------|---------------------------|
+| **CMake**        | Recent version            |
+| **C++ Compiler** | Modern MSVC / GCC / Clang |
+| **Python**       | 3.x                       |
+| **Conan**        | 2.x                       |
+| **Vulkan SDK**   | Latest SDK                |
 
 ## ⚙️ Configuration & Installation
 
