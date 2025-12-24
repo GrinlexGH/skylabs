@@ -2,17 +2,7 @@
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 #include "project_info.hpp"
 
-#include <unordered_set>
 #include <ranges>
-
-namespace std {
-    template<>
-    struct hash<vk::LayerProperties> {
-        size_t operator()(vk::LayerProperties const& layer) const {
-            return hash<string_view>{}(layer.layerName);
-        }
-    };
-}
 
 namespace {
 #ifdef DEBUG
@@ -44,8 +34,8 @@ namespace Vulkan {
 CInstance::CInstance(std::nullptr_t) {}
 
 CInstance::CInstance(
-    const std::unordered_map<std::string_view, bool>& extensions,
-    const std::vector<std::string_view>& layers
+    const std::span<RequestedExtension> extensions,
+    const std::span<std::string_view> layers
 ) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
@@ -70,10 +60,10 @@ CInstance::CInstance(
     appInfo.apiVersion = m_apiVersion;
 
     //====================
-    std::vector<const char*> enabledLayers = EnableLayers(layers);
+    const std::vector<const char*> enabledLayers = EnableLayers(layers);
 
     //====================
-    std::vector<const char*> enabledExtensions = EnableExtensions(extensions);
+    const std::vector<const char*> enabledExtensions = EnableExtensions(extensions);
 
     //====================
     void* pNext = nullptr;
@@ -123,7 +113,7 @@ CInstance::CInstance(
     QueryPhysicalDevices();
 }
 
-auto CInstance::EnableLayers(const std::vector<std::string_view>& requestedLayers) -> std::vector<const char*> {
+auto CInstance::EnableLayers(const std::span<std::string_view> requestedLayers) -> std::vector<const char*> {
     static const std::vector<vk::LayerProperties> layerProps = m_context.enumerateInstanceLayerProperties();
     static const std::unordered_set<std::string_view> availableLayerNames =
         layerProps
@@ -157,7 +147,7 @@ auto CInstance::EnableLayers(const std::vector<std::string_view>& requestedLayer
     return enabledLayers;
 }
 
-auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool>& requestedExtensions) -> std::vector<const char*> {
+auto CInstance::EnableExtensions(const std::span<RequestedExtension> requestedExtensions) -> std::vector<const char*> {
     static const std::vector<vk::ExtensionProperties> extensionProps = m_context.enumerateInstanceExtensionProperties();
     static const std::unordered_set<std::string_view> availableExtensionNames =
         extensionProps
@@ -167,43 +157,45 @@ auto CInstance::EnableExtensions(const std::unordered_map<std::string_view, bool
     std::vector<const char*> enabledExtensions;
     enabledExtensions.reserve(requestedExtensions.size() + 1);
 
-    std::vector<std::pair<std::string_view, bool>> missingExtensions;
+    std::vector<RequestedExtension> missingExtensions;
     missingExtensions.reserve(4);
 
     m_enabledExtensions.reserve(requestedExtensions.size());
 
-    auto tryEnable = [&](const std::string_view name, bool required) {
+    auto tryEnable = [&](const std::string_view name, ExtensionRequirement requirement) {
         if (availableExtensionNames.contains(name)) {
             enabledExtensions.push_back(name.data());
             m_enabledExtensions.emplace(name);
         } else {
-            missingExtensions.emplace_back(name, required);
+            missingExtensions.emplace_back(name, requirement);
         }
     };
 
 #ifdef DEBUG
-    tryEnable(vk::EXTDebugUtilsExtensionName, false);
+    tryEnable(vk::EXTDebugUtilsExtensionName, ExtensionRequirement::Optional);
 #endif
 
-    for (const auto& [extensionName, required] : requestedExtensions) {
+    for (const auto& [extensionName, requirement] : requestedExtensions) {
         if (!m_enabledExtensions.contains(extensionName)) {
-            tryEnable(extensionName, required);
+            tryEnable(extensionName, requirement);
         }
     }
 
+    // Search extension in layers
+    // Useful for android old drivers
     if (!missingExtensions.empty()) {
         for (const std::string_view layerName : m_enabledLayers) {
             const std::vector<vk::ExtensionProperties> availableExtensions =
                 m_context.enumerateInstanceExtensionProperties(std::string { layerName });
 
-            std::erase_if(missingExtensions, [&](const std::pair<std::string_view, bool> extension) {
-                const auto [extensionName, required] = extension;
+            std::erase_if(missingExtensions, [&](const RequestedExtension& extension) {
+                const auto [extensionName, requirement] = extension;
                 if (HasExtension(availableExtensions, extensionName)) {
                     enabledExtensions.push_back(extensionName.data());
                     m_enabledExtensions.emplace(extensionName);
                     return true;
                 }
-                if (!required)
+                if (requirement == ExtensionRequirement::Optional)
                     return true;
                 return false;
             });

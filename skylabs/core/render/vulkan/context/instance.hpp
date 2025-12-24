@@ -2,8 +2,6 @@
 #include <skylabs/core/render/vulkan/context/extensions.hpp>
 #include <skylabs/public/string_utils.hpp>
 
-#include <unordered_map>
-
 #include <vulkan/vulkan_raii.hpp>
 
 namespace Vulkan {
@@ -14,8 +12,8 @@ class CInstance
 public:
     explicit CInstance(std::nullptr_t);
     explicit CInstance(
-        const std::unordered_map<std::string_view, bool>& extensions,
-        const std::vector<std::string_view>& layers = {}
+        std::span<RequestedExtension> extensions,
+        std::span<std::string_view> layers = {}
     );
     CInstance(const CInstance&) = delete;
     CInstance(CInstance&&) noexcept = default;
@@ -32,8 +30,8 @@ public:
     [[nodiscard]] auto GetPhysicalDevices() -> std::vector<CPhysicalDevice>& { return m_physicalDevices; }
 
 private:
-    auto EnableLayers(const std::vector<std::string_view>& requestedLayers) -> std::vector<const char*>;
-    auto EnableExtensions(const std::unordered_map<std::string_view, bool>& requestedExtensions) -> std::vector<const char*>;
+    auto EnableLayers(std::span<std::string_view> requestedLayers) -> std::vector<const char*>;
+    auto EnableExtensions(std::span<RequestedExtension> requestedExtensions) -> std::vector<const char*>;
     auto QueryPhysicalDevices() -> void;
 
     vk::raii::Context m_context;

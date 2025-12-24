@@ -18,7 +18,7 @@ public:
         const CInstance& instance,
         const CPhysicalDevice& physicalDevice,
         const IWindow* window,
-        const std::unordered_map<std::string_view, bool>& extensions
+        std::span<RequestedExtension> extensions
     );
     CDevice(const CDevice&) = delete;
     CDevice(CDevice&&) noexcept = default;
@@ -38,7 +38,7 @@ public:
 
 private:
     auto EnableExtensions(
-        const std::unordered_map<std::string_view, bool>& requestedExtensions,
+        std::span<RequestedExtension> requestedExtensions,
         const CPhysicalDevice& physicalDevice
     ) -> std::vector<const char*>;
 
