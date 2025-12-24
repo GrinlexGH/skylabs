@@ -30,19 +30,24 @@ CContext::CContext(const IWindow* const window) : m_window(window) {
 }
 
 auto CContext::CreateInstance() -> void {
-    // instanceExtensions[name] -> isRequired
-    std::unordered_map<std::string_view, bool> instanceExtensions;
+    std::vector<RequestedExtension> instanceExtensions;
 
     const std::span<const char* const> required = m_window->GetRequiredInstanceExtensions();
     instanceExtensions.reserve(required.size() + 1);
 
-    instanceExtensions[vk::KHRGetPhysicalDeviceProperties2ExtensionName] = true;
+    instanceExtensions.emplace_back(
+        vk::KHRGetPhysicalDeviceProperties2ExtensionName,
+        ExtensionRequirement::Required
+    );
 
     for (const std::string_view ext : required) {
-        instanceExtensions[ext] = true;
+        instanceExtensions.emplace_back(ext, ExtensionRequirement::Required);
     }
 
-    m_instance = CInstance { instanceExtensions, {} };
+    std::ranges::sort(instanceExtensions);
+    instanceExtensions.erase(std::ranges::unique(instanceExtensions).begin(), instanceExtensions.end());
+
+    m_instance = CInstance { instanceExtensions };
 }
 
 auto CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool {
@@ -97,45 +102,44 @@ auto CContext::SelectPhysicalDevice() -> void {
 }
 
 auto CContext::CreateLogicalDevice() -> void {
-    // deviceExtensions[name] -> isRequired
-    std::unordered_map<std::string_view, bool> deviceExtensions;
+    std::vector<RequestedExtension> deviceExtensions;
     deviceExtensions.reserve(15);
 
     // VMA
-    deviceExtensions[vk::KHRDedicatedAllocationExtensionName] = false;
-    deviceExtensions[vk::KHRBindMemory2ExtensionName] = false;
-    deviceExtensions[vk::KHRMaintenance4ExtensionName] = false;
-    deviceExtensions[vk::KHRMaintenance5ExtensionName] = false;
-    deviceExtensions[vk::EXTMemoryBudgetExtensionName] = false;
-    deviceExtensions[vk::KHRBufferDeviceAddressExtensionName] = false;
-    deviceExtensions[vk::EXTMemoryPriorityExtensionName] = false;
-    deviceExtensions[vk::AMDDeviceCoherentMemoryExtensionName] = false;
+    deviceExtensions.emplace_back(vk::KHRDedicatedAllocationExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::KHRBindMemory2ExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::KHRMaintenance4ExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::KHRMaintenance5ExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::EXTMemoryBudgetExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::KHRBufferDeviceAddressExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::EXTMemoryPriorityExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::AMDDeviceCoherentMemoryExtensionName, ExtensionRequirement::Optional);
 
-    deviceExtensions[vk::KHRSwapchainExtensionName] = true;
+    deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName, ExtensionRequirement::Required);
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    deviceExtensions[vk::KHRExternalMemoryWin32ExtensionName] = false;
+    deviceExtensions.emplace_back(vk::KHRExternalMemoryWin32ExtensionName, ExtensionRequirement::Optional);
 #endif
 
 #ifdef DEBUG
-    deviceExtensions[vk::EXTDeviceAddressBindingReportExtensionName] = false;
+    deviceExtensions.emplace_back(vk::EXTDeviceAddressBindingReportExtensionName, ExtensionRequirement::Optional);
 #endif
 
     // Enable all extensions here
     REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
 
     if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
-        deviceExtensions[vk::KHRDynamicRenderingExtensionName] = false;
+        deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName, ExtensionRequirement::Optional);
         REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
     }
 
     if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, synchronization2)) {
-        deviceExtensions[vk::KHRSynchronization2ExtensionName] = true;
+        deviceExtensions.emplace_back(vk::KHRSynchronization2ExtensionName, ExtensionRequirement::Required);
         REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceSynchronization2Features, synchronization2);
     }
 
     if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan12Features, bufferDeviceAddress)) {
-        deviceExtensions[vk::KHRBufferDeviceAddressExtensionName] = true;
+        deviceExtensions.emplace_back(vk::KHRBufferDeviceAddressExtensionName, ExtensionRequirement::Required);
         REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceBufferDeviceAddressFeatures, bufferDeviceAddress);
     }
 

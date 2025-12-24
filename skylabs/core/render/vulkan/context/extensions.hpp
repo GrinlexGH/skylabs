@@ -1,6 +1,25 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
 
+enum class ExtensionRequirement : std::uint8_t { Required, Optional };
+
+struct RequestedExtension {
+    std::string_view name;
+    ExtensionRequirement requirement = ExtensionRequirement::Optional;
+
+    constexpr std::strong_ordering operator<=>(const RequestedExtension& rhs) const noexcept {
+        if (const std::strong_ordering cmp = name <=> rhs.name; cmp != 0)
+            return cmp;
+        if (requirement == rhs.requirement)
+            return std::strong_ordering::equal;
+        return requirement == ExtensionRequirement::Required
+            ? std::strong_ordering::less
+            : std::strong_ordering::greater;
+    }
+
+    constexpr bool operator==(const RequestedExtension& rhs) const noexcept = default;
+};
+
 inline bool HasExtension(const std::vector<const char*>& set, const std::string_view target) {
     return std::ranges::any_of(
         set, [&](const char* extension) { return extension == target; }

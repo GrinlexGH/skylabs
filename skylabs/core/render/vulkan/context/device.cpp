@@ -120,7 +120,7 @@ CDevice::CDevice(
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice,
     const IWindow* const window,
-    const std::unordered_map<std::string_view, bool>& extensions
+    const std::span<RequestedExtension> extensions
 ) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
@@ -176,7 +176,7 @@ CDevice::CDevice(
 }
 
 auto CDevice::EnableExtensions(
-    const std::unordered_map<std::string_view, bool>& requestedExtensions,
+    const std::span<RequestedExtension> requestedExtensions,
     const CPhysicalDevice& physicalDevice
 ) -> std::vector<const char*> {
     std::vector<const char*> enabledExtensions;
@@ -187,13 +187,13 @@ auto CDevice::EnableExtensions(
 
     m_enabledExtensions.reserve(requestedExtensions.size());
 
-    for (const auto& [name, required] : requestedExtensions) {
+    for (const auto& [name, requirement] : requestedExtensions) {
         if (!m_enabledExtensions.contains(name)) {
             if (physicalDevice.IsExtensionSupported(name)) {
                 enabledExtensions.emplace_back(name.data());
                 m_enabledExtensions.emplace(name);
             }
-        } else if (required) {
+        } else if (requirement == ExtensionRequirement::Required) {
             missingExtensions.push_back(name.data());
         }
     }

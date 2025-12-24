@@ -94,7 +94,7 @@ void MoveBackward() { targetOffset.z -= 0.1f; }
 
 std::vector<std::uint16_t> indices = {
     0, 1, 2, 2, 3, 0,   // первый квадрат
-    //4, 5, 6, 6, 7, 4    // второй квадрат
+    //4, 5, 6, 6, 7, 4 // второй квадрат
 };
 
 namespace {
@@ -247,6 +247,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     if (window == nullptr) {
         throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
     }
+
     m_context = CContext { window };
 
     m_surface = CSurface { m_context };
