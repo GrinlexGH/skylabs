@@ -24,22 +24,24 @@ namespace {
 std::string GetLastErrorMessage() {
     wchar_t* errorMsg = nullptr;
     FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-            FORMAT_MESSAGE_FROM_SYSTEM |
-            FORMAT_MESSAGE_IGNORE_INSERTS,
+        FORMAT_MESSAGE_ALLOCATE_BUFFER
+            | FORMAT_MESSAGE_FROM_SYSTEM
+            | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr,
-        GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<LPWSTR>(&errorMsg), 0,
-        nullptr
+        GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPWSTR>(&errorMsg),
+        0, nullptr
     );
 
-    std::string finalMsg { nowide::narrow(errorMsg) };
+    std::string finalMsg = nowide::narrow(errorMsg);
     LocalFree(errorMsg);
     return finalMsg;
 }
 
 std::wstring GetProgramPath() {
-    std::wstring out(100, L'\0');
+    std::wstring out;
+    out.reserve(100);
     DWORD size;
 
     while (true) {
@@ -60,9 +62,9 @@ public:
     CLibrary() = delete;
     explicit CLibrary(const wchar_t* path) : m_handle(LoadLibraryExW(path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH)) {
         if (!m_handle) {
-            throw std::runtime_error(
+            throw std::runtime_error {
                 std::format("Failed to load library:\n{}\n{}\n", nowide::narrow(path), GetLastErrorMessage())
-            );
+            };
         }
     }
     CLibrary(const CLibrary&) = delete;
@@ -74,9 +76,9 @@ public:
     void* GetFunctionAddress(const char* name) const {
         const auto func = reinterpret_cast<void*>(GetProcAddress(m_handle, name));
         if (!func) {
-            throw std::runtime_error(
+            throw std::runtime_error {
                 std::format("Failed to load library function:\n{}\n{}\n", name, GetLastErrorMessage())
-            );
+            };
         }
         return func;
     }
@@ -88,10 +90,10 @@ private:
 
 int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int /*nShowCmd*/) {
     try {
-        std::filesystem::path rootDir { GetProgramPath() };
+        std::filesystem::path rootDir = GetProgramPath();
         rootDir.remove_filename();
 
-        const std::filesystem::path libCorePath { rootDir / L"bin" / L"core.dll" };
+        const std::filesystem::path libCorePath = rootDir / L"bin" / L"core.dll";
 
         const CLibrary core { libCorePath.c_str() };
         const auto main = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
@@ -138,9 +140,9 @@ public:
     CLibrary() = delete;
     explicit CLibrary(const char* path) : m_handle(dlopen(path, RTLD_LAZY)) {
         if (!m_handle) {
-            throw std::runtime_error(
+            throw std::runtime_error {
                 std::format("Failed to load library:\n{}\n", dlerror())
-            );
+            };
         }
     }
     CLibrary(const CLibrary&) = delete;
@@ -152,9 +154,9 @@ public:
     void* GetFunctionAddress(const char* name) const {
         void* const func = dlsym(m_handle, name);
         if (const char* error = dlerror(); error != nullptr) {
-            throw std::runtime_error(
+            throw std::runtime_error {
                 std::format("Failed to load library function:\n{}\n", error)
-            );
+            };
         }
         return func;
     }
@@ -174,7 +176,7 @@ __attribute__((visibility("default"))) int main(int argc, char* argv[]) {
     try {
         const std::string libCorePath = "core.so";
 
-        const CLibrary core(libCorePath.c_str());
+        const CLibrary core { libCorePath.c_str() };
         const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {
@@ -200,7 +202,7 @@ int main(int argc, char* argv[]) {
 
         const std::string libCorePath = rootDir / "bin" / "core.so";
 
-        const CLibrary core(libCorePath.c_str());
+        const CLibrary core { libCorePath.c_str() };
         const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
 
         try {

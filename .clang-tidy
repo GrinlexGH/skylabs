@@ -33,7 +33,7 @@ Checks: >
   -misc-include-cleaner
 WarningsAsErrors: ''
 UseColor: true
-HeaderFilterRegex: 'src/'
+HeaderFilterRegex: 'skylabs/**/*.*'
 FormatStyle: file
 SystemHeaders: false
 CheckOptions:
