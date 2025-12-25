@@ -21,8 +21,8 @@ public:
     CImage& operator=(CImage&&) noexcept = default;
     ~CImage();
 
-    auto operator*() const noexcept -> vk::Image { assert(m_handle); return *m_handle; }
-    [[nodiscard]] auto GetHandle() const -> vk::Image { assert(m_handle); return *m_handle; }
+    auto operator*() const noexcept -> vk::Image { return *m_handle; }
+    [[nodiscard]] auto GetHandle() const -> vk::Image { return *m_handle; }
 
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
     [[nodiscard]] auto GetLayout() const -> vk::ImageLayout { return m_layout; }
@@ -30,11 +30,7 @@ public:
     auto Clear() -> void;
 
     auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
-    auto CopyBufferToImage(
-        const vk::raii::CommandBuffer& commandBuffer,
-        const vk::Buffer& buffer,
-        const vk::Extent3D& extent
-    ) -> void;
+    auto CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent3D& extent) -> void;
 
 private:
     vma::UniqueImage m_handle;

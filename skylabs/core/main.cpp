@@ -7,7 +7,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <boost/nowide/convert.hpp>
-#include <format>
 
 #include <skylabs/public/logging.hpp>
 
@@ -15,19 +14,18 @@ namespace {
 std::string GetLastErrorMessage() {
     wchar_t* errorMsg = nullptr;
     FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-            FORMAT_MESSAGE_FROM_SYSTEM |
-            FORMAT_MESSAGE_IGNORE_INSERTS,
+        FORMAT_MESSAGE_ALLOCATE_BUFFER
+            | FORMAT_MESSAGE_FROM_SYSTEM
+            | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr,
-        GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<LPWSTR>(&errorMsg), 0,
-        nullptr
+        GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPWSTR>(&errorMsg),
+        0, nullptr
     );
 
     std::string finalMsg = boost::nowide::narrow(errorMsg);
-
     LocalFree(errorMsg);
-
     return finalMsg;
 }
 

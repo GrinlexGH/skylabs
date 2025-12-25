@@ -113,7 +113,7 @@ CInstance::CInstance(
     QueryPhysicalDevices();
 }
 
-auto CInstance::EnableLayers(const std::span<std::string_view> requestedLayers) -> std::vector<const char*> {
+std::vector<const char*> CInstance::EnableLayers(const std::span<std::string_view> requestedLayers) {
     static const std::vector<vk::LayerProperties> layerProps = m_context.enumerateInstanceLayerProperties();
     static const std::unordered_set<std::string_view> availableLayerNames =
         layerProps
@@ -147,7 +147,7 @@ auto CInstance::EnableLayers(const std::span<std::string_view> requestedLayers) 
     return enabledLayers;
 }
 
-auto CInstance::EnableExtensions(const std::span<RequestedExtension> requestedExtensions) -> std::vector<const char*> {
+std::vector<const char*> CInstance::EnableExtensions(const std::span<RequestedExtension> requestedExtensions) {
     static const std::vector<vk::ExtensionProperties> extensionProps = m_context.enumerateInstanceExtensionProperties();
     static const std::unordered_set<std::string_view> availableExtensionNames =
         extensionProps
@@ -215,7 +215,7 @@ auto CInstance::EnableExtensions(const std::span<RequestedExtension> requestedEx
     return enabledExtensions;
 }
 
-auto CInstance::QueryPhysicalDevices() -> void {
+void CInstance::QueryPhysicalDevices() {
     vk::raii::PhysicalDevices physicalDevices { m_handle };
     if (physicalDevices.empty()) {
         throw std::runtime_error { "Couldn't find a physical device that supports Vulkan!" };

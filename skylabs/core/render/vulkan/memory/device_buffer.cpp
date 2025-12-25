@@ -17,7 +17,7 @@ CDeviceBuffer::CDeviceBuffer(
     std::tie(m_allocation, m_handle) = context.GetAllocator().createBufferUnique(bufferInfo, allocInfo);
 }
 
-auto CDeviceBuffer::Clear() -> void {
+void CDeviceBuffer::Clear() {
     m_handle.reset();
     m_allocation.reset();
 }

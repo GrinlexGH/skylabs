@@ -25,7 +25,7 @@ CMemoryMapping& CMemoryMapping::operator=(CMemoryMapping&& rhs) noexcept {
     return *this;
 }
 
-auto CMemoryMapping::Clear() -> void {
+void CMemoryMapping::Clear() {
     m_allocator.unmapMemory(m_allocation);
     m_data = nullptr;
     m_allocation = nullptr;

@@ -3,7 +3,7 @@
 #include <skylabs/public/logging.hpp>
 
 namespace {
-auto ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) -> vk::SurfaceFormatKHR {
+vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
     constexpr vk::SurfaceFormatKHR preferredSurfaceFormat { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear };
 
     const auto formatIt = std::ranges::find(availableFormats, preferredSurfaceFormat);
@@ -12,11 +12,11 @@ auto ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableForma
             "Preferred surface format ({}, {}) is not available. Choosing ({}, {})",
             vk::to_string(preferredSurfaceFormat.format),
             vk::to_string(preferredSurfaceFormat.colorSpace),
-            vk::to_string(availableFormats[0].format),
-            vk::to_string(availableFormats[0].colorSpace)
+            vk::to_string(availableFormats.begin()->format),
+            vk::to_string(availableFormats.begin()->colorSpace)
         );
 
-        return availableFormats[0];
+        return *availableFormats.begin();
     }
 
     return *formatIt;
@@ -90,9 +90,9 @@ auto CSwapchain::CreateSwapchain(
         Log::Warning(
             "Requested present mode ({}) is not available. Choosing ({})",
             vk::to_string(presentMode),
-            vk::to_string(presentModes[0])
+            vk::to_string(*presentModes.begin())
         );
-        presentMode = presentModes[0];
+        presentMode = *presentModes.begin();
     }
 
     createInfo.presentMode = m_presentMode = presentMode; // VSync
@@ -105,7 +105,7 @@ auto CSwapchain::CreateSwapchain(
     m_handle = vk::raii::SwapchainKHR { *device, createInfo };
 }
 
-auto CSwapchain::CreateImages() -> void {
+void CSwapchain::CreateImages() {
     m_images = m_handle.getImages();
     m_imageViews.reserve(m_images.size());
 
@@ -126,30 +126,28 @@ auto CSwapchain::CreateImages() -> void {
 
         m_imageViews.emplace_back(*m_context->GetDevice(), imageViewInfo);
     }
-
-    assert(m_images.size() == m_imageViews.size());
 }
 
-auto CSwapchain::DestroyImages() -> void {
+void CSwapchain::DestroyImages() {
     m_imageViews.clear();
 }
 
-auto CSwapchain::Recreate() -> void {
+void CSwapchain::Recreate() {
     Recreate(m_associatedSurface, GetImageCount(), m_presentMode);
 }
 
-auto CSwapchain::Recreate(
+void CSwapchain::Recreate(
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
-) -> void {
+) {
     CreateSwapchain(surface, imageCount, presentMode, vk::raii::SwapchainKHR { std::move(m_handle) });
 
     DestroyImages();
     CreateImages();
 }
 
-auto CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const -> vk::Extent2D {
+vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     }

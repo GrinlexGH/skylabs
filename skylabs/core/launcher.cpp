@@ -148,7 +148,7 @@ void CLauncher::Main() {
 
     const std::unique_ptr<IRenderer> renderer = Vulkan::CRenderer::TryToCreate(&window);
     if (!renderer) {
-        throw std::runtime_error("Cannot initialize vulkan!\n");
+        throw std::runtime_error { "Cannot initialize vulkan!\n" };
     }
 
     MainLoop(renderer, window.GetHandle());
