@@ -18,13 +18,9 @@ CHostBuffer::CHostBuffer(
     std::tie(m_allocation, m_handle) = m_context->GetAllocator().createBufferUnique(bufferInfo, allocInfo);
 }
 
-auto CHostBuffer::Clear() -> void {
+void CHostBuffer::Clear() {
     m_handle.reset();
     m_allocation.reset();
     m_context = nullptr;
-}
-
-auto CHostBuffer::Map() -> CMemoryMapping {
-    return { m_context->GetAllocator(), *m_allocation };
 }
 }

@@ -3,7 +3,7 @@
 #include <skylabs/public/logging.hpp>
 
 namespace {
-auto GetDeviceTypeScore(const vk::PhysicalDeviceType type) -> int {
+int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
     switch (type) {
         case vk::PhysicalDeviceType::eDiscreteGpu:
             return 5;
@@ -29,7 +29,7 @@ CContext::CContext(const IWindow* const window) : m_window(window) {
     CreateAllocator();
 }
 
-auto CContext::CreateInstance() -> void {
+void CContext::CreateInstance() {
     std::vector<RequestedExtension> instanceExtensions;
 
     const std::span<const char* const> required = m_window->GetRequiredInstanceExtensions();
@@ -50,7 +50,7 @@ auto CContext::CreateInstance() -> void {
     m_instance = CInstance { instanceExtensions };
 }
 
-auto CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool {
+bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
     bool hasPresentQueue = false;
     bool hasGraphicsQueue = false;
 
@@ -73,7 +73,7 @@ auto CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> 
     return false;
 }
 
-auto CContext::GetSuitablePhysicalDevice() -> CPhysicalDevice* {
+CPhysicalDevice* CContext::GetSuitablePhysicalDevice() {
     CPhysicalDevice* selectedDevice = nullptr;
     std::vector<CPhysicalDevice>& physicalDevices = m_instance.GetPhysicalDevices();
 
@@ -95,13 +95,13 @@ auto CContext::GetSuitablePhysicalDevice() -> CPhysicalDevice* {
     return selectedDevice;
 }
 
-auto CContext::SelectPhysicalDevice() -> void {
+void CContext::SelectPhysicalDevice() {
     m_selectedPhysicalDevice = GetSuitablePhysicalDevice();
 
     Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->GetProperties().deviceName });
 }
 
-auto CContext::CreateLogicalDevice() -> void {
+void CContext::CreateLogicalDevice() {
     std::vector<RequestedExtension> deviceExtensions;
     deviceExtensions.reserve(15);
 
@@ -151,7 +151,7 @@ auto CContext::CreateLogicalDevice() -> void {
     };
 }
 
-auto CContext::CreateAllocator() -> void {
+void CContext::CreateAllocator() {
     m_allocator = CAllocator { m_instance, m_selectedPhysicalDevice->GetHandle(), m_device };
 }
 }

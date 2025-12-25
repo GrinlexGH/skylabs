@@ -75,14 +75,14 @@ CImage::CImage(
     m_view = vk::raii::ImageView { *context.GetDevice(), imageViewInfo };
 }
 
-auto CImage::Clear() -> void {
+void CImage::Clear() {
     m_handle.reset();
     m_allocation.reset();
     m_view.clear();
     m_layout = vk::ImageLayout::eUndefined;
 }
 
-auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void {
+void CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) {
     const auto it = g_transitionRules.find(std::make_pair(m_layout, newLayout));
     if (it == g_transitionRules.end()) {
         throw std::invalid_argument("Unsupported layout transition!");
@@ -120,11 +120,11 @@ auto CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::
     m_layout = newLayout;
 }
 
-auto CImage::CopyBufferToImage(
+void CImage::CopyBufferToImage(
     const vk::raii::CommandBuffer& commandBuffer,
     const vk::Buffer& buffer,
     const vk::Extent3D& extent
-) -> void {
+) {
     vk::BufferImageCopy region;
     region.bufferOffset = 0;
     region.bufferRowLength = 0;

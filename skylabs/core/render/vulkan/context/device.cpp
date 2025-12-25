@@ -16,12 +16,12 @@ struct CQueueFamilies
     std::uint32_t m_compute;
 };
 
-auto ThrowIfMissing(
+void ThrowIfMissing(
     const std::optional<std::uint32_t>& graphicsIndex,
     const std::optional<std::uint32_t>& presentIndex,
     const std::optional<std::uint32_t>& transferIndex,
     const std::optional<std::uint32_t>& computeIndex
-) -> void {
+) {
     const std::array<std::pair<const char*, bool>, 4> checks = {{
         { "graphics", graphicsIndex.has_value() },
         { "present", presentIndex.has_value() },
@@ -48,11 +48,11 @@ auto ThrowIfMissing(
     }
 }
 
-auto GetQueueFamilies(
+CQueueFamilies GetQueueFamilies(
     const vk::Instance& instance,
     const Vulkan::CPhysicalDevice& physicalDevice,
     const Vulkan::IWindow* window
-) -> CQueueFamilies {
+) {
     const std::vector<vk::QueueFamilyProperties>& queueFamilies = physicalDevice.GetQueueFamilies();
     const vk::PhysicalDevice physicalDeviceHandle = physicalDevice.GetHandle();
 
@@ -175,10 +175,10 @@ CDevice::CDevice(
     m_computeQueue = { .m_handle = vk::raii::Queue { m_handle, computeFamily, 0 }, .m_familyIndex = computeFamily };
 }
 
-auto CDevice::EnableExtensions(
+std::vector<const char*> CDevice::EnableExtensions(
     const std::span<RequestedExtension> requestedExtensions,
     const CPhysicalDevice& physicalDevice
-) -> std::vector<const char*> {
+) {
     std::vector<const char*> enabledExtensions;
     enabledExtensions.reserve(requestedExtensions.size());
 

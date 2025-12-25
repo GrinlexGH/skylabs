@@ -23,7 +23,7 @@ public:
 
     auto Clear() -> void;
 
-    auto Map() -> CMemoryMapping;
+    auto Map() -> CMemoryMapping { return { m_context->GetAllocator(), *m_allocation }; }
 
 private:
     vma::UniqueBuffer m_handle;
