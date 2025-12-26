@@ -18,8 +18,8 @@ public:
     CHostBuffer& operator=(CHostBuffer&&) noexcept = default;
     ~CHostBuffer() = default;
 
-    auto operator*() const noexcept -> vk::Buffer { assert(m_handle); return *m_handle; }
-    [[nodiscard]] auto GetHandle() const -> vk::Buffer { assert(m_handle); return *m_handle; }
+    [[nodiscard]] auto operator*() const noexcept -> vk::Buffer { return *m_handle; }
+    [[nodiscard]] auto GetHandle() const noexcept -> vk::Buffer { return *m_handle; }
 
     auto Clear() -> void;
 

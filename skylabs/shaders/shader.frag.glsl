@@ -16,7 +16,7 @@ layout(location = 0) out vec4 outColor;
 void main() {
     float Z = 3.0;
     float n = 2.0;
-    float pi = 3.1415926535897932384626433832795;
+    float pi = radians(180);
 
     vec2 uv = fragTexCoord * 2.0 - 1.0;
     float x = uv.x * 5.0;
@@ -40,5 +40,5 @@ void main() {
     float alpha = clamp(intensity, 0, 1);
 
     vec4 texColor = texture(texSampler, fragTexCoord);
-    outColor = vec4(texColor.rgb, 1);
+    outColor = vec4(texColor.rgb, alpha);
 }

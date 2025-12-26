@@ -20,8 +20,8 @@ public:
     CPipeline& operator=(CPipeline&&) noexcept = default;
     ~CPipeline() = default;
 
-    auto operator*() const noexcept -> const vk::raii::Pipeline& { return m_handle; }
-    [[nodiscard]] auto GetHandle() -> const vk::raii::Pipeline& { return m_handle; }
+    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Pipeline& { return m_handle; }
+    [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::Pipeline& { return m_handle; }
 
     [[nodiscard]] auto GetLayout() -> const vk::raii::PipelineLayout& { return m_layout; }
 
