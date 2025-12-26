@@ -16,8 +16,8 @@ public:
     CPhysicalDevice& operator=(CPhysicalDevice&&) noexcept = default;
     ~CPhysicalDevice() = default;
 
-    auto operator*() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
-    [[nodiscard]] auto GetHandle() const -> const vk::raii::PhysicalDevice& { return m_handle; }
+    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
+    [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
 
     [[nodiscard]] auto GetProperties() const -> const vk::PhysicalDeviceProperties& { return m_properties; }
     [[nodiscard]] auto GetFeatures() const -> const vk::PhysicalDeviceFeatures& { return m_features; }

@@ -20,8 +20,8 @@ public:
     CAllocator& operator=(CAllocator&& rhs) noexcept = default;
     ~CAllocator() = default;
 
-    auto operator*() const noexcept -> vma::Allocator { return *m_handle; }
-    [[nodiscard]] auto GetHandle() const -> vma::Allocator { return *m_handle; }
+    [[nodiscard]] auto operator*() const noexcept -> vma::Allocator { return *m_handle; }
+    [[nodiscard]] auto GetHandle() const noexcept -> vma::Allocator { return *m_handle; }
 
 private:
     vma::UniqueAllocator m_handle;

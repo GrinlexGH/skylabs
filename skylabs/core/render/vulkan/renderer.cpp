@@ -55,15 +55,13 @@ struct Vertex
     }
 };
 
-namespace std {
-    template<> struct hash<Vertex> {
-        size_t operator()(Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.pos) ^
-                   (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-                   (hash<glm::vec2>()(vertex.texCoord) << 1);
-        }
-    };
-}
+template<> struct std::hash<Vertex> {
+    size_t operator()(Vertex const& vertex) const noexcept {
+        return ((hash<glm::vec3>()(vertex.pos) ^
+               (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+               (hash<glm::vec2>()(vertex.texCoord) << 1);
+    }
+};
 
 std::vector vertices {
     Vertex { .pos = { -0.5f, -0.5f, 0.0f }, .color = { 1.0f, 0.0f, 0.0f }, .texCoord = { 1.0f, 0.0f } },
@@ -268,107 +266,127 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_renderFinishedSemaphores.emplace_back(*m_context.GetDevice(), vk::SemaphoreCreateInfo {});
     }
 
-    auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
-        for (const vk::Format format : candidates) {
-            const vk::FormatProperties props = m_context.GetPhysicalDevice()->GetHandle().getFormatProperties(format);
+        auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
+            for (const vk::Format format : candidates) {
+                const vk::FormatProperties props = m_context.GetPhysicalDevice()->GetHandle().getFormatProperties(format);
 
-            if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
-                return format;
+                if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+                    return format;
+                }
+                if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+                    return format;
+                }
             }
-            if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
-                return format;
-            }
-        }
 
-        throw std::runtime_error("Failed to find supported format!");
-    };
+            throw std::runtime_error("Failed to find supported format!");
+        };
 
-    auto findDepthFormat = [&] -> vk::Format {
-        return findSupportedFormat(
-            { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
+        auto findDepthFormat = [&] -> vk::Format {
+            return findSupportedFormat(
+                { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
+                vk::ImageTiling::eOptimal,
+                vk::FormatFeatureFlagBits::eDepthStencilAttachment
+            );
+        };
+
+        m_depthBuffer = CImage {
+            m_context,
+            vk::Extent3D { renderWidth, renderHeight, 1 },
+            findDepthFormat(),
             vk::ImageTiling::eOptimal,
-            vk::FormatFeatureFlagBits::eDepthStencilAttachment
-        );
-    };
+            vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            vk::ImageAspectFlagBits::eDepth,
+            vk::MemoryPropertyFlagBits::eDeviceLocal
+        };
 
-    m_depthBuffer = CImage {
-        m_context,
-        vk::Extent3D { renderWidth, renderHeight, 1 },
-        findDepthFormat(),
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        vk::ImageAspectFlagBits::eDepth,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
-    };
+        vk::AttachmentDescription depthAttachment {};
+        depthAttachment.format = findDepthFormat();
+        depthAttachment.samples = vk::SampleCountFlagBits::e1;
+        depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+        depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+        depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+        depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-    vk::AttachmentDescription depthAttachment {};
-    depthAttachment.format = findDepthFormat();
-    depthAttachment.samples = vk::SampleCountFlagBits::e1;
-    depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-    depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-    depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-    depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-    depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
-    depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+        vk::AttachmentReference depthAttachmentRef {};
+        depthAttachmentRef.attachment = 1;
+        depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-    vk::AttachmentReference depthAttachmentRef {};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    // CRPTexture depthTexture = m_renderGraph.CreateTexture({
+    //     .m_usage = CRPTextureUsage::eDepth,
+    //     .m_width = renderWidth,
+    //     .m_height = renderHeight,
+    // });
+
+        m_colorBuffer = CImage {
+            m_context,
+            vk::Extent3D { renderWidth, renderHeight, 1 },
+            vk::Format::eR8G8B8A8Snorm,
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+            vk::ImageAspectFlagBits::eColor,
+            vk::MemoryPropertyFlagBits::eDeviceLocal
+        };
+
+        vk::AttachmentDescription colorAttachment {};
+        colorAttachment.format = vk::Format::eR8G8B8A8Snorm;
+        colorAttachment.samples = vk::SampleCountFlagBits::e1;
+        colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+        colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+        colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
+        colorAttachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        vk::AttachmentReference colorAttachmentRef {};
+        colorAttachmentRef.attachment = 0;
+        colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+    // CRPTexture renderTexture = m_renderGraph.CreateTexture({
+    //     .m_usage = CRPTextureUsage::eColor,
+    //     .m_width = renderWidth,
+    //     .m_height = renderHeight,
+    // });
 
 
-    m_colorBuffer = CImage {
-        m_context,
-        vk::Extent3D { renderWidth, renderHeight, 1 },
-        vk::Format::eR8G8B8A8Snorm,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
-        vk::ImageAspectFlagBits::eColor,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
-    };
+        vk::SubpassDescription subpass {};
+        subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+        subpass.inputAttachmentCount = 0;
+        subpass.pInputAttachments = nullptr;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.preserveAttachmentCount = 0;
+        subpass.pPreserveAttachments = nullptr;
+        subpass.pResolveAttachments = nullptr;
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-    vk::AttachmentDescription colorAttachment {};
-    colorAttachment.format = vk::Format::eR8G8B8A8Snorm;
-    colorAttachment.samples = vk::SampleCountFlagBits::e1;
-    colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-    colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-    colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-    colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-    colorAttachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        vk::SubpassDependency dependency {};
+        dependency.srcSubpass = vk::SubpassExternal;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+        dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 
-    vk::AttachmentReference colorAttachmentRef {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+        std::array attachments = { colorAttachment, depthAttachment };
+        vk::RenderPassCreateInfo renderPassInfo {};
+        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        renderPassInfo.pAttachments = attachments.data();
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
+        m_renderPassMain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
 
-
-    vk::SubpassDescription subpass {};
-    subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = nullptr;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = nullptr;
-    subpass.pResolveAttachments = nullptr;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    vk::SubpassDependency dependency {};
-    dependency.srcSubpass = vk::SubpassExternal;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-
-    std::array attachments = { colorAttachment, depthAttachment };
-    vk::RenderPassCreateInfo renderPassInfo {};
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
-    m_renderPassMain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
+    // m_renderGraph.AddPass(
+    //     CRenderPass()
+    //         .AttachTexture(depthTexture, CRPTextureOp::eWrite)
+    //         .AttachTexture(renderTexture, CRPTextureOp::eWrite)
+    //         .SetExecutionCallback([=]() {
+    //
+    //         })
+    // );
 
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
@@ -379,54 +397,54 @@ CRenderer::CRenderer(const IWindow* const window) {
         fragmentShader.GetPipelineShaderCreateInfo(),
     };
 
-    SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
-    if (!imageRaw) {
-        throw std::runtime_error("Failed to load texture image!");
-    }
-    SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
-    SDL_DestroySurface(imageRaw);
-    vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
+        SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
+        if (!imageRaw) {
+            throw std::runtime_error("Failed to load texture image!");
+        }
+        SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
+        SDL_DestroySurface(imageRaw);
+        vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 
-    CHostBuffer stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
-    auto commandPool = (*m_context.GetDevice()).createCommandPool({
-            vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            m_context.GetDevice().GetGraphicsQueue().m_familyIndex
-    });
-    {
-        CMemoryMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.GetData(), image->pixels, imageSize);
+        CHostBuffer stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
+        auto commandPool = (*m_context.GetDevice()).createCommandPool({
+                vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+                m_context.GetDevice().GetGraphicsQueue().m_familyIndex
+        });
+        {
+            CMemoryMapping mapping = stagingBuffer.Map();
+            std::memcpy(mapping.GetData(), image->pixels, imageSize);
 
-        void* p = std::malloc(imageSize / 4);
-        std::memcpy((char*)mapping.GetData() + imageSize * 3 / 4, p, imageSize / 4);
-        std::free(p);
-    }
+            void* p = std::malloc(imageSize / 4);
+            std::memcpy((char*)mapping.GetData() + imageSize * 3 / 4, p, imageSize / 4);
+            std::free(p);
+        }
 
-    m_modelTexture = CImage { m_context,
-                              { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
-                              vk::Format::eR8G8B8A8Srgb,
-                              vk::ImageTiling::eOptimal,
-                              vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-                              vk::ImageAspectFlagBits::eColor,
-                              vk::MemoryPropertyFlagBits::eDeviceLocal };
+        m_modelTexture = CImage { m_context,
+                                  { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
+                                  vk::Format::eR8G8B8A8Srgb,
+                                  vk::ImageTiling::eOptimal,
+                                  vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+                                  vk::ImageAspectFlagBits::eColor,
+                                  vk::MemoryPropertyFlagBits::eDeviceLocal };
 
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
-    {
-        m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-        m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
-        m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
-    }
-    EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
+        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
+        {
+            m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
+            m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
+            m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+        }
+        EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
 
-    {
-        stagingBuffer.Clear();
-    }
-    SDL_DestroySurface(image);
-    image = nullptr;
+        {
+            stagingBuffer.Clear();
+        }
+        SDL_DestroySurface(image);
+        image = nullptr;
 
-    m_modelTextureSampler = CSampler { m_context };
+        m_modelTextureSampler = CSampler { m_context };
 
 
-    const std::string MODEL_PATH = "assets/viking_room.obj";
+    constexpr std::string MODEL_PATH = "assets/viking_room.obj";
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -486,67 +504,67 @@ CRenderer::CRenderer(const IWindow* const window) {
     samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
     samplerLayoutBinding.pImmutableSamplers = nullptr;
 
-    std::array bindings = { uboLayoutBinding, samplerLayoutBinding };
+    std::array bindings = { uboLayoutBinding, samplerLayoutBinding }; //!!!!
 
-    vk::DescriptorSetLayoutCreateInfo layoutInfo {};
-    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
+        vk::DescriptorSetLayoutCreateInfo layoutInfo {};
+        layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
+        layoutInfo.pBindings = bindings.data();
 
-    m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { m_context.GetDevice().GetHandle(), layoutInfo };
-
-
-    std::array<vk::DescriptorPoolSize, 2> poolSizes {};
-    poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-    poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-
-    vk::DescriptorPoolCreateInfo poolInfo {};
-    poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-
-    m_descriptorPoolMain = vk::raii::DescriptorPool { m_context.GetDevice().GetHandle(), poolInfo };
+        m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { m_context.GetDevice().GetHandle(), layoutInfo };
 
 
-    std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutMain);
-    vk::DescriptorSetAllocateInfo descriptorAllocInfo {};
-    descriptorAllocInfo.descriptorPool = m_descriptorPoolMain;
-    descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-    descriptorAllocInfo.pSetLayouts = layouts.data();
+        std::array<vk::DescriptorPoolSize, 2> poolSizes {};
+        poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
+        poolSizes[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+        poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
-    m_descriptorSetsMain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
+        vk::DescriptorPoolCreateInfo poolInfo {};
+        poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::DescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = *m_uniformBuffers[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(UniformBufferObject);
+        m_descriptorPoolMain = vk::raii::DescriptorPool { m_context.GetDevice().GetHandle(), poolInfo };
 
-        vk::DescriptorImageInfo imageInfo {};
-        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_modelTexture.GetView();
-        imageInfo.sampler = *m_modelTextureSampler;
 
-        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
-        descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
-        descriptorWrites[0].pImageInfo = nullptr;
-        descriptorWrites[0].pTexelBufferView = nullptr;
+        std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutMain);
+        vk::DescriptorSetAllocateInfo descriptorAllocInfo {};
+        descriptorAllocInfo.descriptorPool = m_descriptorPoolMain;
+        descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+        descriptorAllocInfo.pSetLayouts = layouts.data();
 
-        descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &imageInfo;
+        m_descriptorSetsMain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
 
-        m_context.GetDevice().GetHandle().updateDescriptorSets(descriptorWrites, {});
-    }
+        for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
+            vk::DescriptorBufferInfo bufferInfo {};
+            bufferInfo.buffer = *m_uniformBuffers[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UniformBufferObject);
+
+            vk::DescriptorImageInfo imageInfo {};
+            imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            imageInfo.imageView = m_modelTexture.GetView();
+            imageInfo.sampler = *m_modelTextureSampler;
+
+            std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
+            descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
+            descriptorWrites[0].dstBinding = 0;
+            descriptorWrites[0].dstArrayElement = 0;
+            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+            descriptorWrites[0].descriptorCount = 1;
+            descriptorWrites[0].pBufferInfo = &bufferInfo;
+            descriptorWrites[0].pImageInfo = nullptr;
+            descriptorWrites[0].pTexelBufferView = nullptr;
+
+            descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
+            descriptorWrites[1].dstBinding = 1;
+            descriptorWrites[1].dstArrayElement = 0;
+            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+            descriptorWrites[1].descriptorCount = 1;
+            descriptorWrites[1].pImageInfo = &imageInfo;
+
+            m_context.GetDevice().GetHandle().updateDescriptorSets(descriptorWrites, {});
+        }
 
 
 
@@ -634,52 +652,52 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 
 
-    colorAttachment = vk::AttachmentDescription {};
-    colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
-    colorAttachment.samples = vk::SampleCountFlagBits::e1;
-    colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-    colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-    colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-    colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-    colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+        colorAttachment = vk::AttachmentDescription {};
+        colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
+        colorAttachment.samples = vk::SampleCountFlagBits::e1;
+        colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+        colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+        colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
+        colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
-    // Аттачмент референс, который описывает просто layout аттачмента
-    colorAttachmentRef = vk::AttachmentReference {};
-    colorAttachmentRef.attachment = 0; // Индекс в vk::SubpassDescription
-    colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+        // Аттачмент референс, который описывает просто layout аттачмента
+        colorAttachmentRef = vk::AttachmentReference {};
+        colorAttachmentRef.attachment = 0; // Индекс в vk::SubpassDescription
+        colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
-    // Описание сабпасса
-    subpass = vk::SubpassDescription {};
-    subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = nullptr;
-    // Аттачмент в который будем писать
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = nullptr;
-    subpass.pResolveAttachments = nullptr;
-    subpass.pDepthStencilAttachment = nullptr;
+        // Описание сабпасса
+        subpass = vk::SubpassDescription {};
+        subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+        subpass.inputAttachmentCount = 0;
+        subpass.pInputAttachments = nullptr;
+        // Аттачмент в который будем писать
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.preserveAttachmentCount = 0;
+        subpass.pPreserveAttachments = nullptr;
+        subpass.pResolveAttachments = nullptr;
+        subpass.pDepthStencilAttachment = nullptr;
 
-    // Описываем как сабпассы будут связаны
-    dependency = vk::SubpassDependency {};
-    dependency.srcSubpass = vk::SubpassExternal; // Пустой внешний сабпасс
-    dependency.dstSubpass = 0; // Описание применяется к первому (нулевому) сабпассу
-    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // Ждём когда на этой стадии закончатся операции
-    dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Какие конкретно операции. Пустое значит все операции
-    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // На какую стадию идём
-    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Что делаем
+        // Описываем как сабпассы будут связаны
+        dependency = vk::SubpassDependency {};
+        dependency.srcSubpass = vk::SubpassExternal; // Пустой внешний сабпасс
+        dependency.dstSubpass = 0; // Описание применяется к первому (нулевому) сабпассу
+        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // Ждём когда на этой стадии закончатся операции
+        dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Какие конкретно операции. Пустое значит все операции
+        dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // На какую стадию идём
+        dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Что делаем
 
-    std::array attachmentsSwapchain = { colorAttachment };
-    renderPassInfo = vk::RenderPassCreateInfo {};
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentsSwapchain.size());
-    renderPassInfo.pAttachments = attachmentsSwapchain.data();
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
-    m_renderPassSwapchain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
+        std::array attachmentsSwapchain = { colorAttachment };
+        renderPassInfo = vk::RenderPassCreateInfo {};
+        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentsSwapchain.size());
+        renderPassInfo.pAttachments = attachmentsSwapchain.data();
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
+        m_renderPassSwapchain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
     //endregion Subpasses
 
 

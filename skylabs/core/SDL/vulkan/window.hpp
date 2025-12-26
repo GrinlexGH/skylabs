@@ -14,7 +14,8 @@ public:
     CWindow& operator=(CWindow&& rhs) noexcept;
     ~CWindow() override;
 
-    [[nodiscard]] auto GetHandle() const -> SDL_Window* { return m_handle; }
+    [[nodiscard]] auto operator*() const noexcept -> SDL_Window* { return m_handle; }
+    [[nodiscard]] auto GetHandle() const noexcept -> SDL_Window* { return m_handle; }
 
     auto GetDrawableSize(int& w, int& h) const -> void override;
 

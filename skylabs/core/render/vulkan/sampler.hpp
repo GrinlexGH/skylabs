@@ -15,8 +15,8 @@ public:
     CSampler& operator=(CSampler&&) noexcept = default;
     ~CSampler() = default;
 
-    auto operator*() const noexcept -> const vk::raii::Sampler& { return m_handle; }
-    [[nodiscard]] auto GetHandle() -> const vk::raii::Sampler& { return m_handle; }
+    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Sampler& { return m_handle; }
+    [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::Sampler& { return m_handle; }
 
 private:
     vk::raii::Sampler m_handle = nullptr;

@@ -10,7 +10,71 @@
 
 CCamera g_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
 
-void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
+void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::Vulkan::CWindow& window) {
+    int width, height;
+    window.GetDrawableSize(width, height);
+
+    CRenderGraph graph;
+
+    const CRPTexture depthTexture = graph.CreateTexture({
+        .m_usage = CRPTextureUsage::eDepth,
+        .m_width = static_cast<std::uint32_t>(width),
+        .m_height = static_cast<std::uint32_t>(height),
+    });
+
+    const CRPTexture renderTexture = graph.CreateTexture({
+        .m_usage = CRPTextureUsage::eColor,
+        .m_width = static_cast<std::uint32_t>(width),
+        .m_height = static_cast<std::uint32_t>(height),
+    });
+
+    const CRPTexture modelTexture = graph.CreateTexture({
+        .m_usage = CRPTextureUsage::eColor,
+        .m_width = static_cast<std::uint32_t>(width),
+        .m_height = static_cast<std::uint32_t>(height),
+        .m_materialDescription = "assets/viking_room.png",
+    });
+
+    const CRPBuffer vertexBuffer = graph.CreateBuffer({
+
+    });
+
+    const CRPBuffer indexBuffer = graph.CreateBuffer({
+
+    });
+
+    const CRPBuffer uniformBuffer = graph.CreateBuffer({
+
+    });
+
+    CRPPipeline mainPipeline;
+    CRPPipeline swapchainPipeline;
+
+    graph
+        .AddPass(
+            CRenderPass()
+                .AttachTexture(depthTexture, CRPResourceOp::eWrite)
+                .AttachTexture(renderTexture, CRPResourceOp::eWrite)
+                .SampleTexture(modelTexture)
+                .UseBuffer(vertexBuffer, CRPResourceOp::eRead)
+                .UseBuffer(indexBuffer, CRPResourceOp::eRead)
+                .UseBuffer(uniformBuffer, CRPResourceOp::eRead)
+                .SetExecutionCallback([=](CRPContext& ctx) {
+                    ctx.BindPipeline(mainPipeline);
+                    ctx.BindVertexBuffer(vertexBuffer);
+                    ctx.BindIndexBuffer(indexBuffer);
+                    ctx.DrawIndexed(indexBuffer.m_size);
+                })
+        )
+        .AddPass(
+            CRenderPass()
+                .AttachTexture(renderTexture, CRPResourceOp::eRead)
+                .SetExecutionCallback([=](CRPContext& ctx) {
+                    ctx.BindPipeline(swapchainPipeline);
+                    ctx.Draw(3);
+                })
+        );
+
     bool quit = false;
     while (!quit) {
         static float deltaTime = 0.0f;
@@ -30,7 +94,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
             const float fps = static_cast<float>(frameCount) / elapsedTime;
 
             const std::string title = "Skylabs | FPS: " + std::to_string(static_cast<int>(fps));
-            SDL_SetWindowTitle(window, title.c_str());
+            SDL_SetWindowTitle(*window, title.c_str());
 
             frameCount = 0;
             elapsedTime = 0.0f;
@@ -65,12 +129,12 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, SDL_Window* window) {
                         } break;
                         case SDLK_P: {
                             static bool mouseModeSwitch = false;
-                            SDL_SetWindowRelativeMouseMode(window, mouseModeSwitch);
+                            SDL_SetWindowRelativeMouseMode(*window, mouseModeSwitch);
                             mouseModeSwitch = !mouseModeSwitch;
                         } break;
                         case SDLK_F11: {
                             static bool fullscreenSwitch = true;
-                            SDL_SetWindowFullscreen(window, fullscreenSwitch);
+                            SDL_SetWindowFullscreen(*window, fullscreenSwitch);
                             fullscreenSwitch = !fullscreenSwitch;
                         } break;
                         case SDLK_UP: {
@@ -151,5 +215,5 @@ void CLauncher::Main() {
         throw std::runtime_error { "Cannot initialize vulkan!\n" };
     }
 
-    MainLoop(renderer, window.GetHandle());
+    MainLoop(renderer, window);
 }

@@ -21,8 +21,8 @@ public:
     CImage& operator=(CImage&&) noexcept = default;
     ~CImage();
 
-    auto operator*() const noexcept -> vk::Image { return *m_handle; }
-    [[nodiscard]] auto GetHandle() const -> vk::Image { return *m_handle; }
+    [[nodiscard]] auto operator*() const noexcept -> vk::Image { return *m_handle; }
+    [[nodiscard]] auto GetHandle() const noexcept -> vk::Image { return *m_handle; }
 
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
     [[nodiscard]] auto GetLayout() const -> vk::ImageLayout { return m_layout; }
