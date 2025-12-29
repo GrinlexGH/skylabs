@@ -48,18 +48,6 @@ target_sources(
         render/vulkan/sampler.cpp
         render/vulkan/pipeline.hpp
         render/vulkan/pipeline.cpp
-        render/render_graph.hpp
-        render/render_graph.cpp
-        render/render_pass.hpp
-        render/render_pass.cpp
-        render/render_pass_texture.hpp
-        render/render_pass_texture.cpp
-        render/render_pass_context.hpp
-        render/render_pass_context.cpp
-        render/render_pass_buffer.hpp
-        render/render_pass_buffer.cpp
-        render/render_pass_pipeline.hpp
-        render/render_pass_pipeline.cpp
         SDL/context.cpp
         SDL/context.hpp
         SDL/vulkan/vulkan.hpp
