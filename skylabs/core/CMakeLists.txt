@@ -48,6 +48,8 @@ target_sources(
         render/vulkan/sampler.cpp
         render/vulkan/pipeline.hpp
         render/vulkan/pipeline.cpp
+        render/vulkan/render_pass.hpp
+        render/vulkan/render_pass.cpp
         SDL/context.cpp
         SDL/context.hpp
         SDL/vulkan/vulkan.hpp
