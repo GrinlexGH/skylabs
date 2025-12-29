@@ -365,6 +365,16 @@ CRenderer::CRenderer(const IWindow* const window) {
         renderPassInfo.pDependencies = &dependency;
         m_renderPassMain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
 
+        std::array attachmentsS = { *m_colorBuffer.GetView(), *m_depthBuffer.GetView() };
+        vk::FramebufferCreateInfo framebufferInfo {};
+        framebufferInfo.renderPass = m_renderPassMain;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentsS.size());
+        framebufferInfo.pAttachments = attachmentsS.data();
+        framebufferInfo.width = renderWidth;
+        framebufferInfo.height = renderHeight;
+        framebufferInfo.layers = 1;
+        m_frameBufferMain = vk::raii::Framebuffer { *m_context.GetDevice(), framebufferInfo };
+
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
     const CShader fragmentShader(m_context, CShader::Type::eFragment, "shader.frag.spv");
@@ -450,10 +460,6 @@ CRenderer::CRenderer(const IWindow* const window) {
             indices.push_back(uniqueVertices[vertex]);
         }
     }
-
-
-
-
 
     vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
     m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
@@ -553,18 +559,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         Vertex::GetAttributeDescriptions(),
         m_renderPassMain
     };
-
-
-    std::array attachmentsS = { *m_colorBuffer.GetView(), *m_depthBuffer.GetView() };
-    vk::FramebufferCreateInfo framebufferInfo {};
-    framebufferInfo.renderPass = m_renderPassMain;
-    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentsS.size());
-    framebufferInfo.pAttachments = attachmentsS.data();
-    framebufferInfo.width = renderWidth;
-    framebufferInfo.height = renderHeight;
-    framebufferInfo.layers = 1;
-    m_frameBufferMain = vk::raii::Framebuffer { *m_context.GetDevice(), framebufferInfo };
-
 
 
 
