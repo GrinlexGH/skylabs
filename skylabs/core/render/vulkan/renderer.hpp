@@ -9,7 +9,6 @@
 #include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline.hpp>
-#include <skylabs/core/render/render_graph.hpp>
 
 #include <glm/glm.hpp>
 
@@ -40,8 +39,6 @@ private:
     CSwapchain m_swapchain { nullptr };
 
     std::vector<CFrameData> m_frameData;
-
-    // CRenderGraph m_renderGraph;
 
     CPipeline m_pipelineMain { nullptr };
     CPipeline m_pipelineSwapchain { nullptr };

@@ -247,9 +247,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     m_context = CContext { window };
-
     m_surface = CSurface { m_context };
-
     m_swapchain = CSwapchain { m_context, *m_surface, 3, vk::PresentModeKHR::eImmediate };
 
     renderWidth = m_swapchain.GetExtent().width;
@@ -313,12 +311,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         depthAttachmentRef.attachment = 1;
         depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-    // CRPTexture depthTexture = m_renderGraph.CreateTexture({
-    //     .m_usage = CRPTextureUsage::eDepth,
-    //     .m_width = renderWidth,
-    //     .m_height = renderHeight,
-    // });
-
         m_colorBuffer = CImage {
             m_context,
             vk::Extent3D { renderWidth, renderHeight, 1 },
@@ -342,12 +334,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::AttachmentReference colorAttachmentRef {};
         colorAttachmentRef.attachment = 0;
         colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-    // CRPTexture renderTexture = m_renderGraph.CreateTexture({
-    //     .m_usage = CRPTextureUsage::eColor,
-    //     .m_width = renderWidth,
-    //     .m_height = renderHeight,
-    // });
 
 
         vk::SubpassDescription subpass {};
@@ -378,15 +364,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
         m_renderPassMain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
-
-    // m_renderGraph.AddPass(
-    //     CRenderPass()
-    //         .AttachTexture(depthTexture, CRPTextureOp::eWrite)
-    //         .AttachTexture(renderTexture, CRPTextureOp::eWrite)
-    //         .SetExecutionCallback([=]() {
-    //
-    //         })
-    // );
 
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
