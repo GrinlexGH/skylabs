@@ -2,6 +2,22 @@
 
 #include <skylabs/public/resource_system.hpp>
 
+namespace {
+constexpr std::array ShaderStageTable = {
+    vk::ShaderStageFlagBits::eVertex,   // Type::eVertex
+    vk::ShaderStageFlagBits::eFragment, // Type::eFragment
+};
+
+static_assert(
+    ShaderStageTable.size() == static_cast<std::size_t>(Vulkan::CShader::Type::eCount),
+    "ShaderStageTable size must match Vulkan::CShader::Type::eCount"
+);
+
+constexpr auto ToVkStage(Vulkan::CShader::Type type) -> vk::ShaderStageFlagBits {
+    return ShaderStageTable[static_cast<std::size_t>(type)];
+}
+}
+
 namespace Vulkan {
 CShader::CShader(const CContext& context, const Type type, const char* name) {
     vk::ShaderModuleCreateInfo createInfo {};

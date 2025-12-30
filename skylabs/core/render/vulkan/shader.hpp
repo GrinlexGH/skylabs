@@ -7,7 +7,7 @@ class CShader
 public:
     enum class Type : std::uint8_t
     {
-        eVertex = 0,
+        eVertex,
         eFragment,
         eCount,
     };
@@ -25,19 +25,6 @@ public:
     [[nodiscard]] auto GetPipelineShaderCreateInfo() const -> vk::PipelineShaderStageCreateInfo { return m_shaderCreateInfo; }
 
 private:
-    constexpr static std::array ShaderStageTable = {
-        vk::ShaderStageFlagBits::eVertex,   // Type::eVertex
-        vk::ShaderStageFlagBits::eFragment, // Type::eFragment
-    };
-
-    constexpr static auto ToVkStage(Type type) -> vk::ShaderStageFlagBits {
-        static_assert(
-            ShaderStageTable.size() == static_cast<std::size_t>(Type::eCount),
-            "ShaderStageTable size must match Vulkan::CShader::Type::eCount"
-        );
-        return ShaderStageTable[static_cast<std::size_t>(type)];
-    }
-
     vk::raii::ShaderModule m_handle = nullptr;
     vk::PipelineShaderStageCreateInfo m_shaderCreateInfo;
 };
