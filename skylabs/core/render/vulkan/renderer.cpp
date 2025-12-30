@@ -4,7 +4,6 @@
 #include <skylabs/core/render/vulkan/shader.hpp>
 
 #define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -14,60 +13,19 @@
 
 #include <chrono>
 
-
-struct Vertex
-{
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec2 texCoord;
-
-    constexpr static auto GetBindingDescription() -> vk::VertexInputBindingDescription {
-        vk::VertexInputBindingDescription bindingDescription {};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(Vertex);
-        bindingDescription.inputRate = vk::VertexInputRate::eVertex;
-
-        return bindingDescription;
-    }
-
-    constexpr static auto GetAttributeDescriptions() -> std::array<vk::VertexInputAttributeDescription, 3> {
-        std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions{};
-
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
-        attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
-        attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = vk::Format::eR32G32Sfloat;
-        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-        return attributeDescriptions;
-    }
-    bool operator==(const Vertex& other) const {
-        return pos == other.pos && color == other.color && texCoord == other.texCoord;
-    }
-};
-
-template<> struct std::hash<Vertex> {
-    size_t operator()(Vertex const& vertex) const noexcept {
-        return ((hash<glm::vec3>()(vertex.pos) ^
-               (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-               (hash<glm::vec2>()(vertex.texCoord) << 1);
+template<> struct std::hash<CVertex> {
+    size_t operator()(CVertex const& vertex) const noexcept {
+        return ((hash<glm::vec3>()(vertex.m_position) ^
+               (hash<glm::vec3>()(vertex.m_color) << 1)) >> 1) ^
+               (hash<glm::vec2>()(vertex.m_texCoord) << 1);
     }
 };
 
 std::vector vertices {
-    Vertex { .pos = { -0.5f, -0.5f, 0.0f }, .color = { 1.0f, 0.0f, 0.0f }, .texCoord = { 1.0f, 0.0f } },
-    Vertex { .pos = {  0.5f, -0.5f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f }, .texCoord = { 0.0f, 0.0f } },
-    Vertex { .pos = {  0.5f,  0.5f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } },
-    Vertex { .pos = { -0.5f,  0.5f, 0.0f }, .color = { 1.0f, 1.0f, 1.0f }, .texCoord = { 1.0f, 1.0f } },
+    CVertex { .m_position = { -0.5f, -0.5f, 0.0f }, .m_color = { 1.0f, 0.0f, 0.0f }, .m_texCoord = { 1.0f, 0.0f } },
+    CVertex { .m_position = {  0.5f, -0.5f, 0.0f }, .m_color = { 0.0f, 1.0f, 0.0f }, .m_texCoord = { 0.0f, 0.0f } },
+    CVertex { .m_position = {  0.5f,  0.5f, 0.0f }, .m_color = { 0.0f, 0.0f, 1.0f }, .m_texCoord = { 0.0f, 1.0f } },
+    CVertex { .m_position = { -0.5f,  0.5f, 0.0f }, .m_color = { 1.0f, 1.0f, 1.0f }, .m_texCoord = { 1.0f, 1.0f } },
 
    // Vertex { .pos = { -0.5f, -0.5f, 0.5f }, .color = { 1.0f, 1.0f, 0.0f }, .texCoord = { 0.0f, 0.0f } },
    // Vertex { .pos = {  0.5f, -0.5f, 0.5f }, .color = { 0.0f, 1.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } },
@@ -441,18 +399,18 @@ CRenderer::CRenderer(const IWindow* const window) {
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
         throw std::runtime_error(warn + " " + err);
     }
-    std::unordered_map<Vertex, uint32_t> uniqueVertices {};
+    std::unordered_map<CVertex, uint32_t> uniqueVertices {};
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
-            Vertex vertex {};
+            CVertex vertex {};
 
-            vertex.pos = { attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1], attrib.vertices[3 * index.vertex_index + 2] };
+            vertex.m_position = { attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1], attrib.vertices[3 * index.vertex_index + 2] };
 
-            vertex.texCoord = { attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
+            vertex.m_texCoord = { attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
 
-            vertex.color = { 1.0f, 1.0f, 1.0f };
+            vertex.m_color = { 1.0f, 1.0f, 1.0f };
 
-            if (uniqueVertices.count(vertex) == 0) {
+            if (!uniqueVertices.contains(vertex)) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
                 vertices.push_back(vertex);
             }
@@ -555,8 +513,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context,
         shaderStages,
         std::array { *m_descriptorSetLayoutMain },
-        Vertex::GetBindingDescription(),
-        Vertex::GetAttributeDescriptions(),
+        CVertexFormat { std::span<const CVertexAttribute, 3> { CVertex::GetAttributes() } },
         m_renderPassMain
     };
 
@@ -686,7 +643,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context,
         shaderStagesSwapchain,
         std::array { *m_descriptorSetLayoutSwapchain },
-        {}, {}, m_renderPassSwapchain
+        CVertexFormat {{}}, m_renderPassSwapchain
     };
 
     m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPassSwapchain);

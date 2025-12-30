@@ -5,15 +5,16 @@ CPipeline::CPipeline(
     const CContext& context,
     const std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
     const std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
-    const vk::VertexInputBindingDescription vertexBindingDescription,
-    const std::span<const vk::VertexInputAttributeDescription> vertexDescription,
+    const CVertexFormat& vertexFormat,
     const vk::RenderPass renderPass
 ) {
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &vertexBindingDescription;
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexDescription.size());
-    vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.data();
+    const std::vector<vk::VertexInputBindingDescription>& bindingDescriptions = vertexFormat.GetBindingDescriptions();
+    const std::vector<vk::VertexInputAttributeDescription>& attributeDescriptions = vertexFormat.GetAttributeDescriptions();
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<std::uint32_t>(bindingDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly {};
     inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
