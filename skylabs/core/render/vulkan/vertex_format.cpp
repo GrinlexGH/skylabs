@@ -20,6 +20,8 @@ constexpr std::uint32_t SizeOfFormat(const VertexFormat format) {
 
 namespace Vulkan {
 CVertexFormat::CVertexFormat(const std::span<const CVertexAttribute> attributes) {
+    if (attributes.empty()) { return; }
+
     m_attributes.reserve(attributes.size());
     std::uint32_t i = 0;
     for (const auto& [format, offset] : attributes) {
