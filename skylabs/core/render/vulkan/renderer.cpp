@@ -178,7 +178,7 @@ void UpdateUniformBuffer(
     static auto startTime = high_resolution_clock::now();
 
     auto currentTime = high_resolution_clock::now();
-    const float time = duration<float, seconds::period>(currentTime - startTime).count();
+    const float time = duration<float>(currentTime - startTime).count();
 
     UniformBufferObject ubo {};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -342,51 +342,51 @@ CRenderer::CRenderer(const IWindow* const window) {
         fragmentShader.GetPipelineShaderCreateInfo(),
     };
 
-        SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
-        if (!imageRaw) {
-            throw std::runtime_error("Failed to load texture image!");
-        }
-        SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
-        SDL_DestroySurface(imageRaw);
-        vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
+    SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
+    if (!imageRaw) {
+        throw std::runtime_error("Failed to load texture image!");
+    }
+    SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
+    SDL_DestroySurface(imageRaw);
+    const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 
-        CHostBuffer stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
-        auto commandPool = (*m_context.GetDevice()).createCommandPool({
-                vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-                m_context.GetDevice().GetGraphicsQueue().m_familyIndex
-        });
-        {
-            CMemoryMapping mapping = stagingBuffer.Map();
-            std::memcpy(mapping.GetData(), image->pixels, imageSize);
+    auto stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
+    auto commandPool = (*m_context.GetDevice()).createCommandPool({
+            vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+            m_context.GetDevice().GetGraphicsQueue().m_familyIndex
+    });
+    {
+        const CMemoryMapping mapping = stagingBuffer.Map();
+        std::memcpy(mapping.GetData(), image->pixels, imageSize);
 
-            void* p = std::malloc(imageSize / 4);
-            std::memcpy((char*)mapping.GetData() + imageSize * 3 / 4, p, imageSize / 4);
-            std::free(p);
-        }
+        char* p = new char[imageSize / 4];
+        std::memcpy((char*)mapping.GetData() + (imageSize * 3 / 4), p, imageSize / 4);
+        std::free(p);
+    }
 
-        m_modelTexture = CImage { m_context,
-                                  { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
-                                  vk::Format::eR8G8B8A8Srgb,
-                                  vk::ImageTiling::eOptimal,
-                                  vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-                                  vk::ImageAspectFlagBits::eColor,
-                                  vk::MemoryPropertyFlagBits::eDeviceLocal };
+    m_modelTexture = CImage { m_context,
+                              { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
+                              vk::Format::eR8G8B8A8Srgb,
+                              vk::ImageTiling::eOptimal,
+                              vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+                              vk::ImageAspectFlagBits::eColor,
+                              vk::MemoryPropertyFlagBits::eDeviceLocal };
 
-        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
-        {
-            m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-            m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
-            m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
-        }
-        EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
+    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
+    {
+        m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
+        m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
+        m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+    }
+    EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
 
-        {
-            stagingBuffer.Clear();
-        }
-        SDL_DestroySurface(image);
-        image = nullptr;
+    {
+        stagingBuffer.Clear();
+    }
+    SDL_DestroySurface(image);
+    image = nullptr;
 
-        m_modelTextureSampler = CSampler { m_context };
+    m_modelTextureSampler = CSampler { m_context };
 
 
     constexpr std::string MODEL_PATH = "assets/viking_room.obj";
