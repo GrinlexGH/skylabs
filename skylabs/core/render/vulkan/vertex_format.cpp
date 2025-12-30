@@ -19,14 +19,18 @@ constexpr std::uint32_t SizeOfFormat(const VertexFormat format) {
 }
 
 namespace Vulkan {
-CVertexFormat::CVertexFormat(const std::span<const CVertexAttribute> attributes) {
+CVertexFormat::CVertexFormat(
+    const std::span<const CVertexAttribute> attributes,
+    const std::uint32_t binding,
+    const vk::VertexInputRate inputRate
+) {
     if (attributes.empty()) { return; }
 
     m_attributes.reserve(attributes.size());
     std::uint32_t i = 0;
     for (const auto& [format, offset] : attributes) {
         vk::VertexInputAttributeDescription attributeDescription {};
-        attributeDescription.binding = 0;
+        attributeDescription.binding = binding;
         attributeDescription.location = i;
         attributeDescription.format = ToVkFormat(format);
         attributeDescription.offset = offset;
@@ -42,7 +46,7 @@ CVertexFormat::CVertexFormat(const std::span<const CVertexAttribute> attributes)
     vk::VertexInputBindingDescription bindingDescription {};
     bindingDescription.binding = 0;
     bindingDescription.stride = stride;
-    bindingDescription.inputRate = vk::VertexInputRate::eVertex;
+    bindingDescription.inputRate = inputRate;
 
     m_bindings.push_back(bindingDescription);
 }

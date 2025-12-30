@@ -9,7 +9,11 @@ namespace Vulkan {
 class CVertexFormat
 {
 public:
-    explicit CVertexFormat(std::span<const CVertexAttribute> attributes);
+    explicit CVertexFormat(
+        std::span<const CVertexAttribute> attributes,
+        std::uint32_t binding = 0,
+        vk::VertexInputRate inputRate = vk::VertexInputRate::eVertex
+    );
     CVertexFormat(const CVertexFormat&) = delete;
     CVertexFormat(CVertexFormat&&) noexcept = default;
     CVertexFormat& operator=(const CVertexFormat&) = delete;
