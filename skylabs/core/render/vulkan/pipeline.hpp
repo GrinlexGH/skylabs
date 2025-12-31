@@ -3,6 +3,11 @@
 #include <skylabs/core/render/vulkan/vertex_format.hpp>
 
 namespace Vulkan {
+enum class CBlendPreset
+{
+    eDefault,
+};
+
 class CPipeline
 {
 public:

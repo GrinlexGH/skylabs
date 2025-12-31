@@ -222,116 +222,54 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_renderFinishedSemaphores.emplace_back(*m_context.GetDevice(), vk::SemaphoreCreateInfo {});
     }
 
-        auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
-            for (const vk::Format format : candidates) {
-                const vk::FormatProperties props = m_context.GetPhysicalDevice()->GetHandle().getFormatProperties(format);
+    auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
+        for (const vk::Format format : candidates) {
+            const vk::FormatProperties props = m_context.GetPhysicalDevice()->GetHandle().getFormatProperties(format);
 
-                if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
-                    return format;
-                }
-                if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
-                    return format;
-                }
+            if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+                return format;
             }
+            if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+                return format;
+            }
+        }
 
-            throw std::runtime_error("Failed to find supported format!");
-        };
+        throw std::runtime_error("Failed to find supported format!");
+    };
 
-        auto findDepthFormat = [&] -> vk::Format {
-            return findSupportedFormat(
-                { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
-                vk::ImageTiling::eOptimal,
-                vk::FormatFeatureFlagBits::eDepthStencilAttachment
-            );
-        };
-
-        m_depthBuffer = CImage {
-            m_context,
-            vk::Extent3D { renderWidth, renderHeight, 1 },
-            findDepthFormat(),
+    auto findDepthFormat = [&] -> vk::Format {
+        return findSupportedFormat(
+            { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
             vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            vk::ImageAspectFlagBits::eDepth,
-            vk::MemoryPropertyFlagBits::eDeviceLocal
-        };
+            vk::FormatFeatureFlagBits::eDepthStencilAttachment
+        );
+    };
 
-        vk::AttachmentDescription depthAttachment {};
-        depthAttachment.format = findDepthFormat();
-        depthAttachment.samples = vk::SampleCountFlagBits::e1;
-        depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-        depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-        depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
-        depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    m_colorBuffer = CImage {
+        m_context,
+        vk::Extent3D { renderWidth, renderHeight, 1 },
+        vk::Format::eR8G8B8A8Srgb,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+        vk::ImageAspectFlagBits::eColor,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    };
 
-        vk::AttachmentReference depthAttachmentRef {};
-        depthAttachmentRef.attachment = 1;
-        depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    m_depthBuffer = CImage {
+        m_context,
+        vk::Extent3D { renderWidth, renderHeight, 1 },
+        findDepthFormat(),
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment,
+        vk::ImageAspectFlagBits::eDepth,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    };
 
-        m_colorBuffer = CImage {
-            m_context,
-            vk::Extent3D { renderWidth, renderHeight, 1 },
-            vk::Format::eR8G8B8A8Snorm,
-            vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
-            vk::ImageAspectFlagBits::eColor,
-            vk::MemoryPropertyFlagBits::eDeviceLocal
-        };
-
-        vk::AttachmentDescription colorAttachment {};
-        colorAttachment.format = vk::Format::eR8G8B8A8Snorm;
-        colorAttachment.samples = vk::SampleCountFlagBits::e1;
-        colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-        colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-        colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-        colorAttachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-        vk::AttachmentReference colorAttachmentRef {};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-
-        vk::SubpassDescription subpass {};
-        subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-        subpass.inputAttachmentCount = 0;
-        subpass.pInputAttachments = nullptr;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-        subpass.preserveAttachmentCount = 0;
-        subpass.pPreserveAttachments = nullptr;
-        subpass.pResolveAttachments = nullptr;
-        subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-        vk::SubpassDependency dependency {};
-        dependency.srcSubpass = vk::SubpassExternal;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-        dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-
-        std::array attachments = { colorAttachment, depthAttachment };
-        vk::RenderPassCreateInfo renderPassInfo {};
-        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        renderPassInfo.pAttachments = attachments.data();
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
-        m_renderPassMain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
-
-        std::array attachmentsS = { *m_colorBuffer.GetView(), *m_depthBuffer.GetView() };
-        vk::FramebufferCreateInfo framebufferInfo {};
-        framebufferInfo.renderPass = m_renderPassMain;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachmentsS.size());
-        framebufferInfo.pAttachments = attachmentsS.data();
-        framebufferInfo.width = renderWidth;
-        framebufferInfo.height = renderHeight;
-        framebufferInfo.layers = 1;
-        m_frameBufferMain = vk::raii::Framebuffer { *m_context.GetDevice(), framebufferInfo };
+    m_passChain = CRenderPassChain { m_context };
+    CRenderPass pass;
+    pass.AddOutImage(m_colorBuffer, ImageUsage::eShaderRead);
+    pass.AddOutImage(m_depthBuffer, ImageUsage::eDepth);
+    m_passChain.AddPass(pass);
 
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
@@ -514,7 +452,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         shaderStages,
         std::array { *m_descriptorSetLayoutMain },
         CVertexFormat { std::span<const CVertexAttribute, 3> { CVertex::GetAttributes() } },
-        m_renderPassMain
+        m_passChain.GetRenderPass()
     };
 
 
@@ -578,57 +516,10 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
 
-
-
-        colorAttachment = vk::AttachmentDescription {};
-        colorAttachment.format = m_swapchain.GetSurfaceFormat().format;
-        colorAttachment.samples = vk::SampleCountFlagBits::e1;
-        colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-        colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-        colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-        colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-
-        // Аттачмент референс, который описывает просто layout аттачмента
-        colorAttachmentRef = vk::AttachmentReference {};
-        colorAttachmentRef.attachment = 0; // Индекс в vk::SubpassDescription
-        colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-        // Описание сабпасса
-        subpass = vk::SubpassDescription {};
-        subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-        subpass.inputAttachmentCount = 0;
-        subpass.pInputAttachments = nullptr;
-        // Аттачмент в который будем писать
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-        subpass.preserveAttachmentCount = 0;
-        subpass.pPreserveAttachments = nullptr;
-        subpass.pResolveAttachments = nullptr;
-        subpass.pDepthStencilAttachment = nullptr;
-
-        // Описываем как сабпассы будут связаны
-        dependency = vk::SubpassDependency {};
-        dependency.srcSubpass = vk::SubpassExternal; // Пустой внешний сабпасс
-        dependency.dstSubpass = 0; // Описание применяется к первому (нулевому) сабпассу
-        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // Ждём когда на этой стадии закончатся операции
-        dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Какие конкретно операции. Пустое значит все операции
-        dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput; // На какую стадию идём
-        dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Что делаем
-
-        std::array attachmentsSwapchain = { colorAttachment };
-        renderPassInfo = vk::RenderPassCreateInfo {};
-        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachmentsSwapchain.size());
-        renderPassInfo.pAttachments = attachmentsSwapchain.data();
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
-        m_renderPassSwapchain = m_context.GetDevice().GetHandle().createRenderPass(renderPassInfo);
-    //endregion Subpasses
-
-
+    m_finalPassChain = CRenderPassChain { m_context };
+    CRenderPass finalPass;
+    finalPass.AddOutImage(m_colorBuffer, ImageUsage::ePresent);
+    m_finalPassChain.AddPass(finalPass);
 
     //region PIPELINE
     const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");
@@ -643,10 +534,10 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context,
         shaderStagesSwapchain,
         std::array { *m_descriptorSetLayoutSwapchain },
-        CVertexFormat {{}}, m_renderPassSwapchain
+        CVertexFormat {{}}, m_finalPassChain.GetRenderPass()
     };
 
-    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_renderPassSwapchain);
+    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_finalPassChain.GetRenderPass());
 
     //region VERTEX BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
@@ -754,7 +645,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_swapchain, m_frameBuffersSwapchain);
+        Resize(m_context.GetDevice().GetHandle(), m_finalPassChain.GetRenderPass(), m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }
@@ -774,8 +665,8 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
 
     vk::RenderPassBeginInfo renderPassInfo {};
-    renderPassInfo.renderPass = m_renderPassMain;
-    renderPassInfo.framebuffer = m_frameBufferMain;
+    renderPassInfo.renderPass = m_passChain.GetRenderPass();
+    renderPassInfo.framebuffer = m_passChain.GetFrameBuffer();
     renderPassInfo.renderArea.offset = { { 0, 0 } };
     renderPassInfo.renderArea.extent = vk::Extent2D { renderWidth, renderHeight };
 
@@ -818,7 +709,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     // #region RENDER_PASS_BEGIN
     renderPassInfo = vk::RenderPassBeginInfo {};
-    renderPassInfo.renderPass = m_renderPassSwapchain;
+    renderPassInfo.renderPass = m_finalPassChain.GetRenderPass();
     renderPassInfo.framebuffer = m_frameBuffersSwapchain[imageIndex];
     renderPassInfo.renderArea.offset = { { 0, 0 } };
     renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
@@ -903,7 +794,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(m_context.GetDevice().GetHandle(), m_renderPassSwapchain, m_swapchain, m_frameBuffersSwapchain);
+        Resize(m_context.GetDevice().GetHandle(), m_finalPassChain.GetRenderPass(), m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }

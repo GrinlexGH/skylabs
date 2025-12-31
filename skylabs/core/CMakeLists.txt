@@ -52,6 +52,8 @@ target_sources(
         render/vulkan/render_pass.cpp
         render/vulkan/vertex_format.hpp
         render/vulkan/vertex_format.cpp
+        render/vulkan/render_pass_chain.hpp
+        render/vulkan/render_pass_chain.cpp
         render/vertex.hpp
         SDL/context.cpp
         SDL/context.hpp
