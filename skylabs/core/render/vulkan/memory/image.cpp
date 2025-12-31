@@ -45,10 +45,10 @@ CImage::CImage(
 ) {
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
-    imageInfo.extent = extent;
+    imageInfo.extent = m_extent = extent;
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
+    imageInfo.format = m_format = format;
     imageInfo.tiling = tiling;
     imageInfo.initialLayout = vk::ImageLayout::eUndefined;
     imageInfo.usage = usage;
@@ -80,6 +80,7 @@ void CImage::Clear() {
     m_allocation.reset();
     m_view.clear();
     m_layout = vk::ImageLayout::eUndefined;
+    m_format = vk::Format::eUndefined;
 }
 
 void CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) {

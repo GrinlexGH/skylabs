@@ -9,6 +9,7 @@
 #include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline.hpp>
+#include <skylabs/core/render/vulkan/render_pass_chain.hpp>
 
 #include <glm/glm.hpp>
 
@@ -43,9 +44,9 @@ private:
     CPipeline m_pipelineMain { nullptr };
     CPipeline m_pipelineSwapchain { nullptr };
 
-    vk::raii::RenderPass m_renderPassMain { nullptr };
-    vk::raii::RenderPass m_renderPassSwapchain { nullptr };
-    vk::raii::Framebuffer m_frameBufferMain { nullptr };
+    CRenderPassChain m_passChain { nullptr };
+    CRenderPassChain m_finalPassChain { nullptr };
+
     std::vector<vk::raii::Framebuffer> m_frameBuffersSwapchain;
 
     CSampler m_mainSampler { nullptr };

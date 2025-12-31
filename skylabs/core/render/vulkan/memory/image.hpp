@@ -26,6 +26,8 @@ public:
 
     [[nodiscard]] auto GetView() const -> const vk::raii::ImageView& { return m_view; }
     [[nodiscard]] auto GetLayout() const -> vk::ImageLayout { return m_layout; }
+    [[nodiscard]] auto GetFormat() const -> vk::Format { return m_format; }
+    [[nodiscard]] auto GetExtent() const -> vk::Extent3D { return m_extent; }
 
     auto Clear() -> void;
 
@@ -38,5 +40,7 @@ private:
     vk::raii::ImageView m_view = nullptr;
 
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;
+    vk::Format m_format = vk::Format::eUndefined;
+    vk::Extent3D m_extent;
 };
 }
