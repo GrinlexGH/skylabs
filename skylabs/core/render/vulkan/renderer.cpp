@@ -56,7 +56,7 @@ std::vector<std::uint16_t> indices = {
 namespace {
 std::pair<vk::Result, uint32_t> SwapchainNextImageWrapper(
     const vk::raii::SwapchainKHR& swapchain,
-    uint64_t timeout,
+    const uint64_t timeout,
     vk::Semaphore semaphore,
     vk::Fence fence
 ) {
@@ -78,7 +78,7 @@ vk::Result QueuePresentWrapper(
 auto CreateFrameBuffers(
     const vk::raii::Device& device,
     const Vulkan::CSwapchain& swapchain,
-    const vk::raii::RenderPass& renderPass
+    const vk::RenderPass renderPass
 ) -> std::vector<vk::raii::Framebuffer> {
     std::vector<vk::raii::Framebuffer> out;
 
@@ -104,7 +104,7 @@ auto CreateFrameBuffers(
 
 auto Resize(
     const vk::raii::Device& device,
-    const vk::raii::RenderPass& renderPass,
+    const vk::RenderPass renderPass,
     Vulkan::CSwapchain& swapchain,
     std::vector<vk::raii::Framebuffer>& frameBuffers
 ) -> void {
@@ -265,12 +265,13 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::MemoryPropertyFlagBits::eDeviceLocal
     };
 
-    m_passChain = CRenderPassChain { m_context };
-    CRenderPass pass;
-    pass.AddOutImage(m_colorBuffer, ImageUsage::eShaderRead);
-    pass.AddOutImage(m_depthBuffer, ImageUsage::eDepth);
-    m_passChain.AddPass(pass);
-
+    m_mainPass = CLegacyRenderPass {
+        m_context,
+        {{
+            { .m_image = &m_colorBuffer, .m_usage = ImageUsage::eShaderRead },
+            { .m_image = &m_depthBuffer, .m_usage = ImageUsage::eDepth }
+        }}
+    };
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
     const CShader fragmentShader(m_context, CShader::Type::eFragment, "shader.frag.spv");
@@ -289,7 +290,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 
     auto stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
-    auto commandPool = (*m_context.GetDevice()).createCommandPool({
+    auto commandPool = m_context.GetDevice()->createCommandPool({
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             m_context.GetDevice().GetGraphicsQueue().m_familyIndex
     });
@@ -322,7 +323,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         stagingBuffer.Clear();
     }
     SDL_DestroySurface(image);
-    image = nullptr;
 
     m_modelTextureSampler = CSampler { m_context };
 
@@ -452,10 +452,8 @@ CRenderer::CRenderer(const IWindow* const window) {
         shaderStages,
         std::array { *m_descriptorSetLayoutMain },
         CVertexFormat { std::span<const CVertexAttribute, 3> { CVertex::GetAttributes() } },
-        m_passChain.GetRenderPass()
+        m_mainPass.GetRenderPass()
     };
-
-
 
 
     vk::DescriptorSetLayoutBinding samplerBinding {};
@@ -512,16 +510,14 @@ CRenderer::CRenderer(const IWindow* const window) {
         descriptorWrite.descriptorCount = 1;
         descriptorWrite.pImageInfo = &imageInfo;
 
-        (*m_context.GetDevice()).updateDescriptorSets(descriptorWrite, nullptr);
+        m_context.GetDevice()->updateDescriptorSets(descriptorWrite, nullptr);
     }
 
+    m_swapchainPass = CLegacyRenderPass {
+        m_context,
+        {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eSwapchainPresent }}}
+    };
 
-    m_finalPassChain = CRenderPassChain { m_context };
-    CRenderPass finalPass;
-    finalPass.AddOutImage(m_colorBuffer, ImageUsage::ePresent);
-    m_finalPassChain.AddPass(finalPass);
-
-    //region PIPELINE
     const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");
     const CShader fragmentShaderSwapchain(m_context, CShader::Type::eFragment, "shaderSwapchain.frag.spv");
 
@@ -534,10 +530,10 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context,
         shaderStagesSwapchain,
         std::array { *m_descriptorSetLayoutSwapchain },
-        CVertexFormat {{}}, m_finalPassChain.GetRenderPass()
+        CVertexFormat {{}}, m_swapchainPass.GetRenderPass()
     };
 
-    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_finalPassChain.GetRenderPass());
+    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_swapchainPass.GetRenderPass());
 
     //region VERTEX BUFFER
     vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
@@ -645,7 +641,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(m_context.GetDevice().GetHandle(), m_finalPassChain.GetRenderPass(), m_swapchain, m_frameBuffersSwapchain);
+        Resize(m_context.GetDevice().GetHandle(), m_swapchainPass.GetRenderPass(), m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }
@@ -665,8 +661,8 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
 
     vk::RenderPassBeginInfo renderPassInfo {};
-    renderPassInfo.renderPass = m_passChain.GetRenderPass();
-    renderPassInfo.framebuffer = m_passChain.GetFrameBuffer();
+    renderPassInfo.renderPass = m_mainPass.GetRenderPass();
+    renderPassInfo.framebuffer = m_mainPass.GetFramebuffer();
     renderPassInfo.renderArea.offset = { { 0, 0 } };
     renderPassInfo.renderArea.extent = vk::Extent2D { renderWidth, renderHeight };
 
@@ -709,7 +705,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     // #region RENDER_PASS_BEGIN
     renderPassInfo = vk::RenderPassBeginInfo {};
-    renderPassInfo.renderPass = m_finalPassChain.GetRenderPass();
+    renderPassInfo.renderPass = m_swapchainPass.GetRenderPass();
     renderPassInfo.framebuffer = m_frameBuffersSwapchain[imageIndex];
     renderPassInfo.renderArea.offset = { { 0, 0 } };
     renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
@@ -794,7 +790,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(m_context.GetDevice().GetHandle(), m_finalPassChain.GetRenderPass(), m_swapchain, m_frameBuffersSwapchain);
+        Resize(m_context.GetDevice().GetHandle(), m_swapchainPass.GetRenderPass(), m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }
