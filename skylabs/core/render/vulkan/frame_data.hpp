@@ -5,6 +5,7 @@ namespace Vulkan {
 class CFrameData
 {
 public:
+    explicit CFrameData(std::nullptr_t) {}
     explicit CFrameData(const CContext& context);
     CFrameData(const CFrameData&) = delete;
     CFrameData(CFrameData&&) noexcept = default;
