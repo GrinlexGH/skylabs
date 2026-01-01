@@ -28,6 +28,7 @@ public:
 
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Device& { return m_handle; }
     [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::Device& { return m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Device* { return &m_handle; }
 
     [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return m_enabledExtensions.contains(name); }
 
