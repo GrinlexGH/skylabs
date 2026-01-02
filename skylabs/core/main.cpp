@@ -51,6 +51,8 @@ void EnableVTP() {
 }
 #endif
 
+#include <steam/steam_api.h>
+
 extern "C" DLL_EXPORT int CoreMain(std::span<char*> /*args*/) {
 #ifdef PLATFORM_WINDOWS
     SetConsoleCP(CP_UTF8);
@@ -59,8 +61,12 @@ extern "C" DLL_EXPORT int CoreMain(std::span<char*> /*args*/) {
     EnableVTP();
 #endif
 
+    SteamAPI_Init();
+
     CLauncher launcher;
     launcher.Run();
+
+    SteamAPI_Shutdown();
 
     return 0;
 }
