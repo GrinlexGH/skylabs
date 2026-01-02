@@ -71,7 +71,6 @@ private:
     std::vector<CHostBuffer> m_uniformBuffers;
     std::vector<CMemoryMapping> m_uniformBuffersMapped;
 
-
     CImage m_modelTexture { nullptr };
     CSampler m_modelTextureSampler { nullptr };
 

@@ -147,6 +147,93 @@ auto EndSingleTimeCommands(
     commandBuffer.clear();
 }
 
+void generateMipmaps(
+    const vk::raii::PhysicalDevice& physicalDevice,
+    vk::CommandBuffer cmd,
+    const Vulkan::CImage& image
+) {
+    const vk::FormatProperties formatProperties = physicalDevice.getFormatProperties(image.GetFormat());
+
+    if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
+        throw std::runtime_error("texture image format does not support linear blitting!");
+    }
+
+    vk::ImageMemoryBarrier barrier{};
+    barrier.image = *image;
+    barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+    barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
+    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.levelCount = 1;
+
+    int32_t mipWidth = image.GetExtent().width;
+    int32_t mipHeight = image.GetExtent().height;
+
+    for (uint32_t i = 1; i < image.GetMipLevels(); i++) {
+        barrier.subresourceRange.baseMipLevel = i - 1;
+        barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+        barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
+        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+        barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+
+        cmd.pipelineBarrier(
+            vk::PipelineStageFlagBits::eTransfer,
+            vk::PipelineStageFlagBits::eTransfer,
+            {},
+            0, nullptr, 0, nullptr,
+            1, &barrier
+        );
+
+        vk::ImageBlit blit {};
+        blit.srcOffsets[0] = {{ 0, 0, 0 }};
+        blit.srcOffsets[1] = {{ mipWidth, mipHeight, 1 }};
+        blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+        blit.srcSubresource.mipLevel = i - 1;
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = 1;
+        blit.dstOffsets[0] = {{ 0, 0, 0 }};
+        blit.dstOffsets[1] = {{ mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 }};
+        blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+        blit.dstSubresource.mipLevel = i;
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = 1;
+
+        cmd.blitImage(
+            *image, vk::ImageLayout::eTransferSrcOptimal,
+            *image, vk::ImageLayout::eTransferDstOptimal,
+            1, &blit,
+            vk::Filter::eLinear
+        );
+
+        barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
+        barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+        cmd.pipelineBarrier(
+            vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader,
+            {}, 0, nullptr, 0, nullptr,
+            1, &barrier
+        );
+
+        if (mipWidth > 1) mipWidth /= 2;
+        if (mipHeight > 1) mipHeight /= 2;
+    }
+
+    barrier.subresourceRange.baseMipLevel = image.GetMipLevels() - 1;
+    barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+    barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+    cmd.pipelineBarrier(
+        vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {},
+        0, nullptr, 0, nullptr,
+        1, &barrier
+    );
+}
+
 void CopyBuffer(
     const Vulkan::CDevice& device,
     const vk::raii::CommandPool& commandPool,
@@ -303,19 +390,22 @@ CRenderer::CRenderer(const IWindow* const window) {
         std::free(p);
     }
 
-    m_modelTexture = CImage { m_context,
-                              { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
-                              vk::Format::eR8G8B8A8Srgb,
-                              vk::ImageTiling::eOptimal,
-                              vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-                              vk::ImageAspectFlagBits::eColor,
-                              vk::MemoryPropertyFlagBits::eDeviceLocal };
+    m_modelTexture = CImage {
+        m_context,
+        { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
+        vk::Format::eR8G8B8A8Srgb,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+        vk::ImageAspectFlagBits::eColor,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1
+    };
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.GetDevice(), commandPool);
     {
         m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
         m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
-        m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+        generateMipmaps(m_context.GetPhysicalDevice()->GetHandle(), commandBuffer, m_modelTexture);
     }
     EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
 
@@ -324,7 +414,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
     SDL_DestroySurface(image);
 
-    m_modelTextureSampler = CSampler { m_context };
+    m_modelTextureSampler = CSampler { m_context, m_modelTexture };
 
 
     constexpr std::string MODEL_PATH = "assets/viking_room.obj";
@@ -365,7 +455,7 @@ CRenderer::CRenderer(const IWindow* const window) {
             sizeof(UniformBufferObject),
             vk::BufferUsageFlagBits::eUniformBuffer
         );
-        m_uniformBuffersMapped.emplace_back(m_uniformBuffers[i].Map());
+        m_uniformBuffersMapped.emplace_back(m_uniformBuffers.at(i).Map());
     }
 
     vk::DescriptorSetLayoutBinding uboLayoutBinding {};
@@ -450,7 +540,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context,
         shaderStages,
         std::array { *m_descriptorSetLayoutMain },
-        CVertexFormat { std::span<const CVertexAttribute, 3> { CVertex::GetAttributes() } },
+        CVertexFormat { CVertex::GetAttributes() },
         m_mainPass.GetRenderPass()
     };
 
@@ -493,7 +583,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_descriptorSetsSwapchain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
 
-    m_mainSampler = CSampler {m_context};
+    m_mainSampler = CSampler { m_context, m_colorBuffer };
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorImageInfo imageInfo {};
@@ -515,7 +605,10 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_swapchainPass = CLegacyRenderPass {
         m_context,
         {
-            .m_colorImages = {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eSwapchainPresent }}}
+            .m_colorImages = {
+                {
+                    { .m_image = &m_colorBuffer, .m_usage = ImageUsage::eSwapchainPresent },
+                }}
         }
     };
 
@@ -537,7 +630,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_swapchainPass.GetRenderPass());
 
     //region VERTEX BUFFER
-    vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
+    const vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
 
     stagingBuffer = CHostBuffer {
         m_context,
@@ -546,7 +639,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
     {
-        CMemoryMapping mapping = stagingBuffer.Map();
+        const CMemoryMapping mapping = stagingBuffer.Map();
         std::memcpy(mapping.GetData(), vertices.data(), vertexBufferSize);
     }
 
@@ -570,7 +663,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     //endregion VERTEX BUFFER
 
     //region INDEX BUFFER
-    vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
+    const vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
 
     stagingBuffer = CHostBuffer {
         m_context,
@@ -708,7 +801,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     renderPassInfo = vk::RenderPassBeginInfo {};
     renderPassInfo.renderPass = m_swapchainPass.GetRenderPass();
     renderPassInfo.framebuffer = m_frameBuffersSwapchain[imageIndex];
-    renderPassInfo.renderArea.offset = { { 0, 0 } };
+    renderPassInfo.renderArea.offset = { { .x = 0, .y = 0 } };
     renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
 
     std::array<vk::ClearValue, 1> clearValues{};
