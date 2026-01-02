@@ -62,8 +62,9 @@ private:
 
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
-    CImage m_depthBuffer { nullptr };
     CImage m_colorBuffer { nullptr };
+    CImage m_depthBufferMSAA { nullptr };
+    CImage m_colorBufferMSAA { nullptr };
 
     CDeviceBuffer m_vertexBuffer { nullptr };
     CDeviceBuffer m_indexBuffer { nullptr };

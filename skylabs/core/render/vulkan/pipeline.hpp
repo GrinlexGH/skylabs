@@ -17,6 +17,7 @@ public:
         std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
         std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
         const CVertexFormat& vertexFormat,
+        vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1,
         vk::RenderPass renderPass = nullptr
     );
     CPipeline(const CPipeline&) = delete;

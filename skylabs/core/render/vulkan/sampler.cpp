@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/sampler.hpp>
 
 namespace Vulkan {
-CSampler::CSampler(const CContext& context, const CImage& image) {
+CSampler::CSampler(const CContext& context) {
     vk::SamplerCreateInfo createInfo {};
     createInfo.magFilter = vk::Filter::eNearest;
     createInfo.minFilter = vk::Filter::eNearest;
@@ -16,7 +16,7 @@ CSampler::CSampler(const CContext& context, const CImage& image) {
     createInfo.compareOp = vk::CompareOp::eAlways;
     createInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
     createInfo.mipLodBias = 0.0f;
-    createInfo.minLod = image.GetMipLevels() / 2.0f;
+    createInfo.minLod = 0.0f;
     createInfo.maxLod = vk::LodClampNone;
     m_handle = vk::raii::Sampler { *context.GetDevice(), createInfo };
 }
