@@ -42,7 +42,8 @@ CImage::CImage(
     const vk::ImageUsageFlags& usage,
     const vk::ImageAspectFlags& imageAspectFlags,
     const vk::MemoryPropertyFlags& memoryProperties,
-    const std::uint32_t mipLevels
+    const std::uint32_t mipLevels,
+    const vk::SampleCountFlagBits sampleCount
 ) {
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
@@ -54,7 +55,7 @@ CImage::CImage(
     imageInfo.initialLayout = vk::ImageLayout::eUndefined;
     imageInfo.usage = usage;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
-    imageInfo.samples = vk::SampleCountFlagBits::e1;
+    imageInfo.samples = m_sampleCount = sampleCount;
     imageInfo.flags = {};
 
     vma::AllocationCreateInfo allocInfo {};

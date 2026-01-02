@@ -6,6 +6,7 @@ CPipeline::CPipeline(
     const std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
     const std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
     const CVertexFormat& vertexFormat,
+    const vk::SampleCountFlagBits sampleCount,
     const vk::RenderPass renderPass
 ) {
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
@@ -35,7 +36,7 @@ CPipeline::CPipeline(
 
     vk::PipelineMultisampleStateCreateInfo multisampling {};
     multisampling.sampleShadingEnable = vk::False;
-    multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
+    multisampling.rasterizationSamples = sampleCount;
 
     vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
     colorBlendAttachment.colorWriteMask =
@@ -82,7 +83,7 @@ CPipeline::CPipeline(
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    m_layout = vk::raii::PipelineLayout { (*context.GetDevice()), pipelineLayoutInfo };
+    m_layout = vk::raii::PipelineLayout { *context.GetDevice(), pipelineLayoutInfo };
 
     vk::GraphicsPipelineCreateInfo pipelineInfo {};
     pipelineInfo.stageCount = shaderStages.size();

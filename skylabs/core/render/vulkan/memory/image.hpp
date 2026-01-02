@@ -14,7 +14,8 @@ public:
         const vk::ImageUsageFlags& usage,
         const vk::ImageAspectFlags& imageAspectFlags,
         const vk::MemoryPropertyFlags& memoryProperties,
-        std::uint32_t mipLevels = 1
+        std::uint32_t mipLevels = 1,
+        vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1
     );
     CImage(const CImage&) = delete;
     CImage(CImage&&) noexcept = default;
@@ -30,6 +31,7 @@ public:
     [[nodiscard]] auto GetFormat() const noexcept -> vk::Format { return m_format; }
     [[nodiscard]] auto GetExtent() const noexcept -> vk::Extent3D { return m_extent; }
     [[nodiscard]] auto GetMipLevels() const noexcept -> std::uint32_t { return m_mipLevels; }
+    [[nodiscard]] auto GetSampleCount() const noexcept -> vk::SampleCountFlagBits { return m_sampleCount; }
 
     auto Clear() -> void;
 
@@ -45,5 +47,6 @@ private:
     vk::Format m_format = vk::Format::eUndefined;
     vk::Extent3D m_extent;
     std::uint32_t m_mipLevels = 1;
+    vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
 };
 }

@@ -3,6 +3,7 @@
 namespace {
 vk::ImageLayout ToLayout(const Vulkan::ImageUsage usage) {
     switch (usage) {
+        case Vulkan::ImageUsage::eNone: return vk::ImageLayout::eColorAttachmentOptimal;
         case Vulkan::ImageUsage::eShaderRead: return vk::ImageLayout::eShaderReadOnlyOptimal;
         case Vulkan::ImageUsage::eSwapchainPresent: return vk::ImageLayout::ePresentSrcKHR;
     }
@@ -11,6 +12,7 @@ vk::ImageLayout ToLayout(const Vulkan::ImageUsage usage) {
 
 vk::AttachmentStoreOp ToStoreOp(const Vulkan::ImageUsage usage) {
     switch (usage) {
+        case Vulkan::ImageUsage::eNone: return vk::AttachmentStoreOp::eDontCare;
         default: return vk::AttachmentStoreOp::eStore;
     }
 }
@@ -27,6 +29,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     std::vector<vk::ImageView> views;
     std::vector<vk::AttachmentDescription> descriptions;
     std::vector<vk::AttachmentReference> colorReferences;
+    std::vector<vk::AttachmentReference> resolveReferences;
     for (const auto& [image, usage] : description.m_colorImages) {
         if (!image)
             continue;
@@ -41,7 +44,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
 
         vk::AttachmentDescription attachmentDescription {};
         attachmentDescription.format = image->GetFormat();
-        attachmentDescription.samples = vk::SampleCountFlagBits::e1;
+        attachmentDescription.samples = image->GetSampleCount();
         attachmentDescription.loadOp = vk::AttachmentLoadOp::eClear;
         attachmentDescription.storeOp = ToStoreOp(usage);
         attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
@@ -58,11 +61,29 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
         colorReferences.push_back(attachmentReference);
     }
 
+    for (const auto& [image, usage] : description.m_resolveImages) {
+        vk::AttachmentDescription desc {};
+        desc.format = image->GetFormat();
+        desc.samples = vk::SampleCountFlagBits::e1;
+        desc.loadOp = vk::AttachmentLoadOp::eDontCare;
+        desc.storeOp = vk::AttachmentStoreOp::eStore;
+        desc.initialLayout = vk::ImageLayout::eUndefined;
+        desc.finalLayout = ToLayout(usage);
+
+        vk::AttachmentReference ref{};
+        ref.attachment = static_cast<uint32_t>(views.size());
+        ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+        views.push_back(image->GetView());
+        descriptions.push_back(desc);
+        resolveReferences.push_back(ref);
+    }
+
     std::optional<vk::AttachmentReference> depthReference;
     if (description.m_depthImage) {
         vk::AttachmentDescription attachmentDescription {};
         attachmentDescription.format = description.m_depthImage->GetFormat();
-        attachmentDescription.samples = vk::SampleCountFlagBits::e1;
+        attachmentDescription.samples = description.m_depthImage->GetSampleCount();
         attachmentDescription.loadOp = vk::AttachmentLoadOp::eClear;
         attachmentDescription.storeOp = vk::AttachmentStoreOp::eDontCare;
         attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
@@ -87,7 +108,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     subpassDescription.pColorAttachments = colorReferences.data();
     subpassDescription.preserveAttachmentCount = 0;
     subpassDescription.pPreserveAttachments = nullptr;
-    subpassDescription.pResolveAttachments = nullptr;
+    subpassDescription.pResolveAttachments = resolveReferences.data();
     subpassDescription.pDepthStencilAttachment = depthReference.has_value() ? std::to_address(depthReference) : nullptr;
 
     vk::SubpassDependency dependency {};

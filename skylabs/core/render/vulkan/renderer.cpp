@@ -342,21 +342,36 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::MemoryPropertyFlagBits::eDeviceLocal
     };
 
-    m_depthBuffer = CImage {
+    m_colorBufferMSAA = CImage {
+        m_context,
+        vk::Extent3D { renderWidth, renderHeight, 1 },
+        vk::Format::eR8G8B8A8Srgb,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eColorAttachment,
+        vk::ImageAspectFlagBits::eColor,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        1,
+        vk::SampleCountFlagBits::e8
+    };
+
+    m_depthBufferMSAA = CImage {
         m_context,
         vk::Extent3D { renderWidth, renderHeight, 1 },
         findDepthFormat(),
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::ImageAspectFlagBits::eDepth,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        1,
+        vk::SampleCountFlagBits::e8
     };
 
     m_mainPass = CLegacyRenderPass {
         m_context,
         {
-            .m_colorImages = {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eShaderRead }}},
-            .m_depthImage = &m_depthBuffer
+            .m_colorImages = {{{ .m_image = &m_colorBufferMSAA, .m_usage = ImageUsage::eNone }}},
+            .m_resolveImages = {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eShaderRead }}},
+            .m_depthImage = &m_depthBufferMSAA
         }
     };
 
@@ -414,7 +429,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
     SDL_DestroySurface(image);
 
-    m_modelTextureSampler = CSampler { m_context, m_modelTexture };
+    m_modelTextureSampler = CSampler { m_context };
 
 
     constexpr std::string MODEL_PATH = "assets/viking_room.obj";
@@ -541,6 +556,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         shaderStages,
         std::array { *m_descriptorSetLayoutMain },
         CVertexFormat { CVertex::GetAttributes() },
+        vk::SampleCountFlagBits::e8,
         m_mainPass.GetRenderPass()
     };
 
@@ -583,7 +599,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_descriptorSetsSwapchain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
 
-    m_mainSampler = CSampler { m_context, m_colorBuffer };
+    m_mainSampler = CSampler { m_context };
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorImageInfo imageInfo {};
@@ -624,7 +640,9 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context,
         shaderStagesSwapchain,
         std::array { *m_descriptorSetLayoutSwapchain },
-        CVertexFormat {{}}, m_swapchainPass.GetRenderPass()
+        CVertexFormat {{}},
+        vk::SampleCountFlagBits::e1,
+        m_swapchainPass.GetRenderPass()
     };
 
     m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_swapchainPass.GetRenderPass());
@@ -760,9 +778,10 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     renderPassInfo.renderArea.offset = { { 0, 0 } };
     renderPassInfo.renderArea.extent = vk::Extent2D { renderWidth, renderHeight };
 
-    std::array<vk::ClearValue, 2> clearValuesMain {};
-    clearValuesMain[0].color = vk::ClearColorValue { 0.2f, 0.3f, 0.6f, 1.0f };
-    clearValuesMain[1].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
+    std::array<vk::ClearValue, 3> clearValuesMain {};
+    clearValuesMain[0].color = vk::ClearColorValue { 0.0f, 0.0f, 0.0f, 1.0f };
+    clearValuesMain[1].color = vk::ClearColorValue { 1.0f, 0.3f, 0.6f, 1.0f };
+    clearValuesMain[2].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValuesMain.size());
     renderPassInfo.pClearValues = clearValuesMain.data();
