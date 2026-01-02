@@ -168,22 +168,22 @@ void CopyBuffer(
 
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
-    std::vector<Vulkan::CMemoryMapping>& uniformBuffersMapped,
-    std::uint32_t currentImage,
-    glm::mat4 view,
-    float deltaTime
+    const std::vector<Vulkan::CMemoryMapping>& uniformBuffersMapped,
+    const std::uint32_t currentImage,
+    const glm::mat4& view,
+    const float deltaTime
 ) {
     using namespace std::chrono;
 
     static auto startTime = high_resolution_clock::now();
 
-    auto currentTime = high_resolution_clock::now();
+    const auto currentTime = high_resolution_clock::now();
     const float time = duration<float>(currentTime - startTime).count();
 
     UniformBufferObject ubo {};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = view;
-    ubo.proj = glm::perspective(glm::radians(90.0f), (float) cameraDimensions.width / (float) cameraDimensions.height, 0.01f, 10.0f);
+    ubo.proj = glm::perspective(glm::radians(90.0f), static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height), 0.01f, 10.0f);
     ubo.proj[1][1] *= -1;
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
     if (glm::length(targetOffset - offset) < 0.0001) {
@@ -191,7 +191,7 @@ void UpdateUniformBuffer(
     }
     ubo.offset = offset;
 
-    std::memcpy(*uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    std::memcpy(*uniformBuffersMapped.at(currentImage), &ubo, sizeof(ubo));
 }
 
 std::uint32_t renderWidth = 0;
@@ -357,13 +357,12 @@ CRenderer::CRenderer(const IWindow* const window) {
         }
     }
 
-    vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
     m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
     m_uniformBuffersMapped.reserve(FRAMES_IN_FLIGHT_COUNT);
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         m_uniformBuffers.emplace_back(
             m_context,
-            bufferSize,
+            sizeof(UniformBufferObject),
             vk::BufferUsageFlagBits::eUniformBuffer
         );
         m_uniformBuffersMapped.emplace_back(m_uniformBuffers[i].Map());

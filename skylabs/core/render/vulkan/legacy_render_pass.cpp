@@ -23,15 +23,19 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     }
 
     // Create attachment reference & description vectors
+    vk::Extent2D extent;
+    std::vector<vk::ImageView> views;
+    std::vector<vk::AttachmentDescription> descriptions;
+    std::vector<vk::AttachmentReference> colorReferences;
     for (const auto& [image, usage] : description.m_colorImages) {
         if (!image)
             continue;
 
         const vk::Extent2D imageExtent { image->GetExtent().width, image->GetExtent().height };
-        if (m_extent == vk::Extent2D {}) {
-            m_extent = imageExtent;
-        } else if (m_extent != imageExtent) {
-            Log::Debug("Image not corresponding size ({}x{}). Skipping.", m_extent.width, m_extent.height);
+        if (extent == vk::Extent2D {}) {
+            extent = imageExtent;
+        } else if (extent != imageExtent) {
+            Log::Debug("Image not corresponding size ({}x{}). Skipping.", extent.width, extent.height);
             continue;
         }
 
@@ -46,14 +50,15 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
         attachmentDescription.finalLayout = ToLayout(usage);
 
         vk::AttachmentReference attachmentReference {};
-        attachmentReference.attachment = static_cast<std::uint32_t>(m_views.size());
+        attachmentReference.attachment = static_cast<std::uint32_t>(views.size());
         attachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
-        m_views.push_back(image->GetView());
-        m_descriptions.push_back(attachmentDescription);
-        m_colorReferences.push_back(attachmentReference);
+        views.push_back(image->GetView());
+        descriptions.push_back(attachmentDescription);
+        colorReferences.push_back(attachmentReference);
     }
 
+    std::optional<vk::AttachmentReference> depthReference;
     if (description.m_depthImage) {
         vk::AttachmentDescription attachmentDescription {};
         attachmentDescription.format = description.m_depthImage->GetFormat();
@@ -66,24 +71,24 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
         attachmentDescription.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
         vk::AttachmentReference attachmentReference {};
-        attachmentReference.attachment = static_cast<uint32_t>(m_views.size());
+        attachmentReference.attachment = static_cast<uint32_t>(views.size());
         attachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-        m_views.push_back(description.m_depthImage->GetView());
-        m_descriptions.push_back(attachmentDescription);
-        m_depthReference = attachmentReference;
+        views.push_back(description.m_depthImage->GetView());
+        descriptions.push_back(attachmentDescription);
+        depthReference = attachmentReference;
     }
 
     vk::SubpassDescription subpassDescription {};
     subpassDescription.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
     subpassDescription.inputAttachmentCount = 0;
     subpassDescription.pInputAttachments = nullptr;
-    subpassDescription.colorAttachmentCount = static_cast<std::uint32_t>(m_colorReferences.size());
-    subpassDescription.pColorAttachments = m_colorReferences.data();
+    subpassDescription.colorAttachmentCount = static_cast<std::uint32_t>(colorReferences.size());
+    subpassDescription.pColorAttachments = colorReferences.data();
     subpassDescription.preserveAttachmentCount = 0;
     subpassDescription.pPreserveAttachments = nullptr;
     subpassDescription.pResolveAttachments = nullptr;
-    subpassDescription.pDepthStencilAttachment = m_depthReference.has_value() ? std::to_address(m_depthReference) : nullptr;
+    subpassDescription.pDepthStencilAttachment = depthReference.has_value() ? std::to_address(depthReference) : nullptr;
 
     vk::SubpassDependency dependency {};
     dependency.srcSubpass = vk::SubpassExternal;
@@ -94,8 +99,8 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 
     vk::RenderPassCreateInfo renderPassInfo {};
-    renderPassInfo.attachmentCount = static_cast<std::uint32_t>(m_descriptions.size());
-    renderPassInfo.pAttachments = m_descriptions.data();
+    renderPassInfo.attachmentCount = static_cast<std::uint32_t>(descriptions.size());
+    renderPassInfo.pAttachments = descriptions.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpassDescription;
     renderPassInfo.dependencyCount = 1;
@@ -104,10 +109,10 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
 
     vk::FramebufferCreateInfo framebufferInfo {};
     framebufferInfo.renderPass = m_renderPass;
-    framebufferInfo.attachmentCount = static_cast<std::uint32_t>(m_views.size());
-    framebufferInfo.pAttachments = m_views.data();
-    framebufferInfo.width = m_extent.width;
-    framebufferInfo.height = m_extent.height;
+    framebufferInfo.attachmentCount = static_cast<std::uint32_t>(views.size());
+    framebufferInfo.pAttachments = views.data();
+    framebufferInfo.width = extent.width;
+    framebufferInfo.height = extent.height;
     framebufferInfo.layers = 1;
     m_framebuffer = vk::raii::Framebuffer { *context.GetDevice(), framebufferInfo };
 }
