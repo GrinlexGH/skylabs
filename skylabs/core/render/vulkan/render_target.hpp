@@ -5,7 +5,6 @@ namespace Vulkan {
 enum class ImageUsage : std::uint8_t
 {
     eShaderRead,
-    eDepth,
     eSwapchainPresent,
 };
 
@@ -13,5 +12,11 @@ struct CRenderTarget
 {
     CImage* m_image;
     ImageUsage m_usage;
+};
+
+struct CRenderPassDescription
+{
+    std::span<const CRenderTarget> m_colorImages;
+    CImage* m_depthImage = nullptr;
 };
 }
