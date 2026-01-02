@@ -41,12 +41,13 @@ CImage::CImage(
     const vk::ImageTiling tiling,
     const vk::ImageUsageFlags& usage,
     const vk::ImageAspectFlags& imageAspectFlags,
-    const vk::MemoryPropertyFlags& memoryProperties
+    const vk::MemoryPropertyFlags& memoryProperties,
+    const std::uint32_t mipLevels
 ) {
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
     imageInfo.extent = m_extent = extent;
-    imageInfo.mipLevels = 1;
+    imageInfo.mipLevels = m_mipLevels = mipLevels;
     imageInfo.arrayLayers = 1;
     imageInfo.format = m_format = format;
     imageInfo.tiling = tiling;
@@ -68,7 +69,7 @@ CImage::CImage(
     imageViewInfo.format = format;
     imageViewInfo.subresourceRange.aspectMask = imageAspectFlags;
     imageViewInfo.subresourceRange.baseMipLevel = 0;
-    imageViewInfo.subresourceRange.levelCount = 1;
+    imageViewInfo.subresourceRange.levelCount = m_mipLevels;
     imageViewInfo.subresourceRange.baseArrayLayer = 0;
     imageViewInfo.subresourceRange.layerCount = 1;
 
@@ -108,7 +109,7 @@ void CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::
     barrier.image = *m_handle;
     barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.levelCount = m_mipLevels;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
 

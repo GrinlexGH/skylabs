@@ -136,10 +136,12 @@ BENCHMARK(BM_CreateInstance)->Unit(benchmark::kMillisecond)->Iterations(50);
 #endif
 
 void CLauncher::Main() {
+#ifdef ENABLE_BENCHMARKS
     int argc = 0;
     char** argv = nullptr;
     ::benchmark::Initialize(&argc, argv);
     ::benchmark::RunSpecifiedBenchmarks();
+#endif
 
     const SDL::CContext sdl(SDL_INIT_VIDEO);
 

@@ -40,5 +40,5 @@ void main() {
     float alpha = clamp(intensity, 0, 1);
 
     vec4 texColor = texture(texSampler, fragTexCoord);
-    outColor = vec4(texColor.rgb, alpha);
+    outColor = vec4(texColor.rgb, 1);
 }
