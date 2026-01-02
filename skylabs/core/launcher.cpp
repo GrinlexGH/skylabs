@@ -6,6 +6,8 @@
 #include <skylabs/core/camera.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
 
+#include <steam/steam_api.h>
+
 #include <span>
 
 CCamera g_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
@@ -118,6 +120,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::Vulkan::CWi
             renderer->Draw(g_camera.GetViewMatrix(), deltaTime);
         }
     }
+    SteamAPI_RunCallbacks();
 }
 
 // #define ENABLE_BENCHMARKS
