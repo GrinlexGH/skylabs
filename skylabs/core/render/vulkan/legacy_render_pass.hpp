@@ -7,15 +7,15 @@ class CLegacyRenderPass
 {
 public:
     explicit CLegacyRenderPass(std::nullptr_t) {}
-    explicit CLegacyRenderPass(const CContext& context, std::span<const CRenderTarget> attachments);
+    explicit CLegacyRenderPass(const CContext& context, const CRenderPassDescription& description);
     CLegacyRenderPass(const CLegacyRenderPass&) = delete;
     CLegacyRenderPass(CLegacyRenderPass&&) noexcept = default;
     CLegacyRenderPass& operator=(const CLegacyRenderPass&) = delete;
     CLegacyRenderPass& operator=(CLegacyRenderPass&&) noexcept = default;
     ~CLegacyRenderPass() = default;
 
-    auto GetRenderPass() const -> vk::RenderPass { return *m_renderPass; }
-    auto GetFramebuffer() const -> vk::Framebuffer { return *m_framebuffer; }
+    [[nodiscard]] auto GetRenderPass() const noexcept -> vk::RenderPass { return *m_renderPass; }
+    [[nodiscard]] auto GetFramebuffer() const noexcept -> vk::Framebuffer { return *m_framebuffer; }
 
 private:
     vk::Extent2D m_extent;

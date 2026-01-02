@@ -267,10 +267,10 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_mainPass = CLegacyRenderPass {
         m_context,
-        {{
-            { .m_image = &m_colorBuffer, .m_usage = ImageUsage::eShaderRead },
-            { .m_image = &m_depthBuffer, .m_usage = ImageUsage::eDepth }
-        }}
+        {
+            .m_colorImages = {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eShaderRead }}},
+            .m_depthImage = &m_depthBuffer
+        }
     };
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
@@ -385,65 +385,65 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     std::array bindings = { uboLayoutBinding, samplerLayoutBinding }; //!!!!
 
-        vk::DescriptorSetLayoutCreateInfo layoutInfo {};
-        layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
+    vk::DescriptorSetLayoutCreateInfo layoutInfo {};
+    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
-        m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { m_context.GetDevice().GetHandle(), layoutInfo };
-
-
-        std::array<vk::DescriptorPoolSize, 2> poolSizes {};
-        poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
-        poolSizes[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-        poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
-        poolSizes[1].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-
-        vk::DescriptorPoolCreateInfo poolInfo {};
-        poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizes.size());
-        poolInfo.pPoolSizes = poolSizes.data();
-        poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-
-        m_descriptorPoolMain = vk::raii::DescriptorPool { m_context.GetDevice().GetHandle(), poolInfo };
+    m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { m_context.GetDevice().GetHandle(), layoutInfo };
 
 
-        std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutMain);
-        vk::DescriptorSetAllocateInfo descriptorAllocInfo {};
-        descriptorAllocInfo.descriptorPool = m_descriptorPoolMain;
-        descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-        descriptorAllocInfo.pSetLayouts = layouts.data();
+    std::array<vk::DescriptorPoolSize, 2> poolSizes {};
+    poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+    poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
-        m_descriptorSetsMain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
+    vk::DescriptorPoolCreateInfo poolInfo {};
+    poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
-        for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-            vk::DescriptorBufferInfo bufferInfo {};
-            bufferInfo.buffer = *m_uniformBuffers[i];
-            bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(UniformBufferObject);
+    m_descriptorPoolMain = vk::raii::DescriptorPool { m_context.GetDevice().GetHandle(), poolInfo };
 
-            vk::DescriptorImageInfo imageInfo {};
-            imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-            imageInfo.imageView = m_modelTexture.GetView();
-            imageInfo.sampler = *m_modelTextureSampler;
 
-            std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
-            descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
-            descriptorWrites[0].dstBinding = 0;
-            descriptorWrites[0].dstArrayElement = 0;
-            descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-            descriptorWrites[0].descriptorCount = 1;
-            descriptorWrites[0].pBufferInfo = &bufferInfo;
-            descriptorWrites[0].pImageInfo = nullptr;
-            descriptorWrites[0].pTexelBufferView = nullptr;
+    std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutMain);
+    vk::DescriptorSetAllocateInfo descriptorAllocInfo {};
+    descriptorAllocInfo.descriptorPool = m_descriptorPoolMain;
+    descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+    descriptorAllocInfo.pSetLayouts = layouts.data();
 
-            descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
-            descriptorWrites[1].dstBinding = 1;
-            descriptorWrites[1].dstArrayElement = 0;
-            descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-            descriptorWrites[1].descriptorCount = 1;
-            descriptorWrites[1].pImageInfo = &imageInfo;
+    m_descriptorSetsMain = (**m_context.GetDevice()).allocateDescriptorSets(descriptorAllocInfo);
 
-            m_context.GetDevice().GetHandle().updateDescriptorSets(descriptorWrites, {});
-        }
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
+        vk::DescriptorBufferInfo bufferInfo {};
+        bufferInfo.buffer = *m_uniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(UniformBufferObject);
+
+        vk::DescriptorImageInfo imageInfo {};
+        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfo.imageView = m_modelTexture.GetView();
+        imageInfo.sampler = *m_modelTextureSampler;
+
+        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
+        descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
+        descriptorWrites[0].pImageInfo = nullptr;
+        descriptorWrites[0].pTexelBufferView = nullptr;
+
+        descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+
+        m_context.GetDevice().GetHandle().updateDescriptorSets(descriptorWrites, {});
+    }
 
 
 
@@ -515,7 +515,9 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_swapchainPass = CLegacyRenderPass {
         m_context,
-        {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eSwapchainPresent }}}
+        {
+            .m_colorImages = {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eSwapchainPresent }}}
+        }
     };
 
     const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");

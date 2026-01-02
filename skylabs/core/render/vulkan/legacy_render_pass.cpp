@@ -4,7 +4,6 @@ namespace {
 vk::ImageLayout ToLayout(const Vulkan::ImageUsage usage) {
     switch (usage) {
         case Vulkan::ImageUsage::eShaderRead: return vk::ImageLayout::eShaderReadOnlyOptimal;
-        case Vulkan::ImageUsage::eDepth: return vk::ImageLayout::eDepthStencilAttachmentOptimal;
         case Vulkan::ImageUsage::eSwapchainPresent: return vk::ImageLayout::ePresentSrcKHR;
     }
     std::unreachable();
@@ -12,20 +11,21 @@ vk::ImageLayout ToLayout(const Vulkan::ImageUsage usage) {
 
 vk::AttachmentStoreOp ToStoreOp(const Vulkan::ImageUsage usage) {
     switch (usage) {
-        case Vulkan::ImageUsage::eDepth: return vk::AttachmentStoreOp::eDontCare;
         default: return vk::AttachmentStoreOp::eStore;
     }
 }
 }
 
 namespace Vulkan {
-CLegacyRenderPass::CLegacyRenderPass(
-    const CContext& context,
-    const std::span<const CRenderTarget> attachments
-) {
+CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassDescription& description) {
+    if (description.m_colorImages.empty()) {
+        throw std::runtime_error("No render targets provided");
+    }
+
     // Create attachment reference & description vectors
-    for (const auto& [image, usage] : attachments) {
-        if (!image) continue;
+    for (const auto& [image, usage] : description.m_colorImages) {
+        if (!image)
+            continue;
 
         const vk::Extent2D imageExtent { image->GetExtent().width, image->GetExtent().height };
         if (m_extent == vk::Extent2D {}) {
@@ -47,15 +47,31 @@ CLegacyRenderPass::CLegacyRenderPass(
 
         vk::AttachmentReference attachmentReference {};
         attachmentReference.attachment = static_cast<std::uint32_t>(m_views.size());
-        attachmentReference.layout = usage == ImageUsage::eDepth ? vk::ImageLayout::eDepthStencilAttachmentOptimal : vk::ImageLayout::eColorAttachmentOptimal;
+        attachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
         m_views.push_back(image->GetView());
         m_descriptions.push_back(attachmentDescription);
-        if (usage == ImageUsage::eDepth) {
-            m_depthReference = attachmentReference;
-        } else {
-            m_colorReferences.push_back(attachmentReference);
-        }
+        m_colorReferences.push_back(attachmentReference);
+    }
+
+    if (description.m_depthImage) {
+        vk::AttachmentDescription attachmentDescription {};
+        attachmentDescription.format = description.m_depthImage->GetFormat();
+        attachmentDescription.samples = vk::SampleCountFlagBits::e1;
+        attachmentDescription.loadOp = vk::AttachmentLoadOp::eClear;
+        attachmentDescription.storeOp = vk::AttachmentStoreOp::eDontCare;
+        attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        attachmentDescription.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        attachmentDescription.initialLayout = vk::ImageLayout::eUndefined;
+        attachmentDescription.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+        vk::AttachmentReference attachmentReference {};
+        attachmentReference.attachment = static_cast<uint32_t>(m_views.size());
+        attachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+        m_views.push_back(description.m_depthImage->GetView());
+        m_descriptions.push_back(attachmentDescription);
+        m_depthReference = attachmentReference;
     }
 
     vk::SubpassDescription subpassDescription {};
