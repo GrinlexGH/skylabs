@@ -18,13 +18,6 @@ public:
     [[nodiscard]] auto GetFramebuffer() const noexcept -> vk::Framebuffer { return *m_framebuffer; }
 
 private:
-    vk::Extent2D m_extent;
-
-    std::vector<vk::ImageView> m_views;
-    std::vector<vk::AttachmentDescription> m_descriptions;
-    std::vector<vk::AttachmentReference> m_colorReferences;
-    std::optional<vk::AttachmentReference> m_depthReference;
-
     vk::raii::RenderPass m_renderPass { nullptr };
     vk::raii::Framebuffer m_framebuffer { nullptr };
 };
