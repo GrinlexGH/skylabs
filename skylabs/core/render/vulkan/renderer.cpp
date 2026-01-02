@@ -149,8 +149,8 @@ auto EndSingleTimeCommands(
 
 void generateMipmaps(
     const vk::raii::PhysicalDevice& physicalDevice,
-    vk::CommandBuffer cmd,
-    const Vulkan::CImage& image
+    const vk::raii::CommandBuffer& cmd,
+    Vulkan::CImage& image
 ) {
     const vk::FormatProperties formatProperties = physicalDevice.getFormatProperties(image.GetFormat());
 
@@ -180,9 +180,8 @@ void generateMipmaps(
         cmd.pipelineBarrier(
             vk::PipelineStageFlagBits::eTransfer,
             vk::PipelineStageFlagBits::eTransfer,
-            {},
-            0, nullptr, 0, nullptr,
-            1, &barrier
+            {}, {}, {},
+            barrier
         );
 
         vk::ImageBlit blit {};
@@ -202,7 +201,7 @@ void generateMipmaps(
         cmd.blitImage(
             *image, vk::ImageLayout::eTransferSrcOptimal,
             *image, vk::ImageLayout::eTransferDstOptimal,
-            1, &blit,
+            blit,
             vk::Filter::eLinear
         );
 
@@ -213,8 +212,8 @@ void generateMipmaps(
 
         cmd.pipelineBarrier(
             vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader,
-            {}, 0, nullptr, 0, nullptr,
-            1, &barrier
+            {}, {}, {},
+            barrier
         );
 
         if (mipWidth > 1) mipWidth /= 2;
@@ -229,8 +228,8 @@ void generateMipmaps(
 
     cmd.pipelineBarrier(
         vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {},
-        0, nullptr, 0, nullptr,
-        1, &barrier
+        {}, {},
+        barrier
     );
 }
 
@@ -399,10 +398,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     {
         const CMemoryMapping mapping = stagingBuffer.Map();
         std::memcpy(mapping.GetData(), image->pixels, imageSize);
-
-        char* p = new char[imageSize / 4];
-        std::memcpy((char*)mapping.GetData() + (imageSize * 3 / 4), p, imageSize / 4);
-        std::free(p);
     }
 
     m_modelTexture = CImage {
@@ -432,7 +427,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_modelTextureSampler = CSampler { m_context };
 
 
-    constexpr std::string MODEL_PATH = "assets/viking_room.obj";
+    const std::string MODEL_PATH = "assets/viking_room.obj";
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
