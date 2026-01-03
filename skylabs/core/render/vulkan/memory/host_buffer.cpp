@@ -7,7 +7,7 @@ CHostBuffer::CHostBuffer(
     const vk::BufferUsageFlags& usage
 ) : m_context(&context) {
     vk::BufferCreateInfo bufferInfo {};
-    bufferInfo.size = size;
+    bufferInfo.size = m_size = size;
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 

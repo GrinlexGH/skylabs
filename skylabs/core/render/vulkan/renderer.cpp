@@ -419,9 +419,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
     EndSingleTimeCommands(m_context.GetDevice(), commandBuffer);
 
-    {
-        stagingBuffer.Clear();
-    }
     SDL_DestroySurface(image);
 
     m_modelTextureSampler = CSampler { m_context };
@@ -441,11 +438,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
             CVertex vertex {};
-
             vertex.m_position = { attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1], attrib.vertices[3 * index.vertex_index + 2] };
-
             vertex.m_texCoord = { attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
-
             vertex.m_color = { 1.0f, 1.0f, 1.0f };
 
             if (!uniqueVertices.contains(vertex)) {
@@ -456,6 +450,62 @@ CRenderer::CRenderer(const IWindow* const window) {
             indices.push_back(uniqueVertices[vertex]);
         }
     }
+
+    const vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
+    if (stagingBuffer.Size() < vertexBufferSize) {
+        stagingBuffer = CHostBuffer {
+            m_context,
+            vertexBufferSize,
+            vk::BufferUsageFlagBits::eTransferSrc
+        };
+    }
+
+    {
+        const CMemoryMapping mapping = stagingBuffer.Map();
+        std::memcpy(mapping.GetData(), vertices.data(), vertexBufferSize);
+    }
+
+    m_vertexBuffer = CDeviceBuffer {
+        m_context,
+        vertexBufferSize,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer
+    };
+
+    CopyBuffer(
+        m_context.GetDevice(),
+        commandPool,
+        *stagingBuffer,
+        *m_vertexBuffer,
+        vertexBufferSize
+    );
+
+    const vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
+    if (stagingBuffer.Size() < indexBufferSize) {
+        stagingBuffer = CHostBuffer {
+            m_context,
+            indexBufferSize,
+            vk::BufferUsageFlagBits::eTransferSrc
+        };
+    }
+
+    {
+        CMemoryMapping mapping = stagingBuffer.Map();
+        std::memcpy(mapping.GetData(), indices.data(), indexBufferSize);
+    }
+
+    m_indexBuffer = CDeviceBuffer {
+        m_context,
+        indexBufferSize,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer
+    };
+
+    CopyBuffer(
+        m_context.GetDevice(),
+        commandPool,
+        *stagingBuffer,
+        *m_indexBuffer,
+        indexBufferSize
+    );
 
     m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
     m_uniformBuffersMapped.reserve(FRAMES_IN_FLIGHT_COUNT);
@@ -641,72 +691,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
     m_frameBuffersSwapchain = CreateFrameBuffers(m_context.GetDevice().GetHandle(), m_swapchain, m_swapchainPass.GetRenderPass());
-
-    //region VERTEX BUFFER
-    const vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
-
-    stagingBuffer = CHostBuffer {
-        m_context,
-        vertexBufferSize,
-        vk::BufferUsageFlagBits::eTransferSrc
-    };
-
-    {
-        const CMemoryMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.GetData(), vertices.data(), vertexBufferSize);
-    }
-
-    m_vertexBuffer = CDeviceBuffer {
-        m_context,
-        vertexBufferSize,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer
-    };
-
-    CopyBuffer(
-        m_context.GetDevice(),
-        commandPool,
-        *stagingBuffer,
-        *m_vertexBuffer,
-        vertexBufferSize
-    );
-
-    {
-        stagingBuffer.Clear();
-    }
-    //endregion VERTEX BUFFER
-
-    //region INDEX BUFFER
-    const vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
-
-    stagingBuffer = CHostBuffer {
-        m_context,
-        indexBufferSize,
-        vk::BufferUsageFlagBits::eTransferSrc
-    };
-
-    {
-        CMemoryMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.GetData(), indices.data(), indexBufferSize);
-    }
-
-    m_indexBuffer = CDeviceBuffer {
-        m_context,
-        indexBufferSize,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer
-    };
-
-    CopyBuffer(
-        m_context.GetDevice(),
-        commandPool,
-        *stagingBuffer,
-        *m_indexBuffer,
-        indexBufferSize
-    );
-
-    {
-        stagingBuffer.Clear();
-    }
-    //endregion INDEX BUFFER
 }
 
 std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const window) {

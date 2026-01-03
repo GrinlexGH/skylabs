@@ -21,14 +21,18 @@ public:
     [[nodiscard]] auto operator*() const noexcept -> vk::Buffer { return *m_handle; }
     [[nodiscard]] auto GetHandle() const noexcept -> vk::Buffer { return *m_handle; }
 
+    [[nodiscard]] auto Size() const noexcept -> vk::DeviceSize { return m_size; }
+
     auto Clear() -> void;
 
     auto Map() -> CMemoryMapping { return { m_context->GetAllocator(), *m_allocation }; }
 
 private:
+    const CContext* m_context = nullptr;
+
     vma::UniqueBuffer m_handle;
     vma::UniqueAllocation m_allocation;
 
-    const CContext* m_context = nullptr;
+    vk::DeviceSize m_size;
 };
 }
