@@ -17,8 +17,8 @@ struct CRenderTarget
 
 struct CRenderPassDescription
 {
-    std::span<const CRenderTarget> m_colorImages;
-    std::span<const CRenderTarget> m_resolveImages;
+    std::span<const CRenderTarget> m_colorImages {};
+    std::span<const CRenderTarget> m_resolveImages {};
     CImage* m_depthImage = nullptr;
 };
 }
