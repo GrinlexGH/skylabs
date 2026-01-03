@@ -4,7 +4,7 @@
 namespace Vulkan {
 enum class ImageUsage : std::uint8_t
 {
-    eNone,
+    eMSAAWrite,
     eShaderRead,
     eSwapchainPresent,
 };

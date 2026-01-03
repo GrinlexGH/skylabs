@@ -3,7 +3,7 @@
 namespace {
 vk::ImageLayout ToLayout(const Vulkan::ImageUsage usage) {
     switch (usage) {
-        case Vulkan::ImageUsage::eNone: return vk::ImageLayout::eColorAttachmentOptimal;
+        case Vulkan::ImageUsage::eMSAAWrite: return vk::ImageLayout::eColorAttachmentOptimal;
         case Vulkan::ImageUsage::eShaderRead: return vk::ImageLayout::eShaderReadOnlyOptimal;
         case Vulkan::ImageUsage::eSwapchainPresent: return vk::ImageLayout::ePresentSrcKHR;
     }
@@ -12,7 +12,7 @@ vk::ImageLayout ToLayout(const Vulkan::ImageUsage usage) {
 
 vk::AttachmentStoreOp ToStoreOp(const Vulkan::ImageUsage usage) {
     switch (usage) {
-        case Vulkan::ImageUsage::eNone: return vk::AttachmentStoreOp::eDontCare;
+        case Vulkan::ImageUsage::eMSAAWrite: return vk::AttachmentStoreOp::eDontCare;
         default: return vk::AttachmentStoreOp::eStore;
     }
 }
@@ -20,84 +20,88 @@ vk::AttachmentStoreOp ToStoreOp(const Vulkan::ImageUsage usage) {
 
 namespace Vulkan {
 CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassDescription& description) {
-    if (description.m_colorImages.empty()) {
-        throw std::runtime_error("No render targets provided");
-    }
-
     // Create attachment reference & description vectors
     vk::Extent2D extent;
     std::vector<vk::ImageView> views;
     std::vector<vk::AttachmentDescription> descriptions;
     std::vector<vk::AttachmentReference> colorReferences;
-    std::vector<vk::AttachmentReference> resolveReferences;
-    for (const auto& [image, usage] : description.m_colorImages) {
-        if (!image)
-            continue;
 
+    auto addAttachment = [&](
+        const CImage* image,
+        const vk::SampleCountFlagBits sampleCount,
+        const vk::AttachmentLoadOp loadOp,
+        const vk::AttachmentStoreOp storeOp,
+        const vk::ImageLayout finalLayout,
+        const vk::ImageLayout referenceLayout
+    ) -> vk::AttachmentReference {
+        vk::AttachmentDescription attachmentDescription {};
+        attachmentDescription.format = image->GetFormat();
+        attachmentDescription.samples = sampleCount;
+        attachmentDescription.loadOp = loadOp;
+        attachmentDescription.storeOp = storeOp;
+        attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+        attachmentDescription.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+        attachmentDescription.initialLayout = vk::ImageLayout::eUndefined;
+        attachmentDescription.finalLayout = finalLayout;
+
+        vk::AttachmentReference attachmentReference {};
+        attachmentReference.attachment = static_cast<std::uint32_t>(views.size());
+        attachmentReference.layout = referenceLayout;
+
+        views.push_back(image->GetView());
+        descriptions.push_back(attachmentDescription);
+        return attachmentReference;
+    };
+
+    auto validateImage = [&](const CImage* image) -> bool {
+        if (!image)
+            return false;
+
+        // Validate extent
         const vk::Extent2D imageExtent { image->GetExtent().width, image->GetExtent().height };
         if (extent == vk::Extent2D {}) {
             extent = imageExtent;
         } else if (extent != imageExtent) {
             Log::Debug("Image not corresponding size ({}x{}). Skipping.", extent.width, extent.height);
-            continue;
+            return false;
         }
 
-        vk::AttachmentDescription attachmentDescription {};
-        attachmentDescription.format = image->GetFormat();
-        attachmentDescription.samples = image->GetSampleCount();
-        attachmentDescription.loadOp = vk::AttachmentLoadOp::eClear;
-        attachmentDescription.storeOp = ToStoreOp(usage);
-        attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        attachmentDescription.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        attachmentDescription.initialLayout = vk::ImageLayout::eUndefined;
-        attachmentDescription.finalLayout = ToLayout(usage);
+        return true;
+    };
 
-        vk::AttachmentReference attachmentReference {};
-        attachmentReference.attachment = static_cast<std::uint32_t>(views.size());
-        attachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
+    // Create descriptions for color images
+    for (const auto& [image, usage] : description.m_colorImages) {
+        if (!validateImage(image))
+            continue;
 
-        views.push_back(image->GetView());
-        descriptions.push_back(attachmentDescription);
-        colorReferences.push_back(attachmentReference);
+        colorReferences.push_back(addAttachment(
+            image, image->GetSampleCount(),
+            vk::AttachmentLoadOp::eClear, ToStoreOp(usage),
+            ToLayout(usage), vk::ImageLayout::eColorAttachmentOptimal
+        ));
     }
 
+    // MSAA-after images
+    std::vector<vk::AttachmentReference> resolveReferences;
     for (const auto& [image, usage] : description.m_resolveImages) {
-        vk::AttachmentDescription desc {};
-        desc.format = image->GetFormat();
-        desc.samples = vk::SampleCountFlagBits::e1;
-        desc.loadOp = vk::AttachmentLoadOp::eDontCare;
-        desc.storeOp = vk::AttachmentStoreOp::eStore;
-        desc.initialLayout = vk::ImageLayout::eUndefined;
-        desc.finalLayout = ToLayout(usage);
+        if (!validateImage(image))
+            continue;
 
-        vk::AttachmentReference ref{};
-        ref.attachment = static_cast<uint32_t>(views.size());
-        ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-        views.push_back(image->GetView());
-        descriptions.push_back(desc);
-        resolveReferences.push_back(ref);
+        resolveReferences.push_back(addAttachment(
+            image, vk::SampleCountFlagBits::e1,
+            vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eStore,
+            ToLayout(usage), vk::ImageLayout::eColorAttachmentOptimal
+        ));
     }
 
+    // Depth
     std::optional<vk::AttachmentReference> depthReference;
-    if (description.m_depthImage) {
-        vk::AttachmentDescription attachmentDescription {};
-        attachmentDescription.format = description.m_depthImage->GetFormat();
-        attachmentDescription.samples = description.m_depthImage->GetSampleCount();
-        attachmentDescription.loadOp = vk::AttachmentLoadOp::eClear;
-        attachmentDescription.storeOp = vk::AttachmentStoreOp::eDontCare;
-        attachmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-        attachmentDescription.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-        attachmentDescription.initialLayout = vk::ImageLayout::eUndefined;
-        attachmentDescription.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-        vk::AttachmentReference attachmentReference {};
-        attachmentReference.attachment = static_cast<uint32_t>(views.size());
-        attachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-        views.push_back(description.m_depthImage->GetView());
-        descriptions.push_back(attachmentDescription);
-        depthReference = attachmentReference;
+    if (validateImage(description.m_depthImage)) {
+        depthReference = addAttachment(
+            description.m_depthImage, description.m_depthImage->GetSampleCount(),
+            vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+            vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal
+        );
     }
 
     vk::SubpassDescription subpassDescription {};
