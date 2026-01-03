@@ -20,6 +20,11 @@ vk::AttachmentStoreOp ToStoreOp(const Vulkan::ImageUsage usage) {
 
 namespace Vulkan {
 CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassDescription& description) {
+    assert(
+       description.m_resolveImages.size() == description.m_colorImages.size() ||
+       description.m_resolveImages.empty()
+    );
+
     // Create attachment reference & description vectors
     vk::Extent2D extent;
     std::vector<vk::ImageView> views;
@@ -109,10 +114,10 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     subpassDescription.inputAttachmentCount = 0;
     subpassDescription.pInputAttachments = nullptr;
     subpassDescription.colorAttachmentCount = static_cast<std::uint32_t>(colorReferences.size());
-    subpassDescription.pColorAttachments = colorReferences.data();
+    subpassDescription.pColorAttachments = !colorReferences.empty() ? colorReferences.data() : nullptr;
     subpassDescription.preserveAttachmentCount = 0;
     subpassDescription.pPreserveAttachments = nullptr;
-    subpassDescription.pResolveAttachments = resolveReferences.data();
+    subpassDescription.pResolveAttachments = !resolveReferences.empty() ? resolveReferences.data() : nullptr;
     subpassDescription.pDepthStencilAttachment = depthReference.has_value() ? std::to_address(depthReference) : nullptr;
 
     vk::SubpassDependency dependency {};
