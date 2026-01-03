@@ -292,7 +292,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_context = CContext { window };
     m_surface = CSurface { m_context };
-    m_swapchain = CSwapchain { m_context, *m_surface, 3, vk::PresentModeKHR::eImmediate };
+    m_swapchain = CSwapchain { m_context, *m_surface, 2, vk::PresentModeKHR::eImmediate };
 
     renderWidth = m_swapchain.GetExtent().width;
     renderHeight = m_swapchain.GetExtent().height;
@@ -368,7 +368,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_mainPass = CLegacyRenderPass {
         m_context,
         {
-            .m_colorImages = {{{ .m_image = &m_colorBufferMSAA, .m_usage = ImageUsage::eNone }}},
+            .m_colorImages = {{{ .m_image = &m_colorBufferMSAA, .m_usage = ImageUsage::eMSAAWrite }}},
             .m_resolveImages = {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eShaderRead }}},
             .m_depthImage = &m_depthBufferMSAA
         }
