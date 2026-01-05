@@ -83,7 +83,7 @@ CPipeline::CPipeline(
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    m_layout = vk::raii::PipelineLayout { *context.GetDevice(), pipelineLayoutInfo };
+    m_layout = vk::raii::PipelineLayout { *context.Device(), pipelineLayoutInfo };
 
     vk::GraphicsPipelineCreateInfo pipelineInfo {};
     pipelineInfo.stageCount = shaderStages.size();
@@ -101,6 +101,6 @@ CPipeline::CPipeline(
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    m_handle = vk::raii::Pipeline { (*context.GetDevice()), nullptr, pipelineInfo };
+    m_handle = vk::raii::Pipeline { (*context.Device()), nullptr, pipelineInfo };
 }
 }

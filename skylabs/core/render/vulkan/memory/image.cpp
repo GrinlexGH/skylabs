@@ -62,7 +62,7 @@ CImage::CImage(
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.requiredFlags = memoryProperties;
 
-    std::tie(m_allocation, m_handle) = context.GetAllocator().createImageUnique(imageInfo, allocInfo);
+    std::tie(m_allocation, m_handle) = context.Allocator().createImageUnique(imageInfo, allocInfo);
 
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = *m_handle;
@@ -74,7 +74,7 @@ CImage::CImage(
     imageViewInfo.subresourceRange.baseArrayLayer = 0;
     imageViewInfo.subresourceRange.layerCount = 1;
 
-    m_view = vk::raii::ImageView { *context.GetDevice(), imageViewInfo };
+    m_view = vk::raii::ImageView { *context.Device(), imageViewInfo };
 }
 
 void CImage::Clear() {

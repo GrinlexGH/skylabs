@@ -21,7 +21,8 @@ public:
     ~CAllocator() = default;
 
     [[nodiscard]] auto operator*() const noexcept -> vma::Allocator { return *m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> vma::Allocator { return *m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vma::Allocator* { return &*m_handle; }
+    [[nodiscard]] auto Handle() const noexcept -> vma::Allocator { return *m_handle; }
 
 private:
     vma::UniqueAllocator m_handle;

@@ -19,11 +19,11 @@ public:
     CContext& operator=(CContext&&) noexcept = default;
     ~CContext() = default;
 
-    [[nodiscard]] auto GetWindow() const -> const IWindow* { return m_window; }
-    [[nodiscard]] auto GetInstance() const -> const CInstance& { return m_instance; }
-    [[nodiscard]] auto GetDevice() const -> const CDevice& { return m_device; }
-    [[nodiscard]] auto GetPhysicalDevice() const -> const CPhysicalDevice* { return m_selectedPhysicalDevice; }
-    [[nodiscard]] auto GetAllocator() const -> vma::Allocator { return *m_allocator; }
+    [[nodiscard]] auto Window() const noexcept -> const IWindow* { return m_window; }
+    [[nodiscard]] auto Instance() const noexcept -> const CInstance& { return m_instance; }
+    [[nodiscard]] auto Device() const noexcept -> const CDevice& { return m_device; }
+    [[nodiscard]] auto PhysicalDevice() const noexcept -> const CPhysicalDevice& { return *m_selectedPhysicalDevice; }
+    [[nodiscard]] auto Allocator() const noexcept -> vma::Allocator { return *m_allocator; }
 
 private:
     auto CreateInstance() -> void;
@@ -32,7 +32,7 @@ private:
     auto CreateAllocator() -> void;
 
     [[nodiscard]] auto IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool;
-    [[nodiscard]] auto GetSuitablePhysicalDevice() -> CPhysicalDevice*;
+    [[nodiscard]] auto SelectSuitablePhysicalDevice() -> CPhysicalDevice*;
 
     CInstance m_instance { nullptr };
     CDevice m_device { nullptr };

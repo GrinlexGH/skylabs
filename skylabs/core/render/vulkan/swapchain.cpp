@@ -39,8 +39,10 @@ auto CSwapchain::CreateSwapchain(
     vk::PresentModeKHR presentMode,
     const vk::raii::SwapchainKHR& oldSwapchain
 ) -> void {
-    const CDevice& device = m_context->GetDevice();
-    const vk::raii::PhysicalDevice physicalDevice = m_context->GetPhysicalDevice()->GetHandle();
+    const CDevice& device = m_context->Device();
+    const CPhysicalDevice& physicalDevice = m_context->PhysicalDevice();
+
+    assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
     //====================
     vk::SwapchainCreateInfoKHR createInfo;
@@ -48,7 +50,7 @@ auto CSwapchain::CreateSwapchain(
     createInfo.surface = m_associatedSurface = surface;
 
     //====================
-    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
+    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice->getSurfaceCapabilitiesKHR(surface);
     createInfo.minImageCount = std::clamp(
         imageCount,
         surfaceCapabilities.minImageCount,
@@ -56,7 +58,7 @@ auto CSwapchain::CreateSwapchain(
     );
 
     //====================
-    m_surfaceFormat = ChooseSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
+    m_surfaceFormat = ChooseSurfaceFormat(physicalDevice->getSurfaceFormatsKHR(surface));
     createInfo.imageFormat = m_surfaceFormat.format;
     createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
 
@@ -67,11 +69,11 @@ auto CSwapchain::CreateSwapchain(
 
     //====================
     const std::array queueFamilyIndices {
-        device.GetGraphicsQueue().m_familyIndex,
-        device.GetPresentQueue().m_familyIndex
+        device.GraphicsQueue().m_familyIndex,
+        device.PresentQueue().m_familyIndex
     };
 
-    if (device.GetGraphicsQueue().m_familyIndex != device.GetPresentQueue().m_familyIndex) {
+    if (device.GraphicsQueue().m_familyIndex != device.PresentQueue().m_familyIndex) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
         createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
@@ -84,7 +86,7 @@ auto CSwapchain::CreateSwapchain(
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
 
     //====================
-    if (const std::vector<vk::PresentModeKHR> presentModes = physicalDevice.getSurfacePresentModesKHR(surface);
+    if (const std::vector<vk::PresentModeKHR> presentModes = physicalDevice->getSurfacePresentModesKHR(surface);
         !std::ranges::contains(presentModes, presentMode)
     ) {
         Log::Warning(
@@ -124,7 +126,7 @@ void CSwapchain::CreateImages() {
         imageViewInfo.subresourceRange.baseArrayLayer = 0;
         imageViewInfo.subresourceRange.layerCount = 1;
 
-        m_imageViews.emplace_back(*m_context->GetDevice(), imageViewInfo);
+        m_imageViews.emplace_back(*m_context->Device(), imageViewInfo);
     }
 }
 
@@ -153,7 +155,7 @@ vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& c
     }
 
     int width, height;
-    m_context->GetWindow()->GetDrawableSize(width, height);
+    m_context->Window()->GetDrawableSize(width, height);
 
     vk::Extent2D actualExtent = {
         static_cast<uint32_t>(width),

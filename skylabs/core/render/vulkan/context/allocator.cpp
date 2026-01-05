@@ -29,7 +29,7 @@ CAllocator::CAllocator(
 
     vma::AllocatorCreateInfo allocatorCreateInfo;
     allocatorCreateInfo.flags = flags;
-    allocatorCreateInfo.vulkanApiVersion = instance.GetApiVersion();
+    allocatorCreateInfo.vulkanApiVersion = instance.ApiVersion();
     allocatorCreateInfo.physicalDevice = physicalDevice;
     allocatorCreateInfo.device = *device;
     allocatorCreateInfo.instance = *instance;

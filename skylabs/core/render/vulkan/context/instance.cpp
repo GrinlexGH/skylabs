@@ -1,5 +1,6 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
+
 #include "project_info.hpp"
 
 #include <ranges>
@@ -34,13 +35,13 @@ namespace Vulkan {
 CInstance::CInstance(std::nullptr_t) {}
 
 CInstance::CInstance(
-    const std::span<RequestedExtension> extensions,
+    const std::span<Utils::CRequestedExtension> extensions,
     const std::span<std::string_view> layers
 ) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
     if (m_context.getDispatcher()->vkEnumerateInstanceVersion) {
-        m_apiVersion = m_context.enumerateInstanceVersion();
+        //m_apiVersion = m_context.enumerateInstanceVersion();
     }
 
     Log::Info(
@@ -87,7 +88,7 @@ CInstance::CInstance(
     };
 
     if (isDebugUtilsAvailable) {
-        AppendToPNextChain(pNext, &debugUtilsCreateInfo);
+        Utils::AppendToPNextChain(pNext, &debugUtilsCreateInfo);
     }
 #endif
 
@@ -147,66 +148,56 @@ std::vector<const char*> CInstance::EnableLayers(const std::span<std::string_vie
     return enabledLayers;
 }
 
-std::vector<const char*> CInstance::EnableExtensions(const std::span<RequestedExtension> requestedExtensions) {
+std::vector<const char*> CInstance::EnableExtensions(const std::span<Utils::CRequestedExtension> requestedExtensions) {
     static const std::vector<vk::ExtensionProperties> extensionProps = m_context.enumerateInstanceExtensionProperties();
-    static const std::unordered_set<std::string_view> availableExtensionNames =
-        extensionProps
-        | std::views::transform([&](const vk::ExtensionProperties& extension) -> std::string_view { return extension.extensionName; })
-        | std::ranges::to<std::unordered_set>();
+    static const std::unordered_set<std::string_view> availableExtensionNames = [&] {
+        std::unordered_set<std::string_view> availableExtensions =
+            extensionProps
+            | std::views::transform([&](const vk::ExtensionProperties& extension) -> std::string_view { return extension.extensionName; })
+            | std::ranges::to<std::unordered_set>();
+
+        for (const std::string_view layer : m_enabledLayers) {
+            for (const auto& extension : m_context.enumerateInstanceExtensionProperties(std::string { layer })) {
+                availableExtensions.insert(extension.extensionName);
+            }
+        }
+
+        return availableExtensions;
+    }();
 
     std::vector<const char*> enabledExtensions;
     enabledExtensions.reserve(requestedExtensions.size() + 1);
 
-    std::vector<RequestedExtension> missingExtensions;
+    std::vector<std::string_view> missingExtensions;
     missingExtensions.reserve(4);
 
     m_enabledExtensions.reserve(requestedExtensions.size());
 
-    auto tryEnable = [&](const std::string_view name, ExtensionRequirement requirement) {
+    auto tryEnable = [&](const std::string_view name, const Utils::ExtensionRequirement requirement) {
         if (availableExtensionNames.contains(name)) {
             enabledExtensions.push_back(name.data());
             m_enabledExtensions.emplace(name);
-        } else {
-            missingExtensions.emplace_back(name, requirement);
+        } else if (requirement == Utils::ExtensionRequirement::Required) {
+            missingExtensions.emplace_back(name);
         }
     };
 
 #ifdef DEBUG
-    tryEnable(vk::EXTDebugUtilsExtensionName, ExtensionRequirement::Optional);
+    tryEnable(vk::EXTDebugUtilsExtensionName, Utils::ExtensionRequirement::Optional);
 #endif
 
-    for (const auto& [extensionName, requirement] : requestedExtensions) {
-        if (!m_enabledExtensions.contains(extensionName)) {
-            tryEnable(extensionName, requirement);
-        }
-    }
-
-    // Search extension in layers
-    // Useful for android old drivers
-    if (!missingExtensions.empty()) {
-        for (const std::string_view layerName : m_enabledLayers) {
-            const std::vector<vk::ExtensionProperties> availableExtensions =
-                m_context.enumerateInstanceExtensionProperties(std::string { layerName });
-
-            std::erase_if(missingExtensions, [&](const RequestedExtension& extension) {
-                const auto [extensionName, requirement] = extension;
-                if (HasExtension(availableExtensions, extensionName)) {
-                    enabledExtensions.push_back(extensionName.data());
-                    m_enabledExtensions.emplace(extensionName);
-                    return true;
-                }
-                if (requirement == ExtensionRequirement::Optional)
-                    return true;
-                return false;
-            });
+    for (const Utils::CRequestedExtension extension : requestedExtensions) {
+        if (const std::string_view extensionName = extension.Name(); m_apiVersion < extension.PromotedVersion() && !m_enabledExtensions.contains(extensionName)) {
+            tryEnable(extensionName, extension.Requirement());
         }
     }
 
     if (!missingExtensions.empty()) {
         std::string error = "System doesn't have required instance extensions:\n";
-        for (const auto [name, _] : missingExtensions) {
+        error.reserve(error.size() + (missingExtensions.size() * 25));
+        for (const auto& extension : missingExtensions) {
             error += "\t";
-            error += name;
+            error += extension;
             error += "\n";
         }
         throw std::runtime_error(error);

@@ -24,14 +24,15 @@ public:
     ~CImage();
 
     [[nodiscard]] auto operator*() const noexcept -> vk::Image { return *m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> vk::Image { return *m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vk::Image* { return &*m_handle; }
+    [[nodiscard]] auto Handle() const noexcept -> vk::Image { return *m_handle; }
 
-    [[nodiscard]] auto GetView() const noexcept -> const vk::raii::ImageView& { return m_view; }
-    [[nodiscard]] auto GetLayout() const noexcept -> vk::ImageLayout { return m_layout; }
-    [[nodiscard]] auto GetFormat() const noexcept -> vk::Format { return m_format; }
-    [[nodiscard]] auto GetExtent() const noexcept -> vk::Extent3D { return m_extent; }
-    [[nodiscard]] auto GetMipLevels() const noexcept -> std::uint32_t { return m_mipLevels; }
-    [[nodiscard]] auto GetSampleCount() const noexcept -> vk::SampleCountFlagBits { return m_sampleCount; }
+    [[nodiscard]] auto View() const noexcept -> const vk::raii::ImageView& { return m_view; }
+    [[nodiscard]] auto Layout() const noexcept -> vk::ImageLayout { return m_layout; }
+    [[nodiscard]] auto Format() const noexcept -> vk::Format { return m_format; }
+    [[nodiscard]] auto Extent() const noexcept -> vk::Extent3D { return m_extent; }
+    [[nodiscard]] auto MipLevels() const noexcept -> std::uint32_t { return m_mipLevels; }
+    [[nodiscard]] auto SampleCount() const noexcept -> vk::SampleCountFlagBits { return m_sampleCount; }
 
     auto Clear() -> void;
 

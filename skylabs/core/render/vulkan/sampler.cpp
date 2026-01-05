@@ -9,7 +9,7 @@ CSampler::CSampler(const CContext& context) {
     createInfo.addressModeV = vk::SamplerAddressMode::eClampToBorder;
     createInfo.addressModeW = vk::SamplerAddressMode::eClampToBorder;
     createInfo.anisotropyEnable = vk::True;
-    createInfo.maxAnisotropy = context.GetPhysicalDevice()->GetProperties().limits.maxSamplerAnisotropy;
+    createInfo.maxAnisotropy = context.PhysicalDevice().Properties().limits.maxSamplerAnisotropy;
     createInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
     createInfo.unnormalizedCoordinates = vk::False;
     createInfo.compareEnable = vk::False;
@@ -18,6 +18,6 @@ CSampler::CSampler(const CContext& context) {
     createInfo.mipLodBias = 0.0f;
     createInfo.minLod = 0.0f;
     createInfo.maxLod = vk::LodClampNone;
-    m_handle = vk::raii::Sampler { *context.GetDevice(), createInfo };
+    m_handle = vk::raii::Sampler { *context.Device(), createInfo };
 }
 }

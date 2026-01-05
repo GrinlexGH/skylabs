@@ -18,7 +18,7 @@ public:
         const CInstance& instance,
         const CPhysicalDevice& physicalDevice,
         const IWindow* window,
-        std::span<RequestedExtension> extensions
+        std::span<Utils::CRequestedExtension> extensions
     );
     CDevice(const CDevice&) = delete;
     CDevice(CDevice&&) noexcept = default;
@@ -27,20 +27,21 @@ public:
     ~CDevice() = default;
 
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Device& { return m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::Device& { return m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Device* { return &m_handle; }
+    [[nodiscard]] auto Handle() const noexcept -> const vk::raii::Device& { return m_handle; }
 
     [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return m_enabledExtensions.contains(name); }
 
-    [[nodiscard]] auto GetGraphicsQueue() const -> const CQueue& { return m_graphicsQueue; }
-    [[nodiscard]] auto GetPresentQueue() const -> const CQueue& { return m_presentQueue; }
-    [[nodiscard]] auto GetTransferQueue() const -> const CQueue& { return m_transferQueue; }
-    [[nodiscard]] auto GetComputeQueue() const -> const CQueue& { return m_computeQueue; }
+    [[nodiscard]] auto GraphicsQueue() const -> const CQueue& { return m_graphicsQueue; }
+    [[nodiscard]] auto PresentQueue() const -> const CQueue& { return m_presentQueue; }
+    [[nodiscard]] auto TransferQueue() const -> const CQueue& { return m_transferQueue; }
+    [[nodiscard]] auto ComputeQueue() const -> const CQueue& { return m_computeQueue; }
 
 private:
     auto EnableExtensions(
-        std::span<RequestedExtension> requestedExtensions,
-        const CPhysicalDevice& physicalDevice
+        std::span<Utils::CRequestedExtension> requestedExtensions,
+        const CPhysicalDevice& physicalDevice,
+        std::uint32_t apiVersion
     ) -> std::vector<const char*>;
 
     UnorderedStringSet m_enabledExtensions;
