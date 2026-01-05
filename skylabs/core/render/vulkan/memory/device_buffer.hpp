@@ -18,7 +18,8 @@ public:
     ~CDeviceBuffer() = default;
 
     [[nodiscard]] auto operator*() const noexcept -> vk::Buffer { return *m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> vk::Buffer { return *m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vk::Buffer* { return &*m_handle; }
+    [[nodiscard]] auto Handle() const noexcept -> vk::Buffer { return *m_handle; }
 
     auto Clear() -> void;
 

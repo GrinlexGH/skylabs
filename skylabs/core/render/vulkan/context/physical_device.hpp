@@ -17,17 +17,18 @@ public:
     ~CPhysicalDevice() = default;
 
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::PhysicalDevice* { return &m_handle; }
+    [[nodiscard]] auto Handle() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
 
-    [[nodiscard]] auto GetProperties() const -> const vk::PhysicalDeviceProperties& { return m_properties; }
-    [[nodiscard]] auto GetFeatures() const -> const vk::PhysicalDeviceFeatures& { return m_features; }
-    [[nodiscard]] auto GetExtensions() const -> const std::vector<vk::ExtensionProperties>& { return m_extensions; }
-    [[nodiscard]] auto GetQueueFamilies() const -> const std::vector<vk::QueueFamilyProperties>& { return m_queueFamilies; }
+    [[nodiscard]] auto Properties() const noexcept -> const vk::PhysicalDeviceProperties& { return m_properties; }
+    [[nodiscard]] auto Features() const noexcept -> const vk::PhysicalDeviceFeatures& { return m_features; }
+    [[nodiscard]] auto Extensions() const noexcept -> const std::vector<vk::ExtensionProperties>& { return m_extensions; }
+    [[nodiscard]] auto QueueFamilies() const noexcept -> const std::vector<vk::QueueFamilyProperties>& { return m_queueFamilies; }
 
     [[nodiscard]] auto IsExtensionSupported(const std::string_view name) const -> bool { return m_availableExtensionsSet.contains(name); }
 
-    [[nodiscard]] auto GetRequiredFeatures() const -> const vk::PhysicalDeviceFeatures& { return m_requiredFeatures; }
-    [[nodiscard]] auto GetExtensionFeaturePNext() const -> void* { return m_extensionFeaturePNext; }
+    [[nodiscard]] auto RequiredFeatures() const noexcept -> const vk::PhysicalDeviceFeatures& { return m_requiredFeatures; }
+    [[nodiscard]] auto ExtensionFeaturePNext() const noexcept -> void* { return m_extensionFeaturePNext; }
 
     template <typename Feature>
     [[nodiscard]] auto GetExtensionFeatures() const -> Feature {
@@ -49,7 +50,7 @@ public:
     auto AddExtensionFeatures() -> Feature& {
         auto [it, added] = m_extensionFeatures.try_emplace(Feature::structureType, std::make_shared<Feature>());
         if (added) {
-            AppendToPNextChain(m_extensionFeaturePNext, it->second.get());
+            Utils::AppendToPNextChain(m_extensionFeaturePNext, it->second.get());
         }
 
         return *static_cast<Feature*>(it->second.get());

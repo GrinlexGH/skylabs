@@ -18,9 +18,9 @@ public:
     ~CMemoryMapping();
 
     [[nodiscard]] auto operator*() const noexcept -> void* { return m_data; }
-    [[nodiscard]] auto GetData() const noexcept -> void* { return m_data; }
-    [[nodiscard]] auto GetSize() const noexcept -> std::size_t { return m_size; }
-    [[nodiscard]] auto GetSpan() const -> std::span<std::byte> { return { static_cast<std::byte*>(m_data), static_cast<std::size_t>(m_size) }; }
+    [[nodiscard]] auto Data() const noexcept -> void* { return m_data; }
+    [[nodiscard]] auto Size() const noexcept -> std::size_t { return m_size; }
+    [[nodiscard]] auto Span() const -> std::span<std::byte> { return { static_cast<std::byte*>(m_data), static_cast<std::size_t>(m_size) }; }
 
     auto Clear() -> void;
 

@@ -14,8 +14,8 @@ public:
     CLegacyRenderPass& operator=(CLegacyRenderPass&&) noexcept = default;
     ~CLegacyRenderPass() = default;
 
-    [[nodiscard]] auto GetRenderPass() const noexcept -> vk::RenderPass { return *m_renderPass; }
-    [[nodiscard]] auto GetFramebuffer() const noexcept -> vk::Framebuffer { return *m_framebuffer; }
+    [[nodiscard]] auto RenderPass() const noexcept -> vk::RenderPass { return *m_renderPass; }
+    [[nodiscard]] auto Framebuffer() const noexcept -> vk::Framebuffer { return *m_framebuffer; }
 
 private:
     vk::raii::RenderPass m_renderPass { nullptr };

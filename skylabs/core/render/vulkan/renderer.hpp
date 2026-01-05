@@ -53,11 +53,11 @@ private:
 
     vk::raii::DescriptorSetLayout m_descriptorSetLayoutMain { nullptr };
     vk::raii::DescriptorPool m_descriptorPoolMain { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSetsMain { nullptr };
+    std::vector<vk::DescriptorSet> m_descriptorSetsMain;
 
     vk::raii::DescriptorSetLayout m_descriptorSetLayoutSwapchain { nullptr };
     vk::raii::DescriptorPool m_descriptorPoolSwapchain { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain { nullptr };
+    std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain;
 
 
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;

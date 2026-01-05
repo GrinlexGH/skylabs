@@ -53,8 +53,8 @@ CQueueFamilies GetQueueFamilies(
     const Vulkan::CPhysicalDevice& physicalDevice,
     const Vulkan::IWindow* window
 ) {
-    const std::vector<vk::QueueFamilyProperties>& queueFamilies = physicalDevice.GetQueueFamilies();
-    const vk::PhysicalDevice physicalDeviceHandle = physicalDevice.GetHandle();
+    const std::vector<vk::QueueFamilyProperties>& queueFamilies = physicalDevice.QueueFamilies();
+    const vk::PhysicalDevice physicalDeviceHandle = physicalDevice.Handle();
 
     std::optional<std::uint32_t> graphicsIndex;
     std::optional<std::uint32_t> presentIndex;
@@ -120,7 +120,7 @@ CDevice::CDevice(
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice,
     const IWindow* const window,
-    const std::span<RequestedExtension> extensions
+    const std::span<Utils::CRequestedExtension> extensions
 ) {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
@@ -129,7 +129,7 @@ CDevice::CDevice(
         presentFamily,
         transferFamily,
         computeFamily
-    ] = GetQueueFamilies(instance.GetHandle(), physicalDevice, window);
+    ] = GetQueueFamilies(*instance, physicalDevice, window);
 
     const std::set uniqueQueueFamilies { graphicsFamily, presentFamily, transferFamily, computeFamily };
 
@@ -144,26 +144,26 @@ CDevice::CDevice(
     }
 
     //====================
-    std::vector<const char*> enabledExtensions = EnableExtensions(extensions, physicalDevice);
+    std::vector<const char*> enabledExtensions = EnableExtensions(extensions, physicalDevice, instance.ApiVersion());
 
     //====================
     void* pNext = nullptr;
     vk::PhysicalDeviceFeatures2 features;
 
-    if (physicalDevice.GetExtensionFeaturePNext()) {
-        features.pNext = physicalDevice.GetExtensionFeaturePNext();
-        features.features = physicalDevice.GetRequiredFeatures();
-        AppendToPNextChain(pNext, &features);
+    if (physicalDevice.ExtensionFeaturePNext()) {
+        features.pNext = physicalDevice.ExtensionFeaturePNext();
+        features.features = physicalDevice.RequiredFeatures();
+        Utils::AppendToPNextChain(pNext, &features);
     }
 
     vk::DeviceCreateInfo createInfo;
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createInfo.pEnabledFeatures = physicalDevice.GetExtensionFeaturePNext()
+    createInfo.pQueueCreateInfos = queueCreateInfos.data();
+    createInfo.pEnabledFeatures = physicalDevice.ExtensionFeaturePNext()
         ? nullptr
-        : &physicalDevice.GetRequiredFeatures();
+        : &physicalDevice.RequiredFeatures();
     createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
+    createInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
     createInfo.pNext = pNext;
 
     m_handle = vk::raii::Device { *physicalDevice, createInfo };
@@ -176,8 +176,9 @@ CDevice::CDevice(
 }
 
 std::vector<const char*> CDevice::EnableExtensions(
-    const std::span<RequestedExtension> requestedExtensions,
-    const CPhysicalDevice& physicalDevice
+    const std::span<Utils::CRequestedExtension> requestedExtensions,
+    const CPhysicalDevice& physicalDevice,
+    const std::uint32_t apiVersion
 ) {
     std::vector<const char*> enabledExtensions;
     enabledExtensions.reserve(requestedExtensions.size());
@@ -187,13 +188,19 @@ std::vector<const char*> CDevice::EnableExtensions(
 
     m_enabledExtensions.reserve(requestedExtensions.size());
 
-    for (const auto& [name, requirement] : requestedExtensions) {
+    for (const auto& extension : requestedExtensions) {
+        const std::string_view name = extension.Name();
+        const Utils::ExtensionRequirement requirement = extension.Requirement();
+
+        if (apiVersion >= extension.PromotedVersion())
+            continue;
+
         if (!m_enabledExtensions.contains(name)) {
             if (physicalDevice.IsExtensionSupported(name)) {
                 enabledExtensions.emplace_back(name.data());
                 m_enabledExtensions.emplace(name);
             }
-        } else if (requirement == ExtensionRequirement::Required) {
+        } else if (requirement == Utils::ExtensionRequirement::Required) {
             missingExtensions.push_back(name.data());
         }
     }

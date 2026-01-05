@@ -3,7 +3,7 @@
 #include <skylabs/public/logging.hpp>
 
 namespace {
-int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
+int DeviceTypeScore(const vk::PhysicalDeviceType type) {
     switch (type) {
         case vk::PhysicalDeviceType::eDiscreteGpu:
             return 5;
@@ -16,8 +16,7 @@ int GetDeviceTypeScore(const vk::PhysicalDeviceType type) {
         case vk::PhysicalDeviceType::eOther:
             return 1;
     }
-
-    return 0;
+    std::unreachable();
 }
 }
 
@@ -30,19 +29,16 @@ CContext::CContext(const IWindow* const window) : m_window(window) {
 }
 
 void CContext::CreateInstance() {
-    std::vector<RequestedExtension> instanceExtensions;
+    std::vector<Utils::CRequestedExtension> instanceExtensions;
 
     const std::span<const char* const> required = m_window->GetRequiredInstanceExtensions();
     instanceExtensions.reserve(required.size() + 1);
 
-    instanceExtensions.emplace_back(
-        vk::KHRGetPhysicalDeviceProperties2ExtensionName,
-        ExtensionRequirement::Required
-    );
-
     for (const std::string_view ext : required) {
-        instanceExtensions.emplace_back(ext, ExtensionRequirement::Required);
+        instanceExtensions.emplace_back(ext, Utils::ExtensionRequirement::Required);
     }
+
+    instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Utils::ExtensionRequirement::Required, vk::ApiVersion11);
 
     std::ranges::sort(instanceExtensions);
     instanceExtensions.erase(std::ranges::unique(instanceExtensions).begin(), instanceExtensions.end());
@@ -54,7 +50,7 @@ bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
     bool hasPresentQueue = false;
     bool hasGraphicsQueue = false;
 
-    for (std::uint32_t i = 0; const auto& queue : physicalDevice.GetQueueFamilies()) {
+    for (std::uint32_t i = 0; const auto& queue : physicalDevice.QueueFamilies()) {
         if (m_window->IsQueueFamilyPresentSupport(*m_instance, *physicalDevice, i)) {
             hasPresentQueue = true;
         }
@@ -73,14 +69,14 @@ bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
     return false;
 }
 
-CPhysicalDevice* CContext::GetSuitablePhysicalDevice() {
+CPhysicalDevice* CContext::SelectSuitablePhysicalDevice() {
     CPhysicalDevice* selectedDevice = nullptr;
-    std::vector<CPhysicalDevice>& physicalDevices = m_instance.GetPhysicalDevices();
+    std::vector<CPhysicalDevice>& physicalDevices = m_instance.PhysicalDevices();
 
     int deviceTypeScore = 0;
     for (auto& physicalDevice : physicalDevices) {
         if (IsDeviceSuitable(physicalDevice)) {
-            if (const int optionScore = GetDeviceTypeScore(physicalDevice.GetProperties().deviceType); optionScore > deviceTypeScore) {
+            if (const int optionScore = DeviceTypeScore(physicalDevice.Properties().deviceType); optionScore > deviceTypeScore) {
                 selectedDevice = &physicalDevice;
                 deviceTypeScore = optionScore;
             }
@@ -88,7 +84,7 @@ CPhysicalDevice* CContext::GetSuitablePhysicalDevice() {
     }
 
     if (selectedDevice == nullptr) {
-        Log::Warning("No suitable GPU was found! Picking first GPU: {}", *physicalDevices[0].GetProperties().deviceName);
+        Log::Warning("No suitable GPU was found! Picking first GPU: {}", *physicalDevices.at(0).Properties().deviceName);
         return physicalDevices.data();
     }
 
@@ -96,52 +92,59 @@ CPhysicalDevice* CContext::GetSuitablePhysicalDevice() {
 }
 
 void CContext::SelectPhysicalDevice() {
-    m_selectedPhysicalDevice = GetSuitablePhysicalDevice();
+    m_selectedPhysicalDevice = SelectSuitablePhysicalDevice();
 
-    Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->GetProperties().deviceName });
+    Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->Properties().deviceName });
 }
 
 void CContext::CreateLogicalDevice() {
-    std::vector<RequestedExtension> deviceExtensions;
+    std::vector<Utils::CRequestedExtension> deviceExtensions;
     deviceExtensions.reserve(15);
 
-    // VMA
-    deviceExtensions.emplace_back(vk::KHRDedicatedAllocationExtensionName, ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::KHRBindMemory2ExtensionName, ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::KHRMaintenance4ExtensionName, ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::KHRMaintenance5ExtensionName, ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::EXTMemoryBudgetExtensionName, ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::KHRBufferDeviceAddressExtensionName, ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::EXTMemoryPriorityExtensionName, ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::AMDDeviceCoherentMemoryExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName, Utils::ExtensionRequirement::Required);
 
-    deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName, ExtensionRequirement::Required);
+    // VMA
+    deviceExtensions.emplace_back(vk::KHRDedicatedAllocationExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
+    deviceExtensions.emplace_back(vk::KHRGetMemoryRequirements2ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
+
+    deviceExtensions.emplace_back(vk::KHRBindMemory2ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
+    deviceExtensions.emplace_back(vk::KHRMaintenance4ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion13);
+    deviceExtensions.emplace_back(vk::EXTMemoryBudgetExtensionName, Utils::ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::EXTMemoryPriorityExtensionName, Utils::ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::AMDDeviceCoherentMemoryExtensionName, Utils::ExtensionRequirement::Optional);
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    deviceExtensions.emplace_back(vk::KHRExternalMemoryWin32ExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::KHRExternalMemoryWin32ExtensionName, Utils::ExtensionRequirement::Optional);
 #endif
 
 #ifdef DEBUG
-    deviceExtensions.emplace_back(vk::EXTDeviceAddressBindingReportExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::EXTDeviceAddressBindingReportExtensionName, Utils::ExtensionRequirement::Optional);
 #endif
 
     // Enable all extensions here
     REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
 
-    if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
-        deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName, ExtensionRequirement::Optional);
+    deviceExtensions.emplace_back(vk::KHRMaintenance5ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion14);
+    if (m_instance.ApiVersion() < vk::ApiVersion13 || !REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
+        deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName, Utils::ExtensionRequirement::Optional);
+        deviceExtensions.emplace_back(vk::KHRDepthStencilResolveExtensionName, Utils::ExtensionRequirement::Optional);
+        deviceExtensions.emplace_back(vk::KHRCreateRenderpass2ExtensionName, Utils::ExtensionRequirement::Optional);
         REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
     }
 
-    if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, synchronization2)) {
-        deviceExtensions.emplace_back(vk::KHRSynchronization2ExtensionName, ExtensionRequirement::Required);
+    if (m_instance.ApiVersion() < vk::ApiVersion13 || !REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, synchronization2)) {
+        deviceExtensions.emplace_back(vk::KHRSynchronization2ExtensionName, Utils::ExtensionRequirement::Required);
         REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceSynchronization2Features, synchronization2);
     }
 
-    if (!REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan12Features, bufferDeviceAddress)) {
-        deviceExtensions.emplace_back(vk::KHRBufferDeviceAddressExtensionName, ExtensionRequirement::Required);
+    deviceExtensions.emplace_back(vk::KHRDeviceGroupExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
+    if (m_instance.ApiVersion() < vk::ApiVersion12 || !REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan12Features, bufferDeviceAddress)) {
+        deviceExtensions.emplace_back(vk::KHRBufferDeviceAddressExtensionName, Utils::ExtensionRequirement::Required);
         REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceBufferDeviceAddressFeatures, bufferDeviceAddress);
     }
+
+    std::ranges::sort(deviceExtensions);
+    deviceExtensions.erase(std::ranges::unique(deviceExtensions).begin(), deviceExtensions.end());
 
     m_device = CDevice {
         m_instance,
@@ -152,6 +155,6 @@ void CContext::CreateLogicalDevice() {
 }
 
 void CContext::CreateAllocator() {
-    m_allocator = CAllocator { m_instance, m_selectedPhysicalDevice->GetHandle(), m_device };
+    m_allocator = CAllocator { m_instance, m_selectedPhysicalDevice->Handle(), m_device };
 }
 }

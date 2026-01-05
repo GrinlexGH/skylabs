@@ -40,7 +40,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
         const vk::ImageLayout referenceLayout
     ) -> vk::AttachmentReference {
         vk::AttachmentDescription attachmentDescription {};
-        attachmentDescription.format = image->GetFormat();
+        attachmentDescription.format = image->Format();
         attachmentDescription.samples = sampleCount;
         attachmentDescription.loadOp = loadOp;
         attachmentDescription.storeOp = storeOp;
@@ -53,7 +53,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
         attachmentReference.attachment = static_cast<std::uint32_t>(views.size());
         attachmentReference.layout = referenceLayout;
 
-        views.push_back(image->GetView());
+        views.push_back(image->View());
         descriptions.push_back(attachmentDescription);
         return attachmentReference;
     };
@@ -63,7 +63,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
             return false;
 
         // Validate extent
-        const vk::Extent2D imageExtent { image->GetExtent().width, image->GetExtent().height };
+        const vk::Extent2D imageExtent { image->Extent().width, image->Extent().height };
         if (extent == vk::Extent2D {}) {
             extent = imageExtent;
         } else if (extent != imageExtent) {
@@ -80,7 +80,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
             continue;
 
         colorReferences.push_back(addAttachment(
-            image, image->GetSampleCount(),
+            image, image->SampleCount(),
             vk::AttachmentLoadOp::eClear, ToStoreOp(usage),
             ToLayout(usage), vk::ImageLayout::eColorAttachmentOptimal
         ));
@@ -103,7 +103,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     std::optional<vk::AttachmentReference> depthReference;
     if (validateImage(description.m_depthImage)) {
         depthReference = addAttachment(
-            description.m_depthImage, description.m_depthImage->GetSampleCount(),
+            description.m_depthImage, description.m_depthImage->SampleCount(),
             vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
             vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal
         );
@@ -135,7 +135,7 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     renderPassInfo.pSubpasses = &subpassDescription;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
-    m_renderPass = context.GetDevice()->createRenderPass(renderPassInfo);
+    m_renderPass = context.Device()->createRenderPass(renderPassInfo);
 
     vk::FramebufferCreateInfo framebufferInfo {};
     framebufferInfo.renderPass = m_renderPass;
@@ -144,6 +144,6 @@ CLegacyRenderPass::CLegacyRenderPass(const CContext& context, const CRenderPassD
     framebufferInfo.width = extent.width;
     framebufferInfo.height = extent.height;
     framebufferInfo.layers = 1;
-    m_framebuffer = vk::raii::Framebuffer { *context.GetDevice(), framebufferInfo };
+    m_framebuffer = vk::raii::Framebuffer { *context.Device(), framebufferInfo };
 }
 }

@@ -18,7 +18,7 @@ public:
     [[nodiscard]] auto GetFence() const -> const vk::raii::Fence& { return m_fence; }
     [[nodiscard]] auto GetImageAvailableSemaphore() const -> const vk::raii::Semaphore& { return m_imageAvailableSemaphore; }
 
-    auto RecreateImageAvailableSemaphore() -> void { m_imageAvailableSemaphore = vk::raii::Semaphore { *m_context->GetDevice(), vk::SemaphoreCreateInfo {} }; }
+    auto RecreateImageAvailableSemaphore() -> void { m_imageAvailableSemaphore = vk::raii::Semaphore { *m_context->Device(), vk::SemaphoreCreateInfo {} }; }
 
 private:
     const CContext* m_context = nullptr;

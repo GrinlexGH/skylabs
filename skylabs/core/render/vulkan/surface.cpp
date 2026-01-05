@@ -3,8 +3,8 @@
 
 namespace Vulkan {
 CSurface::CSurface(const CContext& context) : m_context(&context) {
-    const vk::Instance instanceHandle = *m_context->GetInstance();
-    const IWindow* window = m_context->GetWindow();
+    const vk::Instance instanceHandle = *m_context->Instance();
+    const IWindow* window = m_context->Window();
     m_handle = window->CreateSurface(instanceHandle);
 }
 
@@ -22,8 +22,8 @@ CSurface& CSurface::operator=(CSurface&& rhs) noexcept {
 
 CSurface::~CSurface() {
     if (m_handle) {
-        const vk::Instance instanceHandle = *m_context->GetInstance();
-        const IWindow* window = m_context->GetWindow();
+        const vk::Instance instanceHandle = *m_context->Instance();
+        const IWindow* window = m_context->Window();
         window->DestroySurface(instanceHandle, m_handle);
     }
 }
