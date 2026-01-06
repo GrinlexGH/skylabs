@@ -1,4 +1,5 @@
 #pragma once
+#include <skylabs/public/utils.hpp>
 
 class IWindow
 {
@@ -10,5 +11,5 @@ public:
     IWindow& operator=(IWindow&&) noexcept = default;
     virtual ~IWindow() = default;
 
-    virtual auto GetDrawableSize(int& w, int& h) const -> void = 0;
+    virtual auto DrawableSize() const -> CExtent2D = 0;
 };

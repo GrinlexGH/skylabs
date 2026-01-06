@@ -2,7 +2,6 @@
 #include <skylabs/core/window.hpp>
 
 #include <span>
-#include <cstdint>
 
 #include <vulkan/vulkan.hpp>
 
@@ -22,7 +21,7 @@ public:
     [[nodiscard]] virtual auto CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR = 0;
     virtual auto DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void = 0;
 
-    [[nodiscard]] virtual auto IsQueueFamilyPresentSupport(
+    [[nodiscard]] virtual auto IsQueueFamilySupportPresent(
         const vk::Instance& instance,
         const vk::PhysicalDevice& physicalDevice,
         std::uint32_t index

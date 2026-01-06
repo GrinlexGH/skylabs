@@ -155,7 +155,7 @@ vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& c
     }
 
     int width, height;
-    m_context->Window()->GetDrawableSize(width, height);
+    m_context->Window()->DrawableSize(width, height);
 
     vk::Extent2D actualExtent = {
         static_cast<uint32_t>(width),

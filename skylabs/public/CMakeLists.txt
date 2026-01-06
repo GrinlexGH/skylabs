@@ -27,6 +27,7 @@ target_sources(
             dll_export.hpp
             os.hpp
             resource_system.hpp
+            utils.hpp
             string_utils.hpp
     FILE_SET generated_headers
         TYPE HEADERS
