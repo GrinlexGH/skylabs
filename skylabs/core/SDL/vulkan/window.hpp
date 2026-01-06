@@ -7,6 +7,8 @@ namespace SDL::Vulkan {
 class CWindow final : public ::Vulkan::IWindow
 {
 public:
+    CWindow() = delete;
+    explicit CWindow(std::nullptr_t) noexcept {}
     explicit CWindow(const char* title, int w, int h, SDL_WindowFlags flags = 0);
     CWindow(const CWindow&) = delete;
     CWindow(CWindow&& other) noexcept;
