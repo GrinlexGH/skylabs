@@ -2,10 +2,14 @@
 #include <skylabs/public/logging.hpp>
 #include <skylabs/core/SDL/context.hpp>
 #include <skylabs/core/SDL/vulkan/window.hpp>
+#include "project_info.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "project_info.hpp"
+// Fix defines
+#ifdef CreateWindow
+#undef CreateWindow
+#endif
 
 class CTimer
 {
@@ -24,19 +28,28 @@ private:
     std::chrono::steady_clock::time_point m_start;
 };
 
+inline bool HasLayer(const std::vector<vk::LayerProperties>& set, const std::string_view target) {
+    return std::ranges::any_of(
+        set, [&](const vk::LayerProperties& layer) { return layer.layerName == target; }
+    );
+}
+
 namespace Vulkan {
+void CVulkanMono::CreateWindow() {
+    m_SDLContext = SDL::CContext { SDL_INIT_VIDEO };
+    m_SDLWindow = SDL::Vulkan::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE };
+    SDL_SetWindowRelativeMouseMode(*m_SDLWindow, true);
+}
+
 void CVulkanMono::Run() {
+    CreateWindow();
+
     CTimer timer;
-
-    const SDL::CContext sdl(SDL_INIT_VIDEO);
-
-    const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
-    SDL_SetWindowRelativeMouseMode(window.Handle(), true);
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
     vk::raii::Context context;
     if (context.getDispatcher()->vkEnumerateInstanceVersion) {
-        std::uint32_t apiVersion = context.enumerateInstanceVersion();
+        const std::uint32_t apiVersion = context.enumerateInstanceVersion();
         Log::Debug(
             "Available Vulkan version: {}.{}.{}, but anyways I will use Vulkan 1.0",
             vk::apiVersionMajor(apiVersion),
@@ -45,22 +58,21 @@ void CVulkanMono::Run() {
         );
     }
 
-    std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
-
-    for (const auto& layerProperties : availableLayers) {
-        std::string_view layerName = layerProperties.layerName;
-        Log::Debug("Layer {}", layerName);
-    }
-
-    std::vector<vk::ExtensionProperties> availableValidationLayerExtensions = context.enumerateInstanceExtensionProperties(std::string { "VK_LAYER_KHRONOS_validation" });
-    Log::Debug("VK_LAYER_KHRONOS_validation extensions:");
-    for (const auto& extensionProperties : availableValidationLayerExtensions) {
-        Log::Debug("    Extension {}", std::string_view { extensionProperties.extensionName });
-    }
-
+    const std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
     std::vector<vk::ExtensionProperties> availableExtensions = context.enumerateInstanceExtensionProperties();
-    for (const auto& extensionProperties : availableExtensions) {
-        Log::Debug("Extension {}", std::string_view { extensionProperties.extensionName });
+
+    std::vector<const char*> enabledLayers { };
+    std::array<const char*, 0> enabledExtensions = {  };
+
+    if (HasLayer(availableLayers, "VK_LAYER_KHRONOS_validation")) {
+        Log::Debug("Enabling VK_LAYER_KHRONOS_validation...");
+        enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
+
+        // If VK_LAYER_KHRONOS_validation is enabled, extensions from it are also available
+        for (const auto& extensionProperties : context.enumerateInstanceExtensionProperties(std::string { "VK_LAYER_KHRONOS_validation" })) {
+            Log::Debug("Adding extension from VK_LAYER_KHRONOS_validation: {}", std::string_view { extensionProperties.extensionName });
+            availableExtensions.push_back(extensionProperties.extensionName);
+        }
     }
 
     vk::ApplicationInfo applicationInfo {};
@@ -70,9 +82,6 @@ void CVulkanMono::Run() {
     applicationInfo.pEngineName = Skylabs::NAME;
     applicationInfo.engineVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     applicationInfo.apiVersion = vk::ApiVersion10;
-
-    std::array<const char* const, 0> enabledLayers = {  };
-    std::array<const char* const, 0> enabledExtensions = {  };
 
     vk::InstanceCreateInfo instanceCreateInfo {};
     instanceCreateInfo.pNext = nullptr;
@@ -84,5 +93,6 @@ void CVulkanMono::Run() {
     instanceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
     vk::raii::Instance instance = context.createInstance(instanceCreateInfo);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 }
 }
