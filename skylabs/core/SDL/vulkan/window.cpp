@@ -28,29 +28,34 @@ CWindow& CWindow::operator=(CWindow&& rhs) noexcept {
     return *this;
 }
 
-auto CWindow::GetRequiredInstanceExtensions() const -> std::span<const char* const> {
+std::span<const char* const> CWindow::GetRequiredInstanceExtensions() const {
     return GetInstanceExtensions();
 }
 
-auto CWindow::IsQueueFamilyPresentSupport(
+bool CWindow::IsQueueFamilySupportPresent(
     const vk::Instance& instance,
     const vk::PhysicalDevice& physicalDevice,
     const uint32_t index
-) const -> bool {
+) const {
     return GetPresentationSupport(instance, physicalDevice, index);
 }
 
-auto CWindow::CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR {
+vk::SurfaceKHR CWindow::CreateSurface(const vk::Instance& instance) const {
     return Vulkan::CreateSurface(m_handle, instance);
 }
 
-auto CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void {
+void CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const {
     Vulkan::DestroySurface(instance, surface);
     surface = nullptr;
 }
 
-auto CWindow::GetDrawableSize(int& w, int& h) const -> void {
+CExtent2D CWindow::DrawableSize() const {
+    int w, h;
     GetWindowSizeInPixels(m_handle, &w, &h);
+    return {
+        static_cast<std::uint32_t>(w),
+        static_cast<std::uint32_t>(h)
+    };
 }
 
 CWindow::~CWindow() {

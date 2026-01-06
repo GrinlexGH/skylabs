@@ -73,7 +73,7 @@ CQueueFamilies GetQueueFamilies(
             graphicsIndex.emplace(i);
         }
 
-        if (window->IsQueueFamilyPresentSupport(instance, physicalDeviceHandle, i)) {
+        if (window->IsQueueFamilySupportPresent(instance, physicalDeviceHandle, i)) {
             presentIndex.emplace(i);
         }
 

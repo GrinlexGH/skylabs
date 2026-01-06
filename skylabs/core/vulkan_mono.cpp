@@ -1,13 +1,37 @@
 #include <skylabs/core/vulkan_mono.hpp>
 #include <skylabs/public/logging.hpp>
+#include <skylabs/core/SDL/context.hpp>
+#include <skylabs/core/SDL/vulkan/window.hpp>
 
 #include <vulkan/vulkan_raii.hpp>
 
 #include "project_info.hpp"
 
+class CTimer
+{
+public:
+    CTimer() {
+        Log::Debug("Timer start");
+        m_start = std::chrono::steady_clock::now();
+    }
+
+    ~CTimer() {
+        const std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        Log::Debug("{} ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - m_start).count());
+    }
+
+private:
+    std::chrono::steady_clock::time_point m_start;
+};
+
 namespace Vulkan {
 void CVulkanMono::Run() {
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    CTimer timer;
+
+    const SDL::CContext sdl(SDL_INIT_VIDEO);
+
+    const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
+    SDL_SetWindowRelativeMouseMode(window.Handle(), true);
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
     vk::raii::Context context;
@@ -22,18 +46,18 @@ void CVulkanMono::Run() {
     }
 
     std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
-    
+
     for (const auto& layerProperties : availableLayers) {
         std::string_view layerName = layerProperties.layerName;
         Log::Debug("Layer {}", layerName);
     }
-    
+
     std::vector<vk::ExtensionProperties> availableValidationLayerExtensions = context.enumerateInstanceExtensionProperties(std::string { "VK_LAYER_KHRONOS_validation" });
     Log::Debug("VK_LAYER_KHRONOS_validation extensions:");
     for (const auto& extensionProperties : availableValidationLayerExtensions) {
         Log::Debug("    Extension {}", std::string_view { extensionProperties.extensionName });
     }
-    
+
     std::vector<vk::ExtensionProperties> availableExtensions = context.enumerateInstanceExtensionProperties();
     for (const auto& extensionProperties : availableExtensions) {
         Log::Debug("Extension {}", std::string_view { extensionProperties.extensionName });
@@ -60,9 +84,5 @@ void CVulkanMono::Run() {
     instanceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
     vk::raii::Instance instance = context.createInstance(instanceCreateInfo);
-
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> duration = end - start;
-    Log::Debug("{} ms", std::chrono::duration_cast<std::chrono::milliseconds>(duration).count());
 }
 }

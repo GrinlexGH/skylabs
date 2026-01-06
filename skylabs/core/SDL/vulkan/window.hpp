@@ -15,16 +15,16 @@ public:
     ~CWindow() override;
 
     [[nodiscard]] auto operator*() const noexcept -> SDL_Window* { return m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> SDL_Window* { return m_handle; }
+    [[nodiscard]] auto Handle() const noexcept -> SDL_Window* { return m_handle; }
 
-    auto GetDrawableSize(int& w, int& h) const -> void override;
+    auto DrawableSize() const -> CExtent2D override;
 
     [[nodiscard]] auto GetRequiredInstanceExtensions() const -> std::span<const char* const> override;
 
     [[nodiscard]] auto CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR override;
     auto DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void override;
 
-    [[nodiscard]] auto IsQueueFamilyPresentSupport(
+    [[nodiscard]] auto IsQueueFamilySupportPresent(
         const vk::Instance& instance,
         const vk::PhysicalDevice& physicalDevice,
         std::uint32_t index

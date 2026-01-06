@@ -149,7 +149,7 @@ void CLauncher::Main() {
     const SDL::CContext sdl(SDL_INIT_VIDEO);
 
     const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
-    SDL_SetWindowRelativeMouseMode(window.GetHandle(), true);
+    SDL_SetWindowRelativeMouseMode(window.Handle(), true);
 
     const std::unique_ptr<IRenderer> renderer = Vulkan::CRenderer::TryToCreate(&window);
     if (!renderer) {
