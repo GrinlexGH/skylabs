@@ -1,31 +1,9 @@
 #include <skylabs/core/SDL/context.hpp>
-#include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
 
-#include <fmt/ranges.h>
-
-#include <array>
-#include <cassert>
 #include <mutex>
 #include <stdexcept>
-
-namespace {
-std::string ToString(const SDL_InitFlags flags) {
-    std::array<std::string_view, 8> active_flags {};
-    size_t count = 0;
-
-    if (flags & SDL_INIT_AUDIO) active_flags[count++] = "AUDIO";
-    if (flags & SDL_INIT_VIDEO) active_flags[count++] = "VIDEO";
-    if (flags & SDL_INIT_JOYSTICK) active_flags[count++] = "JOYSTICK";
-    if (flags & SDL_INIT_HAPTIC) active_flags[count++] = "HAPTIC";
-    if (flags & SDL_INIT_GAMEPAD) active_flags[count++] = "GAMEPAD";
-    if (flags & SDL_INIT_EVENTS) active_flags[count++] = "EVENTS";
-    if (flags & SDL_INIT_SENSOR) active_flags[count++] = "SENSOR";
-    if (flags & SDL_INIT_CAMERA) active_flags[count++] = "CAMERA";
-
-    return fmt::format("{}", fmt::join(active_flags.begin(), active_flags.begin() + count, " | "));
-}
-}
+#include <utility>
 
 namespace SDL {
 CContext::CContext(const SDL_InitFlags flags) {
@@ -39,7 +17,6 @@ CContext::CContext(const SDL_InitFlags flags) {
         SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING, "game");
     });
 
-    Log::Debug("Initializing SDL subsystems: {}...", ToString(flags));
     if (!SDL_InitSubSystem(flags)) {
         throw std::runtime_error(SDL_GetError());
     }
@@ -64,7 +41,6 @@ CContext::~CContext() {
 
 void CContext::Cleanup() {
     if (m_flags != 0) {
-        Log::Debug("Quiting from SDL subsystems: {}", ToString(m_flags));
         SDL_QuitSubSystem(m_flags);
         m_flags = 0;
     }
