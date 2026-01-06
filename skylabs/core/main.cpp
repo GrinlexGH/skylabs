@@ -3,6 +3,8 @@
 
 #include <span>
 
+#include "vulkan_mono.hpp"
+
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -63,8 +65,11 @@ extern "C" DLL_EXPORT int CoreMain(std::span<char*> /*args*/) {
 
     SteamAPI_Init();
 
-    CLauncher launcher;
-    launcher.Run();
+    // CLauncher launcher;
+    // launcher.Run();
+
+    Vulkan::CVulkanMono vulkan;
+    vulkan.Run();
 
     SteamAPI_Shutdown();
 
