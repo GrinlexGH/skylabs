@@ -1,10 +1,14 @@
 #include <skylabs/core/vulkan_mono.hpp>
-#include <skylabs/public/logging.hpp>
+
 #include <skylabs/core/SDL/context.hpp>
 #include <skylabs/core/SDL/vulkan/window.hpp>
+#include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
+#include <fmt/ranges.h>
+
+#include <unordered_set>
 
 // Fix defines
 #ifdef CreateWindow
@@ -28,10 +32,46 @@ private:
     std::chrono::steady_clock::time_point m_start;
 };
 
-inline bool HasLayer(const std::vector<vk::LayerProperties>& set, const std::string_view target) {
+bool HasLayer(const std::vector<vk::LayerProperties>& set, const std::string_view target) {
     return std::ranges::any_of(
         set, [&](const vk::LayerProperties& layer) { return layer.layerName == target; }
     );
+}
+
+void AppendToPNextChain(void*& currentChain, void* newExtension) {
+    if (currentChain == nullptr) {
+        currentChain = newExtension;
+        return;
+    }
+
+    auto* current = static_cast<vk::BaseOutStructure*>(currentChain);
+    while (current->pNext != nullptr) {
+        current = current->pNext;
+    }
+
+    current->pNext = static_cast<vk::BaseOutStructure*>(newExtension);
+}
+
+VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
+    vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
+    const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* /*pUserData*/
+) {
+    switch (messageSeverity) {
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
+            Log::Info("{}", pCallbackData->pMessage);
+            break;
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
+            Log::Warning("{}", pCallbackData->pMessage);
+            break;
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
+            Log::Error("{}", pCallbackData->pMessage);
+            break;
+    }
+
+    return vk::False;
 }
 
 namespace Vulkan {
@@ -58,21 +98,75 @@ void CVulkanMono::Run() {
         );
     }
 
-    const std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
-    std::vector<vk::ExtensionProperties> availableExtensions = context.enumerateInstanceExtensionProperties();
-
-    std::vector<const char*> enabledLayers { };
-    std::array<const char*, 0> enabledExtensions = {  };
-
-    if (HasLayer(availableLayers, "VK_LAYER_KHRONOS_validation")) {
-        Log::Debug("Enabling VK_LAYER_KHRONOS_validation...");
-        enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
-
-        // If VK_LAYER_KHRONOS_validation is enabled, extensions from it are also available
-        for (const auto& extensionProperties : context.enumerateInstanceExtensionProperties(std::string { "VK_LAYER_KHRONOS_validation" })) {
-            Log::Debug("Adding extension from VK_LAYER_KHRONOS_validation: {}", std::string_view { extensionProperties.extensionName });
-            availableExtensions.push_back(extensionProperties.extensionName);
+    // Collect all available global extensions
+    std::vector<std::string> availableExtensions;
+    {
+        const std::vector<vk::ExtensionProperties> globalExtensions = context.enumerateInstanceExtensionProperties();
+        availableExtensions.reserve(globalExtensions.size());
+        for(const auto& p : globalExtensions) {
+            availableExtensions.emplace_back(p.extensionName.data());
         }
+    }
+
+    // Enable validation layer
+    std::vector<const char*> enabledLayers { };
+    {
+        const std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
+
+        if (constexpr auto validationLayerName = "VK_LAYER_KHRONOS_validation";
+            HasLayer(availableLayers, validationLayerName)
+        ) {
+            Log::Debug("Enabling {}...", validationLayerName);
+            enabledLayers.push_back(validationLayerName);
+
+            // If VK_LAYER_KHRONOS_validation is enabled, extensions from it are also available
+            for(const auto& p : context.enumerateInstanceExtensionProperties(std::string { validationLayerName })) {
+                availableExtensions.emplace_back(p.extensionName.data());
+            }
+        }
+    }
+
+    // Sort for binary searching
+    std::ranges::sort(availableExtensions);
+
+    // Enable extensions
+    std::vector<std::string> activeExtensions { };
+    void* pNext = nullptr;
+
+    for (const auto ext : m_SDLWindow.GetRequiredInstanceExtensions()) {
+        if (std::ranges::binary_search(availableExtensions, ext))
+            activeExtensions.push_back(ext);
+    }
+
+    bool isDebugUtilsAvailable = false;
+    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {};
+    if (std::ranges::binary_search(availableExtensions, vk::EXTDebugUtilsExtensionName)) {
+        isDebugUtilsAvailable = true;
+
+        activeExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+        debugUtilsCreateInfo.messageSeverity =
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+        debugUtilsCreateInfo.messageType =
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
+            | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
+            | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+        debugUtilsCreateInfo.pfnUserCallback = DebugCallback;
+
+        AppendToPNextChain(pNext, &debugUtilsCreateInfo);
+    }
+
+    // Sort for binary searching
+    std::ranges::sort(activeExtensions);
+    activeExtensions.erase(std::ranges::unique(activeExtensions).begin(), activeExtensions.end());
+
+    // For instance creation
+    std::vector<const char*> enabledExtensions { };
+    enabledExtensions.reserve(activeExtensions.size());
+    for (const auto& ext : activeExtensions) {
+        enabledExtensions.push_back(ext.c_str());
     }
 
     vk::ApplicationInfo applicationInfo {};
@@ -92,7 +186,12 @@ void CVulkanMono::Run() {
     instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     instanceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
-    vk::raii::Instance instance = context.createInstance(instanceCreateInfo);
+    vk::raii::Instance instance { context, instanceCreateInfo };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
+
+    vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger { nullptr };
+    if (isDebugUtilsAvailable) {
+        debugUtilsMessenger = vk::raii::DebugUtilsMessengerEXT { instance, debugUtilsCreateInfo };
+    }
 }
 }
