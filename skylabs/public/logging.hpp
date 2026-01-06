@@ -26,7 +26,7 @@ inline auto g_minLogLevel = Type::eDebug;
 inline std::mutex g_mutex;
 
 template <typename... Args>
-void Log(const Type type, const fmt::format_string<Args...> fmt, Args&&... args) {
+void Log(const Type type, const fmt::format_string<Args...>& fmt, Args&&... args) {
     if (type < g_minLogLevel)
         return;
 
@@ -90,22 +90,22 @@ void Log(const Type type, const fmt::format_string<Args...> fmt, Args&&... args)
 }
 
 template <class... Args>
-void Debug(const fmt::format_string<Args...> fmt, Args&&... args) {
+void Debug(const fmt::format_string<Args...>& fmt, Args&&... args) {
     Log(Type::eDebug, fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
-void Info(const fmt::format_string<Args...> fmt, Args&&... args) {
+void Info(const fmt::format_string<Args...>& fmt, Args&&... args) {
     Log(Type::eInfo, fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
-void Warning(const fmt::format_string<Args...> fmt, Args&&... args) {
+void Warning(const fmt::format_string<Args...>& fmt, Args&&... args) {
     Log(Type::eWarning, fmt, std::forward<Args>(args)...);
 }
 
 template <class... Args>
-void Error(const fmt::format_string<Args...> fmt, Args&&... args) {
+void Error(const fmt::format_string<Args...>& fmt, Args&&... args) {
     Log(Type::eError, fmt, std::forward<Args>(args)...);
 }
 }

@@ -51,7 +51,7 @@ bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
     bool hasGraphicsQueue = false;
 
     for (std::uint32_t i = 0; const auto& queue : physicalDevice.QueueFamilies()) {
-        if (m_window->IsQueueFamilyPresentSupport(*m_instance, *physicalDevice, i)) {
+        if (m_window->IsQueueFamilySupportPresent(*m_instance, *physicalDevice, i)) {
             hasPresentQueue = true;
         }
 
