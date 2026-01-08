@@ -24,7 +24,8 @@ CContext::CContext(const SDL_InitFlags flags) {
     m_flags = flags;
 }
 
-CContext::CContext(CContext&& other) noexcept : m_flags(std::exchange(other.m_flags, 0))
+CContext::CContext(CContext&& other) noexcept :
+    m_flags(std::exchange(other.m_flags, 0))
 {}
 
 CContext& CContext::operator=(CContext&& other) noexcept {

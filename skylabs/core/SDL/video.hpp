@@ -1,8 +1,16 @@
 #pragma once
+#include <skylabs/public/utils.hpp>
+
 #include <SDL3/SDL_video.h>
 
 namespace SDL {
-inline void GetWindowSizeInPixels(SDL_Window* window, int* w, int* h) {
-    SDL_GetWindowSizeInPixels(window, w, h);
+inline CExtent2D GetWindowSizeInPixels(SDL_Window* window) {
+    int w, h;
+    SDL_GetWindowSizeInPixels(window, &w, &h);
+
+    return CExtent2D {
+        .width = static_cast<std::uint32_t>(w),
+        .height = static_cast<std::uint32_t>(h)
+    };
 }
 }

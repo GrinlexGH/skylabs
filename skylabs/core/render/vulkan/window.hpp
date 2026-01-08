@@ -17,7 +17,6 @@ public:
     ~IWindow() override = default;
 
     [[nodiscard]] virtual auto GetRequiredInstanceExtensions() const -> std::span<const char* const> = 0;
-
     [[nodiscard]] virtual auto CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR = 0;
     virtual auto DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void = 0;
 

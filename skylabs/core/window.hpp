@@ -11,5 +11,5 @@ public:
     IWindow& operator=(IWindow&&) noexcept = default;
     virtual ~IWindow() = default;
 
-    virtual auto DrawableSize() const -> CExtent2D = 0;
+    [[nodiscard]] virtual auto DrawableSize() const -> CExtent2D = 0;
 };

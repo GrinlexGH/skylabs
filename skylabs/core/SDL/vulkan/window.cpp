@@ -50,12 +50,7 @@ void CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surfa
 }
 
 CExtent2D CWindow::DrawableSize() const {
-    int w, h;
-    GetWindowSizeInPixels(m_handle, &w, &h);
-    return {
-        static_cast<std::uint32_t>(w),
-        static_cast<std::uint32_t>(h)
-    };
+    return GetWindowSizeInPixels(m_handle);
 }
 
 CWindow::~CWindow() {
