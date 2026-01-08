@@ -78,6 +78,7 @@ struct CRequestedExtension
     Requirement m_requirement;
 };
 
+// region Instance
 class CInstance
 {
 public:
@@ -97,10 +98,12 @@ public:
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Instance& { return m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Instance* { return &m_handle; }
 
+    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return m_activeExtensions.contains(name); }
+
 private:
     vk::raii::Instance m_handle { nullptr };
 
-    std::flat_set<std::string> m_activeExtensions;
+    std::flat_set<std::string, std::less<>> m_activeExtensions;
 
 #ifdef DEBUG
     vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger { nullptr };
@@ -184,6 +187,7 @@ CInstance::CInstance(
     }
 #endif
 
+    // Process requested extensions
     std::flat_set<std::string_view> missingExtensions { };
     for (const auto& [name, requirement] : requestedExtensions) {
         if (isExtensionAvailable(name)) {
@@ -213,7 +217,6 @@ CInstance::CInstance(
     }
 
     vk::ApplicationInfo applicationInfo {};
-    applicationInfo.pNext = nullptr;
     applicationInfo.pApplicationName = Skylabs::GAME_NAME;
     applicationInfo.applicationVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     applicationInfo.pEngineName = Skylabs::NAME;
@@ -238,6 +241,7 @@ CInstance::CInstance(
     }
 #endif
 }
+// endregion
 
 class CContext
 {
@@ -251,39 +255,128 @@ public:
     CContext& operator=(CContext&&) = default;
     ~CContext() = default;
 
+    [[nodiscard]] auto Instance() const noexcept -> const CInstance& { return m_instance; }
+    [[nodiscard]] auto Window() const noexcept -> const Vulkan::IWindow* { return m_window; }
+
 private:
+    auto CreateInstance() -> void;
+    auto SelectPhysicalDevice() -> void;
+    auto IsDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const -> bool;
+    auto RatePhysicalDevice(const vk::raii::PhysicalDevice& physicalDevice) const -> int;
+
+    const Vulkan::IWindow* m_window { nullptr };
     vk::raii::Context m_context;
     CInstance m_instance { nullptr };
+    vk::raii::PhysicalDevice m_physicalDevice { nullptr };
 };
 
-CContext::CContext(const ::Vulkan::IWindow* const window) {
+// Guarantees:
+// * Graphics & present queue families
+// * VK_KHR_swapchain extension
+// * SamplerAnisotropy feature
+bool CContext::IsDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice) const {
+    // Check for graphics and queue families
+    const std::vector<vk::QueueFamilyProperties2KHR> queueFamilies = physicalDevice.getQueueFamilyProperties2KHR();
+    bool hasGraphicsQueue = false;
+    bool hasPresentQueue = false;
+
+    for (uint32_t i = 0; i < queueFamilies.size(); i++) {
+        if (queueFamilies[i].queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics)
+            hasGraphicsQueue = true;
+        if (m_window->IsQueueFamilySupportPresent(*m_instance, *physicalDevice, i))
+            hasPresentQueue = true;
+        if (hasGraphicsQueue && hasPresentQueue) break;
+    }
+
+    if (!hasGraphicsQueue || !hasPresentQueue)
+        return false;
+
+    // Check for swapchain extension
+    bool hasSwapchainExtension = false;
+
+    for (const auto& extension : physicalDevice.enumerateDeviceExtensionProperties()) {
+        if (std::strcmp(extension.extensionName, vk::KHRSwapchainExtensionName) == 0) {
+            hasSwapchainExtension = true;
+            break;
+        }
+    }
+
+    if (!hasSwapchainExtension)
+        return false;
+
+    // Check for sampler anisotropy
+    if (!physicalDevice.getFeatures2KHR().features.samplerAnisotropy)
+        return false;
+
+    return true;
+}
+
+int CContext::RatePhysicalDevice(const vk::raii::PhysicalDevice& physicalDevice) const {
+    int score = 0;
+
+    if (!IsDeviceSuitable(physicalDevice))
+        return score;
+
+    switch (physicalDevice.getProperties2KHR().properties.deviceType) {
+        case vk::PhysicalDeviceType::eDiscreteGpu: score += 2000; break;
+        case vk::PhysicalDeviceType::eIntegratedGpu: score += 800; break;
+        case vk::PhysicalDeviceType::eVirtualGpu: score += 500; break;
+        case vk::PhysicalDeviceType::eCpu: score += 200; break;
+        case vk::PhysicalDeviceType::eOther: score += 100; break;
+    }
+
+    return score;
+}
+
+CContext::CContext(const ::Vulkan::IWindow* const window) : m_window(window) {
+    CreateInstance();
+    SelectPhysicalDevice();
+}
+
+void CContext::CreateInstance() {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    std::uint32_t apiVersion;
+    std::uint32_t apiVersion = vk::ApiVersion10;
     if (m_context.getDispatcher()->vkEnumerateInstanceVersion) {
         apiVersion = m_context.enumerateInstanceVersion();
         Log::Debug("Available Vulkan version: {}.{}.{}, but anyways I will use Vulkan 1.0",
             vk::apiVersionMajor(apiVersion), vk::apiVersionMinor(apiVersion), vk::apiVersionPatch(apiVersion)
         );
+
+        apiVersion = vk::ApiVersion10;
     }
 
-    apiVersion = vk::ApiVersion10;
-
-    std::vector<CRequestedExtension> instanceExtensions;
     using Req = CRequestedExtension::Requirement;
-
-    const std::span<const char* const> windowExtensions = window->GetRequiredInstanceExtensions();
-    instanceExtensions.reserve(windowExtensions.size() + 1);
-
-    for (const char* name : windowExtensions) {
-        instanceExtensions.emplace_back(name, Req::eRequired);
-    }
+    std::vector<CRequestedExtension> instanceExtensions = m_window->GetRequiredInstanceExtensions()
+        | std::views::transform([](const char* const ext) -> CRequestedExtension { return { .m_name = ext, .m_requirement = Req::eRequired }; })
+        | std::ranges::to<std::vector<CRequestedExtension>>();
 
     if (apiVersion < vk::ApiVersion11) {
         instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Req::eRequired);
     }
 
     m_instance = CInstance { m_context, apiVersion, instanceExtensions };
+}
+
+void CContext::SelectPhysicalDevice() {
+    // TODO: wrapper with all extensions and properties
+    const vk::raii::PhysicalDevices physicalDevices { *m_instance };
+
+    int maxScore = -1;
+
+    for (const auto& device : physicalDevices) {
+        if (const int score = RatePhysicalDevice(device); score > maxScore) {
+            maxScore = score;
+            m_physicalDevice = device;
+        }
+    }
+
+    if (maxScore <= 0) {
+        throw std::runtime_error("Failed to find a suitable GPU!");
+    }
+
+    auto props = m_physicalDevice.getProperties2KHR();
+    Log::Info("Selected GPU: {}", std::string_view{ props.properties.deviceName });
 }
 }
 
