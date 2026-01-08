@@ -365,6 +365,12 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::SampleCountFlagBits::e8
     };
 
+    vk::DebugUtilsObjectNameInfoEXT nameInfo;
+    nameInfo.objectType = vk::ObjectType::eImage;
+    nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkImage>(*m_depthBufferMSAA));
+    nameInfo.pObjectName = "Main Depth Texture";
+    m_context.Device()->setDebugUtilsObjectNameEXT(nameInfo);
+
     m_mainPass = CLegacyRenderPass {
         m_context,
         {
@@ -750,6 +756,10 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     vk::CommandBufferBeginInfo beginInfo {};
     frameData.GetCommandBuffers()[0].begin(beginInfo);
 
+    vk::DebugUtilsLabelEXT marker;
+    marker.pLabelName = "Point of Interest";
+    marker.color = std::array { 1.0f, 0.5f, 0.0f, 1.0f };
+    frameData.GetCommandBuffers()[0].insertDebugUtilsLabelEXT(marker);
 
     vk::RenderPassBeginInfo renderPassInfo {};
     renderPassInfo.renderPass = m_mainPass.RenderPass();
@@ -766,7 +776,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     renderPassInfo.pClearValues = clearValuesMain.data();
     frameData.GetCommandBuffers()[0].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-        frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
+    frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
 
     vk::Viewport viewport {};
     viewport.x = 0.0f;
@@ -796,6 +806,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
 
     // #region RENDER_PASS_BEGIN
+    vk::DebugUtilsLabelEXT labelInfo;
+    labelInfo.pLabelName = "Latest";
+    labelInfo.color = std::array { 1.0f, 0.5f, 0.0f, 1.0f };
+    frameData.GetCommandBuffers()[0].beginDebugUtilsLabelEXT(labelInfo);
+
     renderPassInfo = vk::RenderPassBeginInfo {};
     renderPassInfo.renderPass = m_swapchainPass.RenderPass();
     renderPassInfo.framebuffer = m_frameBuffersSwapchain[imageIndex];
@@ -814,7 +829,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
 
-     viewport = vk::Viewport {};
+    viewport = vk::Viewport {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = static_cast<float>(m_swapchain.GetExtent().width);
@@ -823,7 +838,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     viewport.maxDepth = 1.0f;
     frameData.GetCommandBuffers()[0].setViewport(0, viewport);
 
-     scissor = vk::Rect2D {};
+    scissor = vk::Rect2D {};
     scissor.offset = { { 0, 0 } };
     scissor.extent = m_swapchain.GetExtent();
     frameData.GetCommandBuffers()[0].setScissor(0, scissor);
@@ -839,6 +854,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     frameData.GetCommandBuffers()[0].draw(3, 1, 0, 0);
 
     frameData.GetCommandBuffers()[0].endRenderPass();
+    frameData.GetCommandBuffers()[0].endDebugUtilsLabelEXT();
     frameData.GetCommandBuffers()[0].end();
     // #endregion COMMAND_RECORD
 
