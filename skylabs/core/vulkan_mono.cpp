@@ -8,7 +8,8 @@
 #include <vulkan/vulkan_raii.hpp>
 #include <fmt/ranges.h>
 
-#include <unordered_set>
+#include <ranges>
+#include <flat_set>
 
 // Fix defines
 #ifdef CreateWindow
@@ -32,12 +33,6 @@ private:
     std::chrono::steady_clock::time_point m_start;
 };
 
-bool HasLayer(const std::vector<vk::LayerProperties>& set, const std::string_view target) {
-    return std::ranges::any_of(
-        set, [&](const vk::LayerProperties& layer) { return layer.layerName == target; }
-    );
-}
-
 void AppendToPNextChain(void*& currentChain, void* newExtension) {
     if (currentChain == nullptr) {
         currentChain = newExtension;
@@ -53,7 +48,7 @@ void AppendToPNextChain(void*& currentChain, void* newExtension) {
 }
 
 VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
-    vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    const vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
     const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* /*pUserData*/
@@ -74,76 +69,106 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     return vk::False;
 }
 
-namespace Vulkan {
-void CVulkanMono::CreateWindow() {
-    m_SDLContext = SDL::CContext { SDL_INIT_VIDEO };
-    m_SDLWindow = SDL::Vulkan::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE };
-    SDL_SetWindowRelativeMouseMode(*m_SDLWindow, true);
-}
+namespace VulkanStructured {
+struct CRequestedExtension
+{
+    enum class Requirement : std::uint8_t { eOptional, eRequired };
 
-void CVulkanMono::Run() {
-    CreateWindow();
+    std::string_view m_name;
+    Requirement m_requirement;
+};
 
-    CTimer timer;
+class CInstance
+{
+public:
+    CInstance() = delete;
+    explicit CInstance(std::nullptr_t) {}
+    explicit CInstance(
+        const vk::raii::Context& context,
+        std::uint32_t apiVersion,
+        std::span<CRequestedExtension> requestedExtensions
+    );
+    CInstance(CInstance&) = delete;
+    CInstance(CInstance&&) = default;
+    CInstance& operator=(CInstance&) = delete;
+    CInstance& operator=(CInstance&&) = default;
+    ~CInstance() = default;
 
-    VULKAN_HPP_DEFAULT_DISPATCHER.init();
-    vk::raii::Context context;
-    if (context.getDispatcher()->vkEnumerateInstanceVersion) {
-        const std::uint32_t apiVersion = context.enumerateInstanceVersion();
-        Log::Debug(
-            "Available Vulkan version: {}.{}.{}, but anyways I will use Vulkan 1.0",
-            vk::apiVersionMajor(apiVersion),
-            vk::apiVersionMinor(apiVersion),
-            vk::apiVersionPatch(apiVersion)
-        );
+    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Instance& { return m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Instance* { return &m_handle; }
+
+private:
+    vk::raii::Instance m_handle { nullptr };
+
+    std::flat_set<std::string> m_activeExtensions;
+
+#ifdef DEBUG
+    vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger { nullptr };
+#endif
+};
+
+CInstance::CInstance(
+    const vk::raii::Context& context,
+    const std::uint32_t apiVersion,
+    const std::span<CRequestedExtension> requestedExtensions
+) {
+    // Validate api version
+    if (const std::uint32_t availableApiVer = context.enumerateInstanceVersion(); availableApiVer < apiVersion) {
+        throw std::runtime_error(fmt::format(
+            "Requested API {}.{}.{} is not supported. Available: {}.{}.{}",
+            vk::apiVersionMajor(apiVersion), vk::apiVersionMinor(apiVersion), vk::apiVersionPatch(apiVersion),
+            vk::apiVersionMajor(availableApiVer), vk::apiVersionMinor(availableApiVer), vk::apiVersionPatch(availableApiVer)
+        ));
     }
 
     // Collect all available global extensions
-    std::vector<std::string> availableExtensions;
-    {
-        const std::vector<vk::ExtensionProperties> globalExtensions = context.enumerateInstanceExtensionProperties();
-        availableExtensions.reserve(globalExtensions.size());
-        for(const auto& p : globalExtensions) {
-            availableExtensions.emplace_back(p.extensionName.data());
-        }
-    }
+    std::vector<vk::ExtensionProperties> globalAvailableExtensions = context.enumerateInstanceExtensionProperties();
 
     // Enable validation layer
     std::vector<const char*> enabledLayers { };
+#ifdef DEBUG
     {
         const std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
 
-        if (constexpr auto validationLayerName = "VK_LAYER_KHRONOS_validation";
-            HasLayer(availableLayers, validationLayerName)
-        ) {
-            Log::Debug("Enabling {}...", validationLayerName);
-            enabledLayers.push_back(validationLayerName);
+        constexpr auto validationLayer = "VK_LAYER_KHRONOS_validation";
+        const bool hasValidation = std::ranges::any_of(availableLayers, [&](const auto& l) {
+            return std::string_view(l.layerName) == validationLayer;
+        });
+
+        if (hasValidation) {
+            Log::Debug("Enabling {}", validationLayer);
+            enabledLayers.push_back(validationLayer);
 
             // If VK_LAYER_KHRONOS_validation is enabled, extensions from it are also available
-            for(const auto& p : context.enumerateInstanceExtensionProperties(std::string { validationLayerName })) {
-                availableExtensions.emplace_back(p.extensionName.data());
-            }
+            std::vector<vk::ExtensionProperties> validationLayerExtensions =
+                context.enumerateInstanceExtensionProperties(std::string { validationLayer });
+            globalAvailableExtensions.insert(
+                globalAvailableExtensions.end(),
+                validationLayerExtensions.begin(), validationLayerExtensions.end()
+            );
         }
     }
+#endif
 
-    // Sort for binary searching
-    std::ranges::sort(availableExtensions);
+    const std::flat_set<std::string_view> availableExtensions = globalAvailableExtensions
+        | std::views::transform([](const vk::ExtensionProperties& ext) -> std::string_view { return ext.extensionName; })
+        | std::ranges::to<std::flat_set<std::string_view>>();
+
+    const auto isExtensionAvailable = [&](const std::string_view name) {
+        return availableExtensions.contains(name);
+    };
 
     // Enable extensions
-    std::vector<std::string> activeExtensions { };
     void* pNext = nullptr;
 
-    for (const auto ext : m_SDLWindow.GetRequiredInstanceExtensions()) {
-        if (std::ranges::binary_search(availableExtensions, ext))
-            activeExtensions.push_back(ext);
-    }
-
+#ifdef DEBUG
+    // Debug utils messenger is the only object that need to be created in instance
     bool isDebugUtilsAvailable = false;
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {};
-    if (std::ranges::binary_search(availableExtensions, vk::EXTDebugUtilsExtensionName)) {
+    if (isExtensionAvailable(vk::EXTDebugUtilsExtensionName)) {
         isDebugUtilsAvailable = true;
 
-        activeExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+        m_activeExtensions.emplace(vk::EXTDebugUtilsExtensionName);
         debugUtilsCreateInfo.messageSeverity =
             vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
             | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo
@@ -157,15 +182,33 @@ void CVulkanMono::Run() {
 
         AppendToPNextChain(pNext, &debugUtilsCreateInfo);
     }
+#endif
 
-    // Sort for binary searching
-    std::ranges::sort(activeExtensions);
-    activeExtensions.erase(std::ranges::unique(activeExtensions).begin(), activeExtensions.end());
+    std::flat_set<std::string_view> missingExtensions { };
+    for (const auto& [name, requirement] : requestedExtensions) {
+        if (isExtensionAvailable(name)) {
+            m_activeExtensions.emplace(name);
+        } else {
+            if (requirement == CRequestedExtension::Requirement::eRequired) [[unlikely]] {
+                missingExtensions.emplace(name);
+            } else {
+                Log::Debug("Optional extension {} is not supported", name);
+            }
+        }
+    }
+
+    // Some required extensions are missing...
+    if (!missingExtensions.empty()) {
+        throw std::runtime_error(fmt::format(
+            "System doesn't have required instance extensions:\n    {}",
+            fmt::join(missingExtensions, "\n    ")
+        ));
+    }
 
     // For instance creation
     std::vector<const char*> enabledExtensions { };
-    enabledExtensions.reserve(activeExtensions.size());
-    for (const auto& ext : activeExtensions) {
+    enabledExtensions.reserve(m_activeExtensions.size());
+    for (const auto& ext : m_activeExtensions) {
         enabledExtensions.push_back(ext.c_str());
     }
 
@@ -178,7 +221,7 @@ void CVulkanMono::Run() {
     applicationInfo.apiVersion = vk::ApiVersion10;
 
     vk::InstanceCreateInfo instanceCreateInfo {};
-    instanceCreateInfo.pNext = nullptr;
+    instanceCreateInfo.pNext = pNext;
     instanceCreateInfo.flags = {};
     instanceCreateInfo.pApplicationInfo = &applicationInfo;
     instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
@@ -186,12 +229,77 @@ void CVulkanMono::Run() {
     instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     instanceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
-    vk::raii::Instance instance { context, instanceCreateInfo };
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
+    m_handle = vk::raii::Instance { context, instanceCreateInfo };
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
-    vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger { nullptr };
+#ifdef DEBUG
     if (isDebugUtilsAvailable) {
-        debugUtilsMessenger = vk::raii::DebugUtilsMessengerEXT { instance, debugUtilsCreateInfo };
+        debugUtilsMessenger = vk::raii::DebugUtilsMessengerEXT { m_handle, debugUtilsCreateInfo };
     }
+#endif
+}
+
+class CContext
+{
+public:
+    CContext() = delete;
+    explicit CContext(std::nullptr_t) {}
+    explicit CContext(const ::Vulkan::IWindow* window);
+    CContext(CContext&) = delete;
+    CContext(CContext&&) = default;
+    CContext& operator=(CContext&) = delete;
+    CContext& operator=(CContext&&) = default;
+    ~CContext() = default;
+
+private:
+    vk::raii::Context m_context;
+    CInstance m_instance { nullptr };
+};
+
+CContext::CContext(const ::Vulkan::IWindow* const window) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.init();
+
+    std::uint32_t apiVersion;
+    if (m_context.getDispatcher()->vkEnumerateInstanceVersion) {
+        apiVersion = m_context.enumerateInstanceVersion();
+        Log::Debug("Available Vulkan version: {}.{}.{}, but anyways I will use Vulkan 1.0",
+            vk::apiVersionMajor(apiVersion), vk::apiVersionMinor(apiVersion), vk::apiVersionPatch(apiVersion)
+        );
+    }
+
+    apiVersion = vk::ApiVersion10;
+
+    std::vector<CRequestedExtension> instanceExtensions;
+    using Req = CRequestedExtension::Requirement;
+
+    const std::span<const char* const> windowExtensions = window->GetRequiredInstanceExtensions();
+    instanceExtensions.reserve(windowExtensions.size() + 1);
+
+    for (const char* name : windowExtensions) {
+        instanceExtensions.emplace_back(name, Req::eRequired);
+    }
+
+    if (apiVersion < vk::ApiVersion11) {
+        instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Req::eRequired);
+    }
+
+    m_instance = CInstance { m_context, apiVersion, instanceExtensions };
+}
+}
+
+namespace Vulkan {
+void CVulkanMono::CreateWindow() {
+    m_SDLContext = SDL::CContext { SDL_INIT_VIDEO };
+    m_SDLWindow = SDL::Vulkan::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE };
+    SDL_SetWindowRelativeMouseMode(*m_SDLWindow, true);
+}
+
+void CVulkanMono::Run() {
+    CreateWindow();
+
+    CTimer timer;
+    using namespace VulkanStructured;
+
+    CContext m_context = CContext { &m_SDLWindow };
 }
 }
