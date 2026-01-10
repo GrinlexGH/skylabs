@@ -10,7 +10,7 @@
 #include <fmt/ranges.h>
 
 #include <ranges>
-#include <flat_set>
+#include <set>
 
 // Fix defines
 #ifdef CreateWindow
@@ -235,6 +235,7 @@ CInstance::CInstance(
 class CGPUInfo
 {
 public:
+    explicit CGPUInfo(std::nullptr_t) {}
     explicit CGPUInfo(vk::raii::PhysicalDevice physicalDevice) :
         m_handle(std::move(physicalDevice)),
         m_queueFamilies(m_handle.getQueueFamilyProperties2KHR()),
@@ -250,7 +251,7 @@ public:
     [[nodiscard]] auto Features() const noexcept -> const vk::PhysicalDeviceFeatures2KHR& { return m_features; }
 
 private:
-    vk::raii::PhysicalDevice m_handle;
+    vk::raii::PhysicalDevice m_handle { nullptr };
     std::vector<vk::QueueFamilyProperties2KHR> m_queueFamilies;
     std::vector<vk::ExtensionProperties> m_availableExtensions;
     vk::PhysicalDeviceProperties2KHR m_properties;
@@ -274,7 +275,7 @@ public:
 
 private:
     auto CreateInstance() -> void;
-    auto SelectPhysicalDevice() -> void;
+    [[nodiscard]] auto SelectPhysicalDevice(const vk::raii::PhysicalDevices& physicalDevices) const -> CGPUInfo;
     [[nodiscard]] auto IsDeviceSuitable(const CGPUInfo& physicalDeviceInfo) const -> bool;
     [[nodiscard]] auto RatePhysicalDevice(const CGPUInfo& physicalDeviceInfo) const -> int;
 
@@ -286,7 +287,39 @@ private:
 
 CContext::CContext(const ::Vulkan::IWindow* const window) : m_window(window) {
     CreateInstance();
-    SelectPhysicalDevice();
+
+    const vk::raii::PhysicalDevices physicalDevices { *m_instance };
+    CGPUInfo selectedGPU = SelectPhysicalDevice(physicalDevices);
+    std::uint32_t graphicsFamily = std::numeric_limits<std::uint32_t>::max();
+    std::uint32_t presentFamily = std::numeric_limits<std::uint32_t>::max();
+    std::uint32_t transferFamily = std::numeric_limits<std::uint32_t>::max();
+    std::uint32_t computeFamily = std::numeric_limits<std::uint32_t>::max();
+    for (std::uint32_t i = 0; const auto& queueFamily : selectedGPU.QueueFamilies()) {
+        if (queueFamily.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) graphicsFamily = i;
+        if (queueFamily.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eCompute) computeFamily = i;
+        if (queueFamily.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eTransfer) transferFamily = i;
+        if (m_window->IsQueueFamilySupportPresent(*m_instance, selectedGPU.Handle(), i)) presentFamily = i;
+        ++i;
+    }
+    if (transferFamily == std::numeric_limits<std::uint32_t>::max()) {
+        transferFamily = graphicsFamily;
+    }
+    const std::set uniqueQueueFamilies { graphicsFamily, presentFamily, transferFamily, computeFamily };
+
+    if (uniqueQueueFamilies.contains(std::numeric_limits<std::uint32_t>::max())) {
+        throw std::runtime_error("Queue doesnt present");
+    }
+
+    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+    queueCreateInfos.reserve(uniqueQueueFamilies.size());
+    constexpr float queuePriority = 0.5f;
+    for (const std::uint32_t queueFamily : uniqueQueueFamilies) {
+        vk::DeviceQueueCreateInfo queueCreateInfo;
+        queueCreateInfo.queueFamilyIndex = queueFamily;
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
 }
 
 void CContext::CreateInstance() {
@@ -372,25 +405,23 @@ int CContext::RatePhysicalDevice(const CGPUInfo& physicalDeviceInfo) const {
     return score;
 }
 
-void CContext::SelectPhysicalDevice() {
-    // TODO: wrapper with all extensions and properties
-    const vk::raii::PhysicalDevices physicalDevices { *m_instance };
-
-    int maxScore = -1;
+CGPUInfo CContext::SelectPhysicalDevice(const vk::raii::PhysicalDevices& physicalDevices) const {
+    CGPUInfo deviceInfo { nullptr };
+    int maxScore = 0;
 
     for (const auto& device : physicalDevices) {
-        if (const int score = RatePhysicalDevice(CGPUInfo { device }); score > maxScore) {
+        CGPUInfo currentDeviceInfo { device };
+        if (const int score = RatePhysicalDevice(currentDeviceInfo); score > maxScore) {
             maxScore = score;
-            m_physicalDevice = device;
+            deviceInfo = std::move(currentDeviceInfo);
         }
     }
 
-    if (maxScore <= 0) {
+    if (maxScore == 0) {
         throw std::runtime_error("Failed to find a suitable GPU!");
     }
 
-    auto props = m_physicalDevice.getProperties2KHR();
-    Log::Info("Selected GPU: {}", std::string_view{ props.properties.deviceName });
+    return deviceInfo;
 }
 }
 
