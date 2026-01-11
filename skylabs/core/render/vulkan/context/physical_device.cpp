@@ -1,17 +1,16 @@
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 
 namespace Vulkan {
-CPhysicalDevice::CPhysicalDevice(vk::raii::PhysicalDevice&& physicalDevice) :
+CPhysicalDevice::CPhysicalDevice(vk::raii::PhysicalDevice physicalDevice) :
     m_handle(std::move(physicalDevice)),
-    m_properties(m_handle.getProperties()),
-    m_features(m_handle.getFeatures()),
-    m_queueFamilies(m_handle.getQueueFamilyProperties()),
-    m_extensions(m_handle.enumerateDeviceExtensionProperties())
-{
-    for (const auto& extension : m_extensions) {
-        m_availableExtensionsSet.emplace(extension.extensionName);
-    }
-
-    Log::Info("Found GPU: {}", m_properties.deviceName.data());
-}
+    m_queueFamilies(m_handle.getQueueFamilyProperties2KHR()),
+    m_availableExtensions(m_handle.enumerateDeviceExtensionProperties()),
+    m_properties(m_handle.getProperties2KHR()),
+    m_features(m_handle.getFeatures2KHR<
+        vk::PhysicalDeviceFeatures2KHR,
+        vk::PhysicalDeviceVulkan11Features,
+        vk::PhysicalDeviceVulkan12Features,
+        vk::PhysicalDeviceVulkan13Features,
+        vk::PhysicalDeviceDynamicRenderingFeaturesKHR>()
+    ) {}
 }

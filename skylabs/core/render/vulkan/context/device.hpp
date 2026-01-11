@@ -1,56 +1,84 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/instance.hpp>
+#include <skylabs/core/render/vulkan/context/physical_device.hpp>
+#include <skylabs/core/render/vulkan/context/extensions.hpp>
 #include <skylabs/core/render/vulkan/window.hpp>
-#include <skylabs/public/string_utils.hpp>
 
 namespace Vulkan {
-struct CQueue
-{
-    vk::raii::Queue m_handle = nullptr;
-    std::uint32_t m_familyIndex = std::numeric_limits<std::uint32_t>::max();
-};
-
 class CDevice
 {
 public:
+    using DeviceFeatures = vk::StructureChain<
+        vk::PhysicalDeviceFeatures2KHR,
+        vk::PhysicalDeviceVulkan11Features,
+        vk::PhysicalDeviceVulkan12Features,
+        vk::PhysicalDeviceVulkan13Features,
+        vk::PhysicalDeviceVulkan14Features,
+        vk::PhysicalDeviceDynamicRenderingFeaturesKHR>;
+
+    struct CRequestedFeature
+    {
+        using PFN_enable = bool (*)(
+            std::uint32_t apiVersion,
+            const CPhysicalDevice& gpu,
+            DeviceFeatures& features,
+            std::vector<const char*>& deviceExtensions
+        );
+
+        PFN_enable m_enable;
+        Utils::Requirement m_requirement;
+    };
+
     explicit CDevice(std::nullptr_t) {}
     explicit CDevice(
-        const CInstance& instance,
-        const CPhysicalDevice& physicalDevice,
         const IWindow* window,
-        std::span<Utils::CRequestedExtension> extensions
+        vk::Instance instance,
+        const CPhysicalDevice& gpu,
+        std::uint32_t apiVersion,
+        std::span<CRequestedFeature> requestedFeatures
     );
-    CDevice(const CDevice&) = delete;
-    CDevice(CDevice&&) noexcept = default;
-    CDevice& operator=(const CDevice&) = delete;
-    CDevice& operator=(CDevice&&) noexcept = default;
+    CDevice(CDevice&) = delete;
+    CDevice(CDevice&&) = default;
+    CDevice& operator=(CDevice&) = delete;
+    CDevice& operator=(CDevice&&) = default;
     ~CDevice() = default;
 
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Device& { return m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Device* { return &m_handle; }
-    [[nodiscard]] auto Handle() const noexcept -> const vk::raii::Device& { return m_handle; }
 
-    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return m_enabledExtensions.contains(name); }
+    [[nodiscard]] auto ApiVersion() const noexcept -> std::uint32_t { return m_apiVersion; }
+    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return std::ranges::contains(m_activeExtensions, name); }
 
-    [[nodiscard]] auto GraphicsQueue() const -> const CQueue& { return m_graphicsQueue; }
-    [[nodiscard]] auto PresentQueue() const -> const CQueue& { return m_presentQueue; }
-    [[nodiscard]] auto TransferQueue() const -> const CQueue& { return m_transferQueue; }
-    [[nodiscard]] auto ComputeQueue() const -> const CQueue& { return m_computeQueue; }
+    [[nodiscard]] auto GraphicsQueue() const noexcept -> const vk::raii::Queue& { return m_graphicsQueue; }
+    [[nodiscard]] auto PresentQueue() const noexcept -> const vk::raii::Queue& { return m_presentQueue; }
+    [[nodiscard]] auto ComputeQueue() const noexcept -> const vk::raii::Queue& { return m_computeQueue; }
+
+    template <typename Feature>
+    [[nodiscard]] auto IsFeatureEnabled(vk::Bool32 Feature::* flag) const -> Feature {
+        return m_enabledFeatures.get<Feature>().*flag;
+    }
 
 private:
-    auto EnableExtensions(
-        std::span<Utils::CRequestedExtension> requestedExtensions,
-        const CPhysicalDevice& physicalDevice,
-        std::uint32_t apiVersion
-    ) -> std::vector<const char*>;
+    struct CQueueFamilyIndices
+    {
+        std::uint32_t m_graphicsFamily = 0;
+        std::uint32_t m_presentFamily = 0;
+        std::uint32_t m_computeFamily = 0;
+    };
 
-    UnorderedStringSet m_enabledExtensions;
+    [[nodiscard]] static auto GetQueueCreateInfos(
+        const IWindow* window,
+        vk::Instance instance,
+        const CPhysicalDevice& gpu
+    ) -> std::pair<std::vector<vk::DeviceQueueCreateInfo>, CQueueFamilyIndices>;
 
-    vk::raii::Device m_handle = nullptr;
+    vk::raii::Device m_handle { nullptr };
 
-    CQueue m_graphicsQueue;
-    CQueue m_presentQueue;
-    CQueue m_transferQueue;
-    CQueue m_computeQueue;
+    std::uint32_t m_apiVersion = 0;
+    std::vector<std::string> m_activeExtensions;
+    DeviceFeatures m_enabledFeatures;
+
+    vk::raii::Queue m_graphicsQueue { nullptr };
+    vk::raii::Queue m_presentQueue { nullptr };
+    vk::raii::Queue m_computeQueue { nullptr };
 };
 }

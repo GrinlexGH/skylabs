@@ -141,8 +141,8 @@ auto EndSingleTimeCommands(
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &*commandBuffer;
 
-    device.GraphicsQueue().m_handle.submit(submitInfo);
-    device.GraphicsQueue().m_handle.waitIdle(); // TODO: USE FENCES
+    device.GraphicsQueue().submit(submitInfo);
+    device.GraphicsQueue().waitIdle(); // TODO: USE FENCES
 
     commandBuffer.clear();
 }
@@ -240,7 +240,7 @@ void CopyBuffer(
     vk::Buffer dstBuffer,
     vk::DeviceSize size
 ) {
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(device.Handle(), commandPool);
+    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*device, commandPool);
 
     vk::BufferCopy copyRegion;
     copyRegion.srcOffset = 0;
@@ -310,7 +310,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
         for (const vk::Format format : candidates) {
-            const vk::FormatProperties props = m_context.PhysicalDevice()->getFormatProperties(format);
+            const vk::FormatProperties props = m_context.PhysicalDevice().getFormatProperties(format);
 
             if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
                 return format;
@@ -544,7 +544,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { m_context.Device().Handle(), layoutInfo };
+    m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { *m_context.Device(), layoutInfo };
 
 
     std::array<vk::DescriptorPoolSize, 2> poolSizes {};
@@ -558,7 +558,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
-    m_descriptorPoolMain = vk::raii::DescriptorPool { m_context.Device().Handle(), poolInfo };
+    m_descriptorPoolMain = vk::raii::DescriptorPool { *m_context.Device(), poolInfo };
 
 
     std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutMain);

@@ -1,121 +1,36 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/extensions.hpp>
-#include <skylabs/public/logging.hpp>
 #include <vulkan/vulkan_raii.hpp>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace Vulkan {
 class CPhysicalDevice
 {
 public:
-    explicit CPhysicalDevice(vk::raii::PhysicalDevice&& physicalDevice);
-    CPhysicalDevice(const CPhysicalDevice&) = delete;
-    CPhysicalDevice(CPhysicalDevice&&) noexcept = default;
-    CPhysicalDevice& operator=(const CPhysicalDevice&) = delete;
-    CPhysicalDevice& operator=(CPhysicalDevice&&) noexcept = default;
-    ~CPhysicalDevice() = default;
+    explicit CPhysicalDevice(std::nullptr_t) {}
+    explicit CPhysicalDevice(vk::raii::PhysicalDevice physicalDevice);
 
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::raii::PhysicalDevice* { return &m_handle; }
-    [[nodiscard]] auto Handle() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
 
-    [[nodiscard]] auto Properties() const noexcept -> const vk::PhysicalDeviceProperties& { return m_properties; }
-    [[nodiscard]] auto Features() const noexcept -> const vk::PhysicalDeviceFeatures& { return m_features; }
-    [[nodiscard]] auto Extensions() const noexcept -> const std::vector<vk::ExtensionProperties>& { return m_extensions; }
-    [[nodiscard]] auto QueueFamilies() const noexcept -> const std::vector<vk::QueueFamilyProperties>& { return m_queueFamilies; }
+    [[nodiscard]] auto QueueFamilies() const noexcept -> const std::vector<vk::QueueFamilyProperties2KHR>& { return m_queueFamilies; }
+    [[nodiscard]] auto AvailableExtensions() const noexcept -> const std::vector<vk::ExtensionProperties>& { return m_availableExtensions; }
+    [[nodiscard]] auto Properties() const noexcept -> const vk::PhysicalDeviceProperties2KHR& { return m_properties; }
+    [[nodiscard]] auto Features() const noexcept -> const auto& { return m_features; }
 
-    [[nodiscard]] auto IsExtensionSupported(const std::string_view name) const -> bool { return m_availableExtensionsSet.contains(name); }
-
-    [[nodiscard]] auto RequiredFeatures() const noexcept -> const vk::PhysicalDeviceFeatures& { return m_requiredFeatures; }
-    [[nodiscard]] auto ExtensionFeaturePNext() const noexcept -> void* { return m_extensionFeaturePNext; }
-
-    template <typename Feature>
-    [[nodiscard]] auto GetExtensionFeatures() const -> Feature {
-        // VK_KHR_get_physical_device_properties2 is required
-        return m_handle.getFeatures2KHR<vk::PhysicalDeviceFeatures2KHR, Feature>().template get<Feature>();
-    }
-
-    template <typename Feature>
-    [[nodiscard]] auto IsExtensionFeatureEnabled(vk::Bool32 Feature::* flag) const -> vk::Bool32 {
-        auto it = m_extensionFeatures.find(Feature::structureType);
-        if (it != m_extensionFeatures.end() && it->second) {
-            auto feature = std::static_pointer_cast<Feature>(it->second);
-            return (*feature).*flag;
-        }
-        return vk::False;
-    }
-
-    template <typename Feature>
-    auto AddExtensionFeatures() -> Feature& {
-        auto [it, added] = m_extensionFeatures.try_emplace(Feature::structureType, std::make_shared<Feature>());
-        if (added) {
-            Utils::AppendToPNextChain(m_extensionFeaturePNext, it->second.get());
-        }
-
-        return *static_cast<Feature*>(it->second.get());
-    }
-
-    template <typename Feature>
-    auto RequestRequiredExtensionFeature(vk::Bool32 Feature::* flag, std::string_view featureName, std::string_view flagName) -> void {
-        if (GetExtensionFeatures<Feature>().*flag) {
-            AddExtensionFeatures<Feature>().*flag = vk::True;
-        } else {
-            throw std::runtime_error(fmt::format("Requested required feature <{}::{}> is not supported!", featureName, flagName));
-        }
-    }
-
-    template <typename Feature>
-    auto RequestOptionalExtensionFeature(vk::Bool32 Feature::* flag, std::string_view featureName, std::string_view flagName) -> vk::Bool32 {
-        const vk::Bool32 supported = GetExtensionFeatures<Feature>().*flag;
-        if (supported) {
-            AddExtensionFeatures<Feature>().*flag = vk::True;
-        } else {
-            Log::Info("Requested optional feature <{}::{}> is not supported", featureName, flagName);
-        }
-
-        return supported;
-    }
-
-    auto RequestRequiredFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, std::string_view flagName) -> void {
-        if (m_features.*flag) {
-            m_requiredFeatures.*flag = vk::True;
-        } else {
-            throw std::runtime_error(fmt::format("Requested required feature \"{}\" is not supported!", flagName));
-        }
-    }
-
-    auto RequestOptionalFeature(vk::Bool32 vk::PhysicalDeviceFeatures::* flag, std::string_view flagName) -> vk::Bool32 {
-        const vk::Bool32 supported = m_features.*flag;
-        if (supported) {
-            m_requiredFeatures.*flag = vk::True;
-        } else {
-            Log::Info("Requested optional feature \"{}\" is not supported.", flagName);
-        }
-
-        return supported;
+    [[nodiscard]] auto IsExtensionAvailable(const std::string_view name) const noexcept -> bool {
+        return std::ranges::any_of(m_availableExtensions, [&](const vk::ExtensionProperties& ext) { return name == ext.extensionName; });
     }
 
 private:
-    vk::raii::PhysicalDevice m_handle;
-
-    // Properties
-    vk::PhysicalDeviceProperties m_properties;
-    vk::PhysicalDeviceFeatures m_features;
-    std::vector<vk::QueueFamilyProperties> m_queueFamilies;
-    std::vector<vk::ExtensionProperties> m_extensions;
-
-    std::unordered_set<std::string_view> m_availableExtensionsSet;
-
-    // Extensions features
-    std::unordered_map<vk::StructureType, std::shared_ptr<void>> m_extensionFeatures;
-    void* m_extensionFeaturePNext = nullptr;
-    vk::PhysicalDeviceFeatures m_requiredFeatures;
+    vk::raii::PhysicalDevice m_handle { nullptr };
+    std::vector<vk::QueueFamilyProperties2KHR> m_queueFamilies;
+    std::vector<vk::ExtensionProperties> m_availableExtensions;
+    vk::PhysicalDeviceProperties2KHR m_properties;
+    vk::StructureChain<
+        vk::PhysicalDeviceFeatures2KHR,
+        vk::PhysicalDeviceVulkan11Features,
+        vk::PhysicalDeviceVulkan12Features,
+        vk::PhysicalDeviceVulkan13Features,
+        vk::PhysicalDeviceDynamicRenderingFeaturesKHR
+    > m_features;
 };
-
-// TODO: C++26 reflection
-#define REQUEST_OPTIONAL_EXT_FEATURE(gpu, feature, flag) gpu->RequestOptionalExtensionFeature<feature>(&feature::flag, #feature, #flag)
-#define REQUEST_REQUIRED_EXT_FEATURE(gpu, feature, flag) gpu->RequestRequiredExtensionFeature<feature>(&feature::flag, #feature, #flag)
-#define REQUEST_OPTIONAL_FEATURE(gpu, flag) gpu->RequestOptionalFeature(&vk::PhysicalDeviceFeatures::flag, #flag)
-#define REQUEST_REQUIRED_FEATURE(gpu, flag) gpu->RequestRequiredFeature(&vk::PhysicalDeviceFeatures::flag, #flag)
 }

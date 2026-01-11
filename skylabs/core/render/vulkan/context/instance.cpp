@@ -1,7 +1,8 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
-#include <skylabs/core/render/vulkan/context/physical_device.hpp>
-
+#include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
+
+#include <fmt/ranges.h>
 
 #include <ranges>
 
@@ -32,189 +33,108 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 }
 
 namespace Vulkan {
-CInstance::CInstance(std::nullptr_t) {}
-
 CInstance::CInstance(
-    const std::span<Utils::CRequestedExtension> extensions,
-    const std::span<std::string_view> layers
+    const vk::raii::Context& context,
+    const std::uint32_t apiVersion,
+    const std::span<Utils::CRequestedExtension> requestedExtensions
 ) {
-    VULKAN_HPP_DEFAULT_DISPATCHER.init();
+    // Collect all available global extensions
+    std::vector<vk::ExtensionProperties> globalAvailableExtensions = context.enumerateInstanceExtensionProperties();
 
-    if (m_context.getDispatcher()->vkEnumerateInstanceVersion) {
-        //m_apiVersion = m_context.enumerateInstanceVersion();
+    // Enable validation layer
+    std::vector<const char*> enabledLayers {};
+#ifdef DEBUG
+    {
+        const std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
+
+        constexpr auto validationLayer = "VK_LAYER_KHRONOS_validation";
+
+        if (std::ranges::any_of(availableLayers, [&](const vk::LayerProperties& l) {
+            return std::string_view { l.layerName } == validationLayer;
+        })) {
+            Log::Debug("Enabling {}", validationLayer);
+            enabledLayers.push_back(validationLayer);
+
+            // If VK_LAYER_KHRONOS_validation is enabled, extensions from it are also available
+            std::vector<vk::ExtensionProperties> validationLayerExtensions = context.enumerateInstanceExtensionProperties(std::string { validationLayer });
+            globalAvailableExtensions.insert(globalAvailableExtensions.end(), validationLayerExtensions.begin(), validationLayerExtensions.end());
+        }
     }
+#endif
 
-    Log::Info(
-        "Vulkan version: {}.{}.{}.{}",
-        vk::apiVersionVariant(m_apiVersion),
-        vk::apiVersionMajor(m_apiVersion),
-        vk::apiVersionMinor(m_apiVersion),
-        vk::apiVersionPatch(m_apiVersion)
-    );
+    const auto isExtensionAvailable = [&](const std::string_view name) {
+        return std::ranges::any_of(globalAvailableExtensions, [&](const vk::ExtensionProperties& ext) { return ext.extensionName == name; });
+    };
 
-    //====================
-    vk::ApplicationInfo appInfo;
-    appInfo.pApplicationName = Skylabs::GAME_NAME;
-    appInfo.applicationVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
-    appInfo.pEngineName = Skylabs::NAME;
-    appInfo.engineVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
-    appInfo.apiVersion = m_apiVersion;
-
-    //====================
-    const std::vector<const char*> enabledLayers = EnableLayers(layers);
-
-    //====================
-    const std::vector<const char*> enabledExtensions = EnableExtensions(extensions);
-
-    //====================
+    // Enable extensions
     void* pNext = nullptr;
 
 #ifdef DEBUG
-    const bool isDebugUtilsAvailable = IsExtensionEnabled(vk::EXTDebugUtilsExtensionName);
+    // Debug utils messenger is the only object that need to be created in instance
+    bool isDebugUtilsAvailable = false;
+    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {};
+    if (isExtensionAvailable(vk::EXTDebugUtilsExtensionName)) {
+        isDebugUtilsAvailable = true;
 
-    vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
-        {},
+        m_activeExtensions.emplace_back(vk::EXTDebugUtilsExtensionName);
+        debugUtilsCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+        debugUtilsCreateInfo.messageType =
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+        debugUtilsCreateInfo.pfnUserCallback = DebugCallback;
 
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-
-        DebugCallback
-    };
-
-    if (isDebugUtilsAvailable) {
         Utils::AppendToPNextChain(pNext, &debugUtilsCreateInfo);
     }
 #endif
 
-    //====================
-    vk::InstanceCreateInfo createInfo;
-    createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-    createInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
-    createInfo.ppEnabledLayerNames = enabledLayers.data();
-    createInfo.pNext = pNext;
+    // Process requested extensions
+    std::vector<std::string_view> missingExtensions {};
+    for (const auto& [name, requirement] : requestedExtensions) {
+        if (isExtensionAvailable(name)) {
+            m_activeExtensions.emplace_back(name);
+        } else {
+            if (requirement == Utils::Requirement::eRequired) {
+                missingExtensions.push_back(name);
+            } else {
+                Log::Debug("Optional extension {} is not supported", name);
+            }
+        }
+    }
 
-    m_handle = vk::raii::Instance { m_context, createInfo };
+    // Some required extensions are missing...
+    if (!missingExtensions.empty()) {
+        throw std::runtime_error(fmt::format("System doesn't have required instance extensions:\n    {}", fmt::join(missingExtensions, "\n    ")));
+    }
+
+    // For instance creation
+    std::vector<const char*> enabledExtensions {};
+    enabledExtensions.reserve(m_activeExtensions.size());
+    for (const auto& ext : m_activeExtensions) {
+        enabledExtensions.push_back(ext.c_str());
+    }
+
+    vk::ApplicationInfo applicationInfo {};
+    applicationInfo.pApplicationName = Skylabs::GAME_NAME;
+    applicationInfo.applicationVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
+    applicationInfo.pEngineName = Skylabs::NAME;
+    applicationInfo.engineVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
+    applicationInfo.apiVersion = m_apiVersion = apiVersion;
+
+    vk::InstanceCreateInfo instanceCreateInfo {};
+    instanceCreateInfo.pNext = pNext;
+    instanceCreateInfo.pApplicationInfo = &applicationInfo;
+    instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
+    instanceCreateInfo.ppEnabledLayerNames = !enabledLayers.empty() ? enabledLayers.data() : nullptr;
+    instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    instanceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
+
+    m_handle = vk::raii::Instance { context, instanceCreateInfo };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
-    //====================
 #ifdef DEBUG
     if (isDebugUtilsAvailable) {
         m_debugUtilsMessenger = vk::raii::DebugUtilsMessengerEXT { m_handle, debugUtilsCreateInfo };
     }
 #endif
-
-    QueryPhysicalDevices();
-}
-
-std::vector<const char*> CInstance::EnableLayers(const std::span<std::string_view> requestedLayers) {
-    static const std::vector<vk::LayerProperties> layerProps = m_context.enumerateInstanceLayerProperties();
-    static const std::unordered_set<std::string_view> availableLayerNames =
-        layerProps
-        | std::views::transform([&](const vk::LayerProperties& layer) -> std::string_view { return layer.layerName; })
-        | std::ranges::to<std::unordered_set>();
-
-    std::vector<const char*> enabledLayers;
-    enabledLayers.reserve(requestedLayers.size() + 1);
-
-    m_enabledLayers.reserve(requestedLayers.size());
-
-    auto tryEnable = [&](const std::string_view name) {
-        if (availableLayerNames.contains(name)) {
-            enabledLayers.push_back(name.data());
-            m_enabledLayers.emplace(name);
-        } else {
-            Log::Debug("System doesn't have vulkan layer \"{}\"", name);
-        }
-    };
-
-#ifdef DEBUG
-    tryEnable("VK_LAYER_KHRONOS_validation");
-#endif
-
-    for (const std::string_view layerName : requestedLayers) {
-        if (!m_enabledLayers.contains(layerName)) {
-            tryEnable(layerName);
-        }
-    }
-
-    return enabledLayers;
-}
-
-std::vector<const char*> CInstance::EnableExtensions(const std::span<Utils::CRequestedExtension> requestedExtensions) {
-    static const std::vector<vk::ExtensionProperties> extensionProps = m_context.enumerateInstanceExtensionProperties();
-    static const std::unordered_set<std::string_view> availableExtensionNames = [&] {
-        std::unordered_set<std::string_view> availableExtensions =
-            extensionProps
-            | std::views::transform([&](const vk::ExtensionProperties& extension) -> std::string_view { return extension.extensionName; })
-            | std::ranges::to<std::unordered_set>();
-
-        for (const std::string_view layer : m_enabledLayers) {
-            for (const auto& extension : m_context.enumerateInstanceExtensionProperties(std::string { layer })) {
-                availableExtensions.insert(extension.extensionName);
-            }
-        }
-
-        return availableExtensions;
-    }();
-
-    std::vector<const char*> enabledExtensions;
-    enabledExtensions.reserve(requestedExtensions.size() + 1);
-
-    std::vector<std::string_view> missingExtensions;
-    missingExtensions.reserve(4);
-
-    m_enabledExtensions.reserve(requestedExtensions.size());
-
-    auto tryEnable = [&](const std::string_view name, const Utils::ExtensionRequirement requirement) {
-        if (availableExtensionNames.contains(name)) {
-            enabledExtensions.push_back(name.data());
-            m_enabledExtensions.emplace(name);
-        } else if (requirement == Utils::ExtensionRequirement::Required) {
-            missingExtensions.emplace_back(name);
-        }
-    };
-
-#ifdef DEBUG
-    tryEnable(vk::EXTDebugUtilsExtensionName, Utils::ExtensionRequirement::Optional);
-#endif
-
-    for (const Utils::CRequestedExtension extension : requestedExtensions) {
-        if (const std::string_view extensionName = extension.Name(); m_apiVersion < extension.PromotedVersion() && !m_enabledExtensions.contains(extensionName)) {
-            tryEnable(extensionName, extension.Requirement());
-        }
-    }
-
-    if (!missingExtensions.empty()) {
-        std::string error = "System doesn't have required instance extensions:\n";
-        error.reserve(error.size() + (missingExtensions.size() * 25));
-        for (const auto& extension : missingExtensions) {
-            error += "\t";
-            error += extension;
-            error += "\n";
-        }
-        throw std::runtime_error(error);
-    }
-
-    return enabledExtensions;
-}
-
-void CInstance::QueryPhysicalDevices() {
-    vk::raii::PhysicalDevices physicalDevices { m_handle };
-    if (physicalDevices.empty()) {
-        throw std::runtime_error { "Couldn't find a physical device that supports Vulkan!" };
-    }
-
-    m_physicalDevices.reserve(physicalDevices.size());
-    for (vk::raii::PhysicalDevice& physicalDevice : physicalDevices) {
-        m_physicalDevices.emplace_back(std::move(physicalDevice));
-    }
 }
 }

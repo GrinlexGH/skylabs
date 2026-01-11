@@ -1,160 +1,174 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
-
 #include <skylabs/public/logging.hpp>
 
+#include <ranges>
+
 namespace {
-int DeviceTypeScore(const vk::PhysicalDeviceType type) {
-    switch (type) {
-        case vk::PhysicalDeviceType::eDiscreteGpu:
-            return 5;
-        case vk::PhysicalDeviceType::eIntegratedGpu:
-            return 4;
-        case vk::PhysicalDeviceType::eVirtualGpu:
-            return 3;
-        case vk::PhysicalDeviceType::eCpu:
-            return 2;
-        case vk::PhysicalDeviceType::eOther:
-            return 1;
+bool EnableDynamicRender(
+    const std::uint32_t apiVersion,
+    const Vulkan::CPhysicalDevice& gpu,
+    Vulkan::CDevice::DeviceFeatures& features,
+    std::vector<const char*>& deviceExtensions
+) {
+    if (apiVersion >= vk::ApiVersion13) {
+        features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
+        features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering = vk::True;
+        return true;
     }
-    std::unreachable();
+
+    if (gpu.IsExtensionAvailable(vk::KHRDynamicRenderingExtensionName) && gpu.Features().get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering) {
+        features.get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering = vk::True;
+        deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName);
+
+        // dependencies
+        if (apiVersion < vk::ApiVersion12) {
+            deviceExtensions.emplace_back(vk::KHRDepthStencilResolveExtensionName);
+            deviceExtensions.emplace_back(vk::KHRCreateRenderpass2ExtensionName);
+            if (apiVersion < vk::ApiVersion11) {
+                deviceExtensions.emplace_back(vk::KHRMultiviewExtensionName);
+                deviceExtensions.emplace_back(vk::KHRMaintenance2ExtensionName);
+            }
+        }
+
+        return true;
+    }
+
+    features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
+    return false;
+}
+
+bool EnableSwapchain(
+    const std::uint32_t /*apiVersion*/,
+    const Vulkan::CPhysicalDevice& gpu,
+    Vulkan::CDevice::DeviceFeatures& /*features*/,
+    std::vector<const char*>& deviceExtensions
+) {
+    if (gpu.IsExtensionAvailable(vk::KHRSwapchainExtensionName)) {
+        deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName);
+        return true;
+    }
+    return false;
 }
 }
 
 namespace Vulkan {
 CContext::CContext(const IWindow* const window) : m_window(window) {
     CreateInstance();
-    SelectPhysicalDevice();
-    CreateLogicalDevice();
-    CreateAllocator();
+    CreateDevice();
+    m_allocator = CAllocator { *m_instance, m_physicalDevice, m_device };
 }
 
 void CContext::CreateInstance() {
-    std::vector<Utils::CRequestedExtension> instanceExtensions;
+    VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    const std::span<const char* const> required = m_window->GetRequiredInstanceExtensions();
-    instanceExtensions.reserve(required.size() + 1);
+    std::uint32_t apiVersion = vk::ApiVersion10;
+    if (m_context.getDispatcher()->vkEnumerateInstanceVersion) {
+        apiVersion = m_context.enumerateInstanceVersion();
+        Log::Debug(
+            "Available Vulkan version: {}.{}.{}, but anyways I will use Vulkan 1.0", vk::apiVersionMajor(apiVersion), vk::apiVersionMinor(apiVersion),
+            vk::apiVersionPatch(apiVersion)
+        );
 
-    for (const std::string_view ext : required) {
-        instanceExtensions.emplace_back(ext, Utils::ExtensionRequirement::Required);
+        apiVersion = vk::ApiVersion10;
     }
 
-    instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Utils::ExtensionRequirement::Required, vk::ApiVersion11);
+    std::vector<Utils::CRequestedExtension> instanceExtensions = m_window->GetRequiredInstanceExtensions() |
+        std::views::transform([](const char* const ext) -> Utils::CRequestedExtension { return { .m_name = ext, .m_requirement = Utils::Requirement::eRequired }; }) |
+        std::ranges::to<std::vector<Utils::CRequestedExtension>>();
 
-    std::ranges::sort(instanceExtensions);
-    instanceExtensions.erase(std::ranges::unique(instanceExtensions).begin(), instanceExtensions.end());
+    if (apiVersion < vk::ApiVersion11) {
+        instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Utils::Requirement::eRequired);
+    }
 
-    m_instance = CInstance { instanceExtensions };
+    m_instance = CInstance { m_context, apiVersion, instanceExtensions };
 }
 
-bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
-    bool hasPresentQueue = false;
+// Guarantees:
+// * Graphics & present queue families
+// * VK_KHR_swapchain extension
+// * SamplerAnisotropy feature
+bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDeviceInfo) const {
+    // Check for graphics and queue families
     bool hasGraphicsQueue = false;
+    bool hasPresentQueue = false;
 
-    for (std::uint32_t i = 0; const auto& queue : physicalDevice.QueueFamilies()) {
-        if (m_window->IsQueueFamilySupportPresent(*m_instance, *physicalDevice, i)) {
-            hasPresentQueue = true;
-        }
-
-        if (queue.queueFlags & vk::QueueFlagBits::eGraphics) {
-            hasGraphicsQueue = true;
-        }
-
-        if (hasPresentQueue && hasGraphicsQueue) {
-            return true;
-        }
-
-        ++i;
+    const std::vector<vk::QueueFamilyProperties2KHR>& queueFamilies = physicalDeviceInfo.QueueFamilies();
+    for (uint32_t i = 0; i < queueFamilies.size(); i++) {
+        if (queueFamilies.at(i).queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) hasGraphicsQueue = true;
+        if (m_window->IsQueueFamilySupportPresent(*m_instance, *physicalDeviceInfo, i)) hasPresentQueue = true;
+        if (hasGraphicsQueue && hasPresentQueue) break;
     }
 
-    return false;
-}
+    if (!hasGraphicsQueue || !hasPresentQueue) return false;
 
-CPhysicalDevice* CContext::SelectSuitablePhysicalDevice() {
-    CPhysicalDevice* selectedDevice = nullptr;
-    std::vector<CPhysicalDevice>& physicalDevices = m_instance.PhysicalDevices();
+    // Check for swapchain extension
+    bool hasSwapchainExtension = false;
 
-    int deviceTypeScore = 0;
-    for (auto& physicalDevice : physicalDevices) {
-        if (IsDeviceSuitable(physicalDevice)) {
-            if (const int optionScore = DeviceTypeScore(physicalDevice.Properties().deviceType); optionScore > deviceTypeScore) {
-                selectedDevice = &physicalDevice;
-                deviceTypeScore = optionScore;
-            }
+    for (const auto& extension : physicalDeviceInfo.AvailableExtensions()) {
+        if (std::strcmp(extension.extensionName, vk::KHRSwapchainExtensionName) == 0) {
+            hasSwapchainExtension = true;
+            break;
         }
     }
 
-    if (selectedDevice == nullptr) {
-        Log::Warning("No suitable GPU was found! Picking first GPU: {}", *physicalDevices.at(0).Properties().deviceName);
-        return physicalDevices.data();
-    }
+    if (!hasSwapchainExtension) return false;
 
-    return selectedDevice;
+    // Check for sampler anisotropy
+    if (!physicalDeviceInfo.Features().get<vk::PhysicalDeviceFeatures2KHR>().features.samplerAnisotropy) return false;
+
+    return true;
 }
 
-void CContext::SelectPhysicalDevice() {
-    m_selectedPhysicalDevice = SelectSuitablePhysicalDevice();
+int CContext::RatePhysicalDevice(const CPhysicalDevice& physicalDeviceInfo) const {
+    int score = 0;
 
-    Log::Info("Selected device: {}", std::string_view { m_selectedPhysicalDevice->Properties().deviceName });
+    if (!IsDeviceSuitable(physicalDeviceInfo)) return score;
+
+    switch (physicalDeviceInfo.Properties().properties.deviceType) {
+        case vk::PhysicalDeviceType::eDiscreteGpu: score += 2000; break;
+        case vk::PhysicalDeviceType::eIntegratedGpu: score += 800; break;
+        case vk::PhysicalDeviceType::eVirtualGpu: score += 500; break;
+        case vk::PhysicalDeviceType::eCpu: score += 200; break;
+        case vk::PhysicalDeviceType::eOther: score += 100; break;
+    }
+
+    return score;
 }
 
-void CContext::CreateLogicalDevice() {
-    std::vector<Utils::CRequestedExtension> deviceExtensions;
-    deviceExtensions.reserve(15);
+CPhysicalDevice CContext::SelectPhysicalDevice(const vk::raii::PhysicalDevices& physicalDevices) const {
+    CPhysicalDevice deviceInfo { nullptr };
+    int maxScore = 0;
 
-    deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName, Utils::ExtensionRequirement::Required);
-
-    // VMA
-    deviceExtensions.emplace_back(vk::KHRDedicatedAllocationExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
-    deviceExtensions.emplace_back(vk::KHRGetMemoryRequirements2ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
-
-    deviceExtensions.emplace_back(vk::KHRBindMemory2ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
-    deviceExtensions.emplace_back(vk::KHRMaintenance4ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion13);
-    deviceExtensions.emplace_back(vk::EXTMemoryBudgetExtensionName, Utils::ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::EXTMemoryPriorityExtensionName, Utils::ExtensionRequirement::Optional);
-    deviceExtensions.emplace_back(vk::AMDDeviceCoherentMemoryExtensionName, Utils::ExtensionRequirement::Optional);
-
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    deviceExtensions.emplace_back(vk::KHRExternalMemoryWin32ExtensionName, Utils::ExtensionRequirement::Optional);
-#endif
-
-#ifdef DEBUG
-    deviceExtensions.emplace_back(vk::EXTDeviceAddressBindingReportExtensionName, Utils::ExtensionRequirement::Optional);
-#endif
-
-    // Enable all extensions here
-    REQUEST_REQUIRED_FEATURE(m_selectedPhysicalDevice, samplerAnisotropy);
-
-    deviceExtensions.emplace_back(vk::KHRMaintenance5ExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion14);
-    if (m_instance.ApiVersion() < vk::ApiVersion13 || !REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, dynamicRendering)) {
-        deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName, Utils::ExtensionRequirement::Optional);
-        deviceExtensions.emplace_back(vk::KHRDepthStencilResolveExtensionName, Utils::ExtensionRequirement::Optional);
-        deviceExtensions.emplace_back(vk::KHRCreateRenderpass2ExtensionName, Utils::ExtensionRequirement::Optional);
-        REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
+    for (const auto& device : physicalDevices) {
+        CPhysicalDevice currentDeviceInfo { device };
+        if (const int score = RatePhysicalDevice(currentDeviceInfo); score > maxScore) {
+            maxScore = score;
+            deviceInfo = std::move(currentDeviceInfo);
+        }
     }
 
-    if (m_instance.ApiVersion() < vk::ApiVersion13 || !REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan13Features, synchronization2)) {
-        deviceExtensions.emplace_back(vk::KHRSynchronization2ExtensionName, Utils::ExtensionRequirement::Required);
-        REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceSynchronization2Features, synchronization2);
+    if (maxScore == 0) {
+        throw std::runtime_error("Failed to find a suitable GPU!");
     }
 
-    deviceExtensions.emplace_back(vk::KHRDeviceGroupExtensionName, Utils::ExtensionRequirement::Optional, vk::ApiVersion11);
-    if (m_instance.ApiVersion() < vk::ApiVersion12 || !REQUEST_OPTIONAL_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceVulkan12Features, bufferDeviceAddress)) {
-        deviceExtensions.emplace_back(vk::KHRBufferDeviceAddressExtensionName, Utils::ExtensionRequirement::Required);
-        REQUEST_REQUIRED_EXT_FEATURE(m_selectedPhysicalDevice, vk::PhysicalDeviceBufferDeviceAddressFeatures, bufferDeviceAddress);
-    }
-
-    std::ranges::sort(deviceExtensions);
-    deviceExtensions.erase(std::ranges::unique(deviceExtensions).begin(), deviceExtensions.end());
-
-    m_device = CDevice {
-        m_instance,
-        *m_selectedPhysicalDevice,
-        m_window,
-        deviceExtensions
-    };
+    return deviceInfo;
 }
 
-void CContext::CreateAllocator() {
-    m_allocator = CAllocator { m_instance, m_selectedPhysicalDevice->Handle(), m_device };
+void CContext::CreateDevice() {
+    const vk::raii::PhysicalDevices physicalDevices { *m_instance };
+    const CPhysicalDevice selectedGPU = SelectPhysicalDevice(physicalDevices);
+
+    const std::uint32_t deviceApiVersion = selectedGPU.Properties().properties.apiVersion;
+    const std::uint32_t usingApiVersion = std::min(m_instance.ApiVersion(), deviceApiVersion);
+    Log::Debug(
+        "Device vulkan api version is {}.{}.{}, minimum version is {}.{}.{}", vk::apiVersionMajor(deviceApiVersion), vk::apiVersionMinor(deviceApiVersion),
+        vk::apiVersionPatch(deviceApiVersion), vk::apiVersionMajor(usingApiVersion), vk::apiVersionMinor(usingApiVersion), vk::apiVersionPatch(usingApiVersion)
+    );
+
+    std::vector<CDevice::CRequestedFeature> deviceFeatures;
+    deviceFeatures.emplace_back(EnableSwapchain, Utils::Requirement::eRequired);
+    deviceFeatures.emplace_back(EnableDynamicRender, Utils::Requirement::eOptional);
+
+    m_device = CDevice { m_window, *m_instance, selectedGPU, usingApiVersion, deviceFeatures };
 }
 }
