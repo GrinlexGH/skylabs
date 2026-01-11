@@ -5,17 +5,13 @@
 #include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
 
-#include <utility>
 #include <vulkan/vulkan_raii.hpp>
 #include <fmt/ranges.h>
+#include <vk_mem_alloc_raii.hpp>
 
+#include <utility>
 #include <ranges>
 #include <set>
-
-// Fix defines
-#ifdef CreateWindow
-#undef CreateWindow
-#endif
 
 class CTimer
 {
@@ -24,7 +20,10 @@ public:
         Log::Debug("Timer start");
         m_start = std::chrono::steady_clock::now();
     }
-
+    CTimer(const CTimer&) = delete;
+    CTimer(CTimer&&) = delete;
+    CTimer& operator=(const CTimer&) = delete;
+    CTimer& operator=(CTimer&&) = delete;
     ~CTimer() {
         const std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         Log::Debug("{} ms", std::chrono::duration_cast<std::chrono::milliseconds>(end - m_start).count());
@@ -71,10 +70,10 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 }
 
 namespace VulkanStructured {
+enum class Requirement : std::uint8_t { eOptional, eRequired };
+
 struct CRequestedExtension
 {
-    enum class Requirement : std::uint8_t { eOptional, eRequired };
-
     std::string_view m_name;
     Requirement m_requirement;
 };
@@ -99,12 +98,14 @@ public:
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Instance& { return m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Instance* { return &m_handle; }
 
+    [[nodiscard]] auto ApiVersion() const noexcept -> std::uint32_t { return m_apiVersion; }
     [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return std::ranges::contains(m_activeExtensions, name); }
 
 private:
     vk::raii::Instance m_handle { nullptr };
 
     std::vector<std::string> m_activeExtensions;
+    std::uint32_t m_apiVersion = 0;
 
 #ifdef DEBUG
     vk::raii::DebugUtilsMessengerEXT debugUtilsMessenger { nullptr };
@@ -183,7 +184,7 @@ CInstance::CInstance(
         if (isExtensionAvailable(name)) {
             m_activeExtensions.emplace_back(name);
         } else {
-            if (requirement == CRequestedExtension::Requirement::eRequired) {
+            if (requirement == Requirement::eRequired) {
                 missingExtensions.push_back(name);
             } else {
                 Log::Debug("Optional extension {} is not supported", name);
@@ -211,7 +212,7 @@ CInstance::CInstance(
     applicationInfo.applicationVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     applicationInfo.pEngineName = Skylabs::NAME;
     applicationInfo.engineVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
-    applicationInfo.apiVersion = apiVersion;
+    applicationInfo.apiVersion = m_apiVersion = apiVersion;
 
     vk::InstanceCreateInfo instanceCreateInfo {};
     instanceCreateInfo.pNext = pNext;
@@ -241,22 +242,207 @@ public:
         m_queueFamilies(m_handle.getQueueFamilyProperties2KHR()),
         m_availableExtensions(m_handle.enumerateDeviceExtensionProperties()),
         m_properties(m_handle.getProperties2KHR()),
-        m_features(m_handle.getFeatures2KHR())
+        m_features(
+            m_handle.getFeatures2KHR<
+                vk::PhysicalDeviceFeatures2KHR,
+                vk::PhysicalDeviceVulkan11Features,
+                vk::PhysicalDeviceVulkan12Features,
+                vk::PhysicalDeviceVulkan13Features,
+                vk::PhysicalDeviceDynamicRenderingFeaturesKHR
+            >()
+        )
     {}
 
     [[nodiscard]] auto Handle() const noexcept -> const vk::raii::PhysicalDevice& { return m_handle; }
     [[nodiscard]] auto QueueFamilies() const noexcept -> const std::vector<vk::QueueFamilyProperties2KHR>& { return m_queueFamilies; }
     [[nodiscard]] auto AvailableExtensions() const noexcept -> const std::vector<vk::ExtensionProperties>& { return m_availableExtensions; }
     [[nodiscard]] auto Properties() const noexcept -> const vk::PhysicalDeviceProperties2KHR& { return m_properties; }
-    [[nodiscard]] auto Features() const noexcept -> const vk::PhysicalDeviceFeatures2KHR& { return m_features; }
+    [[nodiscard]] auto Features() const noexcept -> const auto& { return m_features; }
+
+    [[nodiscard]] auto IsExtensionAvailable(const std::string_view name) const noexcept -> bool {
+        return std::ranges::any_of(
+            m_availableExtensions,
+            [&](const vk::ExtensionProperties& ext) { return name == ext.extensionName; }
+        );
+    }
 
 private:
     vk::raii::PhysicalDevice m_handle { nullptr };
     std::vector<vk::QueueFamilyProperties2KHR> m_queueFamilies;
     std::vector<vk::ExtensionProperties> m_availableExtensions;
     vk::PhysicalDeviceProperties2KHR m_properties;
-    vk::PhysicalDeviceFeatures2KHR m_features;
+    vk::StructureChain<
+        vk::PhysicalDeviceFeatures2KHR,
+        vk::PhysicalDeviceVulkan11Features,
+        vk::PhysicalDeviceVulkan12Features,
+        vk::PhysicalDeviceVulkan13Features,
+        vk::PhysicalDeviceDynamicRenderingFeaturesKHR
+    > m_features;
 };
+
+class CDevice
+{
+public:
+    using DeviceFeatures = vk::StructureChain<
+        vk::PhysicalDeviceFeatures2KHR,
+        vk::PhysicalDeviceVulkan11Features,
+        vk::PhysicalDeviceVulkan12Features,
+        vk::PhysicalDeviceVulkan13Features,
+        vk::PhysicalDeviceDynamicRenderingFeaturesKHR
+    >;
+
+    struct CRequestedFeature
+    {
+        using PFN_enable = bool(*)(
+            std::uint32_t apiVersion,
+            const CGPUInfo& gpu,
+            DeviceFeatures& features,
+            std::vector<const char*>& deviceExtensions
+        );
+
+        PFN_enable m_enable;
+        Requirement m_requirement;
+    };
+
+    explicit CDevice(std::nullptr_t) {}
+    explicit CDevice(
+        const ::Vulkan::IWindow* window,
+        vk::Instance instance,
+        const CGPUInfo& gpu,
+        std::uint32_t apiVersion,
+        std::span<CRequestedFeature> requestedFeatures
+    );
+    CDevice(CDevice&) = delete;
+    CDevice(CDevice&&) = default;
+    CDevice& operator=(CDevice&) = delete;
+    CDevice& operator=(CDevice&&) = default;
+    ~CDevice() = default;
+
+    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Device& { return m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Device* { return &m_handle; }
+
+    [[nodiscard]] auto ApiVersion() const noexcept -> std::uint32_t { return m_apiVersion; }
+    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return std::ranges::contains(m_activeExtensions, name); }
+
+    template <typename Feature>
+    [[nodiscard]] auto IsFeatureEnabled(vk::Bool32 Feature::* flag) const -> Feature {
+        return m_enabledFeatures.get<Feature>().*flag;
+    }
+
+private:
+    [[nodiscard]] static auto GetQueueCreateInfos(
+        const ::Vulkan::IWindow* window,
+        vk::Instance instance,
+        const CGPUInfo& gpu
+    ) -> std::vector<vk::DeviceQueueCreateInfo>;
+
+    vk::raii::Device m_handle { nullptr };
+
+    std::uint32_t m_apiVersion = 0;
+    std::vector<std::string> m_activeExtensions;
+    DeviceFeatures m_enabledFeatures;
+};
+
+std::vector<vk::DeviceQueueCreateInfo> CDevice::GetQueueCreateInfos(
+    const ::Vulkan::IWindow* window,
+    const vk::Instance instance,
+    const CGPUInfo& gpu
+) {
+    std::optional<std::uint32_t> graphicsFamily;
+    std::optional<std::uint32_t> presentFamily;
+    std::optional<std::uint32_t> computeFamily;
+    const auto& queueFamilies = gpu.QueueFamilies();
+
+    for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
+        if (!graphicsFamily.has_value() && queueFamilies[i].queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) {
+            graphicsFamily.emplace(i);
+        }
+
+        // Graphics queue guarantees compute queue (but not on the same physical device...)
+        if (!computeFamily.has_value() && queueFamilies[i].queueFamilyProperties.queueFlags & vk::QueueFlagBits::eCompute) {
+            computeFamily.emplace(i);
+        }
+
+        if (!presentFamily.has_value() && window->IsQueueFamilySupportPresent(instance, gpu.Handle(), i)) {
+            presentFamily.emplace(i);
+        }
+
+        if (graphicsFamily.has_value() && presentFamily.has_value() && computeFamily.has_value()) {
+            break;
+        }
+    }
+
+    std::array uniqueQueueFamilies { *graphicsFamily, *presentFamily, *computeFamily };
+    std::ranges::sort(uniqueQueueFamilies);
+    const std::size_t uniqueCount =
+        std::distance(uniqueQueueFamilies.begin(), std::ranges::unique(uniqueQueueFamilies).begin());
+
+    static constexpr float queuePriority = 0.5f;
+    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+    queueCreateInfos.reserve(uniqueCount);
+    for (std::size_t i = 0; i < uniqueCount; ++i) {
+        vk::DeviceQueueCreateInfo queueCreateInfo;
+        queueCreateInfo.queueFamilyIndex = uniqueQueueFamilies.at(i);
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
+
+    return queueCreateInfos;
+}
+
+CDevice::CDevice(
+    const ::Vulkan::IWindow* window,
+    const vk::Instance instance,
+    const CGPUInfo& gpu,
+    const std::uint32_t apiVersion,
+    std::span<CRequestedFeature> requestedFeatures
+) : m_apiVersion(apiVersion) {
+    const std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(window, instance, gpu);
+
+    DeviceFeatures finalFeatures;
+
+    if (apiVersion < vk::ApiVersion13) {
+        finalFeatures.unlink<vk::PhysicalDeviceVulkan13Features>();
+
+        if (apiVersion < vk::ApiVersion12) {
+            finalFeatures.unlink<vk::PhysicalDeviceVulkan12Features>();
+
+            if (apiVersion < vk::ApiVersion11) {
+                finalFeatures.unlink<vk::PhysicalDeviceVulkan11Features>();
+            }
+        }
+    }
+
+    std::vector<const char*> enabledExtensions { };
+    for (const auto& [enable, requirement] : requestedFeatures) {
+        if (!enable(apiVersion, gpu, finalFeatures, enabledExtensions)) {
+            if (requirement == Requirement::eRequired) {
+                throw std::runtime_error("System can't enable required feature! See logs");
+            }
+            Log::Debug("Can't enable optional feature. See logs");
+        }
+    }
+
+    // Remove duplicates
+    std::ranges::sort(enabledExtensions);
+    enabledExtensions.erase(enabledExtensions.end(), std::ranges::unique(enabledExtensions).end());
+
+    vk::DeviceCreateInfo deviceCreateInfo;
+    deviceCreateInfo.queueCreateInfoCount = static_cast<std::uint32_t>(queueCreateInfos.size());
+    deviceCreateInfo.pQueueCreateInfos = !queueCreateInfos.empty() ? queueCreateInfos.data() : nullptr;
+    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    deviceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
+    deviceCreateInfo.pNext = (m_enabledFeatures = finalFeatures).get<vk::PhysicalDeviceFeatures2KHR>();
+
+    auto* current = static_cast<const vk::BaseInStructure*>(deviceCreateInfo.pNext);
+    while (current) {
+        Log::Debug("{}", vk::to_string(current->sType));
+        current = current->pNext;
+    }
+
+    m_handle = vk::raii::Device { gpu.Handle(), deviceCreateInfo };
+}
 
 class CContext
 {
@@ -274,52 +460,29 @@ public:
     [[nodiscard]] auto Window() const noexcept -> const Vulkan::IWindow* { return m_window; }
 
 private:
+    static auto EnableDynamicRender(
+        std::uint32_t apiVersion,
+        const CGPUInfo& gpu,
+        CDevice::DeviceFeatures& features,
+        std::vector<const char*>& deviceExtensions
+    ) -> bool;
+
     auto CreateInstance() -> void;
     [[nodiscard]] auto SelectPhysicalDevice(const vk::raii::PhysicalDevices& physicalDevices) const -> CGPUInfo;
     [[nodiscard]] auto IsDeviceSuitable(const CGPUInfo& physicalDeviceInfo) const -> bool;
     [[nodiscard]] auto RatePhysicalDevice(const CGPUInfo& physicalDeviceInfo) const -> int;
+    auto CreateDevice() -> void;
 
-    const Vulkan::IWindow* m_window { nullptr };
+    const Vulkan::IWindow* m_window = nullptr;
     vk::raii::Context m_context;
     CInstance m_instance { nullptr };
     vk::raii::PhysicalDevice m_physicalDevice { nullptr };
+    CDevice m_device { nullptr };
 };
 
 CContext::CContext(const ::Vulkan::IWindow* const window) : m_window(window) {
     CreateInstance();
-
-    const vk::raii::PhysicalDevices physicalDevices { *m_instance };
-    CGPUInfo selectedGPU = SelectPhysicalDevice(physicalDevices);
-    std::uint32_t graphicsFamily = std::numeric_limits<std::uint32_t>::max();
-    std::uint32_t presentFamily = std::numeric_limits<std::uint32_t>::max();
-    std::uint32_t transferFamily = std::numeric_limits<std::uint32_t>::max();
-    std::uint32_t computeFamily = std::numeric_limits<std::uint32_t>::max();
-    for (std::uint32_t i = 0; const auto& queueFamily : selectedGPU.QueueFamilies()) {
-        if (queueFamily.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) graphicsFamily = i;
-        if (queueFamily.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eCompute) computeFamily = i;
-        if (queueFamily.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eTransfer) transferFamily = i;
-        if (m_window->IsQueueFamilySupportPresent(*m_instance, selectedGPU.Handle(), i)) presentFamily = i;
-        ++i;
-    }
-    if (transferFamily == std::numeric_limits<std::uint32_t>::max()) {
-        transferFamily = graphicsFamily;
-    }
-    const std::set uniqueQueueFamilies { graphicsFamily, presentFamily, transferFamily, computeFamily };
-
-    if (uniqueQueueFamilies.contains(std::numeric_limits<std::uint32_t>::max())) {
-        throw std::runtime_error("Queue doesnt present");
-    }
-
-    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-    queueCreateInfos.reserve(uniqueQueueFamilies.size());
-    constexpr float queuePriority = 0.5f;
-    for (const std::uint32_t queueFamily : uniqueQueueFamilies) {
-        vk::DeviceQueueCreateInfo queueCreateInfo;
-        queueCreateInfo.queueFamilyIndex = queueFamily;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfos.push_back(queueCreateInfo);
-    }
+    CreateDevice();
 }
 
 void CContext::CreateInstance() {
@@ -335,13 +498,12 @@ void CContext::CreateInstance() {
         apiVersion = vk::ApiVersion10;
     }
 
-    using Req = CRequestedExtension::Requirement;
     std::vector<CRequestedExtension> instanceExtensions = m_window->GetRequiredInstanceExtensions()
-        | std::views::transform([](const char* const ext) -> CRequestedExtension { return { .m_name = ext, .m_requirement = Req::eRequired }; })
+        | std::views::transform([](const char* const ext) -> CRequestedExtension { return { .m_name = ext, .m_requirement = Requirement::eRequired }; })
         | std::ranges::to<std::vector<CRequestedExtension>>();
 
     if (apiVersion < vk::ApiVersion11) {
-        instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Req::eRequired);
+        instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Requirement::eRequired);
     }
 
     m_instance = CInstance { m_context, apiVersion, instanceExtensions };
@@ -382,7 +544,7 @@ bool CContext::IsDeviceSuitable(const CGPUInfo& physicalDeviceInfo) const {
         return false;
 
     // Check for sampler anisotropy
-    if (!physicalDeviceInfo.Features().features.samplerAnisotropy)
+    if (!physicalDeviceInfo.Features().get<vk::PhysicalDeviceFeatures2KHR>().features.samplerAnisotropy)
         return false;
 
     return true;
@@ -422,6 +584,58 @@ CGPUInfo CContext::SelectPhysicalDevice(const vk::raii::PhysicalDevices& physica
     }
 
     return deviceInfo;
+}
+
+void CContext::CreateDevice() {
+    const vk::raii::PhysicalDevices physicalDevices { *m_instance };
+    const CGPUInfo selectedGPU = SelectPhysicalDevice(physicalDevices);
+
+    const std::uint32_t deviceApiVersion = selectedGPU.Properties().properties.apiVersion;
+    const std::uint32_t usingApiVersion = std::min(m_instance.ApiVersion(), deviceApiVersion);
+    Log::Debug("Device vulkan api version is {}.{}.{}, minimum version is {}.{}.{}",
+        vk::apiVersionMajor(deviceApiVersion), vk::apiVersionMinor(deviceApiVersion), vk::apiVersionPatch(deviceApiVersion),
+        vk::apiVersionMajor(usingApiVersion), vk::apiVersionMinor(usingApiVersion), vk::apiVersionPatch(usingApiVersion)
+    );
+
+    std::vector<CDevice::CRequestedFeature> deviceFeatures;
+    deviceFeatures.emplace_back(EnableDynamicRender, Requirement::eOptional);
+
+    m_device = CDevice { m_window, *m_instance, selectedGPU, usingApiVersion, deviceFeatures };
+}
+
+bool CContext::EnableDynamicRender(
+    const std::uint32_t apiVersion,
+    const CGPUInfo& gpu,
+    CDevice::DeviceFeatures& features,
+    std::vector<const char*>& deviceExtensions
+) {
+    if (apiVersion >= vk::ApiVersion13) {
+        features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
+        features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering = vk::True;
+        return true;
+    }
+
+    if (gpu.IsExtensionAvailable(vk::KHRDynamicRenderingExtensionName) &&
+        gpu.Features().get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering
+    ) {
+        features.get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering = vk::True;
+        deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName);
+
+        // dependencies
+        if (apiVersion < vk::ApiVersion12) {
+            deviceExtensions.emplace_back(vk::KHRDepthStencilResolveExtensionName);
+            deviceExtensions.emplace_back(vk::KHRCreateRenderpass2ExtensionName);
+            if (apiVersion < vk::ApiVersion11) {
+                deviceExtensions.emplace_back(vk::KHRMultiviewExtensionName);
+                deviceExtensions.emplace_back(vk::KHRMaintenance2ExtensionName);
+            }
+        }
+
+        return true;
+    }
+
+    features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
+    return false;
 }
 }
 
