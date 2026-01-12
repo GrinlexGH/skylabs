@@ -31,55 +31,6 @@ CAllocator::CAllocator(
     allocatorCreateInfo.flags = flags;
     allocatorCreateInfo.vulkanApiVersion = device.ApiVersion();
     allocatorCreateInfo.physicalDevice = physicalDevice;
-    allocatorCreateInfo.device = *device;
-    allocatorCreateInfo.instance = *instance;
-
-    vma::VulkanFunctions vulkanFunctions = {
-        instance.getDispatcher()->vkGetInstanceProcAddr,
-        instance.getDispatcher()->vkGetDeviceProcAddr,
-        *instance.getDispatcher()->vkGetPhysicalDeviceProperties,
-        instance.getDispatcher()->vkGetPhysicalDeviceMemoryProperties,
-        device->getDispatcher()->vkAllocateMemory,
-        device->getDispatcher()->vkFreeMemory,
-        device->getDispatcher()->vkMapMemory,
-        device->getDispatcher()->vkUnmapMemory,
-        device->getDispatcher()->vkFlushMappedMemoryRanges,
-        device->getDispatcher()->vkInvalidateMappedMemoryRanges,
-        device->getDispatcher()->vkBindBufferMemory,
-        device->getDispatcher()->vkBindImageMemory,
-        device->getDispatcher()->vkGetBufferMemoryRequirements,
-        device->getDispatcher()->vkGetImageMemoryRequirements,
-        device->getDispatcher()->vkCreateBuffer,
-        device->getDispatcher()->vkDestroyBuffer,
-        device->getDispatcher()->vkCreateImage,
-        device->getDispatcher()->vkDestroyImage,
-        device->getDispatcher()->vkCmdCopyBuffer,
-        device->getDispatcher()->vkGetBufferMemoryRequirements2KHR
-            ? device->getDispatcher()->vkGetBufferMemoryRequirements2KHR
-            : device->getDispatcher()->vkGetBufferMemoryRequirements2,
-        device->getDispatcher()->vkGetImageMemoryRequirements2KHR
-            ? device->getDispatcher()->vkGetImageMemoryRequirements2KHR
-            : device->getDispatcher()->vkGetImageMemoryRequirements2,
-        device->getDispatcher()->vkBindBufferMemory2KHR ? device->getDispatcher()->vkBindBufferMemory2KHR
-                                       : device->getDispatcher()->vkBindBufferMemory2,
-        device->getDispatcher()->vkBindImageMemory2KHR ? device->getDispatcher()->vkBindImageMemory2KHR
-                                      : device->getDispatcher()->vkBindImageMemory2,
-        instance.getDispatcher()->vkGetPhysicalDeviceMemoryProperties2KHR
-            ? instance.getDispatcher()->vkGetPhysicalDeviceMemoryProperties2KHR
-            : instance.getDispatcher()->vkGetPhysicalDeviceMemoryProperties2,
-        device->getDispatcher()->vkGetDeviceBufferMemoryRequirementsKHR
-            ? device->getDispatcher()->vkGetDeviceBufferMemoryRequirementsKHR
-            : device->getDispatcher()->vkGetDeviceBufferMemoryRequirements,
-        device->getDispatcher()->vkGetDeviceImageMemoryRequirementsKHR
-            ? device->getDispatcher()->vkGetDeviceImageMemoryRequirementsKHR
-            : device->getDispatcher()->vkGetDeviceImageMemoryRequirements,
-    };
-
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    vulkanFunctions.vkGetMemoryWin32HandleKHR = device->getDispatcher()->vkGetMemoryWin32HandleKHR;
-#endif
-
-    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
     m_handle = vma::raii::Allocator { instance, *device, allocatorCreateInfo };
 }
