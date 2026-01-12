@@ -45,6 +45,11 @@ bool EnableSwapchain(const CFeatureConfig& config) {
     config.m_deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName);
     return true;
 }
+
+bool EnableSynchronization2(const CFeatureConfig& config) {
+    config.m_deviceExtensions.emplace_back(vk::KHRSynchronization2ExtensionName);
+    return true;
+}
 }
 
 namespace Vulkan {
@@ -167,6 +172,7 @@ void CContext::CreateDevice() {
     std::vector<CDevice::CRequestedFeature> deviceFeatures;
     deviceFeatures.emplace_back(EnableSwapchain, Requirement::eRequired);
     deviceFeatures.emplace_back(EnableDynamicRender, Requirement::eOptional);
+    deviceFeatures.emplace_back(EnableSynchronization2, Requirement::eRequired);
 
     m_device = CDevice { m_window, *m_instance, selectedGPU, usingApiVersion, deviceFeatures };
 }

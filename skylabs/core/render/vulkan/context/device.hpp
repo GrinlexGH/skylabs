@@ -69,12 +69,12 @@ public:
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Device& { return m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Device* { return &m_handle; }
 
-    [[nodiscard]] auto ApiVersion() const noexcept -> std::uint32_t { return m_apiVersion; }
-    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return std::ranges::contains(m_activeExtensions, name); }
-
     [[nodiscard]] auto GraphicsQueue() const noexcept -> const CQueue& { return m_graphicsQueue; }
     [[nodiscard]] auto PresentQueue() const noexcept -> const CQueue& { return m_presentQueue; }
     [[nodiscard]] auto ComputeQueue() const noexcept -> const CQueue& { return m_computeQueue; }
+
+    [[nodiscard]] auto ApiVersion() const noexcept -> std::uint32_t { return m_apiVersion; }
+    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return std::ranges::contains(m_activeExtensions, name); }
 
     template <typename Feature>
     [[nodiscard]] auto IsFeatureEnabled(vk::Bool32 Feature::* flag) const -> Feature {

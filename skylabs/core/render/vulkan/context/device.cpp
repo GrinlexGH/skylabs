@@ -62,6 +62,10 @@ CDevice::CDevice(
     std::ranges::sort(enabledExtensions);
     enabledExtensions.erase(enabledExtensions.end(), std::ranges::unique(enabledExtensions).end());
 
+    for (const auto name : enabledExtensions) {
+        m_activeExtensions.emplace_back(name);
+    }
+
     vk::DeviceCreateInfo deviceCreateInfo;
     deviceCreateInfo.queueCreateInfoCount = static_cast<std::uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pQueueCreateInfos = !queueCreateInfos.empty() ? queueCreateInfos.data() : nullptr;
