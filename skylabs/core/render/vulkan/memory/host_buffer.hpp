@@ -23,7 +23,7 @@ public:
 
     [[nodiscard]] auto Size() const noexcept -> vk::DeviceSize { return m_size; }
 
-    [[nodiscard]] auto Map() const -> CBufferMapping { return CBufferMapping { m_handle }; }
+    [[nodiscard]] auto Map() -> CBufferMapping { return CBufferMapping { m_handle }; }
 
 private:
     const CContext* m_context = nullptr;

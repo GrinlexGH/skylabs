@@ -399,7 +399,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     auto stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
     auto commandPool = m_context.Device()->createCommandPool({
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            m_context.Device().GraphicsQueue().m_familyIndex
+            m_context.Device().GraphicsQueue().FamilyIndex()
     });
     {
         const CBufferMapping mapping = stagingBuffer.Map();
@@ -421,7 +421,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     {
         m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
         m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
-        generateMipmaps(*m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
+        generateMipmaps(m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
     }
     EndSingleTimeCommands(m_context.Device(), commandBuffer);
 
