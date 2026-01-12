@@ -1,4 +1,5 @@
 #include <skylabs/core/render/vulkan/legacy_render_pass.hpp>
+#include <skylabs/public/logging.hpp>
 
 namespace {
 vk::ImageLayout ToLayout(const Vulkan::ImageUsage usage) {

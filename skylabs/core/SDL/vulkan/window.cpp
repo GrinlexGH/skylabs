@@ -49,7 +49,7 @@ void CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surfa
     surface = nullptr;
 }
 
-CExtent2D CWindow::DrawableSize() const {
+Utils::CExtent2D CWindow::DrawableSize() const {
     return GetWindowSizeInPixels(m_handle);
 }
 
