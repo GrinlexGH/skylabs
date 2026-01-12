@@ -7,7 +7,7 @@ CFrameData::CFrameData(const CContext& context) : m_context(&context) {
         *m_context->Device(),
         {
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            context.Device().GraphicsQueue().m_familyIndex
+            context.Device().GraphicsQueue().FamilyIndex()
         }
     };
 

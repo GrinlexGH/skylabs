@@ -17,14 +17,10 @@ public:
     CDeviceBuffer& operator=(CDeviceBuffer&&) noexcept = default;
     ~CDeviceBuffer() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> vk::Buffer { return *m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vk::Buffer* { return &*m_handle; }
-    [[nodiscard]] auto Handle() const noexcept -> vk::Buffer { return *m_handle; }
-
-    auto Clear() -> void;
+    [[nodiscard]] auto operator*() const noexcept -> const vma::raii::Buffer& { return m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vma::raii::Buffer* { return &m_handle; }
 
 private:
-    vma::UniqueBuffer m_handle;
-    vma::UniqueAllocation m_allocation;
+    vma::raii::Buffer m_handle { nullptr };
 };
 }

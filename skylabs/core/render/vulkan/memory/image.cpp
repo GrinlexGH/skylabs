@@ -62,7 +62,7 @@ CImage::CImage(
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.requiredFlags = memoryProperties;
 
-    std::tie(m_allocation, m_handle) = context.Allocator()->createImageUnique(imageInfo, allocInfo);
+    m_handle = vma::raii::Image { *context.Allocator(), imageInfo, allocInfo };
 
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = *m_handle;
@@ -78,8 +78,7 @@ CImage::CImage(
 }
 
 void CImage::Clear() {
-    m_handle.reset();
-    m_allocation.reset();
+    m_handle.clear();
     m_view.clear();
     m_layout = vk::ImageLayout::eUndefined;
     m_format = vk::Format::eUndefined;
@@ -127,7 +126,7 @@ void CImage::CopyBufferToImage(
     const vk::raii::CommandBuffer& commandBuffer,
     const vk::Buffer& buffer,
     const vk::Extent3D& extent
-) {
+) const {
     vk::BufferImageCopy region;
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -146,5 +145,9 @@ void CImage::CopyBufferToImage(
 
 CImage::~CImage() {
     m_layout = vk::ImageLayout::eUndefined;
+    m_format = vk::Format::eUndefined;
+    m_extent = vk::Extent3D {};
+    m_mipLevels = 1;
+    m_sampleCount = vk::SampleCountFlagBits::e1;
 }
 }

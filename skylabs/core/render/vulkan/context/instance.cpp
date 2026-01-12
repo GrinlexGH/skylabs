@@ -1,4 +1,5 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
+#include <skylabs/core/render/vulkan/context/extensions.hpp>
 #include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
 
@@ -9,7 +10,7 @@
 namespace {
 #ifdef DEBUG
 VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
-    vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    const vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
     const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* /*pUserData*/
@@ -36,9 +37,12 @@ namespace Vulkan {
 CInstance::CInstance(
     const vk::raii::Context& context,
     const std::uint32_t apiVersion,
-    const std::span<Utils::CRequestedExtension> requestedExtensions
+    const std::span<CRequestedExtension> requestedExtensions
 ) {
     // Collect all available global extensions
+#ifndef DEBUG
+    const
+#endif
     std::vector<vk::ExtensionProperties> globalAvailableExtensions = context.enumerateInstanceExtensionProperties();
 
     // Enable validation layer
@@ -48,10 +52,11 @@ CInstance::CInstance(
         const std::vector<vk::LayerProperties> availableLayers = context.enumerateInstanceLayerProperties();
 
         constexpr auto validationLayer = "VK_LAYER_KHRONOS_validation";
+        const bool validationAvailable = std::ranges::any_of(availableLayers, [&](const vk::LayerProperties& l) {
+            return std::string_view { validationLayer } == l.layerName;
+        });
 
-        if (std::ranges::any_of(availableLayers, [&](const vk::LayerProperties& l) {
-            return std::string_view { l.layerName } == validationLayer;
-        })) {
+        if (validationAvailable) {
             Log::Debug("Enabling {}", validationLayer);
             enabledLayers.push_back(validationLayer);
 
@@ -77,10 +82,15 @@ CInstance::CInstance(
         isDebugUtilsAvailable = true;
 
         m_activeExtensions.emplace_back(vk::EXTDebugUtilsExtensionName);
-        debugUtilsCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+        debugUtilsCreateInfo.messageSeverity =
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
         debugUtilsCreateInfo.messageType =
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
         debugUtilsCreateInfo.pfnUserCallback = DebugCallback;
 
         Utils::AppendToPNextChain(pNext, &debugUtilsCreateInfo);
@@ -93,7 +103,7 @@ CInstance::CInstance(
         if (isExtensionAvailable(name)) {
             m_activeExtensions.emplace_back(name);
         } else {
-            if (requirement == Utils::Requirement::eRequired) {
+            if (requirement == ::Utils::Requirement::eRequired) {
                 missingExtensions.push_back(name);
             } else {
                 Log::Debug("Optional extension {} is not supported", name);
@@ -103,7 +113,9 @@ CInstance::CInstance(
 
     // Some required extensions are missing...
     if (!missingExtensions.empty()) {
-        throw std::runtime_error(fmt::format("System doesn't have required instance extensions:\n    {}", fmt::join(missingExtensions, "\n    ")));
+        throw std::runtime_error(
+            fmt::format("System doesn't have required instance extensions:\n    {}", fmt::join(missingExtensions, "\n    "))
+        );
     }
 
     // For instance creation

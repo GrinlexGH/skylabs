@@ -10,8 +10,26 @@ CDevice::CDevice(
     const std::uint32_t apiVersion,
     std::span<CRequestedFeature> requestedFeatures
 ) : m_apiVersion(apiVersion) {
-    auto [queueCreateInfos, queueFamilyIndices] = GetQueueCreateInfos(window, instance, gpu);
+    // Setup queue create infos
+    auto [graphicsFamily, presentFamily, computeFamily] = GetQueueFamilies(window, instance, gpu);
 
+    // Unique array
+    std::array uniqueQueueFamilies { graphicsFamily, presentFamily, computeFamily };
+    std::ranges::sort(uniqueQueueFamilies);
+    const std::size_t uniqueCount = std::distance(uniqueQueueFamilies.begin(), std::ranges::unique(uniqueQueueFamilies).begin());
+
+    static constexpr float queuePriority = 0.5f;
+    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+    queueCreateInfos.reserve(uniqueCount);
+    for (std::size_t i = 0; i < uniqueCount; ++i) {
+        vk::DeviceQueueCreateInfo queueCreateInfo;
+        queueCreateInfo.queueFamilyIndex = uniqueQueueFamilies.at(i);
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
+
+    // Setup features
     DeviceFeatures finalFeatures;
 
     if (apiVersion < vk::ApiVersion14) {
@@ -32,8 +50,8 @@ CDevice::CDevice(
 
     std::vector<const char*> enabledExtensions {};
     for (const auto& [enable, requirement] : requestedFeatures) {
-        if (!enable(apiVersion, gpu, finalFeatures, enabledExtensions)) {
-            if (requirement == Utils::Requirement::eRequired) {
+        if (!enable({ .m_apiVersion = apiVersion, .m_gpu = gpu, .m_features = finalFeatures, .m_deviceExtensions = enabledExtensions })) {
+            if (requirement == ::Utils::Requirement::eRequired) {
                 throw std::runtime_error("System can't enable required feature! See logs");
             }
             Log::Debug("Can't enable optional feature. See logs");
@@ -58,17 +76,14 @@ CDevice::CDevice(
     }
 
     m_handle = vk::raii::Device { *gpu, deviceCreateInfo };
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
-    m_graphicsQueue = vk::raii::Queue { m_handle, queueFamilyIndices.m_graphicsFamily, 0 };
-    m_presentQueue = vk::raii::Queue { m_handle, queueFamilyIndices.m_presentFamily, 0 };
-    m_computeQueue = vk::raii::Queue { m_handle, queueFamilyIndices.m_computeFamily, 0 };
+    m_graphicsQueue = CQueue { vk::raii::Queue { m_handle, graphicsFamily, 0 }, graphicsFamily };
+    m_presentQueue = CQueue { vk::raii::Queue { m_handle, presentFamily, 0 }, presentFamily };
+    m_computeQueue = CQueue { vk::raii::Queue { m_handle, computeFamily, 0 }, computeFamily };
 }
 
-std::pair<std::vector<vk::DeviceQueueCreateInfo>, CDevice::CQueueFamilyIndices> CDevice::GetQueueCreateInfos(
-    const IWindow* window,
-    const vk::Instance instance,
-    const CPhysicalDevice& gpu
-) {
+CDevice::CQueueFamilyIndices CDevice::GetQueueFamilies(const IWindow* window, const vk::Instance instance, const CPhysicalDevice& gpu) {
     std::optional<std::uint32_t> graphicsFamily;
     std::optional<std::uint32_t> presentFamily;
     std::optional<std::uint32_t> computeFamily;
@@ -93,21 +108,6 @@ std::pair<std::vector<vk::DeviceQueueCreateInfo>, CDevice::CQueueFamilyIndices> 
         }
     }
 
-    std::array uniqueQueueFamilies { *graphicsFamily, *presentFamily, *computeFamily };
-    std::ranges::sort(uniqueQueueFamilies);
-    const std::size_t uniqueCount = std::distance(uniqueQueueFamilies.begin(), std::ranges::unique(uniqueQueueFamilies).begin());
-
-    static constexpr float queuePriority = 0.5f;
-    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-    queueCreateInfos.reserve(uniqueCount);
-    for (std::size_t i = 0; i < uniqueCount; ++i) {
-        vk::DeviceQueueCreateInfo queueCreateInfo;
-        queueCreateInfo.queueFamilyIndex = uniqueQueueFamilies.at(i);
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfos.push_back(queueCreateInfo);
-    }
-
-    return { queueCreateInfos, { .m_graphicsFamily = *graphicsFamily, .m_presentFamily = *presentFamily, .m_computeFamily = *computeFamily } };
+    return { .m_graphicsFamily = *graphicsFamily, .m_presentFamily = *presentFamily, .m_computeFamily = *computeFamily };
 };
 }

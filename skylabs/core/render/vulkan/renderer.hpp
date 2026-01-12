@@ -70,7 +70,7 @@ private:
     CDeviceBuffer m_indexBuffer { nullptr };
 
     std::vector<CHostBuffer> m_uniformBuffers;
-    std::vector<CMemoryMapping> m_uniformBuffersMapped;
+    std::vector<CBufferMapping> m_uniformBuffersMapped;
 
     CImage m_modelTexture { nullptr };
     CSampler m_modelTextureSampler { nullptr };

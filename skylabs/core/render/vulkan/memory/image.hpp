@@ -25,7 +25,6 @@ public:
 
     [[nodiscard]] auto operator*() const noexcept -> vk::Image { return *m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::Image* { return &*m_handle; }
-    [[nodiscard]] auto Handle() const noexcept -> vk::Image { return *m_handle; }
 
     [[nodiscard]] auto View() const noexcept -> const vk::raii::ImageView& { return m_view; }
     [[nodiscard]] auto Layout() const noexcept -> vk::ImageLayout { return m_layout; }
@@ -37,11 +36,10 @@ public:
     auto Clear() -> void;
 
     auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
-    auto CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent3D& extent) -> void;
+    auto CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent3D& extent) const -> void;
 
 private:
-    vma::UniqueImage m_handle;
-    vma::UniqueAllocation m_allocation;
+    vma::raii::Image m_handle { nullptr };
     vk::raii::ImageView m_view = nullptr;
 
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;

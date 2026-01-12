@@ -141,8 +141,8 @@ auto EndSingleTimeCommands(
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &*commandBuffer;
 
-    device.GraphicsQueue().submit(submitInfo);
-    device.GraphicsQueue().waitIdle(); // TODO: USE FENCES
+    device.GraphicsQueue()->submit(submitInfo);
+    device.GraphicsQueue()->waitIdle(); // TODO: USE FENCES
 
     commandBuffer.clear();
 }
@@ -254,7 +254,7 @@ void CopyBuffer(
 
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
-    const std::vector<Vulkan::CMemoryMapping>& uniformBuffersMapped,
+    const std::vector<Vulkan::CBufferMapping>& uniformBuffersMapped,
     const std::uint32_t currentImage,
     const glm::mat4& view,
     const float deltaTime
@@ -402,7 +402,7 @@ CRenderer::CRenderer(const IWindow* const window) {
             m_context.Device().GraphicsQueue().m_familyIndex
     });
     {
-        const CMemoryMapping mapping = stagingBuffer.Map();
+        const CBufferMapping mapping = stagingBuffer.Map();
         std::memcpy(mapping.Data(), image->pixels, imageSize);
     }
 
@@ -467,7 +467,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     {
-        const CMemoryMapping mapping = stagingBuffer.Map();
+        const CBufferMapping mapping = stagingBuffer.Map();
         std::memcpy(mapping.Data(), vertices.data(), vertexBufferSize);
     }
 
@@ -495,7 +495,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     {
-        CMemoryMapping mapping = stagingBuffer.Map();
+        CBufferMapping mapping = stagingBuffer.Map();
         std::memcpy(mapping.Data(), indices.data(), indexBufferSize);
     }
 
@@ -625,7 +625,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     layoutInfo.bindingCount = static_cast<std::uint32_t>(bindingsSwapchain.size());
     layoutInfo.pBindings = bindingsSwapchain.data();
 
-    m_descriptorSetLayoutSwapchain = vk::raii::DescriptorSetLayout { m_context.Device().Handle(), layoutInfo };
+    m_descriptorSetLayoutSwapchain = vk::raii::DescriptorSetLayout { *m_context.Device(), layoutInfo };
 
 
 
@@ -638,7 +638,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     poolInfo.pPoolSizes = poolSizesSwapchain.data();
     poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
-    m_descriptorPoolSwapchain = vk::raii::DescriptorPool { m_context.Device().Handle(), poolInfo };
+    m_descriptorPoolSwapchain = vk::raii::DescriptorPool { *m_context.Device(), poolInfo };
 
 
 
@@ -696,7 +696,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_swapchainPass.RenderPass()
     };
 
-    m_frameBuffersSwapchain = CreateFrameBuffers(m_context.Device().Handle(), m_swapchain, m_swapchainPass.RenderPass());
+    m_frameBuffersSwapchain = CreateFrameBuffers(*m_context.Device(), m_swapchain, m_swapchainPass.RenderPass());
 }
 
 std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const window) {
@@ -710,7 +710,7 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const w
 
 void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     CFrameData& frameData = m_frameData[m_frameIndex];
-    const vk::raii::Device& deviceHandle = m_context.Device().Handle();
+    const vk::raii::Device& deviceHandle = *m_context.Device();
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain.GetHandle();
 
 
@@ -738,7 +738,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(m_context.Device().Handle(), m_swapchainPass.RenderPass(), m_swapchain, m_frameBuffersSwapchain);
+        Resize(*m_context.Device(), m_swapchainPass.RenderPass(), m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }
@@ -874,7 +874,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     const CDevice& device = m_context.Device();
-    device.GraphicsQueue().m_handle.submit(submitInfo, frameData.GetFence());
+    device.GraphicsQueue()->submit(submitInfo, frameData.GetFence());
     // #endregion COMMAND_RECORD
 
     // #region PRESENT
@@ -888,7 +888,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     presentInfo.pImageIndices = &imageIndex;
 
-    result = QueuePresentWrapper(device.PresentQueue().m_handle, presentInfo);
+    result = QueuePresentWrapper(*device.PresentQueue(), presentInfo);
     if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || GetResizedState()) {
         SetResizedState(false);
         for (auto& frame : m_frameData) {
@@ -898,7 +898,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(m_context.Device().Handle(), m_swapchainPass.RenderPass(), m_swapchain, m_frameBuffersSwapchain);
+        Resize(*m_context.Device(), m_swapchainPass.RenderPass(), m_swapchain, m_frameBuffersSwapchain);
 
         return;
     }
@@ -908,6 +908,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 }
 
 CRenderer::~CRenderer() {
-    m_context.Device().Handle().waitIdle();
+    m_context.Device()->waitIdle();
 }
 }

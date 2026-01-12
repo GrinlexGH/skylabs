@@ -3,51 +3,47 @@
 
 #include <ranges>
 
+using namespace ::Utils;
+using CFeatureConfig = Vulkan::CDevice::CRequestedFeature::CFeatureConfig;
+
 namespace {
-bool EnableDynamicRender(
-    const std::uint32_t apiVersion,
-    const Vulkan::CPhysicalDevice& gpu,
-    Vulkan::CDevice::DeviceFeatures& features,
-    std::vector<const char*>& deviceExtensions
-) {
-    if (apiVersion >= vk::ApiVersion13) {
-        features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
-        features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering = vk::True;
-        return true;
+bool EnableDynamicRender(const CFeatureConfig& config) {
+    if (config.m_apiVersion >= vk::ApiVersion13) {
+        config.m_features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
+
+        if (config.m_gpu.Features().get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering) {
+            config.m_features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering = vk::True;
+            return true;
+        }
+        return false;
     }
 
-    if (gpu.IsExtensionAvailable(vk::KHRDynamicRenderingExtensionName) && gpu.Features().get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering) {
-        features.get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering = vk::True;
-        deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName);
+    if (config.m_gpu.IsExtensionAvailable(vk::KHRDynamicRenderingExtensionName) &&
+        config.m_gpu.Features().get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering
+    ) {
+        config.m_features.get<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>().dynamicRendering = vk::True;
+        config.m_deviceExtensions.emplace_back(vk::KHRDynamicRenderingExtensionName);
 
         // dependencies
-        if (apiVersion < vk::ApiVersion12) {
-            deviceExtensions.emplace_back(vk::KHRDepthStencilResolveExtensionName);
-            deviceExtensions.emplace_back(vk::KHRCreateRenderpass2ExtensionName);
-            if (apiVersion < vk::ApiVersion11) {
-                deviceExtensions.emplace_back(vk::KHRMultiviewExtensionName);
-                deviceExtensions.emplace_back(vk::KHRMaintenance2ExtensionName);
+        if (config.m_apiVersion < vk::ApiVersion12) {
+            config.m_deviceExtensions.emplace_back(vk::KHRDepthStencilResolveExtensionName);
+            config.m_deviceExtensions.emplace_back(vk::KHRCreateRenderpass2ExtensionName);
+            if (config.m_apiVersion < vk::ApiVersion11) {
+                config.m_deviceExtensions.emplace_back(vk::KHRMultiviewExtensionName);
+                config.m_deviceExtensions.emplace_back(vk::KHRMaintenance2ExtensionName);
             }
         }
 
         return true;
     }
 
-    features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
+    config.m_features.unlink<vk::PhysicalDeviceDynamicRenderingFeaturesKHR>();
     return false;
 }
 
-bool EnableSwapchain(
-    const std::uint32_t /*apiVersion*/,
-    const Vulkan::CPhysicalDevice& gpu,
-    Vulkan::CDevice::DeviceFeatures& /*features*/,
-    std::vector<const char*>& deviceExtensions
-) {
-    if (gpu.IsExtensionAvailable(vk::KHRSwapchainExtensionName)) {
-        deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName);
-        return true;
-    }
-    return false;
+bool EnableSwapchain(const CFeatureConfig& config) {
+    config.m_deviceExtensions.emplace_back(vk::KHRSwapchainExtensionName);
+    return true;
 }
 }
 
@@ -61,23 +57,28 @@ CContext::CContext(const IWindow* const window) : m_window(window) {
 void CContext::CreateInstance() {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
+    // Get available Vulkan api version
     std::uint32_t apiVersion = vk::ApiVersion10;
     if (m_context.getDispatcher()->vkEnumerateInstanceVersion) {
         apiVersion = m_context.enumerateInstanceVersion();
-        Log::Debug(
-            "Available Vulkan version: {}.{}.{}, but anyways I will use Vulkan 1.0", vk::apiVersionMajor(apiVersion), vk::apiVersionMinor(apiVersion),
-            vk::apiVersionPatch(apiVersion)
+        Log::Debug("Available Vulkan version: {}.{}.{}, but anyways I will use Vulkan 1.0",
+            vk::apiVersionMajor(apiVersion), vk::apiVersionMinor(apiVersion), vk::apiVersionPatch(apiVersion)
         );
 
         apiVersion = vk::ApiVersion10;
     }
 
-    std::vector<Utils::CRequestedExtension> instanceExtensions = m_window->GetRequiredInstanceExtensions() |
-        std::views::transform([](const char* const ext) -> Utils::CRequestedExtension { return { .m_name = ext, .m_requirement = Utils::Requirement::eRequired }; }) |
-        std::ranges::to<std::vector<Utils::CRequestedExtension>>();
+    // Required extensions for surface creation
+    const auto toRequiredRequest = [](const auto ext) -> CInstance::CRequestedExtension {
+        return { .m_name = ext, .m_requirement = Requirement::eRequired };
+    };
+
+    auto instanceExtensions = m_window->GetRequiredInstanceExtensions()
+        | std::views::transform(toRequiredRequest)
+        | std::ranges::to<std::vector>();
 
     if (apiVersion < vk::ApiVersion11) {
-        instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Utils::Requirement::eRequired);
+        instanceExtensions.emplace_back(vk::KHRGetPhysicalDeviceProperties2ExtensionName, Requirement::eRequired);
     }
 
     m_instance = CInstance { m_context, apiVersion, instanceExtensions };
@@ -93,7 +94,7 @@ bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDeviceInfo) const
     bool hasPresentQueue = false;
 
     const std::vector<vk::QueueFamilyProperties2KHR>& queueFamilies = physicalDeviceInfo.QueueFamilies();
-    for (uint32_t i = 0; i < queueFamilies.size(); i++) {
+    for (std::uint32_t i = 0; i < queueFamilies.size(); i++) {
         if (queueFamilies.at(i).queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) hasGraphicsQueue = true;
         if (m_window->IsQueueFamilySupportPresent(*m_instance, *physicalDeviceInfo, i)) hasPresentQueue = true;
         if (hasGraphicsQueue && hasPresentQueue) break;
@@ -102,19 +103,14 @@ bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDeviceInfo) const
     if (!hasGraphicsQueue || !hasPresentQueue) return false;
 
     // Check for swapchain extension
-    bool hasSwapchainExtension = false;
-
-    for (const auto& extension : physicalDeviceInfo.AvailableExtensions()) {
-        if (std::strcmp(extension.extensionName, vk::KHRSwapchainExtensionName) == 0) {
-            hasSwapchainExtension = true;
-            break;
-        }
+    if (!physicalDeviceInfo.IsExtensionAvailable(vk::KHRSwapchainExtensionName)) {
+        return false;
     }
 
-    if (!hasSwapchainExtension) return false;
-
     // Check for sampler anisotropy
-    if (!physicalDeviceInfo.Features().get<vk::PhysicalDeviceFeatures2KHR>().features.samplerAnisotropy) return false;
+    if (!physicalDeviceInfo.Features().get<vk::PhysicalDeviceFeatures2KHR>().features.samplerAnisotropy) {
+        return false;
+    }
 
     return true;
 }
@@ -122,7 +118,8 @@ bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDeviceInfo) const
 int CContext::RatePhysicalDevice(const CPhysicalDevice& physicalDeviceInfo) const {
     int score = 0;
 
-    if (!IsDeviceSuitable(physicalDeviceInfo)) return score;
+    if (!IsDeviceSuitable(physicalDeviceInfo))
+        return score;
 
     switch (physicalDeviceInfo.Properties().properties.deviceType) {
         case vk::PhysicalDeviceType::eDiscreteGpu: score += 2000; break;
@@ -157,17 +154,19 @@ CPhysicalDevice CContext::SelectPhysicalDevice(const vk::raii::PhysicalDevices& 
 void CContext::CreateDevice() {
     const vk::raii::PhysicalDevices physicalDevices { *m_instance };
     const CPhysicalDevice selectedGPU = SelectPhysicalDevice(physicalDevices);
+    m_physicalDevice = *selectedGPU;
 
     const std::uint32_t deviceApiVersion = selectedGPU.Properties().properties.apiVersion;
     const std::uint32_t usingApiVersion = std::min(m_instance.ApiVersion(), deviceApiVersion);
     Log::Debug(
-        "Device vulkan api version is {}.{}.{}, minimum version is {}.{}.{}", vk::apiVersionMajor(deviceApiVersion), vk::apiVersionMinor(deviceApiVersion),
-        vk::apiVersionPatch(deviceApiVersion), vk::apiVersionMajor(usingApiVersion), vk::apiVersionMinor(usingApiVersion), vk::apiVersionPatch(usingApiVersion)
+        "Device vulkan api version is {}.{}.{}, minimum version is {}.{}.{}",
+        vk::apiVersionMajor(deviceApiVersion), vk::apiVersionMinor(deviceApiVersion), vk::apiVersionPatch(deviceApiVersion),
+        vk::apiVersionMajor(usingApiVersion), vk::apiVersionMinor(usingApiVersion), vk::apiVersionPatch(usingApiVersion)
     );
 
     std::vector<CDevice::CRequestedFeature> deviceFeatures;
-    deviceFeatures.emplace_back(EnableSwapchain, Utils::Requirement::eRequired);
-    deviceFeatures.emplace_back(EnableDynamicRender, Utils::Requirement::eOptional);
+    deviceFeatures.emplace_back(EnableSwapchain, Requirement::eRequired);
+    deviceFeatures.emplace_back(EnableDynamicRender, Requirement::eOptional);
 
     m_device = CDevice { m_window, *m_instance, selectedGPU, usingApiVersion, deviceFeatures };
 }

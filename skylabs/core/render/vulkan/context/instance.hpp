@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/extensions.hpp>
+#include <skylabs/public/utils.hpp>
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -7,12 +7,18 @@ namespace Vulkan {
 class CInstance
 {
 public:
+    struct CRequestedExtension
+    {
+        std::string_view m_name;
+        Utils::Requirement m_requirement;
+    };
+
     CInstance() = delete;
     explicit CInstance(std::nullptr_t) {}
     explicit CInstance(
         const vk::raii::Context& context,
         std::uint32_t apiVersion,
-        std::span<Utils::CRequestedExtension> requestedExtensions
+        std::span<CRequestedExtension> requestedExtensions
     );
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;

@@ -20,20 +20,15 @@ public:
 
     [[nodiscard]] auto operator*() const noexcept -> vk::Buffer { return *m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::Buffer* { return &*m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> vk::Buffer { return *m_handle; }
 
     [[nodiscard]] auto Size() const noexcept -> vk::DeviceSize { return m_size; }
 
-    auto Clear() -> void;
-
-    auto Map() -> CMemoryMapping { return { m_context->Allocator(), *m_allocation }; }
+    [[nodiscard]] auto Map() const -> CBufferMapping { return CBufferMapping { m_handle }; }
 
 private:
     const CContext* m_context = nullptr;
 
-    vma::UniqueBuffer m_handle;
-    vma::UniqueAllocation m_allocation;
-
+    vma::raii::Buffer m_handle { nullptr };
     vk::DeviceSize m_size = 0;
 };
 }

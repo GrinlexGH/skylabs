@@ -13,8 +13,6 @@ target_sources(
         header_factory.cpp
         window.hpp
         camera.hpp
-        vulkan_mono.hpp
-        vulkan_mono.cpp
         render/renderer.hpp
         render/vulkan/window.hpp
         render/vulkan/renderer.hpp
