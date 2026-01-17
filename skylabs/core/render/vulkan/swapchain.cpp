@@ -135,7 +135,7 @@ void CSwapchain::DestroyImages() {
 }
 
 void CSwapchain::Recreate() {
-    Recreate(m_associatedSurface, GetImageCount(), m_presentMode);
+    Recreate(m_associatedSurface, ImageCount(), m_presentMode);
 }
 
 void CSwapchain::Recreate(

@@ -19,16 +19,16 @@ public:
     ~CSwapchain() = default;
 
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::SwapchainKHR& { return m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::SwapchainKHR& { return m_handle; }
+    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::SwapchainKHR* { return &m_handle; }
 
-    [[nodiscard]] auto GetSurfaceFormat() const -> vk::SurfaceFormatKHR { return m_surfaceFormat; }
-    [[nodiscard]] auto GetExtent() const -> vk::Extent2D { return m_extent; }
-    [[nodiscard]] auto GetPresentMode() const -> vk::PresentModeKHR { return m_presentMode; }
-    [[nodiscard]] auto GetSurface() const -> vk::SurfaceKHR { return m_associatedSurface; }
+    [[nodiscard]] auto SurfaceFormat() const -> vk::SurfaceFormatKHR { return m_surfaceFormat; }
+    [[nodiscard]] auto Extent() const -> vk::Extent2D { return m_extent; }
+    [[nodiscard]] auto PresentMode() const -> vk::PresentModeKHR { return m_presentMode; }
+    [[nodiscard]] auto Surface() const -> vk::SurfaceKHR { return m_associatedSurface; }
 
-    [[nodiscard]] auto GetImages() const -> const std::vector<vk::Image>& { return m_images; }
-    [[nodiscard]] auto GetImageViews() const -> const std::vector<vk::raii::ImageView>& { return m_imageViews; }
-    [[nodiscard]] auto GetImageCount() const -> std::uint32_t {
+    [[nodiscard]] auto Images() const -> const std::vector<vk::Image>& { return m_images; }
+    [[nodiscard]] auto ImageViews() const -> const std::vector<vk::raii::ImageView>& { return m_imageViews; }
+    [[nodiscard]] auto ImageCount() const -> std::uint32_t {
         assert(m_images.size() == m_imageViews.size());
         return static_cast<std::uint32_t>(m_images.size());
     }

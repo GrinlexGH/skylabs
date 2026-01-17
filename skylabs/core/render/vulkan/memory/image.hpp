@@ -35,6 +35,16 @@ public:
 
     auto Clear() -> void;
 
+    static void CmdTransitionLayout(
+        vk::CommandBuffer commandBuffer,
+        vk::Image image,
+        vk::ImageLayout oldLayout,
+        vk::ImageLayout newLayout,
+        vk::ImageAspectFlags aspectMask = vk::ImageAspectFlagBits::eColor,
+        std::uint32_t mipLevels = 1,
+        std::uint32_t layerCount = 1
+    );
+
     auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
     auto CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent3D& extent) const -> void;
 
@@ -43,6 +53,7 @@ private:
     vk::raii::ImageView m_view = nullptr;
 
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;
+    vk::ImageAspectFlags m_aspectFlags = vk::ImageAspectFlagBits::eNone;
     vk::Format m_format = vk::Format::eUndefined;
     vk::Extent3D m_extent;
     std::uint32_t m_mipLevels = 1;

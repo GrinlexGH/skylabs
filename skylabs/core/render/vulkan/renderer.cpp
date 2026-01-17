@@ -75,43 +75,6 @@ vk::Result QueuePresentWrapper(
         static_cast<VkQueue>(*queue), reinterpret_cast<const VkPresentInfoKHR*>(&present_info)));
 }
 
-auto CreateFrameBuffers(
-    const vk::raii::Device& device,
-    const Vulkan::CSwapchain& swapchain,
-    const vk::RenderPass renderPass
-) -> std::vector<vk::raii::Framebuffer> {
-    std::vector<vk::raii::Framebuffer> out;
-
-    out.reserve(swapchain.GetImageCount());
-    for (const auto& imageView : swapchain.GetImageViews()) {
-        std::array attachments = {
-            *imageView
-        };
-
-        vk::FramebufferCreateInfo framebufferInfo {};
-        framebufferInfo.renderPass = renderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = swapchain.GetExtent().width;
-        framebufferInfo.height = swapchain.GetExtent().height;
-        framebufferInfo.layers = 1;
-
-        out.emplace_back(device, framebufferInfo);
-    }
-
-    return out;
-}
-
-auto Resize(
-    const vk::raii::Device& device,
-    const vk::RenderPass renderPass,
-    Vulkan::CSwapchain& swapchain,
-    std::vector<vk::raii::Framebuffer>& frameBuffers
-) -> void {
-    swapchain.Recreate();
-    frameBuffers = CreateFrameBuffers(device, swapchain, renderPass);
-}
-
 auto BeginSingleTimeCommands(
     const vk::raii::Device& device,
     const vk::CommandPool& commandPool
@@ -294,15 +257,15 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_surface = CSurface { m_context };
     m_swapchain = CSwapchain { m_context, *m_surface, 2, vk::PresentModeKHR::eImmediate };
 
-    renderWidth = m_swapchain.GetExtent().width;
-    renderHeight = m_swapchain.GetExtent().height;
+    renderWidth = m_swapchain.Extent().width;
+    renderHeight = m_swapchain.Extent().height;
 
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
         m_frameData.emplace_back(m_context);
     }
 
-    const std::uint32_t imageCount = m_swapchain.GetImageCount();
+    const std::uint32_t imageCount = m_swapchain.ImageCount();
     m_renderFinishedSemaphores.reserve(imageCount);
     for (std::size_t i = 0; i < imageCount; ++i) {
         m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
@@ -362,7 +325,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageAspectFlagBits::eDepth,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         1,
-        vk::SampleCountFlagBits::e8
+        vk::SampleCountFlagBits::e1
     };
 
     vk::DebugUtilsObjectNameInfoEXT nameInfo;
@@ -370,15 +333,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkImage>(*m_depthBufferMSAA));
     nameInfo.pObjectName = "Main Depth Texture";
     m_context.Device()->setDebugUtilsObjectNameEXT(nameInfo);
-
-    m_mainPass = CLegacyRenderPass {
-        m_context,
-        {
-            .m_colorImages = {{{ .m_image = &m_colorBufferMSAA, .m_usage = ImageUsage::eMSAAWrite }}},
-            .m_resolveImages = {{{ .m_image = &m_colorBuffer, .m_usage = ImageUsage::eShaderRead }}},
-            .m_depthImage = &m_depthBufferMSAA
-        }
-    };
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
     const CShader fragmentShader(m_context, CShader::Type::eFragment, "shader.frag.spv");
@@ -388,7 +342,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         fragmentShader.GetPipelineShaderCreateInfo(),
     };
 
-    SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
+    SDL_Surface* imageRaw = IMG_Load("assets/matroskin.png");
     if (!imageRaw) {
         throw std::runtime_error("Failed to load texture image!");
     }
@@ -427,7 +381,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_modelTextureSampler = CSampler { m_context };
 
 
-    const std::string MODEL_PATH = "assets/viking_room.obj";
+    const std::string MODEL_PATH = "assets/matroskin.obj";
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -441,8 +395,24 @@ CRenderer::CRenderer(const IWindow* const window) {
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
             CVertex vertex {};
-            vertex.m_position = { attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1], attrib.vertices[3 * index.vertex_index + 2] };
-            vertex.m_texCoord = { attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
+            if (index.vertex_index >= 0) {
+                vertex.m_position = {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]
+                };
+            }
+            if (index.texcoord_index >= 0) {
+                vertex.m_texCoord = {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+            } else {
+                vertex.m_texCoord = {
+                    vertex.m_position.x * 0.5f + 0.5f,
+                    vertex.m_position.z * 0.5f + 0.5f
+                };
+            }
             vertex.m_color = { 1.0f, 1.0f, 1.0f };
 
             if (!uniqueVertices.contains(vertex)) {
@@ -590,14 +560,19 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
 
+    vk::Format colorFormats[] = { m_colorBuffer.Format() };
+    vk::PipelineRenderingCreateInfo renderingInfo {};
+    renderingInfo.colorAttachmentCount = 1;
+    renderingInfo.pColorAttachmentFormats = colorFormats;
+    renderingInfo.depthAttachmentFormat = m_depthBufferMSAA.Format();
 
     m_pipelineMain = CPipeline {
         m_context,
         shaderStages,
         std::array { *m_descriptorSetLayoutMain },
         CVertexFormat { CVertex::GetAttributes() },
-        vk::SampleCountFlagBits::e8,
-        m_mainPass.RenderPass()
+        renderingInfo,
+        vk::SampleCountFlagBits::e1
     };
 
 
@@ -658,16 +633,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_context.Device()->updateDescriptorSets(descriptorWrite, nullptr);
     }
 
-    m_swapchainPass = CLegacyRenderPass {
-        m_context,
-        {
-            .m_colorImages = {
-                {
-                    { .m_image = &m_colorBuffer, .m_usage = ImageUsage::eSwapchainPresent },
-                }}
-        }
-    };
-
     const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");
     const CShader fragmentShaderSwapchain(m_context, CShader::Type::eFragment, "shaderSwapchain.frag.spv");
 
@@ -676,16 +641,19 @@ CRenderer::CRenderer(const IWindow* const window) {
         fragmentShaderSwapchain.GetPipelineShaderCreateInfo(),
     };
 
+    colorFormats[0] = m_swapchain.SurfaceFormat().format;
+    renderingInfo = vk::PipelineRenderingCreateInfo {};
+    renderingInfo.colorAttachmentCount = 1;
+    renderingInfo.pColorAttachmentFormats = colorFormats;
+
     m_pipelineSwapchain = CPipeline {
         m_context,
         shaderStagesSwapchain,
         std::array { *m_descriptorSetLayoutSwapchain },
         CVertexFormat {{}},
-        vk::SampleCountFlagBits::e1,
-        m_swapchainPass.RenderPass()
+        renderingInfo,
+        vk::SampleCountFlagBits::e1
     };
-
-    m_frameBuffersSwapchain = CreateFrameBuffers(*m_context.Device(), m_swapchain, m_swapchainPass.RenderPass());
 }
 
 std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const window) {
@@ -700,10 +668,11 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const w
 void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     CFrameData& frameData = m_frameData[m_frameIndex];
     const vk::raii::Device& deviceHandle = *m_context.Device();
-    const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain.GetHandle();
+    const vk::raii::SwapchainKHR& swapchainHandle = *m_swapchain;
+    auto& cmd = frameData.GetCommandBuffers()[0];
 
 
-    UpdateUniformBuffer(m_swapchain.GetExtent(), m_uniformBuffers, m_frameIndex, view, deltaTime);
+    UpdateUniformBuffer(m_swapchain.Extent(), m_uniformBuffers, m_frameIndex, view, deltaTime);
 
     // #region ACQUIRE_IMAGE
     vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -727,7 +696,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(*m_context.Device(), m_swapchainPass.RenderPass(), m_swapchain, m_frameBuffersSwapchain);
+        m_swapchain.Recreate();
 
         return;
     }
@@ -741,57 +710,58 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
 
     // #region COMMAND_RECORD
-    frameData.GetCommandBuffers()[0].reset();
+    cmd.reset();
     vk::CommandBufferBeginInfo beginInfo {};
-    frameData.GetCommandBuffers()[0].begin(beginInfo);
+    cmd.begin(beginInfo);
+
+    m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
+    m_depthBufferMSAA.TransitionLayout(cmd, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     vk::DebugUtilsLabelEXT marker;
     marker.pLabelName = "Point of Interest";
     marker.color = std::array { 1.0f, 0.5f, 0.0f, 1.0f };
-    frameData.GetCommandBuffers()[0].insertDebugUtilsLabelEXT(marker);
+    cmd.insertDebugUtilsLabelEXT(marker);
 
-    vk::RenderPassBeginInfo renderPassInfo {};
-    renderPassInfo.renderPass = m_mainPass.RenderPass();
-    renderPassInfo.framebuffer = m_mainPass.Framebuffer();
-    renderPassInfo.renderArea.offset = { { 0, 0 } };
-    renderPassInfo.renderArea.extent = vk::Extent2D { renderWidth, renderHeight };
+    vk::RenderingAttachmentInfo colorAttachInfo{};
+    colorAttachInfo.imageView = m_colorBuffer.View();
+    colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
+    colorAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.0f, 1.0f, 1.0f};
 
-    std::array<vk::ClearValue, 3> clearValuesMain {};
-    clearValuesMain[0].color = vk::ClearColorValue { 0.0f, 0.0f, 1.0f, 1.0f };
-    clearValuesMain[1].color = vk::ClearColorValue { 1.0f, 0.3f, 0.6f, 1.0f };
-    clearValuesMain[2].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
+    vk::RenderingAttachmentInfo depthAttachInfo{};
+    depthAttachInfo.imageView = m_depthBufferMSAA.View();
+    depthAttachInfo.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    depthAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    depthAttachInfo.storeOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue{1.0f, 0};
 
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValuesMain.size());
-    renderPassInfo.pClearValues = clearValuesMain.data();
-    frameData.GetCommandBuffers()[0].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+    vk::RenderingInfo mainRenderInfo{};
+    mainRenderInfo.renderArea = vk::Rect2D{ {0, 0}, {renderWidth, renderHeight} };
+    mainRenderInfo.layerCount = 1;
+    mainRenderInfo.colorAttachmentCount = 1;
+    mainRenderInfo.pColorAttachments = &colorAttachInfo;
+    mainRenderInfo.pDepthAttachment = &depthAttachInfo;
+    // mainRenderInfo.pStencilAttachment = ...; // Если нужен стенсил
 
-    frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
+    // 3. Begin Rendering
+    cmd.beginRendering(mainRenderInfo);
 
-    vk::Viewport viewport {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = renderWidth;
-    viewport.height = renderHeight;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    frameData.GetCommandBuffers()[0].setViewport(0, viewport);
+    cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
 
-    vk::Rect2D scissor {};
-    scissor.offset = { { 0, 0 } };
-    scissor.extent = vk::Extent2D { renderWidth, renderHeight };
-    frameData.GetCommandBuffers()[0].setScissor(0, scissor);
+    vk::Viewport viewport {0.0f, 0.0f, (float)renderWidth, (float)renderHeight, 0.0f, 1.0f};
+    cmd.setViewport(0, viewport);
+    vk::Rect2D scissor {{0, 0}, {renderWidth, renderHeight}};
+    cmd.setScissor(0, scissor);
 
     vk::Buffer vertexBuffers[] = { *m_vertexBuffer };
     vk::DeviceSize offsets[] = { 0 };
-    frameData.GetCommandBuffers()[0].bindVertexBuffers(0, vertexBuffers, offsets);
-    frameData.GetCommandBuffers()[0].bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
 
-    frameData.GetCommandBuffers()[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, m_descriptorSetsMain[m_frameIndex], {});
-
-    frameData.GetCommandBuffers()[0].drawIndexed(indices.size(), 1, 0, 0, 0);
-
-
-    frameData.GetCommandBuffers()[0].endRenderPass();
+    cmd.bindVertexBuffers(0, vertexBuffers, offsets);
+    cmd.bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
+    cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, m_descriptorSetsMain[m_frameIndex], {});
+    cmd.drawIndexed(indices.size(), 1, 0, 0, 0);
+    cmd.endRenderPass();
 
 
     // #region RENDER_PASS_BEGIN
@@ -800,51 +770,50 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     labelInfo.color = std::array { 1.0f, 0.5f, 0.0f, 1.0f };
     frameData.GetCommandBuffers()[0].beginDebugUtilsLabelEXT(labelInfo);
 
-    renderPassInfo = vk::RenderPassBeginInfo {};
-    renderPassInfo.renderPass = m_swapchainPass.RenderPass();
-    renderPassInfo.framebuffer = m_frameBuffersSwapchain[imageIndex];
-    renderPassInfo.renderArea.offset = { { .x = 0, .y = 0 } };
-    renderPassInfo.renderArea.extent = m_swapchain.GetExtent();
-
-    std::array<vk::ClearValue, 1> clearValues{};
-    clearValues[0].color = vk::ClearColorValue { 0.0f, 0.0f, 0.0f, 1.0f };
-    //clearValues[1].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
-
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
-
-    frameData.GetCommandBuffers()[0].beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
-    // #endregion RENDER_PASS_BEGIN
-
-    frameData.GetCommandBuffers()[0].bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
-
-    viewport = vk::Viewport {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(m_swapchain.GetExtent().width);
-    viewport.height = static_cast<float>(m_swapchain.GetExtent().height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    frameData.GetCommandBuffers()[0].setViewport(0, viewport);
-
-    scissor = vk::Rect2D {};
-    scissor.offset = { { 0, 0 } };
-    scissor.extent = m_swapchain.GetExtent();
-    frameData.GetCommandBuffers()[0].setScissor(0, scissor);
-
-    frameData.GetCommandBuffers()[0].bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics,
-        *m_pipelineSwapchain.Layout(),
-        0,
-        m_descriptorSetsSwapchain[m_frameIndex],
-        {}
+    m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eShaderReadOnlyOptimal);
+    CImage::CmdTransitionLayout(
+        cmd,
+        m_swapchain.Images()[imageIndex],
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eColorAttachmentOptimal
     );
 
-    frameData.GetCommandBuffers()[0].draw(3, 1, 0, 0);
+    vk::RenderingAttachmentInfo swapchainAttachInfo{};
+    swapchainAttachInfo.imageView = m_swapchain.ImageViews()[imageIndex];
+    swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    swapchainAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    swapchainAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
+    swapchainAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f};
 
-    frameData.GetCommandBuffers()[0].endRenderPass();
-    frameData.GetCommandBuffers()[0].endDebugUtilsLabelEXT();
-    frameData.GetCommandBuffers()[0].end();
+    vk::RenderingInfo swapchainRenderInfo{};
+    swapchainRenderInfo.renderArea = vk::Rect2D{ {0, 0}, m_swapchain.Extent() };
+    swapchainRenderInfo.layerCount = 1;
+    swapchainRenderInfo.colorAttachmentCount = 1;
+    swapchainRenderInfo.pColorAttachments = &swapchainAttachInfo;
+
+    // 3. Begin Rendering
+    cmd.beginRendering(swapchainRenderInfo);
+    cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
+
+    viewport = vk::Viewport {0.0f, 0.0f, (float)m_swapchain.Extent().width, (float)m_swapchain.Extent().height, 0.0f, 1.0f};
+    cmd.setViewport(0, viewport);
+    scissor = vk::Rect2D {{0, 0}, m_swapchain.Extent()};
+    cmd.setScissor(0, scissor);
+
+    cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
+    cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain.Layout(), 0, m_descriptorSetsSwapchain[m_frameIndex], {});
+    cmd.draw(3, 1, 0, 0);
+
+    cmd.endDebugUtilsLabelEXT();
+
+    CImage::CmdTransitionLayout(
+        cmd,
+        m_swapchain.Images()[imageIndex],
+        vk::ImageLayout::eColorAttachmentOptimal,
+        vk::ImageLayout::ePresentSrcKHR,
+        vk::ImageAspectFlagBits::eColor
+    );
+    cmd.end();
     // #endregion COMMAND_RECORD
 
     // #region COMMAND_SUBMIT
@@ -887,7 +856,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             }
         }
         frameData.RecreateImageAvailableSemaphore();
-        Resize(*m_context.Device(), m_swapchainPass.RenderPass(), m_swapchain, m_frameBuffersSwapchain);
+        m_swapchain.Recreate();
 
         return;
     }

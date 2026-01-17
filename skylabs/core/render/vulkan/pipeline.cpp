@@ -6,8 +6,8 @@ CPipeline::CPipeline(
     const std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
     const std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
     const CVertexFormat& vertexFormat,
-    const vk::SampleCountFlagBits sampleCount,
-    const vk::RenderPass renderPass
+    const vk::PipelineRenderingCreateInfo renderingInfo,
+    const vk::SampleCountFlagBits sampleCount
 ) {
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
     const std::vector<vk::VertexInputBindingDescription>& bindingDescriptions = vertexFormat.GetBindingDescriptions();
@@ -97,9 +97,10 @@ CPipeline::CPipeline(
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.layout = m_layout;
-    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.pNext = &renderingInfo;
 
     m_handle = vk::raii::Pipeline { (*context.Device()), nullptr, pipelineInfo };
 }
