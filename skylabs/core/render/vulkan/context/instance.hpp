@@ -1,25 +1,15 @@
 #pragma once
-#include <skylabs/public/utils.hpp>
-
+#include <skylabs/public/string_utils.hpp>
 #include <vulkan/vulkan_raii.hpp>
+
+#include <unordered_map>
 
 namespace Vulkan {
 class CInstance
 {
 public:
-    struct CRequestedExtension
-    {
-        std::string_view m_name;
-        Utils::Requirement m_requirement;
-    };
-
-    CInstance() = delete;
     explicit CInstance(std::nullptr_t) {}
-    explicit CInstance(
-        const vk::raii::Context& context,
-        std::uint32_t apiVersion,
-        std::span<CRequestedExtension> requestedExtensions
-    );
+    explicit CInstance(std::span<const char* const> requiredExtensions = {});
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
     CInstance& operator=(CInstance&) = delete;
@@ -29,14 +19,18 @@ public:
     [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Instance& { return m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Instance* { return &m_handle; }
 
-    [[nodiscard]] auto ApiVersion() const noexcept -> std::uint32_t { return m_apiVersion; }
-    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return std::ranges::contains(m_activeExtensions, name); }
+    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return m_enabledExtensions.contains(name); }
 
 private:
+    [[nodiscard]] auto SetupExtensions(
+        const vk::raii::Context& context,
+        std::span<const char* const> requiredExtensions,
+        const std::vector<const char*>& enabledLayers
+    ) -> std::vector<const char*>;
+
     vk::raii::Instance m_handle { nullptr };
 
-    std::vector<std::string> m_activeExtensions;
-    std::uint32_t m_apiVersion = 0;
+    UnorderedStringSet m_enabledExtensions;
 
 #ifdef DEBUG
     vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger { nullptr };

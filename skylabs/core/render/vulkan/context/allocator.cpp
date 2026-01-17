@@ -1,4 +1,5 @@
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
+#include <skylabs/core/render/vulkan/profile.hpp>
 
 namespace Vulkan {
 CAllocator::CAllocator(
@@ -7,20 +8,22 @@ CAllocator::CAllocator(
     const CDevice& device
 ) {
     constexpr std::array extensionAndFlagMap = {
-        std::pair { vk::KHRDedicatedAllocationExtensionName, vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation },
-        std::pair { vk::KHRBindMemory2ExtensionName, vma::AllocatorCreateFlagBits::eKhrBindMemory2 },
         std::pair { vk::EXTMemoryBudgetExtensionName, vma::AllocatorCreateFlagBits::eExtMemoryBudget },
         std::pair { vk::AMDDeviceCoherentMemoryExtensionName, vma::AllocatorCreateFlagBits::eAmdDeviceCoherentMemory },
-        std::pair { vk::KHRBufferDeviceAddressExtensionName, vma::AllocatorCreateFlagBits::eBufferDeviceAddress },
         std::pair { vk::EXTMemoryPriorityExtensionName, vma::AllocatorCreateFlagBits::eExtMemoryPriority },
-        std::pair { vk::KHRMaintenance4ExtensionName, vma::AllocatorCreateFlagBits::eKhrMaintenance4 },
         std::pair { vk::KHRMaintenance5ExtensionName, vma::AllocatorCreateFlagBits::eKhrMaintenance5 },
-    #ifdef PLATFORM_WINDOWS
+#ifdef PLATFORM_WINDOWS
         std::pair { vk::KHRExternalMemoryWin32ExtensionName, vma::AllocatorCreateFlagBits::eKhrExternalMemoryWin32 },
-    #endif
+#endif
     };
 
-    vma::AllocatorCreateFlags flags {};
+    // Available in roadmap
+    vma::AllocatorCreateFlags flags =
+        vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation
+        | vma::AllocatorCreateFlagBits::eKhrBindMemory2
+        | vma::AllocatorCreateFlagBits::eBufferDeviceAddress
+        | vma::AllocatorCreateFlagBits::eKhrMaintenance4;
+
     for (const auto& [ext, flag] : extensionAndFlagMap) {
         if (device.IsExtensionEnabled(ext)) {
             flags |= flag;
@@ -29,7 +32,7 @@ CAllocator::CAllocator(
 
     vma::AllocatorCreateInfo allocatorCreateInfo;
     allocatorCreateInfo.flags = flags;
-    allocatorCreateInfo.vulkanApiVersion = device.ApiVersion();
+    allocatorCreateInfo.vulkanApiVersion = Profile::GetVersion();
     allocatorCreateInfo.physicalDevice = physicalDevice;
 
     m_handle = vma::raii::Allocator { instance, *device, allocatorCreateInfo };

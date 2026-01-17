@@ -16,5 +16,12 @@ CHostBuffer::CHostBuffer(
     allocInfo.flags = vma::AllocationCreateFlagBits::eHostAccessSequentialWrite;
 
     m_handle = vma::raii::Buffer { *context.Allocator(), bufferInfo, allocInfo };
+    m_data = m_handle.getAllocation().map();
+}
+
+CHostBuffer::~CHostBuffer() {
+    if (*m_handle) {
+        m_handle.getAllocation().unmap();
+    }
 }
 }

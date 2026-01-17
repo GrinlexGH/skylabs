@@ -40,7 +40,7 @@ auto CSwapchain::CreateSwapchain(
     const vk::raii::SwapchainKHR& oldSwapchain
 ) -> void {
     const CDevice& device = m_context->Device();
-    const vk::raii::PhysicalDevice& physicalDevice = m_context->PhysicalDevice();
+    const CPhysicalDevice& physicalDevice = m_context->PhysicalDevice();
 
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
@@ -50,7 +50,7 @@ auto CSwapchain::CreateSwapchain(
     createInfo.surface = m_associatedSurface = surface;
 
     //====================
-    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
+    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice->getSurfaceCapabilitiesKHR(surface);
     createInfo.minImageCount = std::clamp(
         imageCount,
         surfaceCapabilities.minImageCount,
@@ -58,7 +58,7 @@ auto CSwapchain::CreateSwapchain(
     );
 
     //====================
-    m_surfaceFormat = ChooseSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
+    m_surfaceFormat = ChooseSurfaceFormat(physicalDevice->getSurfaceFormatsKHR(surface));
     createInfo.imageFormat = m_surfaceFormat.format;
     createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
 
@@ -86,7 +86,7 @@ auto CSwapchain::CreateSwapchain(
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
 
     //====================
-    if (const std::vector<vk::PresentModeKHR> presentModes = physicalDevice.getSurfacePresentModesKHR(surface);
+    if (const std::vector<vk::PresentModeKHR> presentModes = physicalDevice->getSurfacePresentModesKHR(surface);
         !std::ranges::contains(presentModes, presentMode)
     ) {
         Log::Warning(

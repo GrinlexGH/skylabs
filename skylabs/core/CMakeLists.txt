@@ -15,6 +15,8 @@ target_sources(
         camera.hpp
         render/renderer.hpp
         render/vulkan/window.hpp
+        render/vulkan/profile.hpp
+        render/vulkan/profile.cpp
         render/vulkan/renderer.hpp
         render/vulkan/renderer.cpp
         render/vulkan/context/allocator.hpp
@@ -24,6 +26,7 @@ target_sources(
         render/vulkan/context/extensions.hpp
         render/vulkan/context/physical_device.hpp
         render/vulkan/context/physical_device.cpp
+        render/vulkan/context/queue.hpp
         render/vulkan/context/device.hpp
         render/vulkan/context/device.cpp
         render/vulkan/context/context.hpp
@@ -42,8 +45,6 @@ target_sources(
         render/vulkan/memory/device_buffer.cpp
         render/vulkan/memory/host_buffer.hpp
         render/vulkan/memory/host_buffer.cpp
-        render/vulkan/memory/memory_mapping.hpp
-        render/vulkan/memory/memory_mapping.cpp
         render/vulkan/sampler.hpp
         render/vulkan/sampler.cpp
         render/vulkan/pipeline.hpp

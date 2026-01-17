@@ -1,0 +1,133 @@
+#include <skylabs/core/render/vulkan/profile.hpp>
+
+#include <fmt/format.h>
+#include <vulkan/vulkan.hpp>
+
+namespace Vulkan::Profile {
+void CheckInstanceSupport() {
+    vk::Bool32 profileSupported;
+    if (vpGetInstanceProfileSupport(nullptr, nullptr, &currentProfile, &profileSupported) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get vulkan profile");
+    }
+
+    if (!profileSupported) {
+        throw std::runtime_error(fmt::format("The vulkan profile {} is not supported", currentProfile.profileName));
+    }
+}
+
+bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) {
+    vk::Bool32 profileSupported;
+    if (vpGetPhysicalDeviceProfileSupport(nullptr, instance, physicalDevice, &currentProfile, &profileSupported) != VK_SUCCESS) {
+        throw std::runtime_error("Cannot get physical device profile supported");
+    }
+
+    return profileSupported;
+}
+
+VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) {
+    VpInstanceCreateInfo vpCreateInfo {};
+    vpCreateInfo.pCreateInfo = &instanceCreateInfo;
+    vpCreateInfo.enabledFullProfileCount = 1;
+    vpCreateInfo.pEnabledFullProfiles = &currentProfile;
+
+    VkInstance instance = VK_NULL_HANDLE;
+    if (vpCreateInstance(nullptr, &vpCreateInfo, nullptr, &instance) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create instance");
+    }
+
+    return instance;
+}
+
+VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) {
+    VpDeviceCreateInfo vpCreateInfo {};
+    vpCreateInfo.pCreateInfo = &deviceCreateInfo;
+    vpCreateInfo.enabledFullProfileCount = 1;
+    vpCreateInfo.pEnabledFullProfiles = &currentProfile;
+    vpCreateInfo.flags = VP_DEVICE_CREATE_DISABLE_ROBUST_ACCESS;
+
+    VkDevice device = VK_NULL_HANDLE;
+    if (vpCreateDevice(nullptr, physicalDevice, &vpCreateInfo, nullptr, &device) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create device");
+    }
+
+    return device;
+}
+
+std::uint32_t GetVersion() {
+    return vpGetProfileAPIVersion(nullptr, &currentProfile);
+}
+
+std::vector<VkExtensionProperties> GetInstanceExtensions() {
+    std::uint32_t extensionCount;
+    if (vpGetProfileInstanceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, nullptr) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get instance extensions count");
+    }
+
+    std::vector<VkExtensionProperties> extensions(extensionCount);
+    if (vpGetProfileInstanceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, extensions.data()) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get instance extensions");
+    }
+
+    return extensions;
+}
+
+std::vector<VkExtensionProperties> GetDeviceExtensions() {
+    std::uint32_t extensionCount;
+    if (vpGetProfileDeviceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, nullptr) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get device extensions count");
+    }
+
+    std::vector<VkExtensionProperties> extensions(extensionCount);
+    if (vpGetProfileDeviceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, extensions.data()) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get device extensions");
+    }
+
+    return extensions;
+}
+}
+
+extern "C" {
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* pName) {
+    return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr(instance, pName);
+}
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* pName) {
+    return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr(device, pName);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceVersion(uint32_t* pApiVersion) {
+    return VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceVersion(pApiVersion);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties) {
+    return VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateInstanceExtensionProperties(pLayerName, pPropertyCount, pProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties) {
+    return VULKAN_HPP_DEFAULT_DISPATCHER.vkEnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pPropertyCount, pProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2* pFeatures) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceFeatures2(physicalDevice, pFeatures);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties2* pProperties) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceProperties2(physicalDevice, pProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties2(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties2* pFormatProperties) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, pFormatProperties);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties2(VkPhysicalDevice physicalDevice, uint32_t* pQueueFamilyPropertyCount, VkQueueFamilyProperties2* pQueueFamilyProperties) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance) {
+    return VULKAN_HPP_DEFAULT_DISPATCHER.vkCreateInstance(pCreateInfo, pAllocator, pInstance);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice) {
+    return VULKAN_HPP_DEFAULT_DISPATCHER.vkCreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+}
+}

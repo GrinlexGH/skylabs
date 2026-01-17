@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/core/render/vulkan/memory/memory_mapping.hpp>
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
 namespace Vulkan {
@@ -16,19 +15,20 @@ public:
     CHostBuffer(CHostBuffer&&) noexcept = default;
     CHostBuffer& operator=(const CHostBuffer&) = delete;
     CHostBuffer& operator=(CHostBuffer&&) noexcept = default;
-    ~CHostBuffer() = default;
+    ~CHostBuffer();
 
     [[nodiscard]] auto operator*() const noexcept -> vk::Buffer { return *m_handle; }
     [[nodiscard]] auto operator->() const noexcept -> const vk::Buffer* { return &*m_handle; }
 
-    [[nodiscard]] auto Size() const noexcept -> vk::DeviceSize { return m_size; }
-
-    [[nodiscard]] auto Map() -> CBufferMapping { return CBufferMapping { m_handle }; }
+    [[nodiscard]] auto Data() const noexcept -> void* { return m_data; }
+    [[nodiscard]] auto Size() const noexcept -> std::size_t { return m_size; }
+    [[nodiscard]] auto Span() const -> std::span<std::byte> { return { static_cast<std::byte*>(m_data), static_cast<std::size_t>(m_size) }; }
 
 private:
     const CContext* m_context = nullptr;
 
     vma::raii::Buffer m_handle { nullptr };
+    void* m_data = nullptr;
     vk::DeviceSize m_size = 0;
 };
 }

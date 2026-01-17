@@ -254,7 +254,7 @@ void CopyBuffer(
 
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
-    const std::vector<Vulkan::CBufferMapping>& uniformBuffersMapped,
+    const std::vector<Vulkan::CHostBuffer>& uniformBuffersMapped,
     const std::uint32_t currentImage,
     const glm::mat4& view,
     const float deltaTime
@@ -277,7 +277,7 @@ void UpdateUniformBuffer(
     }
     ubo.offset = offset;
 
-    std::memcpy(*uniformBuffersMapped.at(currentImage), &ubo, sizeof(ubo));
+    std::memcpy(uniformBuffersMapped.at(currentImage).Data(), &ubo, sizeof(ubo));
 }
 
 std::uint32_t renderWidth = 0;
@@ -310,7 +310,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
         for (const vk::Format format : candidates) {
-            const vk::FormatProperties props = m_context.PhysicalDevice().getFormatProperties(format);
+            const vk::FormatProperties props = m_context.PhysicalDevice()->getFormatProperties(format);
 
             if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
                 return format;
@@ -401,10 +401,7 @@ CRenderer::CRenderer(const IWindow* const window) {
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
             m_context.Device().GraphicsQueue().FamilyIndex()
     });
-    {
-        const CBufferMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.Data(), image->pixels, imageSize);
-    }
+    std::memcpy(stagingBuffer.Data(), image->pixels, imageSize);
 
     m_modelTexture = CImage {
         m_context,
@@ -421,7 +418,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     {
         m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
         m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
-        generateMipmaps(m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
+        generateMipmaps(*m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
     }
     EndSingleTimeCommands(m_context.Device(), commandBuffer);
 
@@ -466,10 +463,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         };
     }
 
-    {
-        const CBufferMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.Data(), vertices.data(), vertexBufferSize);
-    }
+    std::memcpy(stagingBuffer.Data(), vertices.data(), vertexBufferSize);
 
     m_vertexBuffer = CDeviceBuffer {
         m_context,
@@ -494,10 +488,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         };
     }
 
-    {
-        CBufferMapping mapping = stagingBuffer.Map();
-        std::memcpy(mapping.Data(), indices.data(), indexBufferSize);
-    }
+    std::memcpy(stagingBuffer.Data(), indices.data(), indexBufferSize);
 
     m_indexBuffer = CDeviceBuffer {
         m_context,
@@ -514,14 +505,12 @@ CRenderer::CRenderer(const IWindow* const window) {
     );
 
     m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
-    m_uniformBuffersMapped.reserve(FRAMES_IN_FLIGHT_COUNT);
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         m_uniformBuffers.emplace_back(
             m_context,
             sizeof(UniformBufferObject),
             vk::BufferUsageFlagBits::eUniformBuffer
         );
-        m_uniformBuffersMapped.emplace_back(m_uniformBuffers.at(i).Map());
     }
 
     vk::DescriptorSetLayoutBinding uboLayoutBinding {};
@@ -714,7 +703,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     const vk::raii::SwapchainKHR& swapchainHandle = m_swapchain.GetHandle();
 
 
-    UpdateUniformBuffer(m_swapchain.GetExtent(), m_uniformBuffersMapped, m_frameIndex, view, deltaTime);
+    UpdateUniformBuffer(m_swapchain.GetExtent(), m_uniformBuffers, m_frameIndex, view, deltaTime);
 
     // #region ACQUIRE_IMAGE
     vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -768,7 +757,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     renderPassInfo.renderArea.extent = vk::Extent2D { renderWidth, renderHeight };
 
     std::array<vk::ClearValue, 3> clearValuesMain {};
-    clearValuesMain[0].color = vk::ClearColorValue { 0.0f, 0.0f, 0.0f, 1.0f };
+    clearValuesMain[0].color = vk::ClearColorValue { 0.0f, 0.0f, 1.0f, 1.0f };
     clearValuesMain[1].color = vk::ClearColorValue { 1.0f, 0.3f, 0.6f, 1.0f };
     clearValuesMain[2].depthStencil = vk::ClearDepthStencilValue { 1.0f, 0 };
 
