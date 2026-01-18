@@ -4,11 +4,11 @@ namespace Vulkan {
 CHostBuffer::CHostBuffer(
     const CContext& context,
     const vk::DeviceSize size,
-    const vk::BufferUsageFlags& usage
-) : m_context(&context) {
+    const vk::BufferUsageFlags usage
+) : m_size(size), m_usage(usage) {
     vk::BufferCreateInfo bufferInfo {};
-    bufferInfo.size = m_size = size;
-    bufferInfo.usage = usage;
+    bufferInfo.size = m_size;
+    bufferInfo.usage = m_usage;
     bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
     vma::AllocationCreateInfo allocInfo {};

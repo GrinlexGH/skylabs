@@ -56,7 +56,7 @@ CQueueFamilyIndices GetQueueFamilies(const Vulkan::IWindow* window, const vk::In
     }
 
     // Search for dedicated compute queue family
-    for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
+    for (std::uint32_t i = 0; i < queueFamilies.size(); ++i) {
         if (!(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) &&
             queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute
         ) {
@@ -135,7 +135,7 @@ std::vector<const char*> CDevice::SetupExtensions(const CPhysicalDevice& gpu) {
     // Some required extensions are missing...
     if (!missingExtensions.empty()) {
         throw std::runtime_error(
-            fmt::format("System doesn't have required instance extensions:\n    {}", fmt::join(missingExtensions, "\n    "))
+            fmt::format("System doesn't have required device extensions:\n    {}", fmt::join(missingExtensions, "\n    "))
         );
     }
 

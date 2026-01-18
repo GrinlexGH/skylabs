@@ -36,20 +36,25 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 }
 #endif
 
-std::vector<const char*> SetupLayers(const vk::raii::Context& context) {
+std::vector<const char*> SetupLayers([[maybe_unused]] const vk::raii::Context& context) {
     std::vector<const char*> enabledLayers {};
 
+#ifdef DEBUG
     for (const auto& layerProperties : context.enumerateInstanceLayerProperties()) {
         if (std::strcmp(layerProperties.layerName, validationLayerName) == 0) {
             enabledLayers.push_back(validationLayerName);
             break;
         }
     }
+#endif
 
     return enabledLayers;
 }
 
-std::vector<vk::ExtensionProperties> GetAvailableExtensions(const vk::raii::Context& context, const std::vector<const char*>& enabledLayers) {
+std::vector<vk::ExtensionProperties> GetAvailableExtensions(
+    const vk::raii::Context& context,
+    [[maybe_unused]] const std::vector<const char*>& enabledLayers
+) {
     std::vector<vk::ExtensionProperties> globalAvailableExtensions = context.enumerateInstanceExtensionProperties();
 
 #ifdef DEBUG

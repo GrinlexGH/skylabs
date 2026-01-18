@@ -7,7 +7,7 @@ struct VOut {
 };
 
 [shader("vertex")]
-VOut vertexMain(uint vertexIndex : SV_VertexID) {
+VOut vertMain(uint vertexIndex : SV_VertexID) {
     VOut output;
 
     const float2 positions[3] = {
@@ -23,6 +23,6 @@ VOut vertexMain(uint vertexIndex : SV_VertexID) {
 }
 
 [shader("fragment")]
-float4 fragmentMain(float4 pos : SV_Position, [[vk::location(0)]] float2 uv) : SV_Target {
+float4 fragMain(float4 pos : SV_Position, [[vk::location(0)]] float2 uv) : SV_Target {
     return uOut.Sample(uv);
 }

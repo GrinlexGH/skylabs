@@ -12,7 +12,7 @@ ConstantBuffer<UniformBufferObject> ubo;
 Sampler2D texSampler;
 
 struct VertexInput {
-    [[vk::location(0)]] float3 position : POSITION;
+    [[vk::location(0)]] float3 position : POSOTION;
     [[vk::location(1)]] float3 color : COLOR;
     [[vk::location(2)]] float2 texCoord : TEXCOORD;
 };
@@ -24,7 +24,7 @@ struct VertexToFragment {
 };
 
 [shader("vertex")]
-VertexToFragment vertexMain(VertexInput input, uint vertexIndex : SV_VertexID) {
+VertexToFragment vertMain(VertexInput input, uint vertexIndex : SV_VertexID) {
     VertexToFragment output;
 
     float4x4 pvm = mul(ubo.proj, mul(ubo.view, ubo.model));
@@ -42,7 +42,7 @@ VertexToFragment vertexMain(VertexInput input, uint vertexIndex : SV_VertexID) {
 }
 
 [shader("fragment")]
-float4 fragmentMain(VertexToFragment input) : SV_Target {
+float4 fragMain(VertexToFragment input) : SV_Target {
     const float Z = 3.0;
     const float n = 2.0;
     const float pi = 3.14159265359;

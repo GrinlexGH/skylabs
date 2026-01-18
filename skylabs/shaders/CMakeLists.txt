@@ -27,7 +27,7 @@ foreach(shader ${SOURCES})
             COMMAND ${CMAKE_COMMAND} -E make_directory ${shader_out_dir}
             COMMAND Vulkan::slangc
             "${shader}"
-            -entry "${stage}Main"
+            -entry "${stageShort}Main"
             -stage "${stage}"
             -o "${shader_out_path}"
             DEPENDS "${shader}"

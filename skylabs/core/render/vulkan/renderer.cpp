@@ -165,7 +165,7 @@ void generateMipmaps(
             *image, vk::ImageLayout::eTransferSrcOptimal,
             *image, vk::ImageLayout::eTransferDstOptimal,
             blit,
-            vk::Filter::eLinear
+            vk::Filter::eNearest
         );
 
         barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
@@ -296,36 +296,33 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_colorBuffer = CImage {
         m_context,
-        vk::Extent3D { renderWidth, renderHeight, 1 },
+        vk::Extent2D { renderWidth, renderHeight },
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
     };
 
     m_colorBufferMSAA = CImage {
         m_context,
-        vk::Extent3D { renderWidth, renderHeight, 1 },
+        vk::Extent2D { renderWidth, renderHeight },
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment,
         vk::ImageAspectFlagBits::eColor,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
         1,
         vk::SampleCountFlagBits::e8
     };
 
     m_depthBufferMSAA = CImage {
         m_context,
-        vk::Extent3D { renderWidth, renderHeight, 1 },
+        vk::Extent2D { renderWidth, renderHeight },
         findDepthFormat(),
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::ImageAspectFlagBits::eDepth,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
         1,
-        vk::SampleCountFlagBits::e1
+        vk::SampleCountFlagBits::e8
     };
 
     vk::DebugUtilsObjectNameInfoEXT nameInfo;
@@ -342,7 +339,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         fragmentShader.GetPipelineShaderCreateInfo(),
     };
 
-    SDL_Surface* imageRaw = IMG_Load("assets/matroskin.png");
+    SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
     if (!imageRaw) {
         throw std::runtime_error("Failed to load texture image!");
     }
@@ -359,19 +356,18 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_modelTexture = CImage {
         m_context,
-        { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
+        vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) },
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
         static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1
     };
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
     {
         m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-        m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 });
+        m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) });
         generateMipmaps(*m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
     }
     EndSingleTimeCommands(m_context.Device(), commandBuffer);
@@ -381,7 +377,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_modelTextureSampler = CSampler { m_context };
 
 
-    const std::string MODEL_PATH = "assets/matroskin.obj";
+    const std::string MODEL_PATH = "assets/viking_room.obj";
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -572,7 +568,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         std::array { *m_descriptorSetLayoutMain },
         CVertexFormat { CVertex::GetAttributes() },
         renderingInfo,
-        vk::SampleCountFlagBits::e1
+        vk::SampleCountFlagBits::e8
     };
 
 
@@ -656,7 +652,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 }
 
-std::unique_ptr<CRenderer> CRenderer::TryToCreate(const Vulkan::IWindow* const window) {
+std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
     try {
         return std::make_unique<CRenderer>(window);
     } catch (const std::exception& e) {

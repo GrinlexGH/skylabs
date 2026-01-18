@@ -1,16 +1,14 @@
 #include <skylabs/core/render/vulkan/memory/image.hpp>
 
-#include <frozen/map.h>
-
 namespace {
 vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout) {
     vk::ImageMemoryBarrier2 barrier {};
     barrier.srcStageMask = vk::PipelineStageFlagBits2::eAllCommands;
-    barrier.srcAccessMask = vk::AccessFlagBits2::eMemoryWrite; // Грубая, но безопасная заглушка по умолчанию
+    barrier.srcAccessMask = vk::AccessFlagBits2::eMemoryWrite;
     barrier.dstStageMask = vk::PipelineStageFlagBits2::eAllCommands;
     barrier.dstAccessMask = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
 
-    // 1. Undefined -> Color Attachment (Начало рендера)
+    // 1. Undefined -> Color Attachment
     if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eColorAttachmentOptimal) {
         barrier.srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe;
         barrier.srcAccessMask = vk::AccessFlagBits2::eNone;
@@ -19,7 +17,7 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
         return barrier;
     }
 
-    // 2. Undefined -> Depth Attachment (Начало рендера глубины)
+    // 2. Undefined -> Depth Attachment
     if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
         barrier.srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe;
         barrier.srcAccessMask = vk::AccessFlagBits2::eNone;
@@ -28,7 +26,7 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
         return barrier;
     }
 
-    // 3. Color Attachment -> Shader Read (Использование результата рендера как текстуры)
+    // 3. Color Attachment -> Shader Read
     if (oldLayout == vk::ImageLayout::eColorAttachmentOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
         barrier.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
         barrier.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
@@ -37,7 +35,7 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
         return barrier;
     }
 
-    // 4. Transfer -> Shader Read (Загрузка текстур, старое правило)
+    // 4. Transfer -> Shader Read
     if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
         barrier.srcStageMask = vk::PipelineStageFlagBits2::eTransfer;
         barrier.srcAccessMask = vk::AccessFlagBits2::eTransferWrite;
@@ -46,7 +44,7 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
         return barrier;
     }
 
-    // 5. Color Attachment -> Present (Для Swapchain перед показом на экран)
+    // 5. Color Attachment -> Present
     if (oldLayout == vk::ImageLayout::eColorAttachmentOptimal && newLayout == vk::ImageLayout::ePresentSrcKHR) {
         barrier.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
         barrier.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
@@ -55,6 +53,7 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
         return barrier;
     }
 
+    assert(false && "Unsupported layout transition!");
     return barrier;
 }
 }
@@ -62,39 +61,42 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
 namespace Vulkan {
 CImage::CImage(
     const CContext& context,
-    const vk::Extent3D& extent,
+    const vk::Extent2D& extent,
     const vk::Format format,
     const vk::ImageTiling tiling,
-    const vk::ImageUsageFlags& usage,
-    const vk::ImageAspectFlags& imageAspectFlags,
-    const vk::MemoryPropertyFlags& memoryProperties,
+    const vk::ImageUsageFlags usage,
+    const vk::ImageAspectFlags imageAspectFlags,
     const std::uint32_t mipLevels,
     const vk::SampleCountFlagBits sampleCount
-) {
+) : m_format(format),
+    m_extent(extent),
+    m_mipLevels(mipLevels),
+    m_sampleCount(sampleCount),
+    m_aspectFlags(imageAspectFlags)
+{
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
-    imageInfo.extent = m_extent = extent;
-    imageInfo.mipLevels = m_mipLevels = mipLevels;
+    imageInfo.format = m_format;
+    imageInfo.extent = vk::Extent3D { extent, 1 };
+    imageInfo.mipLevels = m_mipLevels;
     imageInfo.arrayLayers = 1;
-    imageInfo.format = m_format = format;
+    imageInfo.samples = m_sampleCount;
     imageInfo.tiling = tiling;
-    imageInfo.initialLayout = vk::ImageLayout::eUndefined;
     imageInfo.usage = usage;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
-    imageInfo.samples = m_sampleCount = sampleCount;
-    imageInfo.flags = {};
+    imageInfo.initialLayout = m_layout;
 
     vma::AllocationCreateInfo allocInfo {};
     allocInfo.usage = vma::MemoryUsage::eAuto;
-    allocInfo.requiredFlags = memoryProperties;
+    allocInfo.requiredFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
     m_handle = vma::raii::Image { *context.Allocator(), imageInfo, allocInfo };
 
     vk::ImageViewCreateInfo imageViewInfo {};
     imageViewInfo.image = *m_handle;
     imageViewInfo.viewType = vk::ImageViewType::e2D;
-    imageViewInfo.format = format;
-    imageViewInfo.subresourceRange.aspectMask = m_aspectFlags = imageAspectFlags;
+    imageViewInfo.format = m_format;
+    imageViewInfo.subresourceRange.aspectMask = m_aspectFlags;
     imageViewInfo.subresourceRange.baseMipLevel = 0;
     imageViewInfo.subresourceRange.levelCount = m_mipLevels;
     imageViewInfo.subresourceRange.baseArrayLayer = 0;
@@ -106,8 +108,12 @@ CImage::CImage(
 void CImage::Clear() {
     m_handle.clear();
     m_view.clear();
-    m_layout = vk::ImageLayout::eUndefined;
     m_format = vk::Format::eUndefined;
+    m_extent = vk::Extent2D {};
+    m_mipLevels = 1;
+    m_sampleCount = vk::SampleCountFlagBits::e1;
+    m_layout = vk::ImageLayout::eUndefined;
+    m_aspectFlags = vk::ImageAspectFlagBits::eNone;
 }
 
 void CImage::CmdTransitionLayout(
@@ -116,8 +122,7 @@ void CImage::CmdTransitionLayout(
     const vk::ImageLayout oldLayout,
     const vk::ImageLayout newLayout,
     const vk::ImageAspectFlags aspectMask,
-    const std::uint32_t mipLevels,
-    const std::uint32_t layerCount
+    const std::uint32_t mipLevels
 ) {
     auto barrier = GetBarrierData(oldLayout, newLayout);
 
@@ -131,7 +136,7 @@ void CImage::CmdTransitionLayout(
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = mipLevels;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = layerCount;
+    barrier.subresourceRange.layerCount = 1;
 
     vk::DependencyInfo dependencyInfo {};
     dependencyInfo.imageMemoryBarrierCount = 1;
@@ -148,7 +153,7 @@ void CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, cons
 void CImage::CopyBufferToImage(
     const vk::raii::CommandBuffer& commandBuffer,
     const vk::Buffer& buffer,
-    const vk::Extent3D& extent
+    const vk::Extent2D& extent
 ) const {
     vk::BufferImageCopy region;
     region.bufferOffset = 0;
@@ -161,16 +166,8 @@ void CImage::CopyBufferToImage(
     region.imageSubresource.layerCount = 1;
 
     region.imageOffset = vk::Offset3D {0, 0, 0};
-    region.imageExtent = extent;
+    region.imageExtent = vk::Extent3D { extent, 1 };
 
     commandBuffer.copyBufferToImage(buffer, *m_handle, vk::ImageLayout::eTransferDstOptimal, region);
-}
-
-CImage::~CImage() {
-    m_layout = vk::ImageLayout::eUndefined;
-    m_format = vk::Format::eUndefined;
-    m_extent = vk::Extent3D {};
-    m_mipLevels = 1;
-    m_sampleCount = vk::SampleCountFlagBits::e1;
 }
 }

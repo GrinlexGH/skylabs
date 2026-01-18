@@ -8,9 +8,6 @@ class SkylabsRecipe(ConanFile):
     package_type = "application"
 
     default_options = {
-        "sdl/*:shared": True,
-        "sdl_image/*:shared": True,
-
         "sdl_image/*:with_libtiff": False,
         "sdl_image/*:with_libwebp": False,
         "sdl_image/*:with_avif": False,

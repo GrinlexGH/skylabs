@@ -86,7 +86,7 @@ CPipeline::CPipeline(
     m_layout = vk::raii::PipelineLayout { *context.Device(), pipelineLayoutInfo };
 
     vk::GraphicsPipelineCreateInfo pipelineInfo {};
-    pipelineInfo.stageCount = shaderStages.size();
+    pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderStages.size());
     pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
