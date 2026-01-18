@@ -34,16 +34,17 @@ public:
 
     auto Clear() -> void;
 
-    static void CmdTransitionLayout(
-        vk::CommandBuffer commandBuffer,
+    static auto CmdTransitionLayout(
+        const vk::raii::CommandBuffer& cmd,
         vk::Image image,
         vk::ImageLayout oldLayout,
         vk::ImageLayout newLayout,
         vk::ImageAspectFlags aspectMask = vk::ImageAspectFlagBits::eColor,
         std::uint32_t mipLevels = 1
-    );
+    ) -> void;
 
     auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
+
     auto CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const -> void;
 
 private:

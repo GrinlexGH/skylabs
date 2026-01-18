@@ -2,58 +2,56 @@
 
 namespace {
 vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout) {
+    auto getStageMask = [](const vk::ImageLayout layout) -> std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2> {
+        switch (layout) {
+            case vk::ImageLayout::eUndefined:
+                return {
+                    vk::PipelineStageFlagBits2::eNone,
+                    vk::AccessFlagBits2::eNone
+                };
+
+            case vk::ImageLayout::eColorAttachmentOptimal:
+                return {
+                    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                    vk::AccessFlagBits2::eColorAttachmentWrite
+                };
+
+            case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+                return {
+                    vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+                    vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+                };
+
+            case vk::ImageLayout::eShaderReadOnlyOptimal:
+                return {
+                    vk::PipelineStageFlagBits2::eFragmentShader,
+                    vk::AccessFlagBits2::eShaderRead
+                };
+
+            case vk::ImageLayout::eTransferDstOptimal:
+                return {
+                    vk::PipelineStageFlagBits2::eTransfer,
+                    vk::AccessFlagBits2::eTransferWrite
+                };
+
+            case vk::ImageLayout::ePresentSrcKHR:
+                return {
+                    vk::PipelineStageFlagBits2::eNone,
+                    vk::AccessFlagBits2::eNone
+                };
+
+            default:
+                assert(false && "Unsupported layout transition!");
+                return {
+                    vk::PipelineStageFlagBits2::eAllCommands,
+                    vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite
+                };
+        }
+    };
     vk::ImageMemoryBarrier2 barrier {};
-    barrier.srcStageMask = vk::PipelineStageFlagBits2::eAllCommands;
-    barrier.srcAccessMask = vk::AccessFlagBits2::eMemoryWrite;
-    barrier.dstStageMask = vk::PipelineStageFlagBits2::eAllCommands;
-    barrier.dstAccessMask = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
+    std::tie(barrier.srcStageMask, barrier.srcAccessMask) = getStageMask(oldLayout);
+    std::tie(barrier.dstStageMask, barrier.dstAccessMask) = getStageMask(newLayout);
 
-    // 1. Undefined -> Color Attachment
-    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eColorAttachmentOptimal) {
-        barrier.srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe;
-        barrier.srcAccessMask = vk::AccessFlagBits2::eNone;
-        barrier.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-        barrier.dstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
-        return barrier;
-    }
-
-    // 2. Undefined -> Depth Attachment
-    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-        barrier.srcStageMask = vk::PipelineStageFlagBits2::eTopOfPipe;
-        barrier.srcAccessMask = vk::AccessFlagBits2::eNone;
-        barrier.dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
-        barrier.dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
-        return barrier;
-    }
-
-    // 3. Color Attachment -> Shader Read
-    if (oldLayout == vk::ImageLayout::eColorAttachmentOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-        barrier.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-        barrier.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
-        barrier.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
-        barrier.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
-        return barrier;
-    }
-
-    // 4. Transfer -> Shader Read
-    if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-        barrier.srcStageMask = vk::PipelineStageFlagBits2::eTransfer;
-        barrier.srcAccessMask = vk::AccessFlagBits2::eTransferWrite;
-        barrier.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
-        barrier.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
-        return barrier;
-    }
-
-    // 5. Color Attachment -> Present
-    if (oldLayout == vk::ImageLayout::eColorAttachmentOptimal && newLayout == vk::ImageLayout::ePresentSrcKHR) {
-        barrier.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-        barrier.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
-        barrier.dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe;
-        barrier.dstAccessMask = vk::AccessFlagBits2::eNone;
-        return barrier;
-    }
-
-    assert(false && "Unsupported layout transition!");
     return barrier;
 }
 }
@@ -117,7 +115,7 @@ void CImage::Clear() {
 }
 
 void CImage::CmdTransitionLayout(
-    const vk::CommandBuffer commandBuffer,
+    const vk::raii::CommandBuffer& cmd,
     const vk::Image image,
     const vk::ImageLayout oldLayout,
     const vk::ImageLayout newLayout,
@@ -142,7 +140,7 @@ void CImage::CmdTransitionLayout(
     dependencyInfo.imageMemoryBarrierCount = 1;
     dependencyInfo.pImageMemoryBarriers = &barrier;
 
-    commandBuffer.pipelineBarrier2(dependencyInfo);
+    cmd.pipelineBarrier2(dependencyInfo);
 }
 
 void CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, const vk::ImageLayout newLayout) {

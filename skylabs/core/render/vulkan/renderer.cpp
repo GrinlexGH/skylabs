@@ -121,7 +121,7 @@ void generateMipmaps(
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
-    vk::ImageMemoryBarrier barrier{};
+    vk::ImageMemoryBarrier barrier {};
     barrier.image = *image;
     barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
     barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
@@ -416,7 +416,7 @@ CRenderer::CRenderer(const IWindow* const window) {
                 vertices.push_back(vertex);
             }
 
-            indices.push_back(uniqueVertices[vertex]);
+            indices.push_back(static_cast<uint16_t> (uniqueVertices[vertex]));
         }
     }
 
@@ -711,19 +711,18 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmd.begin(beginInfo);
 
     m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
+    m_colorBufferMSAA.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
     m_depthBufferMSAA.TransitionLayout(cmd, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-    vk::DebugUtilsLabelEXT marker;
-    marker.pLabelName = "Point of Interest";
-    marker.color = std::array { 1.0f, 0.5f, 0.0f, 1.0f };
-    cmd.insertDebugUtilsLabelEXT(marker);
-
     vk::RenderingAttachmentInfo colorAttachInfo{};
-    colorAttachInfo.imageView = m_colorBuffer.View();
+    colorAttachInfo.imageView = m_colorBufferMSAA.View();
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    colorAttachInfo.loadOp = vk::AttachmentLoadOp::eLoad;
     colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.0f, 1.0f, 1.0f};
+    colorAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.5f, 1.0f, 1.0f};
+    colorAttachInfo.resolveImageView = m_colorBuffer.View();
+    colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eMin;
 
     vk::RenderingAttachmentInfo depthAttachInfo{};
     depthAttachInfo.imageView = m_depthBufferMSAA.View();
@@ -738,7 +737,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     mainRenderInfo.colorAttachmentCount = 1;
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
     mainRenderInfo.pDepthAttachment = &depthAttachInfo;
-    // mainRenderInfo.pStencilAttachment = ...; // Если нужен стенсил
 
     // 3. Begin Rendering
     cmd.beginRendering(mainRenderInfo);
@@ -756,15 +754,15 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmd.bindVertexBuffers(0, vertexBuffers, offsets);
     cmd.bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
     cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, m_descriptorSetsMain[m_frameIndex], {});
-    cmd.drawIndexed(indices.size(), 1, 0, 0, 0);
-    cmd.endRenderPass();
+    cmd.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
+    cmd.endRendering();
 
 
     // #region RENDER_PASS_BEGIN
     vk::DebugUtilsLabelEXT labelInfo;
     labelInfo.pLabelName = "Latest";
     labelInfo.color = std::array { 1.0f, 0.5f, 0.0f, 1.0f };
-    frameData.GetCommandBuffers()[0].beginDebugUtilsLabelEXT(labelInfo);
+    cmd.beginDebugUtilsLabelEXT(labelInfo);
 
     m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eShaderReadOnlyOptimal);
     CImage::CmdTransitionLayout(
@@ -789,7 +787,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     // 3. Begin Rendering
     cmd.beginRendering(swapchainRenderInfo);
-    cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
 
     viewport = vk::Viewport {0.0f, 0.0f, (float)m_swapchain.Extent().width, (float)m_swapchain.Extent().height, 0.0f, 1.0f};
     cmd.setViewport(0, viewport);
@@ -800,15 +797,16 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain.Layout(), 0, m_descriptorSetsSwapchain[m_frameIndex], {});
     cmd.draw(3, 1, 0, 0);
 
+    cmd.endRendering();
     cmd.endDebugUtilsLabelEXT();
 
     CImage::CmdTransitionLayout(
         cmd,
         m_swapchain.Images()[imageIndex],
         vk::ImageLayout::eColorAttachmentOptimal,
-        vk::ImageLayout::ePresentSrcKHR,
-        vk::ImageAspectFlagBits::eColor
+        vk::ImageLayout::ePresentSrcKHR
     );
+
     cmd.end();
     // #endregion COMMAND_RECORD
 
