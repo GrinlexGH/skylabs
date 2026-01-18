@@ -18,6 +18,7 @@ Checks: >
   -cppcoreguidelines-pro-type-reinterpret-cast,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-pro-type-union-access,
   -hicpp-no-array-decay,
   -hicpp-braces-around-statements,
   -hicpp-member-init,

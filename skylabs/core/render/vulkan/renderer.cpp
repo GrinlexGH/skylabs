@@ -717,7 +717,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     vk::RenderingAttachmentInfo colorAttachInfo{};
     colorAttachInfo.imageView = m_colorBufferMSAA.View();
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    colorAttachInfo.loadOp = vk::AttachmentLoadOp::eLoad;
+    colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
     colorAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.5f, 1.0f, 1.0f};
     colorAttachInfo.resolveImageView = m_colorBuffer.View();

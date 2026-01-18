@@ -48,6 +48,7 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
                 };
         }
     };
+
     vk::ImageMemoryBarrier2 barrier {};
     std::tie(barrier.srcStageMask, barrier.srcAccessMask) = getStageMask(oldLayout);
     std::tie(barrier.dstStageMask, barrier.dstAccessMask) = getStageMask(newLayout);
