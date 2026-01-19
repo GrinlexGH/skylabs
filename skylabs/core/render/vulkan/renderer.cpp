@@ -704,7 +704,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     // Prepare attachments for main render
     m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
-    
+
     // Main render
     vk::RenderingAttachmentInfo colorAttachInfo {};
     colorAttachInfo.imageView = m_colorBufferMSAA.View();
