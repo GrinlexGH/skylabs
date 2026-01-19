@@ -6,6 +6,7 @@ namespace {
 constexpr std::array ShaderStageTable = {
     vk::ShaderStageFlagBits::eVertex,   // Type::eVertex
     vk::ShaderStageFlagBits::eFragment, // Type::eFragment
+    vk::ShaderStageFlagBits::eCompute,  // Type::eCompute
 };
 
 static_assert(
@@ -13,7 +14,7 @@ static_assert(
     "ShaderStageTable size must match Vulkan::CShader::Type::eCount"
 );
 
-constexpr auto ToVkStage(Vulkan::CShader::Type type) -> vk::ShaderStageFlagBits {
+constexpr vk::ShaderStageFlagBits ToVkStage(Vulkan::CShader::Type type) {
     return ShaderStageTable[static_cast<std::size_t>(type)];
 }
 }

@@ -20,17 +20,17 @@ public:
     CDevice& operator=(CDevice&&) = default;
     ~CDevice() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Device& { return m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Device* { return &m_handle; }
+    [[nodiscard]] const vk::raii::Device& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::Device* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] auto GraphicsQueue() const noexcept -> const CQueue& { return m_graphicsQueue; }
-    [[nodiscard]] auto PresentQueue() const noexcept -> const CQueue& { return m_presentQueue; }
-    [[nodiscard]] auto ComputeQueue() const noexcept -> const CQueue& { return m_computeQueue; }
+    [[nodiscard]] const CQueue& GraphicsQueue() const noexcept { return m_graphicsQueue; }
+    [[nodiscard]] const CQueue& PresentQueue() const noexcept { return m_presentQueue; }
+    [[nodiscard]] const CQueue& ComputeQueue() const noexcept { return m_computeQueue; }
 
-    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return std::ranges::contains(m_enabledExtensions, name); }
+    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return std::ranges::contains(m_enabledExtensions, name); }
 
 private:
-    [[nodiscard]] auto SetupExtensions(const CPhysicalDevice& gpu) -> std::vector<const char*>;
+    [[nodiscard]] std::vector<const char*> SetupExtensions(const CPhysicalDevice& gpu);
 
     vk::raii::Device m_handle { nullptr };
 

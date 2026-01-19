@@ -9,6 +9,7 @@ public:
     {
         eVertex,
         eFragment,
+        eCompute,
         eCount,
     };
 
@@ -19,10 +20,10 @@ public:
     CShader& operator=(CShader&&) noexcept = default;
     ~CShader() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::ShaderModule& { return m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> const vk::raii::ShaderModule& { return m_handle; }
+    [[nodiscard]] const vk::raii::ShaderModule& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::ShaderModule* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] auto GetPipelineShaderCreateInfo() const -> vk::PipelineShaderStageCreateInfo { return m_shaderCreateInfo; }
+    [[nodiscard]] vk::PipelineShaderStageCreateInfo GetPipelineShaderCreateInfo() const { return m_shaderCreateInfo; }
 
 private:
     vk::raii::ShaderModule m_handle = nullptr;

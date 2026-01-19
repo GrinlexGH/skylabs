@@ -11,5 +11,5 @@ public:
     IWindow& operator=(IWindow&&) noexcept = default;
     virtual ~IWindow() = default;
 
-    [[nodiscard]] virtual auto DrawableSize() const -> Utils::CExtent2D = 0;
+    [[nodiscard]] virtual Utils::CExtent2D DrawableSize() const = 0;
 };

@@ -95,7 +95,7 @@ public:
         UpdateCameraVectors();
     }
 
-    void ProcessMouseScroll(float yoffset) {
+    void ProcessMouseScroll(const float yoffset) {
         m_fov -= yoffset;
         if (m_fov < 1.0f)
             m_fov = 1.0f;

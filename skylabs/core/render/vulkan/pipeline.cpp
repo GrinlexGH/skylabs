@@ -6,7 +6,7 @@ CPipeline::CPipeline(
     const std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
     const std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
     const CVertexFormat& vertexFormat,
-    const vk::PipelineRenderingCreateInfo renderingInfo,
+    const vk::PipelineRenderingCreateInfo& renderingInfo,
     const vk::SampleCountFlagBits sampleCount
 ) {
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};

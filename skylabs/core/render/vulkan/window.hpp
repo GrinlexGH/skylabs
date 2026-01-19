@@ -16,14 +16,14 @@ public:
     IWindow& operator=(IWindow&&) noexcept = default;
     ~IWindow() override = default;
 
-    [[nodiscard]] virtual auto GetRequiredInstanceExtensions() const -> std::span<const char* const> = 0;
-    [[nodiscard]] virtual auto CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR = 0;
-    virtual auto DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void = 0;
+    [[nodiscard]] virtual std::span<const char* const> GetRequiredInstanceExtensions() const = 0;
+    [[nodiscard]] virtual vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const = 0;
+    virtual void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const = 0;
 
-    [[nodiscard]] virtual auto IsQueueFamilySupportPresent(
+    [[nodiscard]] virtual bool IsQueueFamilySupportPresent(
         const vk::Instance& instance,
         const vk::PhysicalDevice& physicalDevice,
         std::uint32_t index
-    ) const -> bool = 0;
+    ) const = 0;
 };
 }

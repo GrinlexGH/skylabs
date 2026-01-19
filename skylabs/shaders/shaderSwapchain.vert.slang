@@ -1,13 +1,10 @@
-[[vk::binding(0)]]
-Sampler2D uOut;
-
 struct VOut {
     float4 pos : SV_Position;
     [[vk::location(0)]] float2 uv;
 };
 
 [shader("vertex")]
-VOut vertMain(uint vertexIndex : SV_VertexID) {
+VOut main(uint vertexIndex : SV_VertexID) {
     VOut output;
 
     const float2 positions[3] = {
@@ -20,9 +17,4 @@ VOut vertMain(uint vertexIndex : SV_VertexID) {
     output.uv = output.pos.xy * 0.5 + 0.5;
 
     return output;
-}
-
-[shader("fragment")]
-float4 fragMain(float4 pos : SV_Position, [[vk::location(0)]] float2 uv) : SV_Target {
-    return uOut.Sample(uv);
 }

@@ -13,6 +13,7 @@ public:
         vk::ImageTiling tiling,
         vk::ImageUsageFlags usage,
         vk::ImageAspectFlags imageAspectFlags,
+        vk::ImageLayout initialLayout = vk::ImageLayout::eUndefined,
         std::uint32_t mipLevels = 1,
         vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1
     );
@@ -22,30 +23,30 @@ public:
     CImage& operator=(CImage&&) noexcept = default;
     ~CImage() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> vk::Image { return *m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vk::Image* { return &*m_handle; }
+    [[nodiscard]] vk::Image operator*() const noexcept { return *m_handle; }
+    [[nodiscard]] const vk::Image* operator->() const noexcept { return &*m_handle; }
 
-    [[nodiscard]] auto View() const noexcept -> const vk::raii::ImageView& { return m_view; }
-    [[nodiscard]] auto Layout() const noexcept -> vk::ImageLayout { return m_layout; }
-    [[nodiscard]] auto Format() const noexcept -> vk::Format { return m_format; }
-    [[nodiscard]] auto Extent() const noexcept -> vk::Extent2D { return m_extent; }
-    [[nodiscard]] auto MipLevels() const noexcept -> std::uint32_t { return m_mipLevels; }
-    [[nodiscard]] auto SampleCount() const noexcept -> vk::SampleCountFlagBits { return m_sampleCount; }
+    [[nodiscard]] const vk::raii::ImageView& View() const noexcept { return m_view; }
+    [[nodiscard]] vk::ImageLayout Layout() const noexcept { return m_layout; }
+    [[nodiscard]] vk::Format Format() const noexcept { return m_format; }
+    [[nodiscard]] vk::Extent2D Extent() const noexcept { return m_extent; }
+    [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
+    [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
 
-    auto Clear() -> void;
+    void Clear();
 
-    static auto CmdTransitionLayout(
+    static void CmdTransitionLayout(
         const vk::raii::CommandBuffer& cmd,
         vk::Image image,
         vk::ImageLayout oldLayout,
         vk::ImageLayout newLayout,
         vk::ImageAspectFlags aspectMask = vk::ImageAspectFlagBits::eColor,
         std::uint32_t mipLevels = 1
-    ) -> void;
+    );
 
-    auto TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout) -> void;
+    void TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout);
 
-    auto CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const -> void;
+    void CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const;
 
 private:
     vma::raii::Image m_handle { nullptr };

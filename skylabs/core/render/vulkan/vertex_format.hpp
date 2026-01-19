@@ -20,8 +20,8 @@ public:
     CVertexFormat& operator=(CVertexFormat&&) noexcept = default;
     ~CVertexFormat() = default;
 
-    [[nodiscard]] constexpr auto GetAttributeDescriptions() const noexcept -> const std::vector<vk::VertexInputAttributeDescription>& { return m_attributes; }
-    [[nodiscard]] constexpr auto GetBindingDescriptions() const noexcept -> const std::vector<vk::VertexInputBindingDescription>& { return m_bindings; }
+    [[nodiscard]] constexpr const std::vector<vk::VertexInputAttributeDescription>& GetAttributeDescriptions() const noexcept { return m_attributes; }
+    [[nodiscard]] constexpr const std::vector<vk::VertexInputBindingDescription>& GetBindingDescriptions() const noexcept { return m_bindings; }
 
 private:
     std::vector<vk::VertexInputAttributeDescription> m_attributes;

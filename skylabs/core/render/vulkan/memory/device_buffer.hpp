@@ -17,11 +17,11 @@ public:
     CDeviceBuffer& operator=(CDeviceBuffer&&) noexcept = default;
     ~CDeviceBuffer() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vma::raii::Buffer& { return m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vma::raii::Buffer* { return &m_handle; }
+    [[nodiscard]] const vma::raii::Buffer& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vma::raii::Buffer* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] auto Size() const noexcept -> vk::DeviceSize { return m_size; }
-    [[nodiscard]] auto Usage() const noexcept -> vk::BufferUsageFlags { return m_usage; }
+    [[nodiscard]] vk::DeviceSize Size() const noexcept { return m_size; }
+    [[nodiscard]] vk::BufferUsageFlags Usage() const noexcept { return m_usage; }
 
 private:
     vma::raii::Buffer m_handle { nullptr };

@@ -27,11 +27,13 @@ public:
     CRenderer& operator=(CRenderer&&) noexcept = default;
     ~CRenderer() override;
 
-    static auto TryToCreate(const IWindow* window) -> std::unique_ptr<CRenderer>;
-    auto Draw(glm::mat4 view_mat, float deltaTime) -> void override;
+    static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window);
+    void Draw(glm::mat4 viewMat, float deltaTime) override;
 
 private:
     static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;
+
+    void Resize(CFrameData& currentFrameData);
 
     CContext m_context { nullptr };
 

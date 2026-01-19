@@ -16,19 +16,19 @@ public:
     CWindow& operator=(CWindow&& rhs) noexcept;
     ~CWindow() override;
 
-    [[nodiscard]] auto operator*() const noexcept -> SDL_Window* { return m_handle; }
-    [[nodiscard]] auto Handle() const noexcept -> SDL_Window* { return m_handle; }
+    [[nodiscard]] SDL_Window* operator*() const noexcept { return m_handle; }
+    [[nodiscard]] SDL_Window* Handle() const noexcept { return m_handle; }
 
-    [[nodiscard]] auto DrawableSize() const -> Utils::CExtent2D override;
-    [[nodiscard]] auto GetRequiredInstanceExtensions() const -> std::span<const char* const> override;
-    [[nodiscard]] auto CreateSurface(const vk::Instance& instance) const -> vk::SurfaceKHR override;
-    auto DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const -> void override;
+    [[nodiscard]] Utils::CExtent2D DrawableSize() const override;
+    [[nodiscard]] std::span<const char* const> GetRequiredInstanceExtensions() const override;
+    [[nodiscard]] vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const override;
+    void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const override;
 
-    [[nodiscard]] auto IsQueueFamilySupportPresent(
+    [[nodiscard]] bool IsQueueFamilySupportPresent(
         const vk::Instance& instance,
         const vk::PhysicalDevice& physicalDevice,
         std::uint32_t index
-    ) const -> bool override;
+    ) const override;
 
 private:
     SDL_Window* m_handle = nullptr;

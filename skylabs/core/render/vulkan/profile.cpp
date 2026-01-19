@@ -115,7 +115,7 @@ VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties2(VkPhysicalDevice physi
     VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceProperties2(physicalDevice, pProperties);
 }
 
-VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties2(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties2* pFormatProperties) {
+VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties2(VkPhysicalDevice physicalDevice, const VkFormat format, VkFormatProperties2* pFormatProperties) {
     VULKAN_HPP_DEFAULT_DISPATCHER.vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, pFormatProperties);
 }
 

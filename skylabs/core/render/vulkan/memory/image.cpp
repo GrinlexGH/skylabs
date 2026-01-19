@@ -65,12 +65,14 @@ CImage::CImage(
     const vk::ImageTiling tiling,
     const vk::ImageUsageFlags usage,
     const vk::ImageAspectFlags imageAspectFlags,
+    const vk::ImageLayout initialLayout,
     const std::uint32_t mipLevels,
     const vk::SampleCountFlagBits sampleCount
 ) : m_format(format),
     m_extent(extent),
     m_mipLevels(mipLevels),
     m_sampleCount(sampleCount),
+    m_layout(initialLayout),
     m_aspectFlags(imageAspectFlags)
 {
     vk::ImageCreateInfo imageInfo {};

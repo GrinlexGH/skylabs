@@ -22,7 +22,7 @@ struct CVertex
     glm::vec3 m_color;
     glm::vec2 m_texCoord;
 
-    static constexpr auto GetAttributes() -> std::array<CVertexAttribute, 3> {
+    static constexpr std::array<CVertexAttribute, 3> GetAttributes() {
         return {
             CVertexAttribute { .m_format = VertexFormat::Float32x3, .m_offset = offsetof(CVertex, m_position) },
             CVertexAttribute { .m_format = VertexFormat::Float32x3, .m_offset = offsetof(CVertex, m_color) },
@@ -30,7 +30,7 @@ struct CVertex
         };
     }
 
-    friend constexpr auto operator==(const CVertex& lhs, const CVertex& rhs) -> bool {
+    friend constexpr bool operator==(const CVertex& lhs, const CVertex& rhs) {
         return lhs.m_position == rhs.m_position && lhs.m_color == rhs.m_color && lhs.m_texCoord == rhs.m_texCoord;
     }
 };

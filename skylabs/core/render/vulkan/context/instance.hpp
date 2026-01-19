@@ -16,17 +16,17 @@ public:
     CInstance& operator=(CInstance&&) = default;
     ~CInstance() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Instance& { return m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Instance* { return &m_handle; }
+    [[nodiscard]] const vk::raii::Instance& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::Instance* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] auto IsExtensionEnabled(const std::string_view name) const -> bool { return m_enabledExtensions.contains(name); }
+    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return m_enabledExtensions.contains(name); }
 
 private:
-    [[nodiscard]] auto SetupExtensions(
+    [[nodiscard]] std::vector<const char*> SetupExtensions(
         const vk::raii::Context& context,
         std::span<const char* const> requiredExtensions,
         const std::vector<const char*>& enabledLayers
-    ) -> std::vector<const char*>;
+    );
 
     vk::raii::Instance m_handle { nullptr };
 

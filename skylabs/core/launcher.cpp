@@ -52,7 +52,7 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::Vulkan::CWi
                     minimized = false;
                     break;
                 case SDL_EVENT_WINDOW_RESIZED:
-                    renderer->SetResizedState(true);
+                    renderer->SetResized();
                     break;
                 case SDL_EVENT_MOUSE_MOTION:
                     g_camera.ProcessMouseMovement(e.motion.xrel, -e.motion.yrel);

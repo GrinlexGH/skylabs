@@ -33,12 +33,27 @@ CSwapchain::CSwapchain(
     Recreate(surface, imageCount, presentMode);
 }
 
-auto CSwapchain::CreateSwapchain(
+void CSwapchain::Recreate() {
+    Recreate(m_associatedSurface, ImageCount(), m_presentMode);
+}
+
+void CSwapchain::Recreate(
+    const vk::SurfaceKHR& surface,
+    const std::uint32_t imageCount,
+    const vk::PresentModeKHR presentMode
+) {
+    CreateSwapchain(surface, imageCount, presentMode, vk::raii::SwapchainKHR { std::move(m_handle) });
+
+    DestroyImages();
+    CreateImages();
+}
+
+void CSwapchain::CreateSwapchain(
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     vk::PresentModeKHR presentMode,
     const vk::raii::SwapchainKHR& oldSwapchain
-) -> void {
+) {
     const CDevice& device = m_context->Device();
     const CPhysicalDevice& physicalDevice = m_context->PhysicalDevice();
 
@@ -132,21 +147,6 @@ void CSwapchain::CreateImages() {
 
 void CSwapchain::DestroyImages() {
     m_imageViews.clear();
-}
-
-void CSwapchain::Recreate() {
-    Recreate(m_associatedSurface, ImageCount(), m_presentMode);
-}
-
-void CSwapchain::Recreate(
-    const vk::SurfaceKHR& surface,
-    const std::uint32_t imageCount,
-    const vk::PresentModeKHR presentMode
-) {
-    CreateSwapchain(surface, imageCount, presentMode, vk::raii::SwapchainKHR { std::move(m_handle) });
-
-    DestroyImages();
-    CreateImages();
 }
 
 vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const {

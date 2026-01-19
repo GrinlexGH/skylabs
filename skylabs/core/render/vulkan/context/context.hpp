@@ -19,18 +19,18 @@ public:
     CContext& operator=(CContext&&) = default;
     ~CContext() = default;
 
-    [[nodiscard]] auto Window() const noexcept -> const IWindow* { return m_window; }
-    [[nodiscard]] auto Instance() const noexcept -> const CInstance& { return m_instance; }
-    [[nodiscard]] auto PhysicalDevice() const noexcept -> const CPhysicalDevice& { return m_physicalDevice; }
-    [[nodiscard]] auto Device() const noexcept -> const CDevice& { return m_device; }
-    [[nodiscard]] auto Allocator() const noexcept -> const CAllocator& { return m_allocator; }
+    [[nodiscard]] const IWindow* Window() const noexcept { return m_window; }
+    [[nodiscard]] const CInstance& Instance() const noexcept { return m_instance; }
+    [[nodiscard]] const CPhysicalDevice& PhysicalDevice() const noexcept { return m_physicalDevice; }
+    [[nodiscard]] const CDevice& Device() const noexcept { return m_device; }
+    [[nodiscard]] const CAllocator& Allocator() const noexcept { return m_allocator; }
 
-    [[nodiscard]] auto ApiVersion() const noexcept -> std::uint32_t { return m_apiVersion; }
+    [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_apiVersion; }
 
 private:
-    [[nodiscard]] auto SelectPhysicalDevice() -> CPhysicalDevice;
-    [[nodiscard]] auto IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const -> bool;
-    [[nodiscard]] auto RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const -> int;
+    [[nodiscard]] CPhysicalDevice SelectPhysicalDevice();
+    [[nodiscard]] bool IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const;
+    [[nodiscard]] int RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const;
 
     const IWindow* m_window = nullptr;
     CInstance m_instance { nullptr };

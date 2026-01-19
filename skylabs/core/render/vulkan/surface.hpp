@@ -13,8 +13,8 @@ public:
     CSurface& operator=(CSurface&& rhs) noexcept;
     ~CSurface();
 
-    [[nodiscard]] auto operator*() const noexcept -> vk::SurfaceKHR { return m_handle; }
-    [[nodiscard]] auto GetHandle() const noexcept -> vk::SurfaceKHR { return m_handle; }
+    [[nodiscard]] vk::SurfaceKHR operator*() const noexcept { return m_handle; }
+    [[nodiscard]] vk::SurfaceKHR GetHandle() const noexcept { return m_handle; }
 
 private:
     vk::SurfaceKHR m_handle = nullptr;

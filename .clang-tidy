@@ -33,7 +33,8 @@ Checks: >
   -readability-uppercase-literal-suffix,
   -misc-misplaced-const,
   -modernize-use-trailing-return-type,
-  -misc-include-cleaner
+  -misc-include-cleaner,
+  -misc-const-correctness
 WarningsAsErrors: ''
 UseColor: true
 HeaderFilterRegex: 'skylabs/**/*.*'

@@ -11,11 +11,11 @@ public:
     IRenderer& operator=(IRenderer&&) noexcept = default;
     virtual ~IRenderer() = default;
 
-    virtual auto Draw(glm::mat4, float) -> void = 0;
+    virtual void Draw(glm::mat4, float) = 0;
 
-    auto SetResizedState(bool isResized) -> void { m_isResized = isResized; }
-    auto GetResizedState() -> bool { return m_isResized; }
+    void SetResized() { m_isResized = true; }
+    bool IsResized() const { return m_isResized; }
 
-private:
+protected:
     bool m_isResized = false;
 };

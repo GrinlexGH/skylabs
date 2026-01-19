@@ -1,6 +1,5 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/memory/image.hpp>
 
 namespace Vulkan {
 class CSampler
@@ -14,9 +13,9 @@ public:
     CSampler& operator=(CSampler&&) noexcept = default;
     ~CSampler() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Sampler& { return m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Sampler* { return &m_handle; }
-    [[nodiscard]] auto Handle() const noexcept -> const vk::raii::Sampler& { return m_handle; }
+    [[nodiscard]] const vk::raii::Sampler& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::Sampler* operator->() const noexcept { return &m_handle; }
+    [[nodiscard]] const vk::raii::Sampler& Handle() const noexcept { return m_handle; }
 
 private:
     vk::raii::Sampler m_handle = nullptr;

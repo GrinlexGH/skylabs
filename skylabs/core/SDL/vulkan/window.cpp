@@ -28,16 +28,18 @@ CWindow& CWindow::operator=(CWindow&& rhs) noexcept {
     return *this;
 }
 
-std::span<const char* const> CWindow::GetRequiredInstanceExtensions() const {
-    return GetInstanceExtensions();
+CWindow::~CWindow() {
+    if(m_handle) {
+        SDL_DestroyWindow(m_handle);
+    }
 }
 
-bool CWindow::IsQueueFamilySupportPresent(
-    const vk::Instance& instance,
-    const vk::PhysicalDevice& physicalDevice,
-    const uint32_t index
-) const {
-    return GetPresentationSupport(instance, physicalDevice, index);
+Utils::CExtent2D CWindow::DrawableSize() const {
+    return GetWindowSizeInPixels(m_handle);
+}
+
+std::span<const char* const> CWindow::GetRequiredInstanceExtensions() const {
+    return GetInstanceExtensions();
 }
 
 vk::SurfaceKHR CWindow::CreateSurface(const vk::Instance& instance) const {
@@ -49,13 +51,11 @@ void CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surfa
     surface = nullptr;
 }
 
-Utils::CExtent2D CWindow::DrawableSize() const {
-    return GetWindowSizeInPixels(m_handle);
-}
-
-CWindow::~CWindow() {
-    if(m_handle) {
-        SDL_DestroyWindow(m_handle);
-    }
+bool CWindow::IsQueueFamilySupportPresent(
+    const vk::Instance& instance,
+    const vk::PhysicalDevice& physicalDevice,
+    const uint32_t index
+) const {
+    return GetPresentationSupport(instance, physicalDevice, index);
 }
 }

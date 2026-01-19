@@ -12,9 +12,10 @@
 #include <tiny_obj_loader.h>
 
 #include <chrono>
+#include <random>
 
 template<> struct std::hash<CVertex> {
-    size_t operator()(CVertex const& vertex) const noexcept {
+    size_t operator()(const CVertex& vertex) const noexcept {
         return ((hash<glm::vec3>()(vertex.m_position) ^
                (hash<glm::vec3>()(vertex.m_color) << 1)) >> 1) ^
                (hash<glm::vec2>()(vertex.m_texCoord) << 1);
@@ -26,11 +27,6 @@ std::vector vertices {
     CVertex { .m_position = {  0.5f, -0.5f, 0.0f }, .m_color = { 0.0f, 1.0f, 0.0f }, .m_texCoord = { 0.0f, 0.0f } },
     CVertex { .m_position = {  0.5f,  0.5f, 0.0f }, .m_color = { 0.0f, 0.0f, 1.0f }, .m_texCoord = { 0.0f, 1.0f } },
     CVertex { .m_position = { -0.5f,  0.5f, 0.0f }, .m_color = { 1.0f, 1.0f, 1.0f }, .m_texCoord = { 1.0f, 1.0f } },
-
-   // Vertex { .pos = { -0.5f, -0.5f, 0.5f }, .color = { 1.0f, 1.0f, 0.0f }, .texCoord = { 0.0f, 0.0f } },
-   // Vertex { .pos = {  0.5f, -0.5f, 0.5f }, .color = { 0.0f, 1.0f, 1.0f }, .texCoord = { 0.0f, 1.0f } },
-   // Vertex { .pos = {  0.5f,  0.5f, 0.5f }, .color = { 1.0f, 0.0f, 1.0f }, .texCoord = { 1.0f, 1.0f } },
-   // Vertex { .pos = { -0.5f,  0.5f, 0.5f }, .color = { 0.5f, 0.5f, 0.5f }, .texCoord = { 1.0f, 0.0f } },
 };
 
 struct UniformBufferObject {
@@ -57,11 +53,11 @@ namespace {
 std::pair<vk::Result, uint32_t> SwapchainNextImageWrapper(
     const vk::raii::SwapchainKHR& swapchain,
     const uint64_t timeout,
-    vk::Semaphore semaphore,
-    vk::Fence fence
+    const vk::Semaphore semaphore,
+    const vk::Fence fence
 ) {
     uint32_t image_index;
-    vk::Result result = static_cast<vk::Result>(swapchain.getDispatcher()->vkAcquireNextImageKHR(
+    auto result = static_cast<vk::Result>(swapchain.getDispatcher()->vkAcquireNextImageKHR(
         static_cast<VkDevice>(swapchain.getDevice()), static_cast<VkSwapchainKHR>(*swapchain),
         timeout, static_cast<VkSemaphore>(semaphore), static_cast<VkFence>(fence), &image_index));
     return std::make_pair(result, image_index);
@@ -69,16 +65,16 @@ std::pair<vk::Result, uint32_t> SwapchainNextImageWrapper(
 
 vk::Result QueuePresentWrapper(
     const vk::raii::Queue& queue,
-    const vk::PresentInfoKHR& present_info
+    const vk::PresentInfoKHR& presentInfo
 ) {
     return static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
-        static_cast<VkQueue>(*queue), reinterpret_cast<const VkPresentInfoKHR*>(&present_info)));
+        static_cast<VkQueue>(*queue), reinterpret_cast<const VkPresentInfoKHR*>(&presentInfo)));
 }
 
-auto BeginSingleTimeCommands(
+vk::raii::CommandBuffer BeginSingleTimeCommands(
     const vk::raii::Device& device,
     const vk::CommandPool& commandPool
-) -> vk::raii::CommandBuffer {
+) {
     vk::CommandBufferAllocateInfo allocInfo {};
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
     allocInfo.commandPool = commandPool;
@@ -94,10 +90,10 @@ auto BeginSingleTimeCommands(
     return vk::raii::CommandBuffer { std::move(commandBuffers[0]) };
 }
 
-auto EndSingleTimeCommands(
+void EndSingleTimeCommands(
     const Vulkan::CDevice& device,
     vk::raii::CommandBuffer& commandBuffer
-) -> void {
+) {
     commandBuffer.end();
 
     vk::SubmitInfo submitInfo {};
@@ -110,10 +106,10 @@ auto EndSingleTimeCommands(
     commandBuffer.clear();
 }
 
-void generateMipmaps(
+void GenerateMipmaps(
     const vk::raii::PhysicalDevice& physicalDevice,
     const vk::raii::CommandBuffer& cmd,
-    Vulkan::CImage& image
+    const Vulkan::CImage& image
 ) {
     const vk::FormatProperties formatProperties = physicalDevice.getFormatProperties(image.Format());
 
@@ -199,9 +195,9 @@ void generateMipmaps(
 void CopyBuffer(
     const Vulkan::CDevice& device,
     const vk::raii::CommandPool& commandPool,
-    vk::Buffer srcBuffer,
-    vk::Buffer dstBuffer,
-    vk::DeviceSize size
+    const vk::Buffer srcBuffer,
+    const vk::Buffer dstBuffer,
+    const vk::DeviceSize size
 ) {
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*device, commandPool);
 
@@ -301,6 +297,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eColorAttachmentOptimal
     };
 
     m_colorBufferMSAA = CImage {
@@ -310,6 +307,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment,
         vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eColorAttachmentOptimal,
         1,
         vk::SampleCountFlagBits::e8
     };
@@ -321,15 +319,10 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::ImageAspectFlagBits::eDepth,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal,
         1,
         vk::SampleCountFlagBits::e8
     };
-
-    vk::DebugUtilsObjectNameInfoEXT nameInfo;
-    nameInfo.objectType = vk::ObjectType::eImage;
-    nameInfo.objectHandle = reinterpret_cast<uint64_t>(static_cast<VkImage>(*m_depthBufferMSAA));
-    nameInfo.pObjectName = "Main Depth Texture";
-    m_context.Device()->setDebugUtilsObjectNameEXT(nameInfo);
 
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
     const CShader fragmentShader(m_context, CShader::Type::eFragment, "shader.frag.spv");
@@ -349,8 +342,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     auto stagingBuffer = CHostBuffer { m_context, imageSize, vk::BufferUsageFlagBits::eTransferSrc };
     auto commandPool = m_context.Device()->createCommandPool({
-            vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-            m_context.Device().GraphicsQueue().FamilyIndex()
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        m_context.Device().GraphicsQueue().FamilyIndex()
     });
     std::memcpy(stagingBuffer.Data(), image->pixels, imageSize);
 
@@ -361,6 +354,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eTransferDstOptimal,
         static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1
     };
 
@@ -368,7 +362,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     {
         m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
         m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) });
-        generateMipmaps(*m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
+        GenerateMipmaps(*m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
     }
     EndSingleTimeCommands(m_context.Device(), commandBuffer);
 
@@ -652,6 +646,16 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 }
 
+CRenderer::~CRenderer() {
+    if (**m_context.Device()) {
+        try {
+            m_context.Device()->waitIdle();
+        } catch (const vk::SystemError& e) {
+            Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
+        }
+    }
+}
+
 std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
     try {
         return std::make_unique<CRenderer>(window);
@@ -663,107 +667,84 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 
 void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     CFrameData& frameData = m_frameData[m_frameIndex];
-    const vk::raii::Device& deviceHandle = *m_context.Device();
-    const vk::raii::SwapchainKHR& swapchainHandle = *m_swapchain;
+    const CDevice& device = m_context.Device();
     auto& cmd = frameData.GetCommandBuffers()[0];
-
 
     UpdateUniformBuffer(m_swapchain.Extent(), m_uniformBuffers, m_frameIndex, view, deltaTime);
 
-    // #region ACQUIRE_IMAGE
-    vk::Result result = deviceHandle.waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+    // Wait for fence to ensure that the previous frame rendering is finished
+    vk::Result result = device->waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
     if (result != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
     }
 
+    // Acquire next image from the swapchain
     std::uint32_t imageIndex;
     std::tie(result, imageIndex) = SwapchainNextImageWrapper(
-        swapchainHandle,
+        *m_swapchain,
         std::numeric_limits<std::uint64_t>::max(),
-        *frameData.GetImageAvailableSemaphore(),
-        nullptr
+        *frameData.GetImageAvailableSemaphore(), nullptr
     );
 
     if (result == vk::Result::eErrorOutOfDateKHR) {
-        for (auto& frame : m_frameData) {
-            result = deviceHandle.waitForFences({ frame.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
-            if (result != vk::Result::eSuccess) {
-                throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
-            }
-        }
-        frameData.RecreateImageAvailableSemaphore();
-        m_swapchain.Recreate();
-
+        Resize(frameData);
         return;
     }
+
     if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
         throw std::runtime_error("Failed to acquire swapchain image: " + vk::to_string(result));
     }
 
-    // Reset fence before we can return from function to avoid deadlock
-    deviceHandle.resetFences({ frameData.GetFence() });
-    // #endregion ACQUIRE_IMAGE
+    // Reset fence after resizing to avoid deadlock on next invocation of Draw()
+    device->resetFences({ frameData.GetFence() });
 
-
-    // #region COMMAND_RECORD
+    // Recording render commands
     cmd.reset();
-    vk::CommandBufferBeginInfo beginInfo {};
-    cmd.begin(beginInfo);
+    cmd.begin({});
 
+    // Prepare attachments for main render
     m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
-    m_colorBufferMSAA.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
-    m_depthBufferMSAA.TransitionLayout(cmd, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-    vk::RenderingAttachmentInfo colorAttachInfo{};
+    
+    // Main render
+    vk::RenderingAttachmentInfo colorAttachInfo {};
     colorAttachInfo.imageView = m_colorBufferMSAA.View();
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.5f, 1.0f, 1.0f};
+    colorAttachInfo.clearValue.color = std::array { 0.0f, 0.5f, 1.0f, 1.0f };
     colorAttachInfo.resolveImageView = m_colorBuffer.View();
     colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eMin;
+    colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eAverage;
 
-    vk::RenderingAttachmentInfo depthAttachInfo{};
+    vk::RenderingAttachmentInfo depthAttachInfo {};
     depthAttachInfo.imageView = m_depthBufferMSAA.View();
     depthAttachInfo.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
     depthAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     depthAttachInfo.storeOp = vk::AttachmentStoreOp::eDontCare;
     depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue{1.0f, 0};
 
-    vk::RenderingInfo mainRenderInfo{};
+    vk::RenderingInfo mainRenderInfo {};
     mainRenderInfo.renderArea = vk::Rect2D{ {0, 0}, {renderWidth, renderHeight} };
     mainRenderInfo.layerCount = 1;
     mainRenderInfo.colorAttachmentCount = 1;
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
     mainRenderInfo.pDepthAttachment = &depthAttachInfo;
 
-    // 3. Begin Rendering
     cmd.beginRendering(mainRenderInfo);
-
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
-
-    vk::Viewport viewport {0.0f, 0.0f, (float)renderWidth, (float)renderHeight, 0.0f, 1.0f};
+    vk::Viewport viewport {0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f};
     cmd.setViewport(0, viewport);
     vk::Rect2D scissor {{0, 0}, {renderWidth, renderHeight}};
     cmd.setScissor(0, scissor);
-
     vk::Buffer vertexBuffers[] = { *m_vertexBuffer };
     vk::DeviceSize offsets[] = { 0 };
-
     cmd.bindVertexBuffers(0, vertexBuffers, offsets);
     cmd.bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
     cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, m_descriptorSetsMain[m_frameIndex], {});
     cmd.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
     cmd.endRendering();
 
-
-    // #region RENDER_PASS_BEGIN
-    vk::DebugUtilsLabelEXT labelInfo;
-    labelInfo.pLabelName = "Latest";
-    labelInfo.color = std::array { 1.0f, 0.5f, 0.0f, 1.0f };
-    cmd.beginDebugUtilsLabelEXT(labelInfo);
-
+    // Prepare attachments for swapchain read
     m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eShaderReadOnlyOptimal);
     CImage::CmdTransitionLayout(
         cmd,
@@ -772,34 +753,31 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         vk::ImageLayout::eColorAttachmentOptimal
     );
 
-    vk::RenderingAttachmentInfo swapchainAttachInfo{};
+    // Render to fullscreen triangle
+    vk::RenderingAttachmentInfo swapchainAttachInfo {};
     swapchainAttachInfo.imageView = m_swapchain.ImageViews()[imageIndex];
     swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     swapchainAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     swapchainAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
     swapchainAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f};
 
-    vk::RenderingInfo swapchainRenderInfo{};
+    vk::RenderingInfo swapchainRenderInfo {};
     swapchainRenderInfo.renderArea = vk::Rect2D{ {0, 0}, m_swapchain.Extent() };
     swapchainRenderInfo.layerCount = 1;
     swapchainRenderInfo.colorAttachmentCount = 1;
     swapchainRenderInfo.pColorAttachments = &swapchainAttachInfo;
 
-    // 3. Begin Rendering
     cmd.beginRendering(swapchainRenderInfo);
-
-    viewport = vk::Viewport {0.0f, 0.0f, (float)m_swapchain.Extent().width, (float)m_swapchain.Extent().height, 0.0f, 1.0f};
+    viewport = vk::Viewport {0.0f, 0.0f, static_cast<float>(m_swapchain.Extent().width), static_cast<float>(m_swapchain.Extent().height), 0.0f, 1.0f};
     cmd.setViewport(0, viewport);
     scissor = vk::Rect2D {{0, 0}, m_swapchain.Extent()};
     cmd.setScissor(0, scissor);
-
     cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
     cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain.Layout(), 0, m_descriptorSetsSwapchain[m_frameIndex], {});
     cmd.draw(3, 1, 0, 0);
-
     cmd.endRendering();
-    cmd.endDebugUtilsLabelEXT();
 
+    // Prepare for presentation
     CImage::CmdTransitionLayout(
         cmd,
         m_swapchain.Images()[imageIndex],
@@ -808,11 +786,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     );
 
     cmd.end();
-    // #endregion COMMAND_RECORD
 
-    // #region COMMAND_SUBMIT
+    // Submit command buffer
     vk::SubmitInfo submitInfo {};
 
+    // Wait for image to be available
     vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &*frameData.GetImageAvailableSemaphore();
@@ -821,45 +799,41 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &*frameData.GetCommandBuffers()[0];
 
-    vk::Semaphore signalSemaphores[] = { m_renderFinishedSemaphores[imageIndex] };
+    // Signal that rendering is finished for that image
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.pSignalSemaphores = &*m_renderFinishedSemaphores[imageIndex];
 
-    const CDevice& device = m_context.Device();
     device.GraphicsQueue()->submit(submitInfo, frameData.GetFence());
-    // #endregion COMMAND_RECORD
 
-    // #region PRESENT
+    // Present
     vk::PresentInfoKHR presentInfo {};
 
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = &*m_renderFinishedSemaphores[imageIndex];
 
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &*swapchainHandle;
-
+    presentInfo.pSwapchains = &**m_swapchain;
     presentInfo.pImageIndices = &imageIndex;
 
     result = QueuePresentWrapper(*device.PresentQueue(), presentInfo);
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || GetResizedState()) {
-        SetResizedState(false);
-        for (auto& frame : m_frameData) {
-            result = deviceHandle.waitForFences({ frame.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
-            if (result != vk::Result::eSuccess) {
-                throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
-            }
-        }
-        frameData.RecreateImageAvailableSemaphore();
-        m_swapchain.Recreate();
-
+    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || IsResized()) {
+        Resize(frameData);
         return;
     }
-    // #endregion PRESENT
 
     m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
 }
 
-CRenderer::~CRenderer() {
-    m_context.Device()->waitIdle();
+void CRenderer::Resize(CFrameData& currentFrameData) {
+    for (auto& frame : m_frameData) {
+        vk::Result result = m_context.Device()->waitForFences({ frame.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+        if (result != vk::Result::eSuccess) {
+            throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
+        }
+    }
+
+    currentFrameData.RecreateImageAvailableSemaphore();
+    m_swapchain.Recreate();
+    m_isResized = false;
 }
 }

@@ -17,10 +17,10 @@ public:
     CQueue& operator=(CQueue&&) = default;
     ~CQueue() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Queue& { return m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Queue* { return &m_handle; }
+    [[nodiscard]] const vk::raii::Queue& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::Queue* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] auto FamilyIndex() const noexcept -> std::uint32_t { return m_familyIndex; }
+    [[nodiscard]] std::uint32_t FamilyIndex() const noexcept { return m_familyIndex; }
 
 private:
     vk::raii::Queue m_handle { nullptr };

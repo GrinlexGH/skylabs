@@ -19,8 +19,8 @@ public:
     CAllocator& operator=(CAllocator&& rhs) noexcept = default;
     ~CAllocator() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vma::raii::Allocator& { return m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vma::raii::Allocator* { return &m_handle; }
+    [[nodiscard]] const vma::raii::Allocator& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vma::raii::Allocator* operator->() const noexcept { return &m_handle; }
 
 private:
     vma::raii::Allocator m_handle { nullptr };

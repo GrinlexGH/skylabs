@@ -12,27 +12,6 @@ CContext::CContext(const IWindow* const window) :
     m_allocator(*m_instance, *m_physicalDevice, m_device)
 {}
 
-bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
-    return Profile::CheckPhysicalDeviceSupport(**m_instance, **physicalDevice);
-}
-
-int CContext::RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const {
-    int score = 0;
-
-    if (!IsDeviceSuitable(physicalDevice))
-        return score;
-
-    switch (physicalDevice->getProperties2().properties.deviceType) {
-        case vk::PhysicalDeviceType::eDiscreteGpu: score += 2000; break;
-        case vk::PhysicalDeviceType::eIntegratedGpu: score += 800; break;
-        case vk::PhysicalDeviceType::eVirtualGpu: score += 500; break;
-        case vk::PhysicalDeviceType::eCpu: score += 200; break;
-        case vk::PhysicalDeviceType::eOther: score += 100; break;
-    }
-
-    return score;
-}
-
 CPhysicalDevice CContext::SelectPhysicalDevice() {
     CPhysicalDevice selectedGPU { nullptr };
     int maxScore = 0;
@@ -52,5 +31,26 @@ CPhysicalDevice CContext::SelectPhysicalDevice() {
     m_physicalDevice = selectedGPU;
 
     return selectedGPU;
+}
+
+bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
+    return Profile::CheckPhysicalDeviceSupport(**m_instance, **physicalDevice);
+}
+
+int CContext::RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const {
+    int score = 0;
+
+    if (!IsDeviceSuitable(physicalDevice))
+        return score;
+
+    switch (physicalDevice->getProperties2().properties.deviceType) {
+        case vk::PhysicalDeviceType::eDiscreteGpu: score += 2000; break;
+        case vk::PhysicalDeviceType::eIntegratedGpu: score += 800; break;
+        case vk::PhysicalDeviceType::eVirtualGpu: score += 500; break;
+        case vk::PhysicalDeviceType::eCpu: score += 200; break;
+        case vk::PhysicalDeviceType::eOther: score += 100; break;
+    }
+
+    return score;
 }
 }

@@ -3,11 +3,6 @@
 #include <skylabs/core/render/vulkan/vertex_format.hpp>
 
 namespace Vulkan {
-enum class CBlendPreset
-{
-    eDefault,
-};
-
 class CPipeline
 {
 public:
@@ -17,7 +12,7 @@ public:
         std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
         std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
         const CVertexFormat& vertexFormat,
-        vk::PipelineRenderingCreateInfo renderingInfo,
+        const vk::PipelineRenderingCreateInfo& renderingInfo,
         vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1
     );
     CPipeline(const CPipeline&) = delete;
@@ -26,11 +21,11 @@ public:
     CPipeline& operator=(CPipeline&&) noexcept = default;
     ~CPipeline() = default;
 
-    [[nodiscard]] auto operator*() const noexcept -> const vk::raii::Pipeline& { return m_handle; }
-    [[nodiscard]] auto operator->() const noexcept -> const vk::raii::Pipeline* { return &m_handle; }
-    [[nodiscard]] auto Handle() const noexcept -> const vk::raii::Pipeline& { return m_handle; }
+    [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }
+    [[nodiscard]] const vk::raii::Pipeline& Handle() const noexcept { return m_handle; }
 
-    [[nodiscard]] auto Layout() -> const vk::raii::PipelineLayout& { return m_layout; }
+    [[nodiscard]] const vk::raii::PipelineLayout& Layout() { return m_layout; }
 
 private:
     vk::raii::Pipeline m_handle { nullptr };
