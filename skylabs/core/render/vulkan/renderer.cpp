@@ -566,6 +566,83 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
 
+    // Compute pipeline
+    m_computeBuffer = CImage {
+        m_context,
+        vk::Extent2D { renderWidth, renderHeight },
+        vk::Format::eR8G8B8A8Unorm,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
+        vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eGeneral
+    };
+
+    // Descriptor set layout
+    vk::DescriptorSetLayoutBinding storageBinding {};
+    storageBinding.binding = 0;
+    storageBinding.descriptorCount = 1;
+    storageBinding.descriptorType = vk::DescriptorType::eStorageImage;
+    storageBinding.stageFlags = vk::ShaderStageFlagBits::eCompute;
+    storageBinding.pImmutableSamplers = nullptr;
+
+    std::array bindingsCompute = { storageBinding };
+    layoutInfo = vk::DescriptorSetLayoutCreateInfo {};
+    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindingsCompute.size());
+    layoutInfo.pBindings = bindingsCompute.data();
+    m_descriptorSetLayoutCompute = vk::raii::DescriptorSetLayout { *m_context.Device(), layoutInfo };
+
+    // Descriptor pool
+    std::array<vk::DescriptorPoolSize, 1> poolSizesCompute {};
+    poolSizesCompute[0].type = vk::DescriptorType::eStorageImage;
+    poolSizesCompute[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+
+    poolInfo = vk::DescriptorPoolCreateInfo {};
+    poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizesCompute.size());
+    poolInfo.pPoolSizes = poolSizesCompute.data();
+    poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+    m_descriptorPoolCompute = vk::raii::DescriptorPool { *m_context.Device(), poolInfo };
+
+    // Descriptor sets
+    layouts = std::vector<vk::DescriptorSetLayout>(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutCompute);
+    descriptorAllocInfo = vk::DescriptorSetAllocateInfo {};
+    descriptorAllocInfo.descriptorPool = m_descriptorPoolCompute;
+    descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+    descriptorAllocInfo.pSetLayouts = layouts.data();
+    m_descriptorSetsCompute = (**m_context.Device()).allocateDescriptorSets(descriptorAllocInfo);
+
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
+        vk::DescriptorImageInfo imageInfo {};
+        imageInfo.imageLayout = vk::ImageLayout::eGeneral;
+        imageInfo.imageView = m_computeBuffer.View();
+
+        vk::WriteDescriptorSet descriptorWrite {};
+        descriptorWrite.dstSet = m_descriptorSetsCompute[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pImageInfo = &imageInfo;
+
+        m_context.Device()->updateDescriptorSets(descriptorWrite, nullptr);
+    }
+
+    // Shaders
+    CShader computeShader(m_context, CShader::Type::eCompute, "shader.comp.spv");
+
+    // Pipeline
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &*m_descriptorSetLayoutCompute;
+    m_computePipelineLayout = m_context.Device()->createPipelineLayout(pipelineLayoutInfo);
+
+    vk::ComputePipelineCreateInfo computePipelineCreateInfo {};
+    computePipelineCreateInfo.stage = computeShader.GetPipelineShaderCreateInfo();
+    computePipelineCreateInfo.layout = m_computePipelineLayout;
+    m_computePipeline = m_context.Device()->createComputePipeline(nullptr, computePipelineCreateInfo);
+
+
+    // Swapchain pipeline
+    // Descriptor set layout
     vk::DescriptorSetLayoutBinding samplerBinding {};
     samplerBinding.binding = 0;
     samplerBinding.descriptorCount = 1;
@@ -573,7 +650,14 @@ CRenderer::CRenderer(const IWindow* const window) {
     samplerBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
     samplerBinding.pImmutableSamplers = nullptr;
 
-    std::array bindingsSwapchain = { samplerBinding };
+    vk::DescriptorSetLayoutBinding samplerBindingCompute {};
+    samplerBindingCompute.binding = 1;
+    samplerBindingCompute.descriptorCount = 1;
+    samplerBindingCompute.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    samplerBindingCompute.stageFlags = vk::ShaderStageFlagBits::eFragment;
+    samplerBindingCompute.pImmutableSamplers = nullptr;
+
+    std::array bindingsSwapchain = { samplerBinding, samplerBindingCompute };
 
     layoutInfo = vk::DescriptorSetLayoutCreateInfo {};
     layoutInfo.bindingCount = static_cast<std::uint32_t>(bindingsSwapchain.size());
@@ -581,11 +665,12 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_descriptorSetLayoutSwapchain = vk::raii::DescriptorSetLayout { *m_context.Device(), layoutInfo };
 
-
-
-    std::array<vk::DescriptorPoolSize, 1> poolSizesSwapchain {};
+    // Descriptor pool
+    std::array<vk::DescriptorPoolSize, 2> poolSizesSwapchain {};
     poolSizesSwapchain[0].type = vk::DescriptorType::eCombinedImageSampler;
     poolSizesSwapchain[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+    poolSizesSwapchain[1].type = vk::DescriptorType::eCombinedImageSampler;
+    poolSizesSwapchain[1].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
 
     poolInfo = vk::DescriptorPoolCreateInfo {};
     poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizesSwapchain.size());
@@ -594,17 +679,16 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_descriptorPoolSwapchain = vk::raii::DescriptorPool { *m_context.Device(), poolInfo };
 
-
-
+    // Descriptor sets
     layouts = std::vector<vk::DescriptorSetLayout>(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutSwapchain);
     descriptorAllocInfo = vk::DescriptorSetAllocateInfo {};
     descriptorAllocInfo.descriptorPool = m_descriptorPoolSwapchain;
     descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
     descriptorAllocInfo.pSetLayouts = layouts.data();
-
     m_descriptorSetsSwapchain = (**m_context.Device()).allocateDescriptorSets(descriptorAllocInfo);
 
     m_mainSampler = CSampler { m_context };
+    m_computeSampler = CSampler { m_context };
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorImageInfo imageInfo {};
@@ -615,6 +699,19 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::WriteDescriptorSet descriptorWrite {};
         descriptorWrite.dstSet = m_descriptorSetsSwapchain[i];
         descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pImageInfo = &imageInfo;
+
+        m_context.Device()->updateDescriptorSets(descriptorWrite, nullptr);
+
+        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfo.imageView = m_computeBuffer.View();
+        imageInfo.sampler = *m_computeSampler;
+
+        descriptorWrite.dstSet = m_descriptorSetsSwapchain[i];
+        descriptorWrite.dstBinding = 1;
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
         descriptorWrite.descriptorCount = 1;
@@ -744,7 +841,17 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmd.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
     cmd.endRendering();
 
+    // Compute
+    m_computeBuffer.TransitionLayout(cmd, vk::ImageLayout::eGeneral);
+
+    cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
+    cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, m_descriptorSetsCompute[m_frameIndex], {});
+    uint32_t gx = renderWidth; // (renderWidth  + 7) / 8;
+    uint32_t gy = renderHeight; // (renderHeight + 7) / 8;
+    cmd.dispatch(gx, gy, 1);
+
     // Prepare attachments for swapchain read
+    m_computeBuffer.TransitionLayout(cmd, vk::ImageLayout::eShaderReadOnlyOptimal);
     m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eShaderReadOnlyOptimal);
     CImage::CmdTransitionLayout(
         cmd,
@@ -759,7 +866,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     swapchainAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     swapchainAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    swapchainAttachInfo.clearValue.color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f};
+    swapchainAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
 
     vk::RenderingInfo swapchainRenderInfo {};
     swapchainRenderInfo.renderArea = vk::Rect2D{ {0, 0}, m_swapchain.Extent() };

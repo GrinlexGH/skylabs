@@ -40,6 +40,12 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
                     vk::AccessFlagBits2::eNone
                 };
 
+            case vk::ImageLayout::eGeneral:
+                return {
+                    vk::PipelineStageFlagBits2::eComputeShader,
+                    vk::AccessFlagBits2::eShaderWrite
+                };
+
             default:
                 assert(false && "Unsupported layout transition!");
                 return {

@@ -73,6 +73,17 @@ private:
     CSampler m_modelTextureSampler { nullptr };
 
 
+    CImage m_computeBuffer { nullptr };
+
+    vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
+    vk::raii::DescriptorPool m_descriptorPoolCompute { nullptr };
+    std::vector<vk::DescriptorSet> m_descriptorSetsCompute;
+    vk::raii::PipelineLayout m_computePipelineLayout { nullptr };
+    vk::raii::Pipeline m_computePipeline { nullptr };
+
+    CSampler m_computeSampler { nullptr };
+
+
     std::uint32_t m_frameIndex = 0;
 };
 }

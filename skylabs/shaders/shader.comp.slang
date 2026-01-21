@@ -1,42 +1,16 @@
-struct Particle
-{
-    float2 position;
-    float2 velocity;
-    float4 color;
-};
+WTexture2D<float4> outImage;
 
-struct ParameterUBO
-{
-    float deltaTime;
-};
-
-[[vk::binding(0)]]
-ConstantBuffer<ParameterUBO> ubo;
-
-[[vk::binding(1)]]
-StructuredBuffer<Particle> particlesIn;
-
-[[vk::binding(2)]]
-RWStructuredBuffer<Particle> particlesOut;
-
-[numthreads(256, 1, 1)]
 [shader("compute")]
-void main(uint3 dispatchThreadID : SV_DispatchThreadID)
-{
-    uint index = dispatchThreadID.x;
+[numthreads(8, 8, 1)]
+void main(uint3 threadId: SV_DispatchThreadID, uint3 groupId: SV_GroupID) {
+    uint2 pixel = threadId.xy;
+    uint2 size;
+    outImage.GetDimensions(size.x, size.y);
 
-    Particle particleIn = particlesIn[index];
+    if (pixel.x >= size.x || pixel.y >= size.y)
+        return;
 
-    particlesOut[index].position = particleIn.position + particleIn.velocity * ubo.deltaTime;
-    particlesOut[index].velocity = particleIn.velocity;
-    particlesOut[index].color = particleIn.color;
+    float4 color = float4(groupId.x / 32.0f, groupId.y / 32.0f, 0.0f, 1.0f);
 
-    if (particlesOut[index].position.x <= -1.0 || particlesOut[index].position.x >= 1.0)
-    {
-        particlesOut[index].velocity.x = -particlesOut[index].velocity.x;
-    }
-    if (particlesOut[index].position.y <= -1.0 || particlesOut[index].position.y >= 1.0)
-    {
-        particlesOut[index].velocity.y = -particlesOut[index].velocity.y;
-    }
+    outImage.Store(pixel, color);
 }
