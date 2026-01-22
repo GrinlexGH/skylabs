@@ -22,7 +22,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("glm/1.0.3")
         self.requires("benchmark/1.9.5")
         self.requires("vulkan-memory-allocator-hpp/3.3.0")
-        self.requires("sdl_image/3.2.6")
+        self.requires("sdl_image/3.4.0")
         self.requires("sdl/3.4.0")
         self.requires("boost/1.90.0")
         self.requires("steamworks_sdk/1.63")
