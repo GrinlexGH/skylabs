@@ -13,7 +13,6 @@ public:
         vk::ImageTiling tiling,
         vk::ImageUsageFlags usage,
         vk::ImageAspectFlags imageAspectFlags,
-        vk::ImageLayout initialLayout = vk::ImageLayout::eUndefined,
         std::uint32_t mipLevels = 1,
         vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1
     );

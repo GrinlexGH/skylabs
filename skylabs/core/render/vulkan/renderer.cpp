@@ -297,7 +297,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
-        vk::ImageLayout::eColorAttachmentOptimal
     };
 
     m_colorBufferMSAA = CImage {
@@ -307,7 +306,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eColorAttachment,
         vk::ImageAspectFlagBits::eColor,
-        vk::ImageLayout::eColorAttachmentOptimal,
         1,
         vk::SampleCountFlagBits::e8
     };
@@ -319,7 +317,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::ImageAspectFlagBits::eDepth,
-        vk::ImageLayout::eDepthStencilAttachmentOptimal,
         1,
         vk::SampleCountFlagBits::e8
     };
@@ -354,7 +351,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
-        vk::ImageLayout::eTransferDstOptimal,
         static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1
     };
 
@@ -574,7 +570,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
-        vk::ImageLayout::eGeneral
     };
 
     // Descriptor set layout
@@ -801,6 +796,8 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     // Prepare attachments for main render
     m_colorBuffer.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
+    m_colorBufferMSAA.TransitionLayout(cmd, vk::ImageLayout::eColorAttachmentOptimal);
+    m_depthBufferMSAA.TransitionLayout(cmd, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     // Main render
     vk::RenderingAttachmentInfo colorAttachInfo {};
