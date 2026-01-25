@@ -32,6 +32,8 @@ public:
     [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
     [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
 
+    void SetLayout(const vk::ImageLayout layout) noexcept { m_layout = layout; }
+
     void Clear();
 
     static void CmdTransitionLayout(
