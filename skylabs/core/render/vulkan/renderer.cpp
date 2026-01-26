@@ -736,6 +736,26 @@ CRenderer::CRenderer(const IWindow* const window) {
         renderingInfo,
         vk::SampleCountFlagBits::e1
     };
+
+    auto cmd = BeginSingleTimeCommands(*m_context.Device(), commandPool);
+    vk::ImageMemoryBarrier2 releaseBarrier {};
+    releaseBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
+    releaseBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
+    releaseBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
+    releaseBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
+    releaseBarrier.oldLayout = vk::ImageLayout::eUndefined;
+    releaseBarrier.newLayout = vk::ImageLayout::eGeneral;
+    releaseBarrier.srcQueueFamilyIndex = m_context.Device().GraphicsQueue().FamilyIndex();
+    releaseBarrier.dstQueueFamilyIndex = m_context.Device().ComputeQueue().FamilyIndex();
+    releaseBarrier.image = *m_computeBuffer;
+    releaseBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+
+    vk::DependencyInfo releaseDependencyInfo {};
+    releaseDependencyInfo.imageMemoryBarrierCount = 1;
+    releaseDependencyInfo.pImageMemoryBarriers = &releaseBarrier;
+
+    cmd.pipelineBarrier2(releaseDependencyInfo);
+    EndSingleTimeCommands(m_context.Device(), cmd);
 }
 
 CRenderer::~CRenderer() {
@@ -822,7 +842,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue{1.0f, 0};
 
     vk::RenderingInfo mainRenderInfo {};
-    mainRenderInfo.renderArea = vk::Rect2D{ {0, 0}, {renderWidth, renderHeight} };
+    mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
     mainRenderInfo.layerCount = 1;
     mainRenderInfo.colorAttachmentCount = 1;
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
@@ -830,9 +850,9 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     cmdMain.beginRendering(mainRenderInfo);
     cmdMain.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
-    vk::Viewport viewport {0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f};
+    vk::Viewport viewport { 0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f };
     cmdMain.setViewport(0, viewport);
-    vk::Rect2D scissor {{0, 0}, {renderWidth, renderHeight}};
+    vk::Rect2D scissor { { 0, 0 }, { renderWidth, renderHeight } };
     cmdMain.setScissor(0, scissor);
     vk::Buffer vertexBuffers[] = { *m_vertexBuffer };
     vk::DeviceSize offsets[] = { 0 };
@@ -857,23 +877,22 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdComp.reset();
     cmdComp.begin({});
 
-    vk::ImageMemoryBarrier2 computeLayoutBarrier {};
-    computeLayoutBarrier.srcStageMask = vk::PipelineStageFlagBits2::eAllCommands;
-    computeLayoutBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
-    computeLayoutBarrier.dstStageMask = vk::PipelineStageFlagBits2::eComputeShader;
-    computeLayoutBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
-    computeLayoutBarrier.oldLayout = m_computeBuffer.Layout();
-    computeLayoutBarrier.newLayout = vk::ImageLayout::eGeneral;
-    computeLayoutBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
-    computeLayoutBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
-    computeLayoutBarrier.image = *m_computeBuffer;
-    computeLayoutBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+    vk::ImageMemoryBarrier2 acquireCompute {};
+    acquireCompute.srcStageMask = vk::PipelineStageFlagBits2::eNone;
+    acquireCompute.srcAccessMask = vk::AccessFlagBits2::eNone;
+    acquireCompute.dstStageMask = vk::PipelineStageFlagBits2::eComputeShader;
+    acquireCompute.dstAccessMask = vk::AccessFlagBits2::eShaderWrite;
+    acquireCompute.oldLayout = m_computeBuffer.Layout();
+    acquireCompute.newLayout = vk::ImageLayout::eGeneral;
+    acquireCompute.srcQueueFamilyIndex = device.GraphicsQueue().FamilyIndex();
+    acquireCompute.dstQueueFamilyIndex = device.ComputeQueue().FamilyIndex();
+    acquireCompute.image = *m_computeBuffer;
+    acquireCompute.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
 
-    vk::DependencyInfo computeLayoutDependencyInfo {};
-    computeLayoutDependencyInfo.imageMemoryBarrierCount = 1;
-    computeLayoutDependencyInfo.pImageMemoryBarriers = &computeLayoutBarrier;
-
-    cmdComp.pipelineBarrier2(computeLayoutDependencyInfo);
+    vk::DependencyInfo depAcquireCompute {};
+    depAcquireCompute.imageMemoryBarrierCount = 1;
+    depAcquireCompute.pImageMemoryBarriers = &acquireCompute;
+    cmdComp.pipelineBarrier2(depAcquireCompute);
 
     cmdComp.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
     cmdComp.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, m_descriptorSetsCompute[m_frameIndex], {});
@@ -929,7 +948,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     depAcquireGraph.imageMemoryBarrierCount = 1;
     depAcquireGraph.pImageMemoryBarriers = &acquireGraphics;
     cmdFina.pipelineBarrier2(depAcquireGraph);
-    m_computeBuffer.SetLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
     m_colorBuffer.TransitionLayout(cmdFina, vk::ImageLayout::eShaderReadOnlyOptimal);
     CImage::CmdTransitionLayout(
@@ -963,6 +981,25 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdFina.draw(3, 1, 0, 0);
     cmdFina.endRendering();
 
+    vk::ImageMemoryBarrier2 releaseGraphics {};
+    releaseGraphics.srcStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
+    releaseGraphics.srcAccessMask = vk::AccessFlagBits2::eShaderRead;
+    releaseGraphics.dstStageMask = vk::PipelineStageFlagBits2::eNone;
+    releaseGraphics.dstAccessMask = vk::AccessFlagBits2::eNone;
+    releaseGraphics.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+    releaseGraphics.newLayout = vk::ImageLayout::eGeneral;
+    releaseGraphics.srcQueueFamilyIndex = device.GraphicsQueue().FamilyIndex();
+    releaseGraphics.dstQueueFamilyIndex = device.ComputeQueue().FamilyIndex();
+    releaseGraphics.image = *m_computeBuffer;
+    releaseGraphics.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+
+    vk::DependencyInfo depReleaseGraph {};
+    depReleaseGraph.imageMemoryBarrierCount = 1;
+    depReleaseGraph.pImageMemoryBarriers = &releaseGraphics;
+    cmdFina.pipelineBarrier2(depReleaseGraph);
+
+    m_computeBuffer.SetLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+
     // Prepare for presentation
     CImage::CmdTransitionLayout(
         cmdFina,
@@ -974,16 +1011,16 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdFina.end();
 
     // Submit command buffer
-    vk::Semaphore waitSems[] = { *frameData.GetImageAvailableSemaphore(), semMain, semComp };
-    vk::PipelineStageFlags waitStages[] = {
+    std::array<vk::Semaphore, 3> waitSems = { *frameData.GetImageAvailableSemaphore(), semMain, semComp };
+    std::array<vk::PipelineStageFlags, waitSems.size()> waitStages = {
         vk::PipelineStageFlagBits::eColorAttachmentOutput,
         vk::PipelineStageFlagBits::eColorAttachmentOutput,
         vk::PipelineStageFlagBits::eFragmentShader
     };
     vk::SubmitInfo finalSubmit{};
-    finalSubmit.waitSemaphoreCount = 3;
-    finalSubmit.pWaitSemaphores = waitSems;
-    finalSubmit.pWaitDstStageMask = waitStages;
+    finalSubmit.waitSemaphoreCount = waitSems.size();
+    finalSubmit.pWaitSemaphores = waitSems.data();
+    finalSubmit.pWaitDstStageMask = waitStages.data();
     finalSubmit.commandBufferCount = 1;
     finalSubmit.pCommandBuffers = &*cmdFina;
     finalSubmit.signalSemaphoreCount = 1;
