@@ -1,8 +1,9 @@
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
-#include <skylabs/core/render/vulkan/profile.hpp>
+#include <skylabs/core/render/vulkan/context/profile.hpp>
 
 namespace Vulkan {
 CAllocator::CAllocator(
+    const CProfile profile,
     const vk::raii::Instance& instance,
     const vk::raii::PhysicalDevice& physicalDevice,
     const CDevice& device
@@ -32,7 +33,7 @@ CAllocator::CAllocator(
 
     vma::AllocatorCreateInfo allocatorCreateInfo;
     allocatorCreateInfo.flags = flags;
-    allocatorCreateInfo.vulkanApiVersion = Profile::GetVersion();
+    allocatorCreateInfo.vulkanApiVersion = profile.GetAPIVersion();
     allocatorCreateInfo.physicalDevice = physicalDevice;
 
     m_handle = vma::raii::Allocator { instance, *device, allocatorCreateInfo };

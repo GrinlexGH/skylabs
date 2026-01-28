@@ -1,5 +1,7 @@
 #pragma once
+#include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/public/string_utils.hpp>
+
 #include <vulkan/vulkan_raii.hpp>
 
 #include <unordered_map>
@@ -9,7 +11,7 @@ class CInstance
 {
 public:
     explicit CInstance(std::nullptr_t) {}
-    explicit CInstance(std::span<const char* const> requiredExtensions = {});
+    explicit CInstance(CProfile profile, std::span<const char* const> requiredExtensions = {});
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
     CInstance& operator=(CInstance&) = delete;
@@ -23,6 +25,7 @@ public:
 
 private:
     [[nodiscard]] std::vector<const char*> SetupExtensions(
+        CProfile profile,
         const vk::raii::Context& context,
         std::span<const char* const> requiredExtensions,
         const std::vector<const char*>& enabledLayers

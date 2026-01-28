@@ -1,5 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/window.hpp>
+#include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 #include <skylabs/core/render/vulkan/context/queue.hpp>
@@ -10,6 +11,7 @@ class CDevice
 public:
     explicit CDevice(std::nullptr_t) {}
     explicit CDevice(
+        CProfile profile,
         const IWindow* window,
         const CInstance& instance,
         const CPhysicalDevice& physicalDevice
@@ -30,7 +32,7 @@ public:
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return std::ranges::contains(m_enabledExtensions, name); }
 
 private:
-    [[nodiscard]] std::vector<const char*> SetupExtensions(const CPhysicalDevice& gpu);
+    [[nodiscard]] std::vector<const char*> SetupExtensions(CProfile profile, const CPhysicalDevice& gpu);
 
     vk::raii::Device m_handle { nullptr };
 

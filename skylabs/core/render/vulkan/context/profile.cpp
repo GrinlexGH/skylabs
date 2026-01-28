@@ -1,10 +1,36 @@
-#include <skylabs/core/render/vulkan/profile.hpp>
+#include <skylabs/core/render/vulkan/context/profile.hpp>
 
 #include <fmt/format.h>
+#include <frozen/map.h>
 #include <vulkan/vulkan.hpp>
 
-namespace Vulkan::Profile {
-void CheckInstanceSupport() {
+namespace Vulkan {
+constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 2> g_profileMap = {
+    {
+        CProfile::Profiles::eRoadmap2024,
+        CProfile::CProfileMeta {
+            .m_name = VP_KHR_ROADMAP_2024_NAME,
+            .m_specVersion = VP_KHR_ROADMAP_2024_SPEC_VERSION,
+            .m_minApiVersion = VP_KHR_ROADMAP_2024_MIN_API_VERSION
+        }
+    },
+    {
+        CProfile::Profiles::eRoadmap2022,
+        CProfile::CProfileMeta {
+            .m_name = VP_KHR_ROADMAP_2022_NAME,
+            .m_specVersion = VP_KHR_ROADMAP_2022_SPEC_VERSION,
+            .m_minApiVersion = VP_KHR_ROADMAP_2022_MIN_API_VERSION
+        }
+    }
+};
+
+CProfile::CProfile(const Profiles profile) : m_currentProfile(g_profileMap.at(profile)) {}
+
+void CProfile::CheckInstanceSupport() const {
+    VpProfileProperties currentProfile;
+    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+
     vk::Bool32 profileSupported;
     if (vpGetInstanceProfileSupport(nullptr, nullptr, &currentProfile, &profileSupported) != VK_SUCCESS) {
         throw std::runtime_error("Failed to get vulkan profile");
@@ -15,7 +41,11 @@ void CheckInstanceSupport() {
     }
 }
 
-bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) {
+bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) const {
+    VpProfileProperties currentProfile;
+    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+
     vk::Bool32 profileSupported;
     if (vpGetPhysicalDeviceProfileSupport(nullptr, instance, physicalDevice, &currentProfile, &profileSupported) != VK_SUCCESS) {
         throw std::runtime_error("Cannot get physical device profile supported");
@@ -24,7 +54,11 @@ bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDe
     return profileSupported;
 }
 
-VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) {
+VkInstance CProfile::CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const {
+    VpProfileProperties currentProfile;
+    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+
     VpInstanceCreateInfo vpCreateInfo {};
     vpCreateInfo.pCreateInfo = &instanceCreateInfo;
     vpCreateInfo.enabledFullProfileCount = 1;
@@ -38,7 +72,11 @@ VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) {
     return instance;
 }
 
-VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) {
+VkDevice CProfile::CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) const {
+    VpProfileProperties currentProfile;
+    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+
     VpDeviceCreateInfo vpCreateInfo {};
     vpCreateInfo.pCreateInfo = &deviceCreateInfo;
     vpCreateInfo.enabledFullProfileCount = 1;
@@ -53,11 +91,19 @@ VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo&
     return device;
 }
 
-std::uint32_t GetVersion() {
+std::uint32_t CProfile::GetAPIVersion() const {
+    VpProfileProperties currentProfile;
+    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+
     return vpGetProfileAPIVersion(nullptr, &currentProfile);
 }
 
-std::vector<VkExtensionProperties> GetInstanceExtensions() {
+std::vector<VkExtensionProperties> CProfile::GetInstanceExtensions() const {
+    VpProfileProperties currentProfile;
+    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+
     std::uint32_t extensionCount;
     if (vpGetProfileInstanceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, nullptr) != VK_SUCCESS) {
         throw std::runtime_error("Failed to get instance extensions count");
@@ -71,7 +117,11 @@ std::vector<VkExtensionProperties> GetInstanceExtensions() {
     return extensions;
 }
 
-std::vector<VkExtensionProperties> GetDeviceExtensions() {
+std::vector<VkExtensionProperties> CProfile::GetDeviceExtensions() const {
+    VpProfileProperties currentProfile;
+    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+
     std::uint32_t extensionCount;
     if (vpGetProfileDeviceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, nullptr) != VK_SUCCESS) {
         throw std::runtime_error("Failed to get device extensions count");

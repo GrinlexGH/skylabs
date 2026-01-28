@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/profile.hpp>
+#include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/core/render/vulkan/context/device.hpp>
 #include <skylabs/core/render/vulkan/context/extensions.hpp>
 #include <skylabs/public/logging.hpp>
@@ -73,7 +73,7 @@ std::vector<vk::DeviceQueueCreateInfo> GetQueueCreateInfos(const CQueueFamilyInd
     std::ranges::sort(uniqueQueueFamilies);
     const std::size_t uniqueCount = std::distance(uniqueQueueFamilies.begin(), std::ranges::unique(uniqueQueueFamilies).begin());
 
-    constexpr float queuePriority = 0.5f;
+    static float queuePriority = 0.5f;
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     queueCreateInfos.reserve(uniqueCount);
     for (std::size_t i = 0; i < uniqueCount; ++i) {
@@ -90,6 +90,7 @@ std::vector<vk::DeviceQueueCreateInfo> GetQueueCreateInfos(const CQueueFamilyInd
 
 namespace Vulkan {
 CDevice::CDevice(
+    const CProfile profile,
     const IWindow* window,
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice
@@ -99,15 +100,20 @@ CDevice::CDevice(
     const std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(queueFamilyIndices);
 
     // Setup features
-    const std::vector<const char*> enabledExtensions = SetupExtensions(physicalDevice);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(profile, physicalDevice);
+
+    // Enable shader draw parameters on roadmap 2022 profile
+    vk::PhysicalDeviceVulkan11Features features11;
+    features11.shaderDrawParameters = vk::True;
 
     vk::DeviceCreateInfo deviceCreateInfo;
+    deviceCreateInfo.pNext = &features11;
     deviceCreateInfo.queueCreateInfoCount = static_cast<std::uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pQueueCreateInfos = !queueCreateInfos.empty() ? queueCreateInfos.data() : nullptr;
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
-    m_handle = vk::raii::Device { *physicalDevice, Profile::CreateDevice(**physicalDevice, deviceCreateInfo) };
+    m_handle = vk::raii::Device { *physicalDevice, profile.CreateDevice(**physicalDevice, deviceCreateInfo) };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
     m_graphicsQueue = CQueue { m_handle, queueFamilyIndices.m_graphicsFamily, 0 };
@@ -115,7 +121,7 @@ CDevice::CDevice(
     m_computeQueue = CQueue { m_handle, queueFamilyIndices.m_computeFamily, 0 };
 }
 
-std::vector<const char*> CDevice::SetupExtensions(const CPhysicalDevice& gpu) {
+std::vector<const char*> CDevice::SetupExtensions(const CProfile profile, const CPhysicalDevice& gpu) {
     const std::unordered_map<std::string, bool> requestedExtensions = RequestExtensions();
 
     // Find these extensions
@@ -147,7 +153,7 @@ std::vector<const char*> CDevice::SetupExtensions(const CPhysicalDevice& gpu) {
     }
 
     // Add extensions from profile
-    for (const auto& [name, _] : Profile::GetDeviceExtensions()) {
+    for (const auto& [name, _] : profile.GetDeviceExtensions()) {
         m_enabledExtensions.insert(name);
     }
 

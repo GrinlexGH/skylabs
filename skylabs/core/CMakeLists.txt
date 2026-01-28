@@ -15,10 +15,10 @@ target_sources(
         camera.hpp
         render/renderer.hpp
         render/vulkan/window.hpp
-        render/vulkan/profile.hpp
-        render/vulkan/profile.cpp
         render/vulkan/renderer.hpp
         render/vulkan/renderer.cpp
+        render/vulkan/context/profile.hpp
+        render/vulkan/context/profile.cpp
         render/vulkan/context/allocator.hpp
         render/vulkan/context/allocator.cpp
         render/vulkan/context/instance.hpp

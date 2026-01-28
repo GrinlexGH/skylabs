@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/profile.hpp>
+#include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/extensions.hpp>
 #include <skylabs/public/logging.hpp>
@@ -88,14 +88,14 @@ std::unordered_map<std::string_view, bool> RequestExtensions(const std::span<con
 }
 
 namespace Vulkan {
-CInstance::CInstance(const std::span<const char* const> requiredExtensions) {
+CInstance::CInstance(const CProfile profile, const std::span<const char* const> requiredExtensions) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    Profile::CheckInstanceSupport();
+    profile.CheckInstanceSupport();
 
     const vk::raii::Context context;
     const std::vector<const char*> enabledLayers = SetupLayers(context);
-    const std::vector<const char*> enabledExtensions = SetupExtensions(context, requiredExtensions, enabledLayers);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(profile, context, requiredExtensions, enabledLayers);
 
     // Enable extensions
     void* pNext = nullptr;
@@ -126,7 +126,7 @@ CInstance::CInstance(const std::span<const char* const> requiredExtensions) {
     applicationInfo.applicationVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     applicationInfo.pEngineName = Skylabs::NAME;
     applicationInfo.engineVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
-    applicationInfo.apiVersion = Profile::currentProfileApiVersion;
+    applicationInfo.apiVersion = profile.GetAPIVersion();
 
     vk::InstanceCreateInfo instanceCreateInfo {};
     instanceCreateInfo.pNext = pNext;
@@ -136,7 +136,7 @@ CInstance::CInstance(const std::span<const char* const> requiredExtensions) {
     instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     instanceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
-    m_handle = vk::raii::Instance { context, Profile::CreateInstance(instanceCreateInfo) };
+    m_handle = vk::raii::Instance { context, profile.CreateInstance(instanceCreateInfo) };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
 #ifdef DEBUG
@@ -147,6 +147,7 @@ CInstance::CInstance(const std::span<const char* const> requiredExtensions) {
 }
 
 std::vector<const char*> CInstance::SetupExtensions(
+    const CProfile profile,
     const vk::raii::Context& context,
     const std::span<const char* const> requiredExtensions,
     const std::vector<const char*>& enabledLayers
@@ -182,7 +183,7 @@ std::vector<const char*> CInstance::SetupExtensions(
     }
 
     // Add extensions from profile
-    for (const auto& [name, _] : Profile::GetInstanceExtensions()) {
+    for (const auto& [name, _] : profile.GetInstanceExtensions()) {
         m_enabledExtensions.insert(name);
     }
 

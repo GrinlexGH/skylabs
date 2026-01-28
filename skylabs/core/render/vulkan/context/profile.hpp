@@ -20,19 +20,37 @@ extern "C" {
 
 #include <vulkan/vulkan_profiles.hpp>
 
-namespace Vulkan::Profile {
-constexpr inline VpProfileProperties currentProfile = {
-    .profileName = VP_KHR_ROADMAP_2024_NAME,
-    .specVersion = VP_KHR_ROADMAP_2024_SPEC_VERSION
+
+namespace Vulkan {
+class CProfile
+{
+public:
+    struct CProfileMeta {
+        const char* m_name = nullptr;
+        std::uint32_t m_specVersion = 0;
+        std::uint32_t m_minApiVersion = 0;
+    };
+
+    enum class Profiles
+    {
+        eRoadmap2024,
+        eRoadmap2022,
+        eAndroidBaseline2022,
+        eAndroidBaseline2021
+    };
+
+    explicit CProfile(std::nullptr_t) {}
+    explicit CProfile(Profiles profile);
+
+    void CheckInstanceSupport() const;
+    bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) const;
+    VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const;
+    VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) const;
+    std::uint32_t GetAPIVersion() const;
+    std::vector<VkExtensionProperties> GetInstanceExtensions() const;
+    std::vector<VkExtensionProperties> GetDeviceExtensions() const;
+
+private:
+    CProfileMeta m_currentProfile = {};
 };
-
-constexpr inline std::uint32_t currentProfileApiVersion = VP_KHR_ROADMAP_2024_MIN_API_VERSION;
-
-void CheckInstanceSupport();
-bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice);
-VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo);
-VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo);
-std::uint32_t GetVersion();
-std::vector<VkExtensionProperties> GetInstanceExtensions();
-std::vector<VkExtensionProperties> GetDeviceExtensions();
 }

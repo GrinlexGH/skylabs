@@ -1,5 +1,5 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/profile.hpp>
+#include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/public/logging.hpp>
 
 #include <ranges>
@@ -7,9 +7,10 @@
 namespace Vulkan {
 CContext::CContext(const IWindow* const window) :
     m_window(window),
-    m_instance(m_window->GetRequiredInstanceExtensions()),
-    m_device(m_window, m_instance, SelectPhysicalDevice()),
-    m_allocator(*m_instance, *m_physicalDevice, m_device)
+    m_profile(CProfile::Profiles::eRoadmap2022),
+    m_instance(m_profile, m_window->GetRequiredInstanceExtensions()),
+    m_device(m_profile, m_window, m_instance, SelectPhysicalDevice()),
+    m_allocator(m_profile, *m_instance, *m_physicalDevice, m_device)
 {}
 
 CPhysicalDevice CContext::SelectPhysicalDevice() {
@@ -34,7 +35,20 @@ CPhysicalDevice CContext::SelectPhysicalDevice() {
 }
 
 bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
-    return Profile::CheckPhysicalDeviceSupport(**m_instance, **physicalDevice);
+    auto getFeatures = [&]<typename T>() {
+        if (physicalDevice->getDispatcher()->vkGetPhysicalDeviceFeatures2) {
+            return physicalDevice->getFeatures2<vk::PhysicalDeviceFeatures2, T>().template get<T>();
+        }
+        if (physicalDevice->getDispatcher()->vkGetPhysicalDeviceFeatures2KHR) {
+            return physicalDevice->getFeatures2KHR<vk::PhysicalDeviceFeatures2, T>().template get<T>();
+        }
+        return T {};
+    };
+
+    const auto features11 = getFeatures.operator()<vk::PhysicalDeviceVulkan11Features>();
+    bool hasDrawParameters = features11.shaderDrawParameters == vk::True;
+
+    return hasDrawParameters && m_profile.CheckPhysicalDeviceSupport(**m_instance, **physicalDevice);
 }
 
 int CContext::RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const {

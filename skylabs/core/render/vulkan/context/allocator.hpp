@@ -9,6 +9,7 @@ class CAllocator
 public:
     explicit CAllocator(std::nullptr_t) {}
     explicit CAllocator(
+        CProfile profile,
         const vk::raii::Instance& instance,
         const vk::raii::PhysicalDevice& physicalDevice,
         const CDevice& device
