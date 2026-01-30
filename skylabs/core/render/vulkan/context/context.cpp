@@ -7,7 +7,7 @@
 namespace Vulkan {
 CContext::CContext(const IWindow* const window) :
     m_window(window),
-    m_profile(CProfile::Profiles::eRoadmap2022),
+    m_profile(CProfile::Profiles::eRoadmap2024),
     m_instance(m_profile, m_window->GetRequiredInstanceExtensions()),
     m_device(m_profile, m_window, m_instance, SelectPhysicalDevice()),
     m_allocator(m_profile, *m_instance, *m_physicalDevice, m_device)
