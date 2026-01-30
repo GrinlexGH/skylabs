@@ -1,38 +1,29 @@
 #include <skylabs/public/os.hpp>
 
-#include <filesystem>
-
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
-#include <boost/nowide/convert.hpp>
 #endif
 
 namespace OS {
+std::filesystem::path GetExecutableDirectory() {
+    static const std::filesystem::path cachedPath = []() {
+        std::filesystem::path p;
 #ifdef PLATFORM_WINDOWS
-
-std::string GetProgramPath() {
-    static const std::string programPath = [] {
-        std::wstring out(100, L'\0');
+        std::wstring buffer(100, L'\0');
         DWORD size;
         while (true) {
-            size = GetModuleFileNameW(nullptr, out.data(), static_cast<DWORD>(out.size()));
-            if (size < out.size())
+            size = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+            if (size < buffer.size())
                 break;
-            out.resize(out.size() + 100);
+            buffer.resize(buffer.size() + 100);
         }
-        out.resize(size);
-        return boost::nowide::narrow(std::filesystem::path(std::move(out)).parent_path().wstring());
-    }();
-
-    return programPath;
-}
-
-#elifdef PLATFORM_UNIX
-
-std::string GetProgramPath() {
-    static std::filesystem::path programPath = std::filesystem::canonical("/proc/self/exe").remove_filename();
-    return programPath.string();
-}
-
+        p = buffer;
+        p = p.parent_path();
+#else
+        p = std::filesystem::canonical("/proc/self/exe").parent_path();
 #endif
+        return p;
+    }();
+    return cachedPath;
+}
 }

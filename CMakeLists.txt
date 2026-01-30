@@ -6,15 +6,6 @@ set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
-# Options
-if(ANDROID)
-    set(enable_steam_default OFF)
-else()
-    set(enable_steam_default ON)
-endif()
-
-option(SKYLABS_ENABLE_STEAM "Enable Steamworks SDK" ${enable_steam_default})
-
 # Global settings
 include(Skylabs/Skylabs)
 include(Skylabs/CompileOptions)
@@ -23,8 +14,6 @@ include(Skylabs/ThirdParty)
 # Skylabs variables
 set(SKYLABS_ROOT_DIR ${PROJECT_SOURCE_DIR})
 set(SKYLABS_ASSETS_DIR ${SKYLABS_ROOT_DIR}/assets)
-set(SKYLABS_ANDROID_DIR ${SKYLABS_ROOT_DIR}/android)
-set(SKYLABS_ANDROID_GENERATED_ASSETS_DIR ${SKYLABS_ROOT_DIR}/android/app/src/main/assets)
 
 set(SKYLABS_ROOT_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/.output/$<CONFIG>)
 set(SKYLABS_BIN_OUTPUT_DIRECTORY ${SKYLABS_ROOT_OUTPUT_DIRECTORY}/bin)

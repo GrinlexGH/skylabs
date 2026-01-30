@@ -1,5 +1,5 @@
 # Third party libraries
-find_package(SteamworksSDK CONFIG)
+find_package(SteamworksSDK CONFIG REQUIRED)
 
 # Useful libraries
 find_package(SDL3 CONFIG REQUIRED)

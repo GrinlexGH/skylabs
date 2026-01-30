@@ -51,6 +51,7 @@ add_compile_definitions(
     $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>
     VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
     VULKAN_HPP_TYPESAFE_CONVERSION=1
+    VULKAN_HPP_USE_STD_EXPECTED=1
     VMA_STATIC_VULKAN_FUNCTIONS=0
     VMA_DYNAMIC_VULKAN_FUNCTIONS=0
     VP_USE_OBJECT=1
@@ -70,10 +71,6 @@ endif()
 
 if(APPLE)
     add_compile_definitions(PLATFORM_APPLE)
-endif()
-
-if(ANDROID)
-    add_compile_definitions(PLATFORM_ANDROID)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

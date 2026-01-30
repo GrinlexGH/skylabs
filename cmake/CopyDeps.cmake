@@ -42,33 +42,27 @@ if(NOT UNIX)
     return()
 endif()
 
-foreach(MOD ${MODS})
-    file(READ_ELF ${MOD} RUNPATH _old_rpath)
-    if("${_old_rpath}" STREQUAL "")
-        file(READ_ELF ${MOD} RPATH _old_rpath)
+set(_all_files ${APPS} ${LIBS} ${MODS})
+
+foreach(_file IN LISTS _all_files)
+    if(NOT EXISTS "${_file}")
+        continue()
     endif()
+
+    file(READ_ELF "${_file}" RUNPATH _old_rpath)
+    if(NOT _old_rpath)
+        file(READ_ELF "${_file}" RPATH _old_rpath)
+    endif()
+
     string(REPLACE ";" ":" _old_rpath "${_old_rpath}")
-    file(RPATH_CHANGE FILE "${MOD}" OLD_RPATH "${_old_rpath}" NEW_RPATH "\$ORIGIN")
+
+    file(RPATH_CHANGE
+        FILE "${_file}"
+        OLD_RPATH "${_old_rpath}"
+        NEW_RPATH "\$ORIGIN"
+    )
 endforeach()
 
-foreach(APP ${APPS})
-    file(READ_ELF ${APP} RUNPATH _old_rpath)
-    if("${_old_rpath}" STREQUAL "")
-        file(READ_ELF ${APP} RPATH _old_rpath)
-    endif()
-    string(REPLACE ";" ":" _old_rpath "${_old_rpath}")
-    file(RPATH_CHANGE FILE "${APP}" OLD_RPATH "${_old_rpath}" NEW_RPATH "\$ORIGIN")
-endforeach()
-
-foreach(LIB ${LIBS})
-    file(READ_ELF ${LIB} RUNPATH _old_rpath)
-    if("${_old_rpath}" STREQUAL "")
-        file(READ_ELF ${LIB} RPATH _old_rpath)
-    endif()
-    string(REPLACE ";" ":" _old_rpath "${_old_rpath}")
-    file(RPATH_CHANGE FILE "${LIB}" OLD_RPATH "${_old_rpath}" NEW_RPATH "\$ORIGIN")
-endforeach()
-
-if(NOT "${_u_deps}" STREQUAL "")
+if(_u_deps)
     message(WARNING "Unresolved dependencies: ${_u_deps}")
 endif()

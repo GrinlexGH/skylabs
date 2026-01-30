@@ -7,10 +7,6 @@
 #include <stc.hpp>
 #include <fmt/format.h>
 
-#ifdef PLATFORM_ANDROID
-    #include <SDL3/SDL.h>
-#endif
-
 namespace Log {
 enum class Type : std::int8_t
 {
@@ -29,29 +25,6 @@ template <typename... Args>
 void Log(const Type type, const fmt::format_string<Args...>& fmt, Args&&... args) {
     if (type < g_minLogLevel)
         return;
-
-    #ifdef PLATFORM_ANDROID
-
-    const std::scoped_lock lock(g_mutex);
-    switch (type) {
-        case Type::eDebug:
-            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;168;228;160m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
-            break;
-        case Type::eInfo:
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;114;159;207m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
-            break;
-        case Type::eWarning:
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;196;160;0m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
-            break;
-        case Type::eError:
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "\033[38;2;204;0;0m%s\033[0m", fmt::format(fmt, std::forward<Args>(args)...).c_str());
-            break;
-        default:
-            SDL_Log("%s", fmt::format(fmt, std::forward<Args>(args)...).c_str());
-            break;
-    }
-
-    #else
 
     constexpr std::array<std::tuple<std::string_view, int, int, int>, static_cast<std::size_t>(Type::eCount)> logInfo = { {
         { "Debug", 168, 228, 160 },
@@ -85,8 +58,6 @@ void Log(const Type type, const fmt::format_string<Args...>& fmt, Args&&... args
               << fmt::format(fmt, std::forward<Args>(args)...)
               << suffix
               << std::endl;
-
-    #endif
 }
 
 template <class... Args>

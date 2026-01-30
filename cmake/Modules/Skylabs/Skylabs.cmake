@@ -22,7 +22,7 @@ function(skylabs_configure_target target_name)
                 COMMAND_EXPAND_LISTS
                 COMMENT "Copying runtime DLLs to ${target_name} output directory"
             )
-        elseif(NOT ANDROID)
+        else()
             set(cmd "-DOUTPUT_DIR=$<TARGET_FILE_DIR:${target_name}>")
             if(target_type STREQUAL "EXECUTABLE")
                 list(APPEND cmd "-DAPPS=$<TARGET_FILE:${target_name}>")

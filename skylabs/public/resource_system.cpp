@@ -6,30 +6,29 @@
 #include <boost/nowide/fstream.hpp>
 
 namespace {
-std::string GetRelativeResourcePath(const ResourceSystem::ResourceType type, const std::string_view relativePath) {
-    std::string path = OS::GetProgramPath();
-    path.reserve(relativePath.size() + 10);
+std::filesystem::path GetResourcePath(const ResourceSystem::ResourceType type, const std::string_view relativePath) {
+    using enum ResourceSystem::ResourceType;
+
+    const char* folder = "";
     switch (type) {
-        case ResourceSystem::ResourceType::eShader: {
-            path += "/shaders/";
-        } break;
+        case eShader: folder = "shaders"; break;
+        default: break;
     }
-    path += relativePath;
-    return path;
+
+    return OS::GetExecutableDirectory() / folder / relativePath;
 }
 }
 
 namespace ResourceSystem {
 [[nodiscard]] PUBLIC_CLASS std::vector<char> LoadBinary(const ResourceType type, const std::string_view relativePath) {
-    const std::string path = GetRelativeResourcePath(type, relativePath);
+    const std::filesystem::path path = GetResourcePath(type, relativePath);
 
-    boost::nowide::ifstream file(path.c_str(), std::ios_base::ate | std::ios_base::binary);
+    boost::nowide::ifstream file(path, std::ios_base::ate | std::ios_base::binary);
 
     if (!file.is_open()) {
-        if (file.fail()) {
-            throw std::runtime_error("Failed to open file: " + path);
-        }
-        Log::Warning("Couldn't open file: {}", path);
+        auto s = path.u8string();
+        std::string fileName(s.begin(), s.end());
+        Log::Warning("Couldn't open file: {}", fileName);
         return {};
     }
 

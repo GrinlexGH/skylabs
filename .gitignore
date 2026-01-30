@@ -15,12 +15,5 @@ out/
 # Do not ignore vscode launch.json
 !.vscode/launch.json
 
-# Gradle
-android/.gradle
-android/app/.cxx
-# Assets will be copied from <project_root>/assets folder
-android/app/src/main/assets
-android/local.properties
-
 # CMake user presets
 CMakeUserPresets.json

@@ -31,26 +31,26 @@ public:
         std::uint32_t m_minApiVersion = 0;
     };
 
-    enum class Profiles
+    enum class Profiles : std::uint8_t
     {
         eRoadmap2024,
-        eRoadmap2022,
-        eAndroidBaseline2022,
-        eAndroidBaseline2021
+        eRoadmap2022
     };
 
     explicit CProfile(std::nullptr_t) {}
     explicit CProfile(Profiles profile);
 
     void CheckInstanceSupport() const;
-    bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) const;
-    VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const;
-    VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) const;
-    std::uint32_t GetAPIVersion() const;
-    std::vector<VkExtensionProperties> GetInstanceExtensions() const;
-    std::vector<VkExtensionProperties> GetDeviceExtensions() const;
+    [[nodiscard]] bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) const;
+    [[nodiscard]] VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const;
+    [[nodiscard]] VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) const;
+    [[nodiscard]] std::uint32_t GetAPIVersion() const;
+    [[nodiscard]] std::vector<VkExtensionProperties> GetInstanceExtensions() const;
+    [[nodiscard]] std::vector<VkExtensionProperties> GetDeviceExtensions() const;
 
 private:
     CProfileMeta m_currentProfile = {};
+
+    [[nodiscard]] VpProfileProperties GenerateProperties() const;
 };
 }

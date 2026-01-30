@@ -70,16 +70,4 @@ add_custom_target(${CURRENT_TARGET_NAME}
     SOURCES ${SOURCES} ${IMPORTS}
 )
 
-if(ANDROID)
-    # Copy shaders to android apk
-    add_custom_command(
-        TARGET ${CURRENT_TARGET_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-        ${SHADER_OUTPUT_DIRECTORY}
-        ${SKYLABS_ANDROID_GENERATED_ASSETS_DIRECTORY}/shaders
-        WORKING_DIRECTORY ${SHADER_OUTPUT_DIRECTORY}
-        COMMENT "Copying shaders to apk"
-    )
-endif()
-
 skylabs_configure_target(${CURRENT_TARGET_NAME})

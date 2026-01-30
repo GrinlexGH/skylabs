@@ -165,36 +165,6 @@ private:
     void* m_handle;
 };
 
-#ifdef PLATFORM_ANDROID
-
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
-
-__attribute__((visibility("default"))) int main(int argc, char* argv[]) {
-    SDL_Log("Skylabs is starting...");
-
-    try {
-        const std::string libCorePath = "core.so";
-
-        const CLibrary core { libCorePath.c_str() };
-        const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));
-
-        try {
-            const int ret = coreMain(std::span(argv, static_cast<std::size_t>(argc)));
-            return ret;
-        } catch (const std::exception& e) {
-            SDL_LogError(0, "%s", e.what());
-        }
-
-        return 1;
-    } catch (const std::exception& e) {
-        SDL_LogError(0, "%s", e.what());
-        return 1;
-    }
-}
-
-#else
-
 int main(int argc, char* argv[]) {
     try {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
@@ -218,7 +188,5 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 }
-
-#endif
 
 #endif

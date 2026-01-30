@@ -4,6 +4,10 @@
 #include <frozen/map.h>
 #include <vulkan/vulkan.hpp>
 
+#include <algorithm>
+#include <ranges>
+#include <cstring>
+
 namespace Vulkan {
 constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 2> g_profileMap = {
     {
@@ -27,9 +31,7 @@ constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 2> g_profileMa
 CProfile::CProfile(const Profiles profile) : m_currentProfile(g_profileMap.at(profile)) {}
 
 void CProfile::CheckInstanceSupport() const {
-    VpProfileProperties currentProfile;
-    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    VpProfileProperties currentProfile = GenerateProperties();
 
     vk::Bool32 profileSupported;
     if (vpGetInstanceProfileSupport(nullptr, nullptr, &currentProfile, &profileSupported) != VK_SUCCESS) {
@@ -42,9 +44,7 @@ void CProfile::CheckInstanceSupport() const {
 }
 
 bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) const {
-    VpProfileProperties currentProfile;
-    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    VpProfileProperties currentProfile = GenerateProperties();
 
     vk::Bool32 profileSupported;
     if (vpGetPhysicalDeviceProfileSupport(nullptr, instance, physicalDevice, &currentProfile, &profileSupported) != VK_SUCCESS) {
@@ -55,9 +55,7 @@ bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice 
 }
 
 VkInstance CProfile::CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const {
-    VpProfileProperties currentProfile;
-    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    VpProfileProperties currentProfile = GenerateProperties();
 
     VpInstanceCreateInfo vpCreateInfo {};
     vpCreateInfo.pCreateInfo = &instanceCreateInfo;
@@ -73,9 +71,7 @@ VkInstance CProfile::CreateInstance(const VkInstanceCreateInfo& instanceCreateIn
 }
 
 VkDevice CProfile::CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) const {
-    VpProfileProperties currentProfile;
-    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    VpProfileProperties currentProfile = GenerateProperties();
 
     VpDeviceCreateInfo vpCreateInfo {};
     vpCreateInfo.pCreateInfo = &deviceCreateInfo;
@@ -92,17 +88,12 @@ VkDevice CProfile::CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceC
 }
 
 std::uint32_t CProfile::GetAPIVersion() const {
-    VpProfileProperties currentProfile;
-    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
-
+    VpProfileProperties currentProfile = GenerateProperties();
     return vpGetProfileAPIVersion(nullptr, &currentProfile);
 }
 
 std::vector<VkExtensionProperties> CProfile::GetInstanceExtensions() const {
-    VpProfileProperties currentProfile;
-    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    VpProfileProperties currentProfile = GenerateProperties();
 
     std::uint32_t extensionCount;
     if (vpGetProfileInstanceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, nullptr) != VK_SUCCESS) {
@@ -118,9 +109,7 @@ std::vector<VkExtensionProperties> CProfile::GetInstanceExtensions() const {
 }
 
 std::vector<VkExtensionProperties> CProfile::GetDeviceExtensions() const {
-    VpProfileProperties currentProfile;
-    strncpy_s(currentProfile.profileName, m_currentProfile.m_name, VP_MAX_PROFILE_NAME_SIZE);
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    VpProfileProperties currentProfile = GenerateProperties();
 
     std::uint32_t extensionCount;
     if (vpGetProfileDeviceExtensionProperties(nullptr, &currentProfile, nullptr, &extensionCount, nullptr) != VK_SUCCESS) {
@@ -133,6 +122,19 @@ std::vector<VkExtensionProperties> CProfile::GetDeviceExtensions() const {
     }
 
     return extensions;
+}
+
+VpProfileProperties CProfile::GenerateProperties() const {
+    VpProfileProperties currentProfile;
+
+    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    std::ranges::copy_n(
+        m_currentProfile.m_name,
+        static_cast<int>(std::strlen(m_currentProfile.m_name) + 1),
+        currentProfile.profileName
+    );
+
+    return currentProfile;
 }
 }
 

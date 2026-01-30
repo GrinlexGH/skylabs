@@ -27,9 +27,7 @@ if(IS_GNU_LIKE)
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
     )
 
-    if(NOT ANDROID)
-        add_compile_options("-march=native" "-mtune=native")
-    endif()
+    add_compile_options("-march=native" "-mtune=native")
 
     if(WIN32 AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
         add_compile_options("-fansi-escape-codes")

@@ -79,10 +79,7 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     tinyobjloader::tinyobjloader
     benchmark::benchmark
     frozen::frozen
+    SteamworksSDK::SteamworksSDK
 )
-
-if(SKYLABS_ENABLE_STEAM)
-    target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE SteamworksSDK::SteamworksSDK)
-endif()
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})
