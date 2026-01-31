@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
         std::filesystem::path rootDir = std::filesystem::canonical("/proc/self/exe");
         rootDir.remove_filename();
 
-        const std::string libCorePath = rootDir / "bin" / "core.so";
+        const std::filesystem::path libCorePath = rootDir / "bin" / "core.so";
 
         const CLibrary core { libCorePath.c_str() };
         const auto coreMain = reinterpret_cast<main_t>(core.GetFunctionAddress("CoreMain"));

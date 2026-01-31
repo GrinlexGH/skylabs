@@ -49,7 +49,6 @@ target_sources(
         render/vulkan/sampler.cpp
         render/vulkan/pipeline.hpp
         render/vulkan/pipeline.cpp
-        render/vulkan/render_target.hpp
         render/vulkan/vertex_format.hpp
         render/vulkan/vertex_format.cpp
         render/vertex.hpp

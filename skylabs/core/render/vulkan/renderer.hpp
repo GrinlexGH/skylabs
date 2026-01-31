@@ -34,6 +34,8 @@ private:
     static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 2;
 
     void Resize(CFrameData& currentFrameData);
+    void LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
+    void LoadModel(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
 
     CContext m_context { nullptr };
 
@@ -42,47 +44,34 @@ private:
 
     std::vector<CFrameData> m_frameData;
 
-    CPipeline m_pipelineMain { nullptr };
-    CPipeline m_pipelineSwapchain { nullptr };
-
-    std::vector<vk::raii::Framebuffer> m_frameBuffersSwapchain;
-
-    CSampler m_mainSampler { nullptr };
+    vk::raii::DescriptorPool m_descriptorPool { nullptr };
 
     vk::raii::DescriptorSetLayout m_descriptorSetLayoutMain { nullptr };
-    vk::raii::DescriptorPool m_descriptorPoolMain { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSetsMain;
-
-    vk::raii::DescriptorSetLayout m_descriptorSetLayoutSwapchain { nullptr };
-    vk::raii::DescriptorPool m_descriptorPoolSwapchain { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain;
-
-
-    std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
-
-    CImage m_colorBuffer { nullptr };
-    CImage m_depthBufferMSAA { nullptr };
-    CImage m_colorBufferMSAA { nullptr };
-
     CDeviceBuffer m_vertexBuffer { nullptr };
     CDeviceBuffer m_indexBuffer { nullptr };
-
-    std::vector<CHostBuffer> m_uniformBuffers;
-
     CImage m_modelTexture { nullptr };
     CSampler m_modelTextureSampler { nullptr };
+    std::vector<CHostBuffer> m_uniformBuffers;
+    std::vector<vk::DescriptorSet> m_descriptorSetsMain;
+    std::vector<CImage> m_colorBuffers;
+    std::vector<CImage> m_depthBuffersMSAA;
+    std::vector<CImage> m_colorBuffersMSAA;
+    CPipeline m_pipelineMain { nullptr };
 
-
-    CImage m_computeBuffer { nullptr };
 
     vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
-    vk::raii::DescriptorPool m_descriptorPoolCompute { nullptr };
+    std::vector<CImage> m_computeBuffers;
     std::vector<vk::DescriptorSet> m_descriptorSetsCompute;
     vk::raii::PipelineLayout m_computePipelineLayout { nullptr };
     vk::raii::Pipeline m_computePipeline { nullptr };
 
-    CSampler m_computeSampler { nullptr };
 
+    vk::raii::DescriptorSetLayout m_descriptorSetLayoutSwapchain { nullptr };
+    CSampler m_computeSampler { nullptr };
+    CSampler m_mainSampler { nullptr };
+    std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain;
+    CPipeline m_pipelineSwapchain { nullptr };
+    std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
     std::uint32_t m_frameIndex = 0;
 };
