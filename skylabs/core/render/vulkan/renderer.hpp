@@ -34,6 +34,10 @@ private:
     static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 2;
 
     void Resize(CFrameData& currentFrameData);
+    void UpdateMainDescriptorSets();
+    void UpdateComputeDescriptorSets();
+    void UpdateSwapchainDescriptorSets();
+    void ReleaseComputeBuffers();
     void LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
     void LoadModel(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
 
@@ -44,6 +48,7 @@ private:
 
     std::vector<CFrameData> m_frameData;
 
+    vk::raii::CommandPool m_singleCommandPool { nullptr };
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
 
     vk::raii::DescriptorSetLayout m_descriptorSetLayoutMain { nullptr };

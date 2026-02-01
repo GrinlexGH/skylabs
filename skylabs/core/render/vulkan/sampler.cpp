@@ -3,8 +3,8 @@
 namespace Vulkan {
 CSampler::CSampler(const CContext& context) {
     vk::SamplerCreateInfo createInfo {};
-    createInfo.magFilter = vk::Filter::eNearest;
-    createInfo.minFilter = vk::Filter::eNearest;
+    createInfo.magFilter = vk::Filter::eLinear;
+    createInfo.minFilter = vk::Filter::eLinear;
     createInfo.addressModeU = vk::SamplerAddressMode::eClampToBorder;
     createInfo.addressModeV = vk::SamplerAddressMode::eClampToBorder;
     createInfo.addressModeW = vk::SamplerAddressMode::eClampToBorder;

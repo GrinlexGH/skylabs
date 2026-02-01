@@ -332,13 +332,13 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     CHostBuffer stagingBuffer { nullptr };
-    auto commandPool = m_context.Device()->createCommandPool({
+    m_singleCommandPool = m_context.Device()->createCommandPool({
         vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
         m_context.Device().GraphicsQueue().FamilyIndex()
     });
 
-    LoadModelTexture(stagingBuffer, commandPool);
-    LoadModel(stagingBuffer, commandPool);
+    LoadModelTexture(stagingBuffer, m_singleCommandPool);
+    LoadModel(stagingBuffer, m_singleCommandPool);
 
     m_modelTextureSampler = CSampler { m_context };
 
@@ -390,36 +390,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_descriptorSetsMain = (**m_context.Device()).allocateDescriptorSets(descriptorAllocInfo);
 
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::DescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = *m_uniformBuffers[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(UniformBufferObject);
-
-        vk::DescriptorImageInfo imageInfo {};
-        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_modelTexture.View();
-        imageInfo.sampler = *m_modelTextureSampler;
-
-        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
-        descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
-        descriptorWrites[0].pImageInfo = nullptr;
-        descriptorWrites[0].pTexelBufferView = nullptr;
-
-        descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &imageInfo;
-
-        m_context.Device()->updateDescriptorSets(descriptorWrites, {});
-    }
+    UpdateMainDescriptorSets();
 
     // Shaders
     const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
@@ -431,10 +402,10 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
     // Pipeline
-    vk::Format colorFormats[] = { m_colorBuffers[0].Format() };
+    std::array<vk::Format, 1> colorFormats = { m_colorBuffers[0].Format() };
     vk::PipelineRenderingCreateInfo renderingInfo {};
-    renderingInfo.colorAttachmentCount = 1;
-    renderingInfo.pColorAttachmentFormats = colorFormats;
+    renderingInfo.colorAttachmentCount = static_cast<std::uint32_t>(colorFormats.size());
+    renderingInfo.pColorAttachmentFormats = colorFormats.data();
     renderingInfo.depthAttachmentFormat = m_depthBuffersMSAA[0].Format();
 
     m_pipelineMain = CPipeline {
@@ -484,21 +455,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     descriptorAllocInfo.pSetLayouts = layouts.data();
     m_descriptorSetsCompute = (**m_context.Device()).allocateDescriptorSets(descriptorAllocInfo);
 
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::DescriptorImageInfo imageInfo {};
-        imageInfo.imageLayout = vk::ImageLayout::eGeneral;
-        imageInfo.imageView = m_computeBuffers[i].View();
-
-        vk::WriteDescriptorSet descriptorWrite {};
-        descriptorWrite.dstSet = m_descriptorSetsCompute[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pImageInfo = &imageInfo;
-
-        m_context.Device()->updateDescriptorSets(descriptorWrite, nullptr);
-    }
+    UpdateComputeDescriptorSets();
 
     // Shaders
     CShader computeShader(m_context, CShader::Type::eCompute, "shader.comp.spv");
@@ -551,35 +508,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_mainSampler = CSampler { m_context };
     m_computeSampler = CSampler { m_context };
 
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::DescriptorImageInfo imageInfo {};
-        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_colorBuffers[i].View();
-        imageInfo.sampler = *m_mainSampler;
-
-        vk::WriteDescriptorSet descriptorWrite {};
-        descriptorWrite.dstSet = m_descriptorSetsSwapchain[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pImageInfo = &imageInfo;
-
-        vk::DescriptorImageInfo imageInfoCompute {};
-        imageInfoCompute.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfoCompute.imageView = m_computeBuffers[i].View();
-        imageInfoCompute.sampler = *m_computeSampler;
-
-        vk::WriteDescriptorSet descriptorWriteCompute {};
-        descriptorWriteCompute.dstSet = m_descriptorSetsSwapchain[i];
-        descriptorWriteCompute.dstBinding = 1;
-        descriptorWriteCompute.dstArrayElement = 0;
-        descriptorWriteCompute.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWriteCompute.descriptorCount = 1;
-        descriptorWriteCompute.pImageInfo = &imageInfoCompute;
-
-        m_context.Device()->updateDescriptorSets({ descriptorWrite, descriptorWriteCompute }, nullptr);
-    }
+    UpdateSwapchainDescriptorSets();
 
     // Shaders
     const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");
@@ -591,10 +520,10 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
     // Pipeline
-    colorFormats[0] = m_swapchain.SurfaceFormat().format;
+    std::array<vk::Format, 1> swapchainColorFormats { m_swapchain.SurfaceFormat().format };
     renderingInfo = vk::PipelineRenderingCreateInfo {};
-    renderingInfo.colorAttachmentCount = 1;
-    renderingInfo.pColorAttachmentFormats = colorFormats;
+    renderingInfo.colorAttachmentCount = static_cast<std::uint32_t>(swapchainColorFormats.size());
+    renderingInfo.pColorAttachmentFormats = swapchainColorFormats.data();
 
     m_pipelineSwapchain = CPipeline {
         m_context,
@@ -606,27 +535,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
     // Release barriers to finish a cirlcle in the Draw method
-    auto cmd = BeginSingleTimeCommands(*m_context.Device(), commandPool);
-    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
-        vk::ImageMemoryBarrier2 releaseBarrier {};
-        releaseBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
-        releaseBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
-        releaseBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
-        releaseBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
-        releaseBarrier.oldLayout = vk::ImageLayout::eUndefined;
-        releaseBarrier.newLayout = vk::ImageLayout::eGeneral;
-        releaseBarrier.srcQueueFamilyIndex = m_context.Device().GraphicsQueue().FamilyIndex();
-        releaseBarrier.dstQueueFamilyIndex = m_context.Device().ComputeQueue().FamilyIndex();
-        releaseBarrier.image = *m_computeBuffers[i];
-        releaseBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-
-        vk::DependencyInfo releaseDependencyInfo {};
-        releaseDependencyInfo.imageMemoryBarrierCount = 1;
-        releaseDependencyInfo.pImageMemoryBarriers = &releaseBarrier;
-
-        cmd.pipelineBarrier2(releaseDependencyInfo);
-    }
-    EndSingleTimeCommands(m_context.Device(), cmd);
+    ReleaseComputeBuffers();
 }
 
 CRenderer::~CRenderer() {
@@ -729,8 +638,8 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdMain.setViewport(0, viewport);
     vk::Rect2D scissor { { 0, 0 }, { renderWidth, renderHeight } };
     cmdMain.setScissor(0, scissor);
-    vk::Buffer vertexBuffers[] = { *m_vertexBuffer };
-    vk::DeviceSize offsets[] = { 0 };
+    std::array<vk::Buffer, 1> vertexBuffers { *m_vertexBuffer };
+    std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
     cmdMain.bindVertexBuffers(0, vertexBuffers, offsets);
     cmdMain.bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
     cmdMain.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, m_descriptorSetsMain[m_frameIndex], {});
@@ -771,9 +680,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     cmdComp.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
     cmdComp.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, m_descriptorSetsCompute[m_frameIndex], {});
-    uint32_t gx = renderWidth;
-    uint32_t gy = renderHeight;
-    cmdComp.dispatch(gx, gy, 1);
+    cmdComp.dispatch((renderWidth + 15) / 16, (renderHeight + 15) / 16, 1);
 
     vk::ImageMemoryBarrier2 releaseBarrier {};
     releaseBarrier.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader;
@@ -926,9 +833,159 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
         }
     }
 
+    auto [width, height] = m_context.Window()->DrawableSize();
+    renderWidth = width;
+    renderHeight = height;
+
+    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
+        m_colorBuffers[i] = CImage {
+            m_context,
+            vk::Extent2D { renderWidth, renderHeight },
+            vk::Format::eR8G8B8A8Srgb,
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+            vk::ImageAspectFlagBits::eColor
+        };
+
+        m_colorBuffersMSAA[i] = CImage(
+            m_context,
+            vk::Extent2D { renderWidth, renderHeight },
+            vk::Format::eR8G8B8A8Srgb,
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eColorAttachment,
+            vk::ImageAspectFlagBits::eColor,
+            1,
+            vk::SampleCountFlagBits::e8
+        );
+
+        m_depthBuffersMSAA[i] = CImage(
+            m_context,
+            vk::Extent2D { renderWidth, renderHeight },
+            m_depthBuffersMSAA[i].Format(),
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            vk::ImageAspectFlagBits::eDepth,
+            1,
+            vk::SampleCountFlagBits::e8
+        );
+    }
+
+    ReleaseComputeBuffers();
+
+    UpdateMainDescriptorSets();
+    UpdateComputeDescriptorSets();
+    UpdateSwapchainDescriptorSets();
+
     currentFrameData.RecreateImageAvailableSemaphore();
     m_swapchain.Recreate();
     m_isResized = false;
+}
+
+void CRenderer::UpdateMainDescriptorSets() {
+    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
+        vk::DescriptorBufferInfo bufferInfo {};
+        bufferInfo.buffer = *m_uniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(UniformBufferObject);
+
+        vk::DescriptorImageInfo imageInfo {};
+        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfo.imageView = m_modelTexture.View();
+        imageInfo.sampler = *m_modelTextureSampler;
+
+        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
+        descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
+        descriptorWrites[0].pImageInfo = nullptr;
+        descriptorWrites[0].pTexelBufferView = nullptr;
+
+        descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+
+        m_context.Device()->updateDescriptorSets(descriptorWrites, {});
+    }
+}
+
+void CRenderer::UpdateComputeDescriptorSets() {
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
+        vk::DescriptorImageInfo imageInfo {};
+        imageInfo.imageLayout = vk::ImageLayout::eGeneral;
+        imageInfo.imageView = m_computeBuffers[i].View();
+
+        vk::WriteDescriptorSet descriptorWrite {};
+        descriptorWrite.dstSet = m_descriptorSetsCompute[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pImageInfo = &imageInfo;
+
+        m_context.Device()->updateDescriptorSets(descriptorWrite, nullptr);
+    }
+}
+
+void CRenderer::UpdateSwapchainDescriptorSets() {
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
+        vk::DescriptorImageInfo imageInfo {};
+        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfo.imageView = m_colorBuffers[i].View();
+        imageInfo.sampler = *m_mainSampler;
+
+        vk::WriteDescriptorSet descriptorWrite {};
+        descriptorWrite.dstSet = m_descriptorSetsSwapchain[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pImageInfo = &imageInfo;
+
+        vk::DescriptorImageInfo imageInfoCompute {};
+        imageInfoCompute.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        imageInfoCompute.imageView = m_computeBuffers[i].View();
+        imageInfoCompute.sampler = *m_computeSampler;
+
+        vk::WriteDescriptorSet descriptorWriteCompute {};
+        descriptorWriteCompute.dstSet = m_descriptorSetsSwapchain[i];
+        descriptorWriteCompute.dstBinding = 1;
+        descriptorWriteCompute.dstArrayElement = 0;
+        descriptorWriteCompute.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        descriptorWriteCompute.descriptorCount = 1;
+        descriptorWriteCompute.pImageInfo = &imageInfoCompute;
+
+        m_context.Device()->updateDescriptorSets({ descriptorWrite, descriptorWriteCompute }, nullptr);
+    }
+}
+
+void CRenderer::ReleaseComputeBuffers() {
+    auto cmd = BeginSingleTimeCommands(*m_context.Device(), m_singleCommandPool);
+    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
+        vk::ImageMemoryBarrier2 releaseBarrier {};
+        releaseBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
+        releaseBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
+        releaseBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
+        releaseBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
+        releaseBarrier.oldLayout = vk::ImageLayout::eUndefined;
+        releaseBarrier.newLayout = vk::ImageLayout::eGeneral;
+        releaseBarrier.srcQueueFamilyIndex = m_context.Device().GraphicsQueue().FamilyIndex();
+        releaseBarrier.dstQueueFamilyIndex = m_context.Device().ComputeQueue().FamilyIndex();
+        releaseBarrier.image = *m_computeBuffers[i];
+        releaseBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+
+        vk::DependencyInfo releaseDependencyInfo {};
+        releaseDependencyInfo.imageMemoryBarrierCount = 1;
+        releaseDependencyInfo.pImageMemoryBarriers = &releaseBarrier;
+
+        cmd.pipelineBarrier2(releaseDependencyInfo);
+    }
+    EndSingleTimeCommands(m_context.Device(), cmd);
 }
 
 void CRenderer::LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
@@ -981,28 +1038,32 @@ void CRenderer::LoadModel(CHostBuffer& stagingBuffer, const vk::raii::CommandPoo
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
         throw std::runtime_error(warn + " " + err);
     }
+
     std::unordered_map<CVertex, uint32_t> uniqueVertices {};
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
             CVertex vertex {};
+
             if (index.vertex_index >= 0) {
                 vertex.m_position = {
-                    attrib.vertices[3 * index.vertex_index + 0],
-                    attrib.vertices[3 * index.vertex_index + 1],
-                    attrib.vertices[3 * index.vertex_index + 2]
+                    attrib.vertices[(3 * index.vertex_index) + 0],
+                    attrib.vertices[(3 * index.vertex_index) + 1],
+                    attrib.vertices[(3 * index.vertex_index) + 2]
                 };
             }
+
             if (index.texcoord_index >= 0) {
                 vertex.m_texCoord = {
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                    attrib.texcoords[(2 * index.texcoord_index) + 0],
+                    1.0f - attrib.texcoords[(2 * index.texcoord_index) + 1]
                 };
             } else {
                 vertex.m_texCoord = {
-                    vertex.m_position.x * 0.5f + 0.5f,
-                    vertex.m_position.z * 0.5f + 0.5f
+                    (vertex.m_position.x * 0.5f) + 0.5f,
+                    (vertex.m_position.z * 0.5f) + 0.5f
                 };
             }
+
             vertex.m_color = { 1.0f, 1.0f, 1.0f };
 
             if (!uniqueVertices.contains(vertex)) {
