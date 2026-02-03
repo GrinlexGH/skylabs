@@ -33,6 +33,7 @@ public:
 
     enum class Profiles : std::uint8_t
     {
+        eRoadmap2026,
         eRoadmap2024,
         eRoadmap2022
     };

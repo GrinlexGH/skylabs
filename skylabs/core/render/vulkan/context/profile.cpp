@@ -9,7 +9,15 @@
 #include <cstring>
 
 namespace Vulkan {
-constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 2> g_profileMap = {
+constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 3> g_profileMap = {
+    {
+        CProfile::Profiles::eRoadmap2026,
+        CProfile::CProfileMeta {
+            .m_name = VP_KHR_ROADMAP_2026_NAME,
+            .m_specVersion = VP_KHR_ROADMAP_2026_SPEC_VERSION,
+            .m_minApiVersion = VP_KHR_ROADMAP_2026_MIN_API_VERSION
+        }
+    },
     {
         CProfile::Profiles::eRoadmap2024,
         CProfile::CProfileMeta {

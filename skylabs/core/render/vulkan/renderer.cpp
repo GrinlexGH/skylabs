@@ -227,7 +227,7 @@ void UpdateUniformBuffer(
     UniformBufferObject ubo {};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = view;
-    ubo.proj = glm::perspective(glm::radians(90.0f), static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height), 0.01f, 10.0f);
+    ubo.proj = glm::perspective(glm::radians(90.0f), static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height), 0.01f, 50'000.0f);
     ubo.proj[1][1] *= -1;
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
     if (glm::length(targetOffset - offset) < 0.0001) {
