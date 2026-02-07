@@ -61,7 +61,7 @@ foreach(shader ${SOURCES})
             -o "${shader_out_path}"
         DEPENDS "${shader}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Compiling ${shader} [${stage}]"
+        COMMENT "Compiling ${shader} [${shader_stage_name}]"
     )
 endforeach()
 
