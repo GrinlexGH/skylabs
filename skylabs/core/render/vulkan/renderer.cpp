@@ -3,10 +3,9 @@
 #include <skylabs/public/logging.hpp>
 #include <skylabs/core/render/vulkan/shader.hpp>
 
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#include <glm/ext/scalar_reciprocal.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <SDL3_image/SDL_image.h>
 #include <tiny_obj_loader.h>
@@ -218,21 +217,28 @@ void UpdateUniformBuffer(
     const float deltaTime
 ) {
     using namespace std::chrono;
-
     static auto startTime = high_resolution_clock::now();
-
     const auto currentTime = high_resolution_clock::now();
     const float time = duration<float>(currentTime - startTime).count();
 
     UniformBufferObject ubo {};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = view;
-    ubo.proj = glm::perspective(glm::radians(90.0f), static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height), 0.01f, 50'000.0f);
-    ubo.proj[1][1] *= -1;
+
+    const auto fov = glm::radians(90.0f);
+    const auto aspect = static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height);
+    const auto zNear = 0.01f;
+
+    float g = 1.0f / std::tan(0.5f * fov);
+    ubo.proj = glm::mat4(0.0f);
+    ubo.proj[0][0] = g / aspect;
+    ubo.proj[1][1] = -g;
+    ubo.proj[2][2] = 0.0f;
+    ubo.proj[2][3] = -1.0f;
+    ubo.proj[3][2] = zNear;
+
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
-    if (glm::length(targetOffset - offset) < 0.0001) {
-        offset = targetOffset;
-    }
+    if (glm::length(targetOffset - offset) < 0.0001) offset = targetOffset;
     ubo.offset = offset;
 
     std::memcpy(uniformBuffersMapped.at(currentImage).Data(), &ubo, sizeof(ubo));
@@ -623,7 +629,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     depthAttachInfo.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
     depthAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     depthAttachInfo.storeOp = vk::AttachmentStoreOp::eDontCare;
-    depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue{1.0f, 0};
+    depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue{0.0f, 0};
 
     vk::RenderingInfo mainRenderInfo {};
     mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };

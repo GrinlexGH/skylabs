@@ -10,8 +10,6 @@
 #include <skylabs/core/render/vulkan/memory/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline.hpp>
 
-#include <glm/glm.hpp>
-
 void MoveForward();
 void MoveBackward();
 
