@@ -3,7 +3,6 @@
 #include <skylabs/public/logging.hpp>
 #include <skylabs/core/render/vulkan/shader.hpp>
 
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 #include <glm/ext/scalar_reciprocal.hpp>
 #include <glm/gtc/matrix_transform.hpp>
