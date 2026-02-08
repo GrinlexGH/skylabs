@@ -21,10 +21,10 @@ template<> struct std::hash<CVertex> {
 };
 
 std::vector vertices {
-    CVertex { .m_position = { -0.5f, -0.5f, 0.0f }, .m_color = { 1.0f, 0.0f, 0.0f }, .m_texCoord = { 1.0f, 0.0f } },
-    CVertex { .m_position = {  0.5f, -0.5f, 0.0f }, .m_color = { 0.0f, 1.0f, 0.0f }, .m_texCoord = { 0.0f, 0.0f } },
-    CVertex { .m_position = {  0.5f,  0.5f, 0.0f }, .m_color = { 0.0f, 0.0f, 1.0f }, .m_texCoord = { 0.0f, 1.0f } },
-    CVertex { .m_position = { -0.5f,  0.5f, 0.0f }, .m_color = { 1.0f, 1.0f, 1.0f }, .m_texCoord = { 1.0f, 1.0f } },
+    CVertex { .m_position = { -100.5f, -100.5f, 0.0f }, .m_color = { 1.0f, 0.0f, 0.0f }, .m_texCoord = { 100.0f, 0.0f } },
+    CVertex { .m_position = {  100.5f, -100.5f, 0.0f }, .m_color = { 0.0f, 1.0f, 0.0f }, .m_texCoord = { 0.0f, 0.0f } },
+    CVertex { .m_position = {  100.5f,  100.5f, 0.0f }, .m_color = { 0.0f, 0.0f, 1.0f }, .m_texCoord = { 0.0f, 100.0f } },
+    CVertex { .m_position = { -100.5f,  100.5f, 0.0f }, .m_color = { 1.0f, 1.0f, 1.0f }, .m_texCoord = { 100.0f, 100.0f } },
 };
 
 struct UniformBufferObject {
