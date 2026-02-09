@@ -2,8 +2,7 @@ import main;
 
 struct VertexInput {
     [[vk::location(0)]] float3 position : POSOTION;
-    [[vk::location(1)]] float3 color : COLOR;
-    [[vk::location(2)]] float2 texCoord : TEXCOORD;
+    [[vk::location(1)]] float2 texCoord : TEXCOORD;
 };
 
 [shader("vertex")]
@@ -18,7 +17,6 @@ VertexToFragment main(VertexInput input, uint vertexIndex : SV_VertexID) {
     }
 
     output.outPosition = mul(pvm, float4(pos, 1.0));
-    output.fragColor = input.color;
     output.fragTexCoord = input.texCoord;
 
     return output;

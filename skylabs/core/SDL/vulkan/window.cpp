@@ -34,7 +34,7 @@ CWindow::~CWindow() {
     }
 }
 
-Utils::CExtent2D CWindow::DrawableSize() const {
+Utils::Extent2D CWindow::DrawableSize() const {
     return GetWindowSizeInPixels(m_handle);
 }
 

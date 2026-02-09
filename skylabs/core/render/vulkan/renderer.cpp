@@ -14,17 +14,15 @@
 
 template<> struct std::hash<CVertex> {
     size_t operator()(const CVertex& vertex) const noexcept {
-        return ((hash<glm::vec3>()(vertex.m_position) ^
-               (hash<glm::vec3>()(vertex.m_color) << 1)) >> 1) ^
-               (hash<glm::vec2>()(vertex.m_texCoord) << 1);
+        return (hash<glm::vec3>()(vertex.m_position)) ^ (hash<glm::vec2>()(vertex.m_texCoord) << 1);
     }
 };
 
 std::vector vertices {
-    CVertex { .m_position = { -100.5f, -100.5f, 0.0f }, .m_color = { 1.0f, 0.0f, 0.0f }, .m_texCoord = { 100.0f, 0.0f } },
-    CVertex { .m_position = {  100.5f, -100.5f, 0.0f }, .m_color = { 0.0f, 1.0f, 0.0f }, .m_texCoord = { 0.0f, 0.0f } },
-    CVertex { .m_position = {  100.5f,  100.5f, 0.0f }, .m_color = { 0.0f, 0.0f, 1.0f }, .m_texCoord = { 0.0f, 100.0f } },
-    CVertex { .m_position = { -100.5f,  100.5f, 0.0f }, .m_color = { 1.0f, 1.0f, 1.0f }, .m_texCoord = { 100.0f, 100.0f } },
+    CVertex { .m_position = { -100.5f, -100.5f, 0.0f }, .m_texCoord = { 100.0f, 0.0f } },
+    CVertex { .m_position = {  100.5f, -100.5f, 0.0f }, .m_texCoord = { 0.0f, 0.0f } },
+    CVertex { .m_position = {  100.5f,  100.5f, 0.0f }, .m_texCoord = { 0.0f, 100.0f } },
+    CVertex { .m_position = { -100.5f,  100.5f, 0.0f }, .m_texCoord = { 100.0f, 100.0f } },
 };
 
 struct UniformBufferObject {
@@ -1068,8 +1066,6 @@ void CRenderer::LoadModel(CHostBuffer& stagingBuffer, const vk::raii::CommandPoo
                     (vertex.m_position.z * 0.5f) + 0.5f
                 };
             }
-
-            vertex.m_color = { 1.0f, 1.0f, 1.0f };
 
             if (!uniqueVertices.contains(vertex)) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());

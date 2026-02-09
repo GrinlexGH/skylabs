@@ -7,8 +7,7 @@ struct UniformBufferObject {
 
 struct VertexToFragment {
     float4 outPosition : SV_Position;
-    [[vk::location(0)]] float3 fragColor;
-    [[vk::location(1)]] float2 fragTexCoord;
+    [[vk::location(0)]] float2 fragTexCoord;
 };
 
 [[vk::binding(0)]]

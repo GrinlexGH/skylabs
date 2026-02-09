@@ -19,18 +19,16 @@ struct CVertexAttribute
 struct CVertex
 {
     glm::vec3 m_position;
-    glm::vec3 m_color;
     glm::vec2 m_texCoord;
 
-    static constexpr std::array<CVertexAttribute, 3> GetAttributes() {
+    static constexpr std::array<CVertexAttribute, 2> GetAttributes() {
         return {
             CVertexAttribute { .m_format = VertexFormat::Float32x3, .m_offset = offsetof(CVertex, m_position) },
-            CVertexAttribute { .m_format = VertexFormat::Float32x3, .m_offset = offsetof(CVertex, m_color) },
             CVertexAttribute { .m_format = VertexFormat::Float32x2, .m_offset = offsetof(CVertex, m_texCoord) },
         };
     }
 
     friend constexpr bool operator==(const CVertex& lhs, const CVertex& rhs) {
-        return lhs.m_position == rhs.m_position && lhs.m_color == rhs.m_color && lhs.m_texCoord == rhs.m_texCoord;
+        return lhs.m_position == rhs.m_position && lhs.m_texCoord == rhs.m_texCoord;
     }
 };
