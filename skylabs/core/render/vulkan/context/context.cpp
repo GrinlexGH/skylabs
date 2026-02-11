@@ -48,7 +48,6 @@ bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
     const auto features11 = getFeatures.operator()<vk::PhysicalDeviceVulkan11Features>();
     bool hasDrawParameters = features11.shaderDrawParameters == vk::True;
 
-    //! TODO: check for using features, not whole profile, because on my laptop there is no stippled lines
     return hasDrawParameters && m_profile.CheckPhysicalDeviceSupport(**m_instance, **physicalDevice);
 }
 
