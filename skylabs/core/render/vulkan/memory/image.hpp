@@ -10,7 +10,6 @@ public:
         const CContext& context,
         const vk::Extent2D& extent,
         vk::Format format,
-        vk::ImageTiling tiling,
         vk::ImageUsageFlags usage,
         vk::ImageAspectFlags imageAspectFlags,
         std::uint32_t mipLevels = 1,

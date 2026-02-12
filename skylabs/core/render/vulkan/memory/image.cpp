@@ -68,7 +68,6 @@ CImage::CImage(
     const CContext& context,
     const vk::Extent2D& extent,
     const vk::Format format,
-    const vk::ImageTiling tiling,
     const vk::ImageUsageFlags usage,
     const vk::ImageAspectFlags imageAspectFlags,
     const std::uint32_t mipLevels,
@@ -86,7 +85,7 @@ CImage::CImage(
     imageInfo.mipLevels = m_mipLevels;
     imageInfo.arrayLayers = 1;
     imageInfo.samples = m_sampleCount;
-    imageInfo.tiling = tiling;
+    imageInfo.tiling = vk::ImageTiling::eOptimal;
     imageInfo.usage = usage;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
     imageInfo.initialLayout = vk::ImageLayout::eUndefined;

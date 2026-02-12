@@ -306,7 +306,6 @@ CRenderer::CRenderer(const IWindow* const window) {
             m_context,
             vk::Extent2D { renderWidth, renderHeight },
             vk::Format::eR8G8B8A8Srgb,
-            vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
             vk::ImageAspectFlagBits::eColor
         );
@@ -315,7 +314,6 @@ CRenderer::CRenderer(const IWindow* const window) {
             m_context,
             vk::Extent2D { renderWidth, renderHeight },
             vk::Format::eR8G8B8A8Srgb,
-            vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eColorAttachment,
             vk::ImageAspectFlagBits::eColor,
             1,
@@ -326,7 +324,6 @@ CRenderer::CRenderer(const IWindow* const window) {
             m_context,
             vk::Extent2D { renderWidth, renderHeight },
             findDepthFormat(),
-            vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eDepthStencilAttachment,
             vk::ImageAspectFlagBits::eDepth,
             1,
@@ -429,7 +426,6 @@ CRenderer::CRenderer(const IWindow* const window) {
             m_context,
             vk::Extent2D { renderWidth, renderHeight },
             vk::Format::eR8G8B8A8Unorm,
-            vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
             vk::ImageAspectFlagBits::eColor
         );
@@ -845,7 +841,6 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
             m_context,
             vk::Extent2D { renderWidth, renderHeight },
             vk::Format::eR8G8B8A8Srgb,
-            vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
             vk::ImageAspectFlagBits::eColor
         };
@@ -854,7 +849,6 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
             m_context,
             vk::Extent2D { renderWidth, renderHeight },
             vk::Format::eR8G8B8A8Srgb,
-            vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eColorAttachment,
             vk::ImageAspectFlagBits::eColor,
             1,
@@ -865,7 +859,6 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
             m_context,
             vk::Extent2D { renderWidth, renderHeight },
             m_depthBuffersMSAA[i].Format(),
-            vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eDepthStencilAttachment,
             vk::ImageAspectFlagBits::eDepth,
             1,
@@ -1013,7 +1006,6 @@ void CRenderer::LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::Com
         m_context,
         vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) },
         vk::Format::eR8G8B8A8Srgb,
-        vk::ImageTiling::eOptimal,
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,
         static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1

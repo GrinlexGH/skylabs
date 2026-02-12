@@ -41,4 +41,9 @@ public:
 private:
     MaskType m_mask;
 };
+
+template<typename Enum>
+constexpr Flags<Enum> operator|(Enum lhs, Enum rhs) {
+    return Flags<Enum>(lhs) | rhs;
+}
 }

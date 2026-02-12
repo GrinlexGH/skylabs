@@ -7,6 +7,9 @@ class IRenderPassCreator
 public:
     ~IRenderPassCreator() = default;
 
-    virtual void SetupResources(CResourceManager& resourceManager) = 0;
+    void SetupResources(CResourceManager& resourceManager);
+
+private:
+    
 };
 }
