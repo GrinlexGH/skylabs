@@ -1,6 +1,8 @@
 #pragma once
 #include <skylabs/core/render/renderer.hpp>
 
+#include <skylabs/core/render/vulkan/render_graph/resource_manager.hpp>
+
 #include <skylabs/core/render/vulkan/frame_data.hpp>
 #include <skylabs/core/render/vulkan/surface.hpp>
 #include <skylabs/core/render/vulkan/swapchain.hpp>
@@ -29,7 +31,7 @@ public:
     void Draw(glm::mat4 viewMat, float deltaTime) override;
 
 private:
-    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 2;
+    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 1;
 
     void Resize(CFrameData& currentFrameData);
     void UpdateMainDescriptorSets();
@@ -44,6 +46,17 @@ private:
     CSurface m_surface { nullptr };
     CSwapchain m_swapchain { nullptr };
 
+    RG::CResourceManager m_resourceManager { nullptr };
+
+    RG::TextureHandle m_colorBuffer;
+    RG::TextureHandle m_colorBufferMSAAx;
+    RG::TextureHandle m_depthBufferMSAAx;
+
+    RG::TextureHandle m_computeBuffer;
+
+
+
+
     std::vector<CFrameData> m_frameData;
 
     vk::raii::CommandPool m_singleCommandPool { nullptr };
@@ -56,14 +69,14 @@ private:
     CSampler m_modelTextureSampler { nullptr };
     std::vector<CHostBuffer> m_uniformBuffers;
     std::vector<vk::DescriptorSet> m_descriptorSetsMain;
-    std::vector<CImage> m_colorBuffers;
-    std::vector<CImage> m_depthBuffersMSAA;
-    std::vector<CImage> m_colorBuffersMSAA;
+    // std::vector<CImage> m_colorBuffers;
+    // std::vector<CImage> m_colorBuffersMSAA;
+    // std::vector<CImage> m_depthBuffersMSAA;
     CPipeline m_pipelineMain { nullptr };
 
 
     vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
-    std::vector<CImage> m_computeBuffers;
+    // std::vector<CImage> m_computeBuffers;
     std::vector<vk::DescriptorSet> m_descriptorSetsCompute;
     vk::raii::PipelineLayout m_computePipelineLayout { nullptr };
     vk::raii::Pipeline m_computePipeline { nullptr };

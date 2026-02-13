@@ -9,8 +9,8 @@ inline Utils::Extent2D GetWindowSizeInPixels(SDL_Window* window) {
     SDL_GetWindowSizeInPixels(window, &w, &h);
 
     return Utils::Extent2D {
-        .width = static_cast<std::uint32_t>(w),
-        .height = static_cast<std::uint32_t>(h)
+        .m_width = static_cast<std::uint32_t>(w),
+        .m_height = static_cast<std::uint32_t>(h)
     };
 }
 }

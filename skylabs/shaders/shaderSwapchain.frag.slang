@@ -9,7 +9,7 @@ float4 main(float4 pos: SV_Position, [[vk::location(0)]] float2 uv) : SV_Target 
     float4 colorMain = uOut.Sample(uv);
     float4 colorCompute = uCompute.Sample(uv);
 
-    float4 result = (colorMain);
+    float4 result = lerp(colorMain, colorCompute, 0.2);
 
     return result;
 }

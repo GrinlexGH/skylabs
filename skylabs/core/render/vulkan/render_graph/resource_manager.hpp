@@ -7,25 +7,26 @@
 #include <filesystem>
 
 namespace Vulkan::RG {
-struct AbsoluteMemorySize
+struct AbsoluteTextureSize
 {
     std::uint32_t m_width  = 1;
     std::uint32_t m_height = 1;
     std::uint32_t m_depth  = 1;
 };
 
-struct RelativeMemorySize
+struct RelativeTextureSize
 {
     float m_scaleX = 1.0f;
     float m_scaleY = 1.0f;
     std::uint32_t m_depth = 1;
 };
 
-using TextureExtent = std::variant<AbsoluteMemorySize, RelativeMemorySize>;
+using TextureExtent = std::variant<AbsoluteTextureSize, RelativeTextureSize>;
 
 enum class TextureFormat : std::uint8_t
 {
     eRGBA8888Srgb = 0,
+    eRGBA8888Unorm,
     eDepthOptimal
 };
 
@@ -33,18 +34,19 @@ enum class TextureUsageBits : std::uint8_t
 {
     eAttachment = 1 << 0,
     eDepthAttachment = 1 << 1,
-    eSampled = 1 << 2
+    eSampled = 1 << 2,
+    eStorage = 1 << 3
 };
 
 using TextureUsage = Utils::Flags<TextureUsageBits>;
 
 struct TextureDescirption
 {
-    TextureFormat m_format;
-    TextureUsage m_usage;
+    TextureFormat m_format = TextureFormat::eRGBA8888Srgb;
+    TextureUsage m_usage = TextureUsageBits::eSampled;
     TextureExtent m_extent;
 
-    bool m_sampled;
+    bool m_sampled = false;
     std::uint32_t m_mipLevels = 1;
 };
 
@@ -65,29 +67,31 @@ struct TextureHandle
 class CResourceManager
 {
 public:
-    CResourceManager(std::nullptr_t) {}
-    explicit CResourceManager(const CContext& context);
+    explicit CResourceManager(std::nullptr_t) {}
+    explicit CResourceManager(const CContext& context, Utils::Extent2D viewportExtent);
     CResourceManager(const CResourceManager&) = delete;
     CResourceManager(CResourceManager&&) noexcept = default;
     CResourceManager& operator=(const CResourceManager&) = delete;
     CResourceManager& operator=(CResourceManager&&) noexcept = default;
     ~CResourceManager() = default;
 
-    TextureHandle CreateEmptyTexture(TextureDescirption description);
-    TextureHandle CreateAssetTexture(AssetTextureDescirption description);
+    [[nodiscard]] TextureHandle CreateEmptyTexture(const char* debugName, const TextureDescirption& description);
+    [[nodiscard]] TextureHandle CreateAssetTexture(const char* debugName, const AssetTextureDescirption& description);
 
     void GenerateTextures();
     CImage& GetTexture(TextureHandle handle);
 
-    void SetFameIndex(unsigned int newIndex) { m_frameIndex = newIndex; }
+    void Resize(Utils::Extent2D newViewportExtent);
 
 private:
     struct TextureMeta
     {
+        std::string m_debugName;
         TextureFormat m_format;
         TextureUsage m_usage;
 
         bool m_sampled;
+        bool m_dirty = true;
 
         struct EmptySource {
             TextureExtent m_extent;
@@ -100,13 +104,25 @@ private:
         };
 
         std::variant<EmptySource, AssetSource> m_source;
+
     };
 
     const CContext* m_context = nullptr;
+    Utils::Extent2D m_viewportExtent;
 
     std::unordered_map<unsigned int, TextureMeta> m_creationPendingTextures;
-    std::unordered_map<unsigned int, std::vector<CImage>> m_textures;
+    std::unordered_map<unsigned int, CImage> m_textures;
 
-    unsigned int m_frameIndex = 0;
+    CImage CreateImage(const TextureMeta& desc);
 };
 }
+
+template <>
+struct Utils::FlagTraits<Vulkan::RG::TextureUsageBits>
+{
+    static constexpr bool isBitmask = true;
+    static constexpr Vulkan::RG::TextureUsage allFlags =
+        Vulkan::RG::TextureUsageBits::eAttachment |
+        Vulkan::RG::TextureUsageBits::eDepthAttachment |
+        Vulkan::RG::TextureUsageBits::eSampled;
+};

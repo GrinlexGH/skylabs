@@ -35,7 +35,8 @@ Checks: >
   -misc-misplaced-const,
   -modernize-use-trailing-return-type,
   -misc-include-cleaner,
-  -misc-const-correctness
+  -misc-const-correctness,
+  -hicpp-explicit-conversions
 WarningsAsErrors: ''
 UseColor: true
 HeaderFilterRegex: 'skylabs/**/*.*'

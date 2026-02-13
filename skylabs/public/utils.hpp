@@ -4,18 +4,24 @@
 
 namespace Utils {
 struct Extent2D {
-    std::uint32_t width;
-    std::uint32_t height;
+    std::uint32_t m_width;
+    std::uint32_t m_height;
 };
 
 enum class Requirement : std::uint8_t { eOptional, eRequired };
+
+template <typename FlagBitsType>
+struct FlagTraits
+{
+    static constexpr bool isBitmask = false;
+};
 
 template <typename BitType>
 class Flags
 {
 public:
     using BitsType = BitType;
-    using MaskType = typename std::underlying_type<BitType>::type;
+    using MaskType = std::underlying_type_t<BitType>;
 
     constexpr Flags() noexcept : m_mask(0) {}
     constexpr Flags(BitType bit) noexcept : m_mask(static_cast<MaskType>(bit)) {}
@@ -25,6 +31,8 @@ public:
     auto operator<=>(Flags<BitType> const&) const = default;
 
     constexpr bool operator!() const noexcept { return !m_mask; }
+
+    constexpr Flags<BitType> operator~() const noexcept { return Flags<BitType>(m_mask ^ FlagTraits<BitType>::allFlags.m_mask); }
 
     constexpr Flags<BitType> operator&(Flags<BitType> const& rhs) const noexcept { return Flags<BitType>(m_mask & rhs.m_mask); }
     constexpr Flags<BitType> operator|(Flags<BitType> const& rhs) const noexcept { return Flags<BitType>(m_mask | rhs.m_mask); }
@@ -41,9 +49,41 @@ public:
 private:
     MaskType m_mask;
 };
-
-template<typename Enum>
-constexpr Flags<Enum> operator|(Enum lhs, Enum rhs) {
-    return Flags<Enum>(lhs) | rhs;
 }
+
+template <typename BitType>
+constexpr Utils::Flags<BitType> operator&(BitType bit, Utils::Flags<BitType> const& flags) noexcept {
+    return flags.operator&(bit);
+}
+
+template <typename BitType>
+constexpr Utils::Flags<BitType> operator|(BitType bit, Utils::Flags<BitType> const& flags) noexcept {
+    return flags.operator|(bit);
+}
+
+template <typename BitType>
+constexpr Utils::Flags<BitType> operator^(BitType bit, Utils::Flags<BitType> const& flags) noexcept {
+    return flags.operator^(bit);
+}
+
+template <typename BitType>
+constexpr Utils::Flags<BitType> operator&(BitType lhs, BitType rhs) noexcept
+requires Utils::FlagTraits<BitType>::isBitmask {
+    return Utils::Flags<BitType>(lhs) & rhs;
+}
+
+template <typename BitType>
+constexpr Utils::Flags<BitType> operator|(BitType lhs, BitType rhs) noexcept
+requires Utils::FlagTraits<BitType>::isBitmask {
+    return Utils::Flags<BitType>(lhs) | rhs;
+}
+
+template <typename BitType>
+constexpr Utils::Flags<BitType> operator^(BitType lhs, BitType rhs) noexcept requires Utils::FlagTraits<BitType>::isBitmask {
+    return Utils::Flags<BitType>(lhs) ^ rhs;
+}
+
+template <typename BitType>
+constexpr Utils::Flags<BitType> operator~(BitType bit) noexcept requires Utils::FlagTraits<BitType>::isBitmask {
+    return ~(Utils::Flags<BitType>(bit));
 }
