@@ -68,7 +68,7 @@ class CResourceManager
 {
 public:
     explicit CResourceManager(std::nullptr_t) {}
-    explicit CResourceManager(const CContext& context, Utils::Extent2D viewportExtent);
+    explicit CResourceManager(const CContext& context, Utils::Extent2D viewportExtent, std::uint32_t inFlightCount);
     CResourceManager(const CResourceManager&) = delete;
     CResourceManager(CResourceManager&&) noexcept = default;
     CResourceManager& operator=(const CResourceManager&) = delete;
@@ -82,6 +82,7 @@ public:
     CImage& GetTexture(TextureHandle handle);
 
     void Resize(Utils::Extent2D newViewportExtent);
+    void SetFrameIndex(std::uint32_t newFrameIndex) { m_frameIndex = newFrameIndex; }
 
 private:
     struct TextureMeta
@@ -104,14 +105,15 @@ private:
         };
 
         std::variant<EmptySource, AssetSource> m_source;
-
     };
 
     const CContext* m_context = nullptr;
     Utils::Extent2D m_viewportExtent;
+    std::uint32_t m_inFlightCount = 0;
+    std::uint32_t m_frameIndex = 0;
 
     std::unordered_map<unsigned int, TextureMeta> m_creationPendingTextures;
-    std::unordered_map<unsigned int, CImage> m_textures;
+    std::unordered_map<unsigned int, std::vector<CImage>> m_textures;
 
     CImage CreateImage(const TextureMeta& desc);
 };

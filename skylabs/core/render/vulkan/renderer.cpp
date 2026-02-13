@@ -258,7 +258,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderWidth = m_swapchain.Extent().width;
     renderHeight = m_swapchain.Extent().height;
 
-    m_resourceManager = RG::CResourceManager { m_context, { .m_width = renderWidth, .m_height = renderHeight } };
+    m_resourceManager = RG::CResourceManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
     auto& rcm = m_resourceManager;
 
     m_colorBuffer = rcm.CreateEmptyTexture("colorBuffer", {
@@ -312,9 +312,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     // };
 
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
-    // m_colorBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
-    // m_colorBuffersMSAA.reserve(FRAMES_IN_FLIGHT_COUNT);
-    // m_depthBuffersMSAA.reserve(FRAMES_IN_FLIGHT_COUNT);
     m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
 
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
@@ -325,34 +322,6 @@ CRenderer::CRenderer(const IWindow* const window) {
             sizeof(UniformBufferObject),
             vk::BufferUsageFlagBits::eUniformBuffer
         );
-
-        // m_colorBuffers.emplace_back(
-        //     m_context,
-        //     vk::Extent2D { renderWidth, renderHeight },
-        //     vk::Format::eR8G8B8A8Srgb,
-        //     vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
-        //     vk::ImageAspectFlagBits::eColor
-        // );
-
-        // m_colorBuffersMSAA.emplace_back(
-        //     m_context,
-        //     vk::Extent2D { renderWidth, renderHeight },
-        //     vk::Format::eR8G8B8A8Srgb,
-        //     vk::ImageUsageFlagBits::eColorAttachment,
-        //     vk::ImageAspectFlagBits::eColor,
-        //     1,
-        //     vk::SampleCountFlagBits::e8
-        // );
-
-        // m_depthBuffersMSAA.emplace_back(
-        //     m_context,
-        //     vk::Extent2D { renderWidth, renderHeight },
-        //     findDepthFormat(),
-        //     vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        //     vk::ImageAspectFlagBits::eDepth,
-        //     1,
-        //     vk::SampleCountFlagBits::e8
-        // );
     }
 
     CHostBuffer stagingBuffer { nullptr };
@@ -450,18 +419,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     });
 
     rcm.GenerateTextures();
-
-    // m_computeBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
-
-    // for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
-    //     m_computeBuffers.emplace_back(
-    //         m_context,
-    //         vk::Extent2D { renderWidth, renderHeight },
-    //         vk::Format::eR8G8B8A8Unorm,
-    //         vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
-    //         vk::ImageAspectFlagBits::eColor
-    //     );
-    // }
 
 
     // Descriptor set layout
@@ -596,10 +553,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto& cmdFina = frameData.GetGraphicsCommandBuffers()[1];
     auto& semMain = frameData.GetSemaphores()[0];
     auto& semComp = frameData.GetSemaphores()[1];
-    // auto& colorBuffer = m_colorBuffers[m_frameIndex];
-    // auto& colorBufferMSAA = m_colorBuffersMSAA[m_frameIndex];
-    // auto& depthBufferMSAA = m_depthBuffersMSAA[m_frameIndex];
-    // auto& computeBuffer = m_computeBuffers[m_frameIndex];
     auto& colorBuffer = m_resourceManager.GetTexture(m_colorBuffer);
     auto& colorBufferMSAA = m_resourceManager.GetTexture(m_colorBufferMSAAx);
     auto& depthBufferMSAA = m_resourceManager.GetTexture(m_depthBufferMSAAx);
@@ -858,6 +811,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     }
 
     m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
+    m_resourceManager.SetFrameIndex(m_frameIndex);
 }
 
 void CRenderer::Resize(CFrameData& currentFrameData) {
@@ -873,36 +827,6 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
     renderHeight = height;
 
     m_resourceManager.Resize({ .m_width = renderWidth, .m_height = renderHeight });
-
-    // for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
-    //     m_colorBuffers[i] = CImage {
-    //         m_context,
-    //         vk::Extent2D { renderWidth, renderHeight },
-    //         vk::Format::eR8G8B8A8Srgb,
-    //         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
-    //         vk::ImageAspectFlagBits::eColor
-    //     };
-
-    //     m_colorBuffersMSAA[i] = CImage(
-    //         m_context,
-    //         vk::Extent2D { renderWidth, renderHeight },
-    //         vk::Format::eR8G8B8A8Srgb,
-    //         vk::ImageUsageFlagBits::eColorAttachment,
-    //         vk::ImageAspectFlagBits::eColor,
-    //         1,
-    //         vk::SampleCountFlagBits::e8
-    //     );
-
-    //     m_depthBuffersMSAA[i] = CImage(
-    //         m_context,
-    //         vk::Extent2D { renderWidth, renderHeight },
-    //         m_depthBuffersMSAA[i].Format(),
-    //         vk::ImageUsageFlagBits::eDepthStencilAttachment,
-    //         vk::ImageAspectFlagBits::eDepth,
-    //         1,
-    //         vk::SampleCountFlagBits::e8
-    //     );
-    // }
 
     ReleaseComputeBuffers();
 

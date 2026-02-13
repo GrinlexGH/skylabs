@@ -5,8 +5,9 @@
 namespace Vulkan::RG {
 CResourceManager::CResourceManager(
     const CContext& context,
-    Utils::Extent2D viewportExtent
-) : m_context(&context), m_viewportExtent(viewportExtent)
+    Utils::Extent2D viewportExtent,
+    std::uint32_t inFlightCount
+) : m_context(&context), m_viewportExtent(viewportExtent), m_inFlightCount(inFlightCount)
 { }
 
 TextureHandle CResourceManager::CreateEmptyTexture(const char* debugName, const TextureDescirption& description) {
@@ -42,7 +43,13 @@ TextureHandle CResourceManager::CreateAssetTexture(const char* debugName, const 
 void CResourceManager::GenerateTextures() {
     for (auto& [id, desc] : m_creationPendingTextures) {
         if (desc.m_dirty) {
-            m_textures.insert_or_assign(id, CreateImage(desc));
+            std::vector<CImage> images;
+            images.reserve(m_inFlightCount);
+            for (std::size_t _ = 0; _ < m_inFlightCount; _++) {
+                images.push_back(CreateImage(desc));
+            }
+
+            m_textures.insert_or_assign(id, std::move(images));
             desc.m_dirty = false;
         }
     }
@@ -60,7 +67,7 @@ CImage& CResourceManager::GetTexture(TextureHandle handle) {
         }
     }, imgMeta.m_source);
 
-    return m_textures.at(handle.m_id);
+    return m_textures.at(handle.m_id).at(m_frameIndex);
 }
 
 void CResourceManager::Resize(const Utils::Extent2D newViewportExtent) {

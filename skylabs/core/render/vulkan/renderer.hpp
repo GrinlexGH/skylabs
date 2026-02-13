@@ -69,14 +69,10 @@ private:
     CSampler m_modelTextureSampler { nullptr };
     std::vector<CHostBuffer> m_uniformBuffers;
     std::vector<vk::DescriptorSet> m_descriptorSetsMain;
-    // std::vector<CImage> m_colorBuffers;
-    // std::vector<CImage> m_colorBuffersMSAA;
-    // std::vector<CImage> m_depthBuffersMSAA;
     CPipeline m_pipelineMain { nullptr };
 
 
     vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
-    // std::vector<CImage> m_computeBuffers;
     std::vector<vk::DescriptorSet> m_descriptorSetsCompute;
     vk::raii::PipelineLayout m_computePipelineLayout { nullptr };
     vk::raii::Pipeline m_computePipeline { nullptr };
