@@ -1,4 +1,5 @@
 #include <skylabs/core/render/vulkan/context/profile.hpp>
+#include <skylabs/public/logging.hpp>
 
 #include <fmt/format.h>
 #include <frozen/map.h>
@@ -9,9 +10,9 @@
 #include <cstring>
 
 namespace Vulkan {
-constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 3> g_profileMap = {
+constexpr frozen::map<CProfile::Profile, CProfile::CProfileMeta, 3> g_profileMap = {
     {
-        CProfile::Profiles::eRoadmap2026,
+        CProfile::Profile::eRoadmap2026,
         CProfile::CProfileMeta {
             .m_name = VP_KHR_ROADMAP_2026_NAME,
             .m_specVersion = VP_KHR_ROADMAP_2026_SPEC_VERSION,
@@ -19,7 +20,7 @@ constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 3> g_profileMa
         }
     },
     {
-        CProfile::Profiles::eRoadmap2024,
+        CProfile::Profile::eRoadmap2024,
         CProfile::CProfileMeta {
             .m_name = VP_KHR_ROADMAP_2024_NAME,
             .m_specVersion = VP_KHR_ROADMAP_2024_SPEC_VERSION,
@@ -27,7 +28,7 @@ constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 3> g_profileMa
         }
     },
     {
-        CProfile::Profiles::eRoadmap2022,
+        CProfile::Profile::eRoadmap2022,
         CProfile::CProfileMeta {
             .m_name = VP_KHR_ROADMAP_2022_NAME,
             .m_specVersion = VP_KHR_ROADMAP_2022_SPEC_VERSION,
@@ -36,7 +37,7 @@ constexpr frozen::map<CProfile::Profiles, CProfile::CProfileMeta, 3> g_profileMa
     }
 };
 
-CProfile::CProfile(const Profiles profile) : m_currentProfile(g_profileMap.at(profile)) {}
+CProfile::CProfile(const Profile profile) : m_profile(profile), m_profileMeta(g_profileMap.at(profile)) {}
 
 void CProfile::CheckInstanceSupport() const {
     VpProfileProperties currentProfile = GenerateProperties();
@@ -51,12 +52,30 @@ void CProfile::CheckInstanceSupport() const {
     }
 }
 
-bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) const {
+bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, const vk::raii::PhysicalDevice& physicalDevice) const {
     VpProfileProperties currentProfile = GenerateProperties();
 
     vk::Bool32 profileSupported;
-    if (vpGetPhysicalDeviceProfileSupport(nullptr, instance, physicalDevice, &currentProfile, &profileSupported) != VK_SUCCESS) {
+    if (vpGetPhysicalDeviceProfileSupport(nullptr, instance, *physicalDevice, &currentProfile, &profileSupported) != VK_SUCCESS) {
         throw std::runtime_error("Cannot get physical device profile supported");
+    }
+
+    auto getFeatures = [&]<typename T>() {
+        if (physicalDevice.getDispatcher()->vkGetPhysicalDeviceFeatures2) {
+            return physicalDevice.getFeatures2<vk::PhysicalDeviceFeatures2, T>().template get<T>();
+        }
+        if (physicalDevice.getDispatcher()->vkGetPhysicalDeviceFeatures2KHR) {
+            return physicalDevice.getFeatures2KHR<vk::PhysicalDeviceFeatures2, T>().template get<T>();
+        }
+        return T {};
+    };
+
+    if (m_profile == Profile::eRoadmap2022) {
+        const auto features11 = getFeatures.operator()<vk::PhysicalDeviceVulkan11Features>();
+        if (features11.shaderDrawParameters != vk::True) {
+            Log::Warning("Application needs shaderDrawParameter feature!");
+            return false;
+        }
     }
 
     return profileSupported;
@@ -135,10 +154,10 @@ std::vector<VkExtensionProperties> CProfile::GetDeviceExtensions() const {
 VpProfileProperties CProfile::GenerateProperties() const {
     VpProfileProperties currentProfile;
 
-    currentProfile.specVersion = m_currentProfile.m_specVersion;
+    currentProfile.specVersion = m_profileMeta.m_specVersion;
     std::ranges::copy_n(
-        m_currentProfile.m_name,
-        static_cast<int>(std::strlen(m_currentProfile.m_name) + 1),
+        m_profileMeta.m_name,
+        static_cast<int>(std::strlen(m_profileMeta.m_name) + 1),
         currentProfile.profileName
     );
 

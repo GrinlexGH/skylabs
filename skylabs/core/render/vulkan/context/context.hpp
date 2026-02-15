@@ -4,6 +4,8 @@
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
 #include <skylabs/core/render/vulkan/context/profile.hpp>
 
+#include <expected>
+
 namespace Vulkan {
 //====================
 // Context stores vulkan globals needed to create vulkan objects
@@ -29,8 +31,7 @@ public:
     [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_apiVersion; }
 
 private:
-    [[nodiscard]] CPhysicalDevice SelectPhysicalDevice();
-    [[nodiscard]] bool IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const;
+    [[nodiscard]] std::expected<CPhysicalDevice, const char*> SelectPhysicalDevice();
     [[nodiscard]] int RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const;
 
     const IWindow* m_window = nullptr;

@@ -34,9 +34,9 @@ CQueueFamilyIndices GetQueueFamilies(const Vulkan::IWindow* window, const vk::In
     std::optional<std::uint32_t> graphicsFamily;
     std::optional<std::uint32_t> presentFamily;
     std::optional<std::uint32_t> computeFamily;
-    const auto& queueFamilies = gpu->getQueueFamilyProperties();
+    const std::vector<vk::QueueFamilyProperties>& queueFamilies = gpu->getQueueFamilyProperties();
 
-    for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
+    for (std::uint32_t i = 0; i < queueFamilies.size(); ++i) {
         if (!graphicsFamily.has_value() && queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) {
             graphicsFamily.emplace(i);
         }
@@ -102,12 +102,17 @@ CDevice::CDevice(
     // Setup features
     const std::vector<const char*> enabledExtensions = SetupExtensions(profile, physicalDevice);
 
-    // Enable shader draw parameters on roadmap 2022 profile
+    void* pNext = nullptr;
     vk::PhysicalDeviceVulkan11Features features11;
-    features11.shaderDrawParameters = vk::True;
+
+    // Enable shader draw parameters on roadmap 2022 profile
+    if (profile.GetCurrentProfile() == CProfile::Profile::eRoadmap2022) {
+        features11.shaderDrawParameters = vk::True;
+        Utils::AppendToPNextChain(pNext, &features11);
+    }
 
     vk::DeviceCreateInfo deviceCreateInfo;
-    deviceCreateInfo.pNext = &features11;
+    deviceCreateInfo.pNext = pNext;
     deviceCreateInfo.queueCreateInfoCount = static_cast<std::uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pQueueCreateInfos = !queueCreateInfos.empty() ? queueCreateInfos.data() : nullptr;
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());

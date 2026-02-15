@@ -54,9 +54,9 @@ struct AssetTextureDescirption
 {
     std::string m_assetFileName;
 
-    TextureFormat m_format;
-    bool m_sampled;
-    bool m_mipmapped;
+    TextureFormat m_format = TextureFormat::eRGBA8888Unorm;
+    bool m_sampled = false;
+    bool m_mipmapped = true;
 };
 
 struct TextureHandle
@@ -96,7 +96,7 @@ private:
 
         struct EmptySource {
             TextureExtent m_extent;
-            std::uint32_t m_mipLevels = 1;
+            std::uint32_t m_mipLevels;
         };
 
         struct AssetSource {

@@ -6,14 +6,29 @@
 
 namespace Vulkan {
 CContext::CContext(const IWindow* const window) :
-    m_window(window),
-    m_profile(CProfile::Profiles::eRoadmap2024),
-    m_instance(m_profile, m_window->GetRequiredInstanceExtensions()),
-    m_device(m_profile, m_window, m_instance, SelectPhysicalDevice()),
-    m_allocator(m_profile, *m_instance, *m_physicalDevice, m_device)
-{}
+    m_window(window)
+{
+    bool initialized = false;
+    for (const auto& profile : { CProfile::Profile::eRoadmap2024, CProfile::Profile::eRoadmap2022 }) {
+        m_profile = CProfile { profile };
+        m_instance = CInstance { m_profile, m_window->GetRequiredInstanceExtensions() };
 
-CPhysicalDevice CContext::SelectPhysicalDevice() {
+        auto physicalDevice = SelectPhysicalDevice();
+        if (physicalDevice.has_value()) {
+            m_physicalDevice = physicalDevice.value();
+            m_device = CDevice { m_profile, m_window, m_instance, m_physicalDevice };
+            m_allocator = CAllocator { m_profile, *m_instance, *m_physicalDevice, m_device };
+            initialized = true;
+            break;
+        }
+    }
+
+    if (!initialized) {
+        throw std::runtime_error("Failed to initialize vulkan context!");
+    }
+}
+
+std::expected<CPhysicalDevice, const char*> CContext::SelectPhysicalDevice() {
     CPhysicalDevice selectedGPU { nullptr };
     int maxScore = 0;
 
@@ -26,35 +41,16 @@ CPhysicalDevice CContext::SelectPhysicalDevice() {
     }
 
     if (maxScore == 0) {
-        throw std::runtime_error("Failed to find a suitable GPU!");
+        return std::unexpected("Failed to find a suitable GPU!");
     }
 
-    m_physicalDevice = selectedGPU;
-
     return selectedGPU;
-}
-
-bool CContext::IsDeviceSuitable(const CPhysicalDevice& physicalDevice) const {
-    auto getFeatures = [&]<typename T>() {
-        if (physicalDevice->getDispatcher()->vkGetPhysicalDeviceFeatures2) {
-            return physicalDevice->getFeatures2<vk::PhysicalDeviceFeatures2, T>().template get<T>();
-        }
-        if (physicalDevice->getDispatcher()->vkGetPhysicalDeviceFeatures2KHR) {
-            return physicalDevice->getFeatures2KHR<vk::PhysicalDeviceFeatures2, T>().template get<T>();
-        }
-        return T {};
-    };
-
-    const auto features11 = getFeatures.operator()<vk::PhysicalDeviceVulkan11Features>();
-    bool hasDrawParameters = features11.shaderDrawParameters == vk::True;
-
-    return hasDrawParameters && m_profile.CheckPhysicalDeviceSupport(**m_instance, **physicalDevice);
 }
 
 int CContext::RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const {
     int score = 0;
 
-    if (!IsDeviceSuitable(physicalDevice))
+    if (!m_profile.CheckPhysicalDeviceSupport(**m_instance, *physicalDevice))
         return score;
 
     switch (physicalDevice->getProperties2().properties.deviceType) {

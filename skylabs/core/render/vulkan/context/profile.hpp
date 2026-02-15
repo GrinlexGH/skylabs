@@ -1,8 +1,8 @@
 #pragma once
 
-#ifdef VK_NO_PROTOTYPES
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_raii.hpp>
 
+#ifdef VK_NO_PROTOTYPES
 extern "C" {
     VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* pName);
     VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* pName);
@@ -31,7 +31,7 @@ public:
         std::uint32_t m_minApiVersion = 0;
     };
 
-    enum class Profiles : std::uint8_t
+    enum class Profile : std::uint8_t
     {
         eRoadmap2026,
         eRoadmap2024,
@@ -39,18 +39,20 @@ public:
     };
 
     explicit CProfile(std::nullptr_t) {}
-    explicit CProfile(Profiles profile);
+    explicit CProfile(Profile profile);
 
     void CheckInstanceSupport() const;
-    [[nodiscard]] bool CheckPhysicalDeviceSupport(VkInstance instance, VkPhysicalDevice physicalDevice) const;
+    [[nodiscard]] bool CheckPhysicalDeviceSupport(VkInstance instance, const vk::raii::PhysicalDevice& physicalDevice) const;
     [[nodiscard]] VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const;
     [[nodiscard]] VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) const;
     [[nodiscard]] std::uint32_t GetAPIVersion() const;
     [[nodiscard]] std::vector<VkExtensionProperties> GetInstanceExtensions() const;
     [[nodiscard]] std::vector<VkExtensionProperties> GetDeviceExtensions() const;
+    [[nodiscard]] Profile GetCurrentProfile() const { return m_profile; }
 
 private:
-    CProfileMeta m_currentProfile = {};
+    Profile m_profile;
+    CProfileMeta m_profileMeta = {};
 
     [[nodiscard]] VpProfileProperties GenerateProperties() const;
 };
