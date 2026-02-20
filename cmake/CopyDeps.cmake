@@ -1,35 +1,35 @@
 cmake_minimum_required(VERSION 3.19)
 
+cmake_policy(SET CMP0207 NEW)
+
 if(NOT OUTPUT_DIR)
     message(FATAL_ERROR "OUTPUT_DIR is not defined")
 endif()
 
-if(NOT DEFINED APPS)
-    set(APPS "")
-endif()
-if(NOT DEFINED LIBS)
-    set(LIBS "")
-endif()
-if(NOT DEFINED MODS)
-    set(MODS "")
+if(DEFINED COMPILER)
+    cmake_path(GET COMPILER PARENT_PATH COMPILER_DIR)
 endif()
 
 file(GET_RUNTIME_DEPENDENCIES
     RESOLVED_DEPENDENCIES_VAR _r_deps
     UNRESOLVED_DEPENDENCIES_VAR _u_deps
-    EXECUTABLES ${APPS}
-    LIBRARIES   ${LIBS}
-    MODULES     ${MODS}
+    EXECUTABLES ${EXECUTABLE}
+    LIBRARIES ${SHARED_LIBRARY}
+    MODULES ${MODULE_LIBRARY}
+    DIRECTORIES ${COMPILER_DIR}
     PRE_EXCLUDE_REGEXES
-        [[api-ms-win-.*]]
-        [[ext-ms-.*]]
-        [[kernel32\.dll]]
-        [[libc\.so\..*]] [[libgcc_s\.so\..*]] [[libm\.so\..*]] [[libstdc\+\+\.so\..*]]
+        "api-ms-win-.*" "ext-ms-.*"
+        "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
     POST_EXCLUDE_REGEXES
-        [[.*/system32/.*\.dll]]
-        [[^/lib.*]]
-        [[^/usr/lib.*]]
+        "^\/lib.*" "^\/usr\/lib.*"
+        "C:[\\\/]Windows[\\\/].*"
+    POST_INCLUDE_REGEXES
+        "vcruntime.*" "msvcp.*"
 )
+
+if(_u_deps)
+    message(WARNING "Unresolved dependencies: ${_u_deps}")
+endif()
 
 file(COPY ${_r_deps}
     DESTINATION ${OUTPUT_DIR}
@@ -62,7 +62,3 @@ foreach(_file IN LISTS _all_files)
         NEW_RPATH "\$ORIGIN"
     )
 endforeach()
-
-if(_u_deps)
-    message(WARNING "Unresolved dependencies: ${_u_deps}")
-endif()

@@ -22,21 +22,16 @@ function(skylabs_configure_target target_name)
                 COMMAND_EXPAND_LISTS
                 COMMENT "Copying runtime DLLs to ${target_name} output directory"
             )
-        else()
-            set(cmd "-DOUTPUT_DIR=$<TARGET_FILE_DIR:${target_name}>")
-            if(target_type STREQUAL "EXECUTABLE")
-                list(APPEND cmd "-DAPPS=$<TARGET_FILE:${target_name}>")
-            elseif(target_type STREQUAL "SHARED_LIBRARY")
-                list(APPEND cmd "-DLIBS=$<TARGET_FILE:${target_name}>")
-            elseif(target_type STREQUAL "MODULE_LIBRARY")
-                list(APPEND cmd "-DMODS=$<TARGET_FILE:${target_name}>")
-            endif()
-            list(APPEND cmd "-P" "${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake")
-            add_custom_command(TARGET ${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND}
-                ${cmd}
-                COMMENT "Resolving and copying symlinked dependencies..."
-            )
         endif()
+
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND}
+            "-DOUTPUT_DIR=$<TARGET_FILE_DIR:${target_name}>"
+            "-DCOMPILER=${CMAKE_CXX_COMPILER}"
+            "-D${target_type}=$<TARGET_FILE:${target_name}>"
+            -P ${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake
+            ${cmd}
+            COMMENT "Resolving and copying symlinked dependencies..."
+        )
     endif()
 endfunction()

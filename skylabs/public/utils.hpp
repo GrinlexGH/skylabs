@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <compare>
 #include <type_traits>
 
 namespace Utils {
