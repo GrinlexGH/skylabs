@@ -1,6 +1,7 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
+#include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
 #include <skylabs/public/utils.hpp>
 
 #include <variant>
@@ -61,7 +62,12 @@ struct AssetTextureDescirption
 
 struct TextureHandle
 {
-    unsigned int m_id;
+    unsigned int m_id = ~0;
+};
+
+struct DescriptorHandle
+{
+    unsigned int m_id = ~0;
 };
 
 class CResourceManager
@@ -81,8 +87,17 @@ public:
     void GenerateTextures();
     CImage& GetTexture(TextureHandle handle);
 
+
+    [[nodiscard]] DescriptorHandle CreateUniformBuffer(const char* debugName, std::size_t size);
+
+    void GenerateDescriptorObjects();
+    CHostBuffer& GetUniformBuffer(DescriptorHandle handle, int index = -1);
+
+
     void Resize(Utils::Extent2D newViewportExtent);
     void SetFrameIndex(std::uint32_t newFrameIndex) { m_frameIndex = newFrameIndex; }
+
+    friend class CRenderPass;
 
 private:
     struct TextureMeta
@@ -107,6 +122,12 @@ private:
         std::variant<EmptySource, AssetSource> m_source;
     };
 
+    struct UniformBufferMeta
+    {
+        std::string m_debugName;
+        std::size_t m_size;
+    };
+
     const CContext* m_context = nullptr;
     Utils::Extent2D m_viewportExtent;
     std::uint32_t m_inFlightCount = 0;
@@ -116,6 +137,22 @@ private:
     std::unordered_map<unsigned int, std::vector<CImage>> m_textures;
 
     CImage CreateImage(const TextureMeta& desc);
+
+
+    struct DescriptorRequirements {
+        uint32_t uniformBuffers = 0;
+        uint32_t combinedSamplers = 0;
+        uint32_t storageImages = 0;
+        uint32_t totalSets = 0;
+    };
+
+    DescriptorRequirements m_descriptorRequirements;
+    vk::raii::DescriptorPool m_descriptorPool { nullptr };
+
+    std::unordered_map<unsigned int, UniformBufferMeta> m_creationPendingUniformBuffers;
+    std::unordered_map<unsigned int, std::vector<CHostBuffer>> m_uniformBuffers;
+
+    void BuildDescriptorPool();
 };
 }
 

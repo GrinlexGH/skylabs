@@ -5,7 +5,7 @@ namespace Vulkan {
 class CShader
 {
 public:
-    enum class Type : std::uint8_t
+    enum class Stage : std::uint8_t
     {
         eVertex,
         eFragment,
@@ -13,7 +13,8 @@ public:
         eCount,
     };
 
-    explicit CShader(const CContext& context, Type type, const char* name);
+    explicit CShader(std::nullptr_t) {}
+    explicit CShader(const CContext& context, Stage type, const char* name);
     CShader(const CShader&) = delete;
     CShader(CShader&&) noexcept = default;
     CShader& operator=(const CShader&) = delete;
@@ -23,9 +24,12 @@ public:
     [[nodiscard]] const vk::raii::ShaderModule& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::ShaderModule* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] vk::PipelineShaderStageCreateInfo GetPipelineShaderCreateInfo() const { return m_shaderCreateInfo; }
+    [[nodiscard]] Stage Type() { return m_type; }
+    [[nodiscard]] vk::PipelineShaderStageCreateInfo PipelineShaderCreateInfo() const { return m_shaderCreateInfo; }
 
 private:
+    enum Stage m_type = Stage::eVertex;
+
     vk::raii::ShaderModule m_handle = nullptr;
     vk::PipelineShaderStageCreateInfo m_shaderCreateInfo;
 };

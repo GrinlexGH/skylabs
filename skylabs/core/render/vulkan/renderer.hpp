@@ -51,6 +51,7 @@ private:
     RG::TextureHandle m_colorBuffer;
     RG::TextureHandle m_colorBufferMSAAx;
     RG::TextureHandle m_depthBufferMSAAx;
+    RG::DescriptorHandle m_uniformBuffer;
 
     RG::TextureHandle m_computeBuffer;
 
@@ -67,7 +68,6 @@ private:
     CDeviceBuffer m_indexBuffer { nullptr };
     CImage m_modelTexture { nullptr };
     CSampler m_modelTextureSampler { nullptr };
-    std::vector<CHostBuffer> m_uniformBuffers;
     std::vector<vk::DescriptorSet> m_descriptorSetsMain;
     CPipeline m_pipelineMain { nullptr };
 

@@ -10,17 +10,17 @@ constexpr std::array ShaderStageTable = {
 };
 
 static_assert(
-    ShaderStageTable.size() == static_cast<std::size_t>(Vulkan::CShader::Type::eCount),
+    ShaderStageTable.size() == static_cast<std::size_t>(Vulkan::CShader::Stage::eCount),
     "ShaderStageTable size must match Vulkan::CShader::Type::eCount"
 );
 
-constexpr vk::ShaderStageFlagBits ToVkStage(Vulkan::CShader::Type type) {
+constexpr vk::ShaderStageFlagBits ToVkStage(Vulkan::CShader::Stage type) {
     return ShaderStageTable[static_cast<std::size_t>(type)];
 }
 }
 
 namespace Vulkan {
-CShader::CShader(const CContext& context, const Type type, const char* name) {
+CShader::CShader(const CContext& context, const Stage type, const char* name) : m_type(type) {
     vk::ShaderModuleCreateInfo createInfo {};
 
     const std::vector<char> vertexShaderSource = ResourceSystem::LoadShader(name);

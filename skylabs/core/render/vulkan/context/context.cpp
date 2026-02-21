@@ -13,7 +13,7 @@ CContext::CContext(const IWindow* const window) :
         m_profile = CProfile { profile };
         m_instance = CInstance { m_profile, m_window->GetRequiredInstanceExtensions() };
 
-        auto physicalDevice = SelectPhysicalDevice();
+        std::expected physicalDevice = SelectPhysicalDevice();
         if (physicalDevice.has_value()) {
             m_physicalDevice = physicalDevice.value();
             m_device = CDevice { m_profile, m_window, m_instance, m_physicalDevice };

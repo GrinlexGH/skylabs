@@ -70,6 +70,57 @@ CImage& CResourceManager::GetTexture(TextureHandle handle) {
     return m_textures.at(handle.m_id).at(m_frameIndex);
 }
 
+DescriptorHandle CResourceManager::CreateUniformBuffer(const char* debugName, std::size_t size) {
+    DescriptorHandle handle { static_cast<unsigned int>(m_creationPendingUniformBuffers.size()) };
+
+    UniformBufferMeta meta;
+    meta.m_debugName = debugName;
+    meta.m_size = size;
+
+    m_creationPendingUniformBuffers.try_emplace(handle.m_id, meta);
+
+    m_descriptorRequirements.uniformBuffers += m_inFlightCount;
+
+    return handle;
+}
+
+void CResourceManager::GenerateDescriptorObjects() {
+    for (auto& [id, desc] : m_creationPendingUniformBuffers) {
+        std::vector<CHostBuffer> ubos;
+        ubos.reserve(m_inFlightCount);
+        for (std::size_t _ = 0; _ < m_inFlightCount; _++) {
+            ubos.emplace_back(*m_context, static_cast<vk::DeviceSize>(desc.m_size), vk::BufferUsageFlagBits::eUniformBuffer);
+        }
+
+        m_uniformBuffers.insert_or_assign(id, std::move(ubos));
+    }
+}
+
+CHostBuffer& CResourceManager::GetUniformBuffer(DescriptorHandle handle, int index) {
+    return m_uniformBuffers.at(handle.m_id).at(index == -1 ? m_frameIndex : index);
+}
+
+void CResourceManager::BuildDescriptorPool() {
+    std::vector<vk::DescriptorPoolSize> poolSizes;
+
+    if (m_descriptorRequirements.uniformBuffers > 0) {
+        poolSizes.emplace_back(vk::DescriptorType::eUniformBuffer, m_descriptorRequirements.uniformBuffers);
+    }
+    if (m_descriptorRequirements.combinedSamplers > 0) {
+        poolSizes.emplace_back(vk::DescriptorType::eCombinedImageSampler, m_descriptorRequirements.combinedSamplers);
+    }
+    if (m_descriptorRequirements.storageImages > 0) {
+        poolSizes.emplace_back(vk::DescriptorType::eStorageImage, m_descriptorRequirements.storageImages);
+    }
+
+    vk::DescriptorPoolCreateInfo poolInfo {};
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = m_inFlightCount * 3; //! HARDCODE!!!
+
+    m_descriptorPool = vk::raii::DescriptorPool { *m_context->Device(), poolInfo };
+}
+
 void CResourceManager::Resize(const Utils::Extent2D newViewportExtent) {
     m_viewportExtent = newViewportExtent;
 

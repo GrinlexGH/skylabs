@@ -208,8 +208,7 @@ void CopyBuffer(
 
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
-    const std::vector<Vulkan::CHostBuffer>& uniformBuffersMapped,
-    const std::uint32_t currentImage,
+    Vulkan::CHostBuffer& uniformBuffersMapped,
     const glm::mat4& view,
     const float deltaTime
 ) {
@@ -238,7 +237,7 @@ void UpdateUniformBuffer(
     if (glm::length(targetOffset - offset) < 0.0001) offset = targetOffset;
     ubo.offset = offset;
 
-    std::memcpy(uniformBuffersMapped.at(currentImage).Data(), &ubo, sizeof(ubo));
+    std::memcpy(uniformBuffersMapped.Data(), &ubo, sizeof(ubo));
 }
 
 std::uint32_t renderWidth = 0;
@@ -282,6 +281,11 @@ CRenderer::CRenderer(const IWindow* const window) {
     rcm.GenerateTextures();
 
 
+    m_uniformBuffer = rcm.CreateUniformBuffer("global-pvm", sizeof(UniformBufferObject));
+
+    rcm.GenerateDescriptorObjects();
+
+
     const std::uint32_t imageCount = m_swapchain.ImageCount();
     m_renderFinishedSemaphores.reserve(imageCount);
     for (std::size_t i = 0; i < imageCount; ++i) {
@@ -312,16 +316,9 @@ CRenderer::CRenderer(const IWindow* const window) {
     // };
 
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
-    m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
 
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
         m_frameData.emplace_back(m_context);
-
-        m_uniformBuffers.emplace_back(
-            m_context,
-            sizeof(UniformBufferObject),
-            vk::BufferUsageFlagBits::eUniformBuffer
-        );
     }
 
     CHostBuffer stagingBuffer { nullptr };
@@ -386,12 +383,12 @@ CRenderer::CRenderer(const IWindow* const window) {
     UpdateMainDescriptorSets();
 
     // Shaders
-    const CShader vertexShader(m_context, CShader::Type::eVertex, "shader.vert.spv");
-    const CShader fragmentShader(m_context, CShader::Type::eFragment, "shader.frag.spv");
+    const CShader vertexShader(m_context, CShader::Stage::eVertex, "shader.vert.spv");
+    const CShader fragmentShader(m_context, CShader::Stage::eFragment, "shader.frag.spv");
 
-    const std::array shaderStages = {
-        vertexShader.GetPipelineShaderCreateInfo(),
-        fragmentShader.GetPipelineShaderCreateInfo(),
+    const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {
+        vertexShader.PipelineShaderCreateInfo(),
+        fragmentShader.PipelineShaderCreateInfo(),
     };
 
     // Pipeline
@@ -446,7 +443,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     UpdateComputeDescriptorSets();
 
     // Shaders
-    CShader computeShader(m_context, CShader::Type::eCompute, "shader.comp.spv");
+    CShader computeShader(m_context, CShader::Stage::eCompute, "shader.comp.spv");
 
     // Pipeline
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
@@ -455,7 +452,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_computePipelineLayout = m_context.Device()->createPipelineLayout(pipelineLayoutInfo);
 
     vk::ComputePipelineCreateInfo computePipelineCreateInfo {};
-    computePipelineCreateInfo.stage = computeShader.GetPipelineShaderCreateInfo();
+    computePipelineCreateInfo.stage = computeShader.PipelineShaderCreateInfo();
     computePipelineCreateInfo.layout = m_computePipelineLayout;
     m_computePipeline = m_context.Device()->createComputePipeline(nullptr, computePipelineCreateInfo);
 
@@ -499,12 +496,12 @@ CRenderer::CRenderer(const IWindow* const window) {
     UpdateSwapchainDescriptorSets();
 
     // Shaders
-    const CShader vertexShaderSwapchain(m_context, CShader::Type::eVertex, "shaderSwapchain.vert.spv");
-    const CShader fragmentShaderSwapchain(m_context, CShader::Type::eFragment, "shaderSwapchain.frag.spv");
+    const CShader vertexShaderSwapchain(m_context, CShader::Stage::eVertex, "shaderSwapchain.vert.spv");
+    const CShader fragmentShaderSwapchain(m_context, CShader::Stage::eFragment, "shaderSwapchain.frag.spv");
 
     const std::array shaderStagesSwapchain = {
-        vertexShaderSwapchain.GetPipelineShaderCreateInfo(),
-        fragmentShaderSwapchain.GetPipelineShaderCreateInfo(),
+        vertexShaderSwapchain.PipelineShaderCreateInfo(),
+        fragmentShaderSwapchain.PipelineShaderCreateInfo(),
     };
 
     // Pipeline
@@ -557,8 +554,9 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto& colorBufferMSAA = m_resourceManager.GetTexture(m_colorBufferMSAAx);
     auto& depthBufferMSAA = m_resourceManager.GetTexture(m_depthBufferMSAAx);
     auto& computeBuffer = m_resourceManager.GetTexture(m_computeBuffer);
+    auto& uniformBuffer = m_resourceManager.GetUniformBuffer(m_uniformBuffer);
 
-    UpdateUniformBuffer(m_swapchain.Extent(), m_uniformBuffers, m_frameIndex, view, deltaTime);
+    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, deltaTime);
 
     // Wait for fence to ensure that the previous frame rendering is finished
     vk::Result result = device->waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -842,7 +840,7 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
 void CRenderer::UpdateMainDescriptorSets() {
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = *m_uniformBuffers[i];
+        bufferInfo.buffer = *m_resourceManager.GetUniformBuffer(m_uniformBuffer, i);
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
