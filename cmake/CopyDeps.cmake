@@ -38,13 +38,13 @@ file(COPY ${_r_deps}
     FOLLOW_SYMLINK_CHAIN
 )
 
+# Restore RUNPATH
 # Sorry for using undocumented api
-# Restoring rpath
 if(NOT UNIX)
     return()
 endif()
 
-set(_all_files ${APPS} ${LIBS} ${MODS})
+set(_all_files ${EXECUTABLE} ${SHARED_LIBRARY} ${MODULE_LIBRARY})
 
 foreach(_file IN LISTS _all_files)
     if(NOT EXISTS "${_file}")

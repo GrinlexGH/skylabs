@@ -20,6 +20,10 @@ else()
     set(CMAKE_INSTALL_RPATH "\$ORIGIN")
 endif()
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+
+# Set paths to the libraries to RUNPATH so that
+# file(GET_RUNTIME_DEPENDENCIES) can find and copy .so files of
+# these libraries. Then it will restore RUNPATH
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
