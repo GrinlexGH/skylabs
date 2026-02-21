@@ -10,9 +10,9 @@
 namespace Vulkan::RG {
 struct AbsoluteTextureSize
 {
-    std::uint32_t m_width  = 1;
+    std::uint32_t m_width = 1;
     std::uint32_t m_height = 1;
-    std::uint32_t m_depth  = 1;
+    std::uint32_t m_depth = 1;
 };
 
 struct RelativeTextureSize
@@ -51,15 +51,6 @@ struct TextureDescirption
     std::uint32_t m_mipLevels = 1;
 };
 
-struct AssetTextureDescirption
-{
-    std::string m_assetFileName;
-
-    TextureFormat m_format = TextureFormat::eRGBA8888Unorm;
-    bool m_sampled = false;
-    bool m_mipmapped = true;
-};
-
 struct TextureHandle
 {
     unsigned int m_id = ~0;
@@ -82,7 +73,6 @@ public:
     ~CResourceManager() = default;
 
     [[nodiscard]] TextureHandle CreateEmptyTexture(const char* debugName, const TextureDescirption& description);
-    [[nodiscard]] TextureHandle CreateAssetTexture(const char* debugName, const AssetTextureDescirption& description);
 
     void GenerateTextures();
     CImage& GetTexture(TextureHandle handle);
@@ -100,6 +90,12 @@ public:
     friend class CRenderPass;
 
 private:
+    const CContext* m_context = nullptr;
+    Utils::Extent2D m_viewportExtent;
+    std::uint32_t m_inFlightCount = 0;
+    std::uint32_t m_frameIndex = 0;
+
+
     struct TextureMeta
     {
         std::string m_debugName;
@@ -114,13 +110,19 @@ private:
             std::uint32_t m_mipLevels;
         };
 
-        struct AssetSource {
-            std::string m_assetFileName;
-            bool m_mipmapped;
-        };
-
-        std::variant<EmptySource, AssetSource> m_source;
+        std::variant<EmptySource> m_source;
     };
+
+    struct Texture
+    {
+        TextureMeta m_info;
+        std::vector<CImage> m_images;
+    };
+
+    std::vector<Texture> m_textures;
+
+    CImage CreateImage(const TextureMeta& desc);
+
 
     struct UniformBufferMeta
     {
@@ -128,16 +130,8 @@ private:
         std::size_t m_size;
     };
 
-    const CContext* m_context = nullptr;
-    Utils::Extent2D m_viewportExtent;
-    std::uint32_t m_inFlightCount = 0;
-    std::uint32_t m_frameIndex = 0;
-
-    std::unordered_map<unsigned int, TextureMeta> m_creationPendingTextures;
-    std::unordered_map<unsigned int, std::vector<CImage>> m_textures;
-
-    CImage CreateImage(const TextureMeta& desc);
-
+    std::unordered_map<unsigned int, UniformBufferMeta> m_creationPendingUniformBuffers;
+    std::unordered_map<unsigned int, std::vector<CHostBuffer>> m_uniformBuffers;
 
     struct DescriptorRequirements {
         uint32_t uniformBuffers = 0;
@@ -146,11 +140,9 @@ private:
         uint32_t totalSets = 0;
     };
 
+
     DescriptorRequirements m_descriptorRequirements;
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
-
-    std::unordered_map<unsigned int, UniformBufferMeta> m_creationPendingUniformBuffers;
-    std::unordered_map<unsigned int, std::vector<CHostBuffer>> m_uniformBuffers;
 
     void BuildDescriptorPool();
 };
