@@ -28,7 +28,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
             Log::Warning("{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-            Log::Error("{}", pCallbackData->pMessage);
+            Log::Error("{}\n", pCallbackData->pMessage);
             break;
     }
 

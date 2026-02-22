@@ -45,8 +45,7 @@ struct TextureDescirption
 {
     TextureFormat m_format = TextureFormat::eRGBA8888Srgb;
     TextureUsage m_usage = TextureUsageBits::eSampled;
-    TextureExtent m_extent;
-
+    TextureExtent m_extent = RelativeTextureSize {};
     bool m_sampled = false;
     std::uint32_t m_mipLevels = 1;
 };
@@ -56,38 +55,24 @@ struct TextureHandle
     unsigned int m_id = ~0;
 };
 
-struct DescriptorHandle
-{
-    unsigned int m_id = ~0;
-};
-
-class CResourceManager
+class CTextureManager
 {
 public:
-    explicit CResourceManager(std::nullptr_t) {}
-    explicit CResourceManager(const CContext& context, Utils::Extent2D viewportExtent, std::uint32_t inFlightCount);
-    CResourceManager(const CResourceManager&) = delete;
-    CResourceManager(CResourceManager&&) noexcept = default;
-    CResourceManager& operator=(const CResourceManager&) = delete;
-    CResourceManager& operator=(CResourceManager&&) noexcept = default;
-    ~CResourceManager() = default;
+    explicit CTextureManager(std::nullptr_t) {}
+    explicit CTextureManager(const CContext& context, Utils::Extent2D viewportExtent, std::uint32_t inFlightCount);
+    CTextureManager(const CTextureManager&) = delete;
+    CTextureManager(CTextureManager&&) noexcept = default;
+    CTextureManager& operator=(const CTextureManager&) = delete;
+    CTextureManager& operator=(CTextureManager&&) noexcept = default;
+    ~CTextureManager() = default;
 
     [[nodiscard]] TextureHandle CreateEmptyTexture(const char* debugName, const TextureDescirption& description);
 
     void GenerateTextures();
-    CImage& GetTexture(TextureHandle handle);
-
-
-    [[nodiscard]] DescriptorHandle CreateUniformBuffer(const char* debugName, std::size_t size);
-
-    void GenerateDescriptorObjects();
-    CHostBuffer& GetUniformBuffer(DescriptorHandle handle, int index = -1);
-
+    [[nodiscard]] CImage& GetTexture(TextureHandle handle, int index = -1);
 
     void Resize(Utils::Extent2D newViewportExtent);
     void SetFrameIndex(std::uint32_t newFrameIndex) { m_frameIndex = newFrameIndex; }
-
-    friend class CRenderPass;
 
 private:
     const CContext* m_context = nullptr;
@@ -105,12 +90,8 @@ private:
         bool m_sampled;
         bool m_dirty = true;
 
-        struct EmptySource {
-            TextureExtent m_extent;
-            std::uint32_t m_mipLevels;
-        };
-
-        std::variant<EmptySource> m_source;
+        TextureExtent m_extent;
+        std::uint32_t m_mipLevels;
     };
 
     struct Texture
@@ -122,29 +103,6 @@ private:
     std::vector<Texture> m_textures;
 
     CImage CreateImage(const TextureMeta& desc);
-
-
-    struct UniformBufferMeta
-    {
-        std::string m_debugName;
-        std::size_t m_size;
-    };
-
-    std::unordered_map<unsigned int, UniformBufferMeta> m_creationPendingUniformBuffers;
-    std::unordered_map<unsigned int, std::vector<CHostBuffer>> m_uniformBuffers;
-
-    struct DescriptorRequirements {
-        uint32_t uniformBuffers = 0;
-        uint32_t combinedSamplers = 0;
-        uint32_t storageImages = 0;
-        uint32_t totalSets = 0;
-    };
-
-
-    DescriptorRequirements m_descriptorRequirements;
-    vk::raii::DescriptorPool m_descriptorPool { nullptr };
-
-    void BuildDescriptorPool();
 };
 }
 

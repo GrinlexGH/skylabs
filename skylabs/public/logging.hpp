@@ -35,29 +35,12 @@ void Log(const Type type, const fmt::format_string<Args...>& fmt, Args&&... args
 
     auto [label, r, g, b] = logInfo[static_cast<std::size_t>(type)];
 
-    std::string_view prefix;
-    std::string_view suffix;
-
-    switch (type) {
-        case Type::eWarning:
-            prefix = "\n";
-            suffix = "\n";
-            break;
-        case Type::eError:
-            prefix = "\n\n";
-            suffix = "\n\n";
-            break;
-        default:
-            break;
-    }
+    std::string text = fmt::format(fmt, std::forward<Args>(args)...);
 
     const std::scoped_lock lock(g_mutex);
-    std::cout << prefix
-              << stc::true_color
+    std::cout << stc::true_color
               << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "
-              << fmt::format(fmt, std::forward<Args>(args)...)
-              << suffix
-              << std::endl;
+              << text << std::endl;
 }
 
 template <class... Args>

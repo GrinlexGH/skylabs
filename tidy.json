@@ -1,6 +1,0 @@
-{
-  "paths": [
-    "skylabs/**/*.{cpp,hpp}"
-  ],
-  "buildRoot": "build"
-}

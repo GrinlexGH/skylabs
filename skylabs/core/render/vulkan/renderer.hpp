@@ -46,12 +46,11 @@ private:
     CSurface m_surface { nullptr };
     CSwapchain m_swapchain { nullptr };
 
-    RG::CResourceManager m_resourceManager { nullptr };
+    RG::CTextureManager m_textureManager { nullptr };
 
     RG::TextureHandle m_colorBuffer;
     RG::TextureHandle m_colorBufferMSAAx;
     RG::TextureHandle m_depthBufferMSAAx;
-    RG::DescriptorHandle m_uniformBuffer;
 
     RG::TextureHandle m_computeBuffer;
 
@@ -59,6 +58,7 @@ private:
 
 
     std::vector<CFrameData> m_frameData;
+    std::vector<CHostBuffer> m_uniformBuffers;
 
     vk::raii::CommandPool m_singleCommandPool { nullptr };
     vk::raii::DescriptorPool m_descriptorPool { nullptr };

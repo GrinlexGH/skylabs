@@ -257,8 +257,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderWidth = m_swapchain.Extent().width;
     renderHeight = m_swapchain.Extent().height;
 
-    m_resourceManager = RG::CResourceManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
-    auto& rcm = m_resourceManager;
+    m_textureManager = RG::CTextureManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
+    auto& rcm = m_textureManager;
 
     m_colorBuffer = rcm.CreateEmptyTexture("colorBuffer", {
         .m_usage = RG::TextureUsageBits::eAttachment | RG::TextureUsageBits::eSampled,
@@ -279,11 +279,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     });
 
     rcm.GenerateTextures();
-
-
-    m_uniformBuffer = rcm.CreateUniformBuffer("global-pvm", sizeof(UniformBufferObject));
-
-    rcm.GenerateDescriptorObjects();
 
 
     const std::uint32_t imageCount = m_swapchain.ImageCount();
@@ -316,9 +311,16 @@ CRenderer::CRenderer(const IWindow* const window) {
     // };
 
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
+    m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
 
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
         m_frameData.emplace_back(m_context);
+
+        m_uniformBuffers.emplace_back(
+            m_context,
+            sizeof(UniformBufferObject),
+            vk::BufferUsageFlagBits::eUniformBuffer
+        );
     }
 
     CHostBuffer stagingBuffer { nullptr };
@@ -543,6 +545,7 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 }
 
 void CRenderer::Draw(glm::mat4 view, float deltaTime) {
+    m_textureManager.SetFrameIndex(m_frameIndex);
     CFrameData& frameData = m_frameData[m_frameIndex];
     const CDevice& device = m_context.Device();
     auto& cmdMain = frameData.GetGraphicsCommandBuffers()[0];
@@ -550,11 +553,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto& cmdFina = frameData.GetGraphicsCommandBuffers()[1];
     auto& semMain = frameData.GetSemaphores()[0];
     auto& semComp = frameData.GetSemaphores()[1];
-    auto& colorBuffer = m_resourceManager.GetTexture(m_colorBuffer);
-    auto& colorBufferMSAA = m_resourceManager.GetTexture(m_colorBufferMSAAx);
-    auto& depthBufferMSAA = m_resourceManager.GetTexture(m_depthBufferMSAAx);
-    auto& computeBuffer = m_resourceManager.GetTexture(m_computeBuffer);
-    auto& uniformBuffer = m_resourceManager.GetUniformBuffer(m_uniformBuffer);
+    auto& colorBuffer = m_textureManager.GetTexture(m_colorBuffer);
+    auto& colorBufferMSAA = m_textureManager.GetTexture(m_colorBufferMSAAx);
+    auto& depthBufferMSAA = m_textureManager.GetTexture(m_depthBufferMSAAx);
+    auto& computeBuffer = m_textureManager.GetTexture(m_computeBuffer);
+    auto& uniformBuffer = m_uniformBuffers.at(m_frameIndex);
 
     UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, deltaTime);
 
@@ -809,7 +812,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     }
 
     m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
-    m_resourceManager.SetFrameIndex(m_frameIndex);
 }
 
 void CRenderer::Resize(CFrameData& currentFrameData) {
@@ -824,7 +826,7 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
     renderWidth = width;
     renderHeight = height;
 
-    m_resourceManager.Resize({ .m_width = renderWidth, .m_height = renderHeight });
+    m_textureManager.Resize({ .m_width = renderWidth, .m_height = renderHeight });
 
     ReleaseComputeBuffers();
 
@@ -840,7 +842,7 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
 void CRenderer::UpdateMainDescriptorSets() {
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = *m_resourceManager.GetUniformBuffer(m_uniformBuffer, i);
+        bufferInfo.buffer = *m_uniformBuffers.at(i);
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -874,7 +876,7 @@ void CRenderer::UpdateComputeDescriptorSets() {
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorImageInfo imageInfo {};
         imageInfo.imageLayout = vk::ImageLayout::eGeneral;
-        imageInfo.imageView = m_resourceManager.GetTexture(m_computeBuffer).View();
+        imageInfo.imageView = m_textureManager.GetTexture(m_computeBuffer, i).View();
 
         vk::WriteDescriptorSet descriptorWrite {};
         descriptorWrite.dstSet = m_descriptorSetsCompute[i];
@@ -892,7 +894,7 @@ void CRenderer::UpdateSwapchainDescriptorSets() {
     for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
         vk::DescriptorImageInfo imageInfo {};
         imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_resourceManager.GetTexture(m_colorBuffer).View(); // m_colorBuffers[i].View();
+        imageInfo.imageView = m_textureManager.GetTexture(m_colorBuffer, i).View(); // m_colorBuffers[i].View();
         imageInfo.sampler = *m_mainSampler;
 
         vk::WriteDescriptorSet descriptorWrite {};
@@ -905,7 +907,7 @@ void CRenderer::UpdateSwapchainDescriptorSets() {
 
         vk::DescriptorImageInfo imageInfoCompute {};
         imageInfoCompute.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfoCompute.imageView = m_resourceManager.GetTexture(m_computeBuffer).View();
+        imageInfoCompute.imageView = m_textureManager.GetTexture(m_computeBuffer, i).View();
         imageInfoCompute.sampler = *m_computeSampler;
 
         vk::WriteDescriptorSet descriptorWriteCompute {};
@@ -932,7 +934,7 @@ void CRenderer::ReleaseComputeBuffers() {
         releaseBarrier.newLayout = vk::ImageLayout::eGeneral;
         releaseBarrier.srcQueueFamilyIndex = m_context.Device().GraphicsQueue().FamilyIndex();
         releaseBarrier.dstQueueFamilyIndex = m_context.Device().ComputeQueue().FamilyIndex();
-        releaseBarrier.image = *m_resourceManager.GetTexture(m_computeBuffer);
+        releaseBarrier.image = *m_textureManager.GetTexture(m_computeBuffer, i);
         releaseBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
 
         vk::DependencyInfo releaseDependencyInfo {};

@@ -53,8 +53,6 @@ target_sources(
         render/vulkan/vertex_format.cpp
         render/vulkan/render_graph/resource_manager.hpp
         render/vulkan/render_graph/resource_manager.cpp
-        render/vulkan/render_graph/render_pass.hpp
-        render/vulkan/render_graph/render_pass.cpp
         render/vertex.hpp
         SDL/context.cpp
         SDL/context.hpp
