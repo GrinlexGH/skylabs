@@ -1,7 +1,7 @@
 # launcher
 set(CURRENT_TARGET_NAME launcher)
 
-add_executable(${CURRENT_TARGET_NAME} ${SOURCES})
+add_executable(${CURRENT_TARGET_NAME})
 
 set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES
@@ -15,10 +15,9 @@ set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRE
 target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
-        main.cpp
+        main.c
 )
 
 add_dependencies(${CURRENT_TARGET_NAME} core)
-target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE Boost::nowide)
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})

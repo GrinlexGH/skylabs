@@ -7,6 +7,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <boost/nowide/convert.hpp>
+#include <boost/nowide/args.hpp>
 
 #include <skylabs/public/logging.hpp>
 
@@ -53,13 +54,15 @@ void EnableVTP() {
 
 #include <steam/steam_api.h>
 
-extern "C" DLL_EXPORT int CoreMain(std::span<char*> /*args*/) {
+extern "C" DLL_EXPORT int CoreMain(int argc, char* argv[]) {
 #ifdef PLATFORM_WINDOWS
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 
     EnableVTP();
 #endif
+
+    boost::nowide::args _(argc, argv);
 
     SteamAPI_Init();
 

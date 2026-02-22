@@ -45,3 +45,7 @@ SystemHeaders: false
 CheckOptions:
   misc-include-cleaner.UnusedIncludes: 'false'
   misc-const-correctness.AnalyzePointers: 'false'
+If:
+  PathMatch: .*\.c
+CompileFlags:
+  Add: [ -xc ]
