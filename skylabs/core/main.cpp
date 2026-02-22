@@ -1,13 +1,14 @@
 #include <skylabs/core/launcher.hpp>
 #include <skylabs/public/dll_export.hpp>
 
+#include <boost/nowide/args.hpp>
+
 #include <span>
 
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <boost/nowide/convert.hpp>
-#include <boost/nowide/args.hpp>
 
 #include <skylabs/public/logging.hpp>
 
@@ -61,7 +62,6 @@ extern "C" DLL_EXPORT int CoreMain(int argc, char* argv[]) {
 
     EnableVTP();
 #endif
-
     boost::nowide::args _(argc, argv);
 
     SteamAPI_Init();

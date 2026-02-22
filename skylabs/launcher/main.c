@@ -1,26 +1,12 @@
-#if defined(PLATFORM_WINDOWS)
-
-#include <windows.h>
-#include <shellapi.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#elif defined(PLATFORM_UNIX)
-
-#include <dlfcn.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <limits.h>
-
-#endif
-
 #include <stddef.h>
 
 typedef int (*main_t)(int argc, char* argv[]);
 
 #ifdef PLATFORM_WINDOWS
+#include <windows.h>
+#include <shellapi.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 static void ShowErrorW(const wchar_t* msg, const wchar_t* detail) {
     size_t len = wcslen(msg) + (detail ? wcslen(detail) : 0) + 10;
@@ -116,6 +102,13 @@ int main() {
 }
 
 #elifdef PLATFORM_LINUX
+#define _POSIX_C_SOURCE 200112L
+
+#include <dlfcn.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <linux/limits.h>
 
 int main(int argc, char* argv[]) {
     char exePath[PATH_MAX];
