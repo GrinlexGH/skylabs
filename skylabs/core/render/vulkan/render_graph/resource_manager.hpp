@@ -80,18 +80,14 @@ private:
     std::uint32_t m_inFlightCount = 0;
     std::uint32_t m_frameIndex = 0;
 
-
     struct TextureMeta
     {
         std::string m_debugName;
         TextureFormat m_format;
         TextureUsage m_usage;
-
-        bool m_sampled;
-        bool m_dirty = true;
-
         TextureExtent m_extent;
         std::uint32_t m_mipLevels;
+        bool m_sampled;
     };
 
     struct Texture
@@ -101,6 +97,7 @@ private:
     };
 
     std::vector<Texture> m_textures;
+    std::vector<unsigned int> m_dirtyIndices;
 
     CImage CreateImage(const TextureMeta& desc);
 };

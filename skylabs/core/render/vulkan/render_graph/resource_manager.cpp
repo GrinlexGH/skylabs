@@ -17,33 +17,37 @@ TextureHandle CTextureManager::CreateEmptyTexture(const char* debugName, const T
         .m_debugName = debugName,
         .m_format = description.m_format,
         .m_usage = description.m_usage,
-        .m_sampled = description.m_sampled,
-        .m_dirty = true,
         .m_extent = description.m_extent,
         .m_mipLevels = description.m_mipLevels,
+        .m_sampled = description.m_sampled,
     };
 
     m_textures.emplace_back(meta);
+    m_dirtyIndices.push_back(handle.m_id);
     return handle;
 }
 
 void CTextureManager::GenerateTextures() {
-    for (auto& [meta, images] : m_textures) {
-        if (meta.m_dirty) {
-            images.reserve(m_inFlightCount);
-            for (std::size_t i = 0; i < m_inFlightCount; i++) {
-                if (images.size() < m_inFlightCount) {
-                    images.push_back(CreateImage(meta));
-                } else {
-                    images.at(i) = CreateImage(meta);
-                }
+    const bool hasDebug =
+        m_context->Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName);
 
-                if (m_context->Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
-                    m_context->Device()->setDebugUtilsObjectNameEXT(*images.at(i), fmt::format("{}-{}", meta.m_debugName, i));
-                }
+    for (auto index : m_dirtyIndices) {
+        auto& [meta, images] = m_textures.at(index);
+
+        images.clear();
+        images.reserve(m_inFlightCount);
+
+        for (std::size_t i = 0; i < m_inFlightCount; ++i) {
+            auto image = CreateImage(meta);
+
+            if (hasDebug) {
+                m_context->Device()->setDebugUtilsObjectNameEXT(
+                    *image,
+                    fmt::format("{}-{}", meta.m_debugName, i)
+                );
             }
 
-            meta.m_dirty = false;
+            images.push_back(std::move(image));
         }
     }
 }
@@ -54,17 +58,6 @@ CImage& CTextureManager::GetTexture(TextureHandle handle, int index) {
 
 void CTextureManager::Resize(const Utils::Extent2D newViewportExtent) {
     m_viewportExtent = newViewportExtent;
-
-    for (auto& [meta, images] : m_textures) {
-        std::visit([&](auto&& textureSize) {
-            using T = std::decay_t<decltype(textureSize)>;
-
-            if constexpr (std::is_same_v<T, RelativeTextureSize>) {
-                meta.m_dirty = true;
-            }
-        }, meta.m_extent);
-    }
-
     GenerateTextures();
 }
 
