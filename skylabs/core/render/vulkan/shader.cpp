@@ -1,26 +1,19 @@
 #include <skylabs/core/render/vulkan/shader.hpp>
-
 #include <skylabs/public/resource_system.hpp>
 
+#include <frozen/map.h>
+
 namespace {
-constexpr std::array ShaderStageTable = {
-    vk::ShaderStageFlagBits::eVertex,   // Type::eVertex
-    vk::ShaderStageFlagBits::eFragment, // Type::eFragment
-    vk::ShaderStageFlagBits::eCompute,  // Type::eCompute
+constexpr frozen::map<Vulkan::ShaderStageBits, vk::ShaderStageFlagBits, 3> g_shaderStageMap
+{
+    { Vulkan::ShaderStageBits::eVertex, vk::ShaderStageFlagBits::eVertex },
+    { Vulkan::ShaderStageBits::eFragment, vk::ShaderStageFlagBits::eFragment },
+    { Vulkan::ShaderStageBits::eCompute, vk::ShaderStageFlagBits::eCompute }
 };
-
-static_assert(
-    ShaderStageTable.size() == static_cast<std::size_t>(Vulkan::CShader::Stage::eCount),
-    "ShaderStageTable size must match Vulkan::CShader::Type::eCount"
-);
-
-constexpr vk::ShaderStageFlagBits ToVkStage(Vulkan::CShader::Stage type) {
-    return ShaderStageTable[static_cast<std::size_t>(type)];
-}
 }
 
 namespace Vulkan {
-CShader::CShader(const CContext& context, const Stage type, const char* name) : m_type(type) {
+CShader::CShader(const CContext& context, const ShaderStageBits type, const char* name) : m_type(type) {
     vk::ShaderModuleCreateInfo createInfo {};
 
     const std::vector<char> vertexShaderSource = ResourceSystem::LoadShader(name);
@@ -30,7 +23,7 @@ CShader::CShader(const CContext& context, const Stage type, const char* name) : 
 
     m_handle = vk::raii::ShaderModule { *context.Device(), createInfo };
 
-    m_shaderCreateInfo.stage = ToVkStage(type);
+    m_shaderCreateInfo.stage = g_shaderStageMap.at(type);
     m_shaderCreateInfo.module = m_handle;
     m_shaderCreateInfo.pName = "main";
 }

@@ -10,16 +10,12 @@ CTextureManager::CTextureManager(
 ) : m_context(&context), m_viewportExtent(viewportExtent), m_inFlightCount(inFlightCount)
 { }
 
-TextureHandle CTextureManager::CreateEmptyTexture(const char* debugName, const TextureDescirption& description) {
+TextureHandle CTextureManager::CreateTexture(const char* debugName, const TextureDescirption& description) {
     TextureHandle handle { static_cast<unsigned int>(m_textures.size()) };
 
     TextureMeta meta {
         .m_debugName = debugName,
-        .m_format = description.m_format,
-        .m_usage = description.m_usage,
-        .m_extent = description.m_extent,
-        .m_mipLevels = description.m_mipLevels,
-        .m_sampled = description.m_sampled,
+        .m_description = description
     };
 
     m_textures.emplace_back(meta);
@@ -61,7 +57,9 @@ void CTextureManager::Resize(const Utils::Extent2D newViewportExtent) {
     GenerateTextures();
 }
 
-CImage CTextureManager::CreateImage(const TextureMeta& desc) {
+CImage CTextureManager::CreateImage(const TextureMeta& meta) {
+    TextureDescirption desc = meta.m_description;
+
     vk::Extent2D extent;
 
     std::visit([&](auto&& textureSize) {
@@ -119,4 +117,12 @@ CImage CTextureManager::CreateImage(const TextureMeta& desc) {
         sampleCount
     };
 }
+
+CDescriptorManager::CDescriptorManager(
+    const CContext& context,
+    std::uint32_t inFlightCount
+) : m_context(&context), m_inFlightCount(inFlightCount)
+{ }
+
+
 }

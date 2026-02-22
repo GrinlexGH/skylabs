@@ -260,18 +260,18 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_textureManager = RG::CTextureManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
     auto& rcm = m_textureManager;
 
-    m_colorBuffer = rcm.CreateEmptyTexture("colorBuffer", {
+    m_colorBuffer = rcm.CreateTexture("colorBuffer", {
         .m_usage = RG::TextureUsageBits::eAttachment | RG::TextureUsageBits::eSampled,
         .m_extent = RG::RelativeTextureSize {}
     });
 
-    m_colorBufferMSAAx = rcm.CreateEmptyTexture("colorBufferMSAAx", {
+    m_colorBufferMSAAx = rcm.CreateTexture("colorBufferMSAAx", {
         .m_usage = RG::TextureUsageBits::eAttachment,
         .m_extent = RG::RelativeTextureSize {},
         .m_sampled = true
     });
 
-    m_depthBufferMSAAx = rcm.CreateEmptyTexture("depthBufferMSAAx", {
+    m_depthBufferMSAAx = rcm.CreateTexture("depthBufferMSAAx", {
         .m_format = RG::TextureFormat::eDepthOptimal,
         .m_usage = RG::TextureUsageBits::eDepthAttachment,
         .m_extent = RG::RelativeTextureSize {},
@@ -385,8 +385,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     UpdateMainDescriptorSets();
 
     // Shaders
-    const CShader vertexShader(m_context, CShader::Stage::eVertex, "shader.vert.spv");
-    const CShader fragmentShader(m_context, CShader::Stage::eFragment, "shader.frag.spv");
+    const CShader vertexShader(m_context, ShaderStageBits::eVertex, "shader.vert.spv");
+    const CShader fragmentShader(m_context, ShaderStageBits::eFragment, "shader.frag.spv");
 
     const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {
         vertexShader.PipelineShaderCreateInfo(),
@@ -411,7 +411,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 
     // Compute pipeline
-    m_computeBuffer = rcm.CreateEmptyTexture("computePostProcess", {
+    m_computeBuffer = rcm.CreateTexture("computePostProcess", {
         .m_format = RG::TextureFormat::eRGBA8888Unorm,
         .m_usage = RG::TextureUsageBits::eStorage | RG::TextureUsageBits::eSampled,
         .m_extent = RG::RelativeTextureSize {}
@@ -445,7 +445,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     UpdateComputeDescriptorSets();
 
     // Shaders
-    CShader computeShader(m_context, CShader::Stage::eCompute, "shader.comp.spv");
+    CShader computeShader(m_context, ShaderStageBits::eCompute, "shader.comp.spv");
 
     // Pipeline
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
@@ -498,8 +498,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     UpdateSwapchainDescriptorSets();
 
     // Shaders
-    const CShader vertexShaderSwapchain(m_context, CShader::Stage::eVertex, "shaderSwapchain.vert.spv");
-    const CShader fragmentShaderSwapchain(m_context, CShader::Stage::eFragment, "shaderSwapchain.frag.spv");
+    const CShader vertexShaderSwapchain(m_context, ShaderStageBits::eVertex, "shaderSwapchain.vert.spv");
+    const CShader fragmentShaderSwapchain(m_context, ShaderStageBits::eFragment, "shaderSwapchain.frag.spv");
 
     const std::array shaderStagesSwapchain = {
         vertexShaderSwapchain.PipelineShaderCreateInfo(),

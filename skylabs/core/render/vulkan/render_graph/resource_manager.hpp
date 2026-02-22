@@ -2,6 +2,7 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
 #include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
+#include <skylabs/core/render/vulkan/shader.hpp>
 #include <skylabs/public/utils.hpp>
 
 #include <variant>
@@ -66,7 +67,7 @@ public:
     CTextureManager& operator=(CTextureManager&&) noexcept = default;
     ~CTextureManager() = default;
 
-    [[nodiscard]] TextureHandle CreateEmptyTexture(const char* debugName, const TextureDescirption& description);
+    [[nodiscard]] TextureHandle CreateTexture(const char* debugName, const TextureDescirption& description);
 
     void GenerateTextures();
     [[nodiscard]] CImage& GetTexture(TextureHandle handle, int index = -1);
@@ -83,11 +84,7 @@ private:
     struct TextureMeta
     {
         std::string m_debugName;
-        TextureFormat m_format;
-        TextureUsage m_usage;
-        TextureExtent m_extent;
-        std::uint32_t m_mipLevels;
-        bool m_sampled;
+        TextureDescirption m_description;
     };
 
     struct Texture
@@ -99,7 +96,42 @@ private:
     std::vector<Texture> m_textures;
     std::vector<unsigned int> m_dirtyIndices;
 
-    CImage CreateImage(const TextureMeta& desc);
+    CImage CreateImage(const TextureMeta& meta);
+};
+
+enum class DescriptorType : std::uint8_t
+{
+    eUniformBuffer = 0,
+    eStorageBuffer,
+    eCombinedImageSampler
+};
+
+class CDescriptorManager
+{
+public:
+    explicit CDescriptorManager(std::nullptr_t) {}
+    explicit CDescriptorManager(const CContext& context, std::uint32_t inFlightCount);
+    CDescriptorManager(const CDescriptorManager&) = delete;
+    CDescriptorManager(CDescriptorManager&&) noexcept = default;
+    CDescriptorManager& operator=(const CDescriptorManager&) = delete;
+    CDescriptorManager& operator=(CDescriptorManager&&) noexcept = default;
+    ~CDescriptorManager() = default;
+
+private:
+    const CContext* m_context = nullptr;
+    std::uint32_t m_inFlightCount = 0;
+    std::uint32_t m_frameIndex = 0;
+
+    struct DescriptorMeta
+    {
+        DescriptorType m_type;
+        ShaderStage m_shaderStages;
+    };
+
+    struct DescriptorSetMeta
+    {
+
+    };
 };
 }
 
