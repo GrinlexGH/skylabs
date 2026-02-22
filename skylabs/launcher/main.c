@@ -80,7 +80,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
         return 1;
     }
 
-    main_t coreMain = (main_t)(void*)GetProcAddress(hCore, "CoreMain");
+    main_t coreMain = (main_t)(uintptr_t)GetProcAddress(hCore, "CoreMain");
     if (!coreMain) {
         ShowSystemError(L"Failed to load library function 'CoreMain':");
         FreeLibrary(hCore);
