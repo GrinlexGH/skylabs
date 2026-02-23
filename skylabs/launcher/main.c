@@ -36,6 +36,9 @@ static void ShowSystemError(const wchar_t* msg) {
 }
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+#define MESSAGE_EXIT_CHECK(expr, msg) do { if (expr) { PresentErrorMessage(msg); CLEANUP_AND_EXIT(); } } while(0)
+#define SYSTEM_EXIT_CHECK(expr, msg) do { if (expr) { ShowSystemError(msg); CLEANUP_AND_EXIT(); } } while(0)
+#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { wchar_t msgBuf[128]; _snwprintf(msgBuf, _countof(msgBuf), msg, __VA_ARGS__); ShowSystemError(msgBuf); CLEANUP_AND_EXIT(); } } while(0)
 #define LOAD_PATH L"\\bin\\core.dll"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
@@ -52,25 +55,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     // Get program path
     DWORD cap = MAX_PATH;
     exePath = malloc(cap * sizeof(wchar_t));
-    if (!exePath) {
-        PresentErrorMessage(L"Failed to allocate memory to get executable path");
-        CLEANUP_AND_EXIT();
-    }
+    MESSAGE_EXIT_CHECK(!exePath, L"Failed to allocate memory to get executable path");
 
     while (1) {
         DWORD size = GetModuleFileNameW(NULL, exePath, cap);
-        if (size == 0) {
-            ShowSystemError(L"Failed to get program path");
-            CLEANUP_AND_EXIT();
-        }
+        SYSTEM_EXIT_CHECK(size == 0, L"Failed to get program path");
 
         if (size == cap - 1) {
             cap += 100;
             wchar_t* tmp = realloc(exePath, cap * sizeof(wchar_t));
-            if (!tmp) {
-                PresentErrorMessage(L"Failed to reallocate memory to get executable path");
-                CLEANUP_AND_EXIT();
-            }
+            MESSAGE_EXIT_CHECK(!tmp, L"Failed to reallocate memory to get executable path");
             exePath = tmp;
         } else {
             exePath[size] = '\0';
@@ -80,78 +74,41 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
     // Remove filename
     wchar_t* lastSlash = wcsrchr(exePath, L'\\');
-    if (!lastSlash) {
-        lastSlash = wcsrchr(exePath, L'/');
-        if (!lastSlash) {
-            PresentErrorMessage(L"Failed to get executable filename");
-            CLEANUP_AND_EXIT();
-        }
-    }
     *lastSlash = L'\0';
 
     cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_PATH);
     libPath = malloc(cap * sizeof(wchar_t));
-    if (!libPath) {
-        PresentErrorMessage(L"Failed to allocate memory for core path");
-        CLEANUP_AND_EXIT();
-    }
+    MESSAGE_EXIT_CHECK(!libPath, L"Failed to allocate memory for core path");
 
     swprintf(libPath, cap, L"%s" LOAD_PATH, exePath);
     free(exePath);
     exePath = NULL;
 
     hCore = LoadLibraryExW(libPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-    if (!hCore) {
-        ShowSystemError(L"Failed to load library");
-        CLEANUP_AND_EXIT();
-    }
+    SYSTEM_EXIT_CHECK(!hCore, L"Failed to load library");
     free(libPath);
     libPath = NULL;
 
     main_t coreMain = (main_t)(uintptr_t)GetProcAddress(hCore, "CoreMain");
-    if (!coreMain) {
-        ShowSystemError(L"Failed to load library function");
-        CLEANUP_AND_EXIT();
-    }
+    SYSTEM_EXIT_CHECK(!coreMain, L"Failed to load library function");
 
     // Convert utf16 argv to utf8
     argc = 0;
     argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (!argvW) {
-        ShowSystemError(L"Failed to get command line");
-        CLEANUP_AND_EXIT();
-    }
+    SYSTEM_EXIT_CHECK(!argvW, L"Failed to get command line");
 
     argv = calloc(argc, sizeof(char*));
-    if (!argv) {
-        PresentErrorMessage(L"Failed to allocate memory for command line arguments");
-        CLEANUP_AND_EXIT();
-    }
+    MESSAGE_EXIT_CHECK(!argv, L"Failed to allocate memory for command line arguments");
 
     for (int i = 0; i < argc; ++i) {
         int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, NULL, 0, NULL, NULL);
-        if (!len) {
-            wchar_t msg[128];
-            _snwprintf(msg, _countof(msg), L"Failed to get length of converted command line argument %d", i);
-            ShowSystemError(msg);
-            CLEANUP_AND_EXIT();
-        }
+        PRINTF_EXIT_CHECK(!len, L"Failed to get length of converted command line argument %d", i);
 
         argv[i] = malloc(len);
-        if (!argv[i]) {
-            wchar_t msg[128];
-            _snwprintf(msg, _countof(msg), L"Failed to allocate memory for command line argument %d", i);
-            PresentErrorMessage(msg);
-            CLEANUP_AND_EXIT();
-        }
+        PRINTF_EXIT_CHECK(!len, L"Failed to allocate memory for command line argument %d", i);
 
         len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, NULL, NULL);
-        if (!len) {
-            wchar_t msg[128];
-            _snwprintf(msg, _countof(msg), L"Failed to convert command line argument to UTF-8 %d", i);
-            ShowSystemError(msg);
-            CLEANUP_AND_EXIT();
-        }
+        PRINTF_EXIT_CHECK(!len, L"Failed to convert command line argument %d to UTF-8", i);
     }
     LocalFree(argvW);
     argvW = NULL;
