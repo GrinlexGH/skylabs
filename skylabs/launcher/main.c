@@ -14,7 +14,7 @@ static void PresentErrorMessage(const wchar_t* msg) {
 
 static void ShowError(const wchar_t* msg, const wchar_t* detail) {
     size_t len = wcslen(msg) + (detail ? wcslen(detail) : 0) + 10;
-    wchar_t* buf = (wchar_t*)malloc(len * sizeof(wchar_t));
+    wchar_t* buf = malloc(len * sizeof(wchar_t));
     if (buf) {
         _snwprintf(buf, len, L"%s:\n%s", msg, detail ? detail : L"");
         PresentErrorMessage(buf);
@@ -51,7 +51,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
     // Get program path
     DWORD cap = MAX_PATH;
-    exePath = (wchar_t*)malloc(cap * sizeof(wchar_t));
+    exePath = malloc(cap * sizeof(wchar_t));
     if (!exePath) {
         PresentErrorMessage(L"Failed to allocate memory to get executable path");
         CLEANUP_AND_EXIT();
@@ -66,7 +66,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
         if (size == cap - 1) {
             cap += 100;
-            wchar_t* tmp = (wchar_t*)realloc(exePath, cap * sizeof(wchar_t));
+            wchar_t* tmp = realloc(exePath, cap * sizeof(wchar_t));
             if (!tmp) {
                 PresentErrorMessage(L"Failed to reallocate memory to get executable path");
                 CLEANUP_AND_EXIT();
@@ -84,18 +84,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         lastSlash = wcsrchr(exePath, L'/');
         if (!lastSlash) {
             PresentErrorMessage(L"Failed to get executable filename");
+            CLEANUP_AND_EXIT();
         }
     }
     *lastSlash = L'\0';
 
     cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_PATH);
-    libPath = (wchar_t*)malloc(cap * sizeof(wchar_t));
+    libPath = malloc(cap * sizeof(wchar_t));
     if (!libPath) {
         PresentErrorMessage(L"Failed to allocate memory for core path");
         CLEANUP_AND_EXIT();
     }
 
-    _snwprintf(libPath, cap, L"%s" LOAD_PATH, exePath);
+    swprintf(libPath, cap, L"%s" LOAD_PATH, exePath);
     free(exePath);
     exePath = NULL;
 
@@ -121,7 +122,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         CLEANUP_AND_EXIT();
     }
 
-    argv = (char**)calloc(argc, sizeof(char*));
+    argv = calloc(argc, sizeof(char*));
     if (!argv) {
         PresentErrorMessage(L"Failed to allocate memory for command line arguments");
         CLEANUP_AND_EXIT();
@@ -136,7 +137,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
             CLEANUP_AND_EXIT();
         }
 
-        argv[i] = (char*)malloc(len);
+        argv[i] = malloc(len);
         if (!argv[i]) {
             wchar_t msg[128];
             _snwprintf(msg, _countof(msg), L"Failed to allocate memory for command line argument %d", i);
@@ -197,7 +198,7 @@ int main(int argc, char* argv[]) {
 
     // Get program path
     int cap = PATH_MAX;
-    exePath = (char*)malloc(sizeof(char) * cap);
+    exePath = malloc(sizeof(char) * cap);
     if (!exePath) {
         perror("Failed to allocate memory to get executable path");
         CLEANUP_AND_EXIT();
@@ -212,7 +213,7 @@ int main(int argc, char* argv[]) {
 
         if (len == cap - 1) {
             cap += 100;
-            char* tmp = (char*)realloc(exePath, sizeof(char) * cap);
+            char* tmp = realloc(exePath, sizeof(char) * cap);
             if (!tmp) {
                 perror("Failed to reallocate memory to get executable path");
                 CLEANUP_AND_EXIT();
@@ -231,7 +232,7 @@ int main(int argc, char* argv[]) {
     }
 
     cap = (lastSlash - exePath) + (sizeof(LOAD_PATH) / sizeof(LOAD_PATH[0]));
-    libPath = (char*)malloc(sizeof(char) * cap);
+    libPath = malloc(sizeof(char) * cap);
     if (!libPath) {
         perror("Failed to allocate memory for core path");
         CLEANUP_AND_EXIT();
