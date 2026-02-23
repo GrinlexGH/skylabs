@@ -106,6 +106,12 @@ enum class DescriptorType : std::uint8_t
     eCombinedImageSampler
 };
 
+struct DescriptorDescription
+{
+    DescriptorType m_type;
+    ShaderStage m_shaderStages;
+};
+
 class CDescriptorManager
 {
 public:
@@ -117,21 +123,21 @@ public:
     CDescriptorManager& operator=(CDescriptorManager&&) noexcept = default;
     ~CDescriptorManager() = default;
 
+    void CreateDescriptorSet(std::span<const DescriptorDescription> descriptors);
+
 private:
     const CContext* m_context = nullptr;
     std::uint32_t m_inFlightCount = 0;
     std::uint32_t m_frameIndex = 0;
 
-    struct DescriptorMeta
-    {
-        DescriptorType m_type;
-        ShaderStage m_shaderStages;
-    };
-
     struct DescriptorSetMeta
     {
-
+        std::vector<DescriptorDescription> m_descriptors;
     };
+
+    std::vector<DescriptorSetMeta> m_descriptorSets;
+
+    vk::raii::DescriptorPool m_pool { nullptr };
 };
 }
 

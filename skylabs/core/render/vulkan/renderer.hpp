@@ -47,6 +47,7 @@ private:
     CSwapchain m_swapchain { nullptr };
 
     RG::CTextureManager m_textureManager { nullptr };
+    RG::CDescriptorManager m_descriptorManager { nullptr };
 
     RG::TextureHandle m_colorBuffer;
     RG::TextureHandle m_colorBufferMSAAx;

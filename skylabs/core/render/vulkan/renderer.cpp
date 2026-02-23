@@ -258,27 +258,27 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderHeight = m_swapchain.Extent().height;
 
     m_textureManager = RG::CTextureManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
-    auto& rcm = m_textureManager;
+    auto& txm = m_textureManager;
 
-    m_colorBuffer = rcm.CreateTexture("colorBuffer", {
+    m_colorBuffer = txm.CreateTexture("colorBuffer", {
         .m_usage = RG::TextureUsageBits::eAttachment | RG::TextureUsageBits::eSampled,
         .m_extent = RG::RelativeTextureSize {}
     });
 
-    m_colorBufferMSAAx = rcm.CreateTexture("colorBufferMSAAx", {
+    m_colorBufferMSAAx = txm.CreateTexture("colorBufferMSAAx", {
         .m_usage = RG::TextureUsageBits::eAttachment,
         .m_extent = RG::RelativeTextureSize {},
         .m_sampled = true
     });
 
-    m_depthBufferMSAAx = rcm.CreateTexture("depthBufferMSAAx", {
+    m_depthBufferMSAAx = txm.CreateTexture("depthBufferMSAAx", {
         .m_format = RG::TextureFormat::eDepthOptimal,
         .m_usage = RG::TextureUsageBits::eDepthAttachment,
         .m_extent = RG::RelativeTextureSize {},
         .m_sampled = true
     });
 
-    rcm.GenerateTextures();
+    txm.GenerateTextures();
 
 
     const std::uint32_t imageCount = m_swapchain.ImageCount();
@@ -333,6 +333,15 @@ CRenderer::CRenderer(const IWindow* const window) {
     LoadModel(stagingBuffer, m_singleCommandPool);
 
     m_modelTextureSampler = CSampler { m_context };
+
+
+    m_descriptorManager = RG::CDescriptorManager { m_context, FRAMES_IN_FLIGHT_COUNT };
+    auto& dsm = m_descriptorManager;
+
+    dsm.CreateDescriptorSet({{
+        { .m_type = RG::DescriptorType::eUniformBuffer, .m_shaderStages = ShaderStageBits::eVertex | ShaderStageBits::eFragment },
+        { .m_type = RG::DescriptorType::eCombinedImageSampler, .m_shaderStages = ShaderStageBits::eFragment },
+    }});
 
     std::array<vk::DescriptorPoolSize, 3> poolSizes {};
     poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
@@ -394,11 +403,11 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
     // Pipeline
-    std::array<vk::Format, 1> colorFormats = { rcm.GetTexture(m_colorBuffer).Format() };
+    std::array<vk::Format, 1> colorFormats = { txm.GetTexture(m_colorBuffer).Format() };
     vk::PipelineRenderingCreateInfo renderingInfo {};
     renderingInfo.colorAttachmentCount = static_cast<std::uint32_t>(colorFormats.size());
     renderingInfo.pColorAttachmentFormats = colorFormats.data();
-    renderingInfo.depthAttachmentFormat = rcm.GetTexture(m_depthBufferMSAAx).Format();
+    renderingInfo.depthAttachmentFormat = txm.GetTexture(m_depthBufferMSAAx).Format();
 
     m_pipelineMain = CPipeline {
         m_context,
@@ -411,13 +420,13 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 
     // Compute pipeline
-    m_computeBuffer = rcm.CreateTexture("computePostProcess", {
+    m_computeBuffer = txm.CreateTexture("computePostProcess", {
         .m_format = RG::TextureFormat::eRGBA8888Unorm,
         .m_usage = RG::TextureUsageBits::eStorage | RG::TextureUsageBits::eSampled,
         .m_extent = RG::RelativeTextureSize {}
     });
 
-    rcm.GenerateTextures();
+    txm.GenerateTextures();
 
 
     // Descriptor set layout

@@ -124,5 +124,7 @@ CDescriptorManager::CDescriptorManager(
 ) : m_context(&context), m_inFlightCount(inFlightCount)
 { }
 
+void CDescriptorManager::CreateDescriptorSet(std::span<const DescriptorDescription> descriptors) {
 
+}
 }
