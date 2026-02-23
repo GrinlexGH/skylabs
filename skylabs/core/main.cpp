@@ -1,8 +1,6 @@
 #include <skylabs/core/launcher.hpp>
 #include <skylabs/public/dll_export.hpp>
 
-#include <boost/nowide/args.hpp>
-
 #include <span>
 
 #ifdef PLATFORM_WINDOWS
@@ -55,14 +53,13 @@ void EnableVTP() {
 
 #include <steam/steam_api.h>
 
-extern "C" DLL_EXPORT int CoreMain(int argc, char* argv[]) {
+extern "C" DLL_EXPORT int CoreMain(int /*argc*/, char* /*argv*/[]) {
 #ifdef PLATFORM_WINDOWS
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 
     EnableVTP();
 #endif
-    boost::nowide::args _(argc, argv);
 
     SteamAPI_Init();
 
