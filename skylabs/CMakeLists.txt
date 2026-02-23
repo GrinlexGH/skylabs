@@ -51,6 +51,7 @@ endif()
 
 # All global macros
 add_compile_definitions(
+    _CRT_SECURE_NO_WARNINGS
     NOMINMAX
     $<$<CONFIG:Debug>:DEBUG> $<$<CONFIG:RelWithDebInfo>:DEBUG>
     GLM_FORCE_DEPTH_ZERO_TO_ONE=1

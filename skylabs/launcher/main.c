@@ -8,13 +8,19 @@ typedef int (*main_t)(int argc, char* argv[]);
 #include <stdio.h>
 #include <stdlib.h>
 
+static void PresentErrorMessage(const wchar_t* msg) {
+    MessageBoxW(NULL, msg, L"Launcher error", MB_OK | MB_ICONERROR);
+}
+
 static void ShowError(const wchar_t* msg, const wchar_t* detail) {
     size_t len = wcslen(msg) + (detail ? wcslen(detail) : 0) + 10;
     wchar_t* buf = (wchar_t*)malloc(len * sizeof(wchar_t));
     if (buf) {
-        _snwprintf(buf, len, L"%s\n%s", msg, detail ? detail : L"");
-        MessageBoxW(NULL, buf, L"Launcher error", MB_OK | MB_ICONERROR);
+        _snwprintf(buf, len, L"%s:\n%s", msg, detail ? detail : L"");
+        PresentErrorMessage(buf);
         free(buf);
+    } else {
+        MessageBoxW(NULL, detail, msg, MB_OK | MB_ICONERROR);
     }
 }
 
@@ -29,73 +35,139 @@ static void ShowSystemError(const wchar_t* msg) {
     if (errorMsg) LocalFree(errorMsg);
 }
 
-int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR /*lpCmdLine*/, int /*nShowCmd*/) {
+#define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+#define LOAD_PATH L"\\bin\\core.dll"
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
+    (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nShowCmd;
+
     int ret = 1;
+    wchar_t* exePath = NULL;
+    wchar_t* libPath = NULL;
+    HMODULE hCore = NULL;
+    int argc = 0;
+    char** argv = NULL;
+    LPWSTR* argvW = NULL;
 
     // Get program path
     DWORD cap = MAX_PATH;
-    wchar_t* exePath = (wchar_t*)malloc(cap * sizeof(wchar_t));
+    exePath = (wchar_t*)malloc(cap * sizeof(wchar_t));
+    if (!exePath) {
+        PresentErrorMessage(L"Failed to allocate memory to get executable path");
+        CLEANUP_AND_EXIT();
+    }
+
     while (1) {
         DWORD size = GetModuleFileNameW(NULL, exePath, cap);
         if (size == 0) {
-            ShowSystemError(L"Failed to get program path:");
-            free(exePath);
-            return 1;
+            ShowSystemError(L"Failed to get program path");
+            CLEANUP_AND_EXIT();
         }
 
-        if (size < cap)
+        if (size == cap - 1) {
+            cap += 100;
+            wchar_t* tmp = (wchar_t*)realloc(exePath, cap * sizeof(wchar_t));
+            if (!tmp) {
+                PresentErrorMessage(L"Failed to reallocate memory to get executable path");
+                CLEANUP_AND_EXIT();
+            }
+            exePath = tmp;
+        } else {
+            exePath[size] = '\0';
             break;
-
-        cap += 100;
-        exePath = realloc(exePath, cap * sizeof(wchar_t));
+        }
     }
 
     // Remove filename
     wchar_t* lastSlash = wcsrchr(exePath, L'\\');
-    if (lastSlash) {
-        *lastSlash = L'\0';
+    if (!lastSlash) {
+        lastSlash = wcsrchr(exePath, L'/');
+        if (!lastSlash) {
+            PresentErrorMessage(L"Failed to get executable filename");
+        }
+    }
+    *lastSlash = L'\0';
+
+    cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_PATH);
+    libPath = (wchar_t*)malloc(cap * sizeof(wchar_t));
+    if (!libPath) {
+        PresentErrorMessage(L"Failed to allocate memory for core path");
+        CLEANUP_AND_EXIT();
     }
 
-    size_t libPathCap = wcslen(exePath) + 50;
-    wchar_t* libPath = (wchar_t*)malloc(libPathCap * sizeof(wchar_t));
-    _snwprintf(libPath, libPathCap, L"%s\\bin\\core.dll", exePath);
+    _snwprintf(libPath, cap, L"%s" LOAD_PATH, exePath);
     free(exePath);
+    exePath = NULL;
 
-    HMODULE hCore = LoadLibraryExW(libPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-    free(libPath);
-
+    hCore = LoadLibraryExW(libPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
     if (!hCore) {
-        ShowSystemError(L"Failed to load library:");
-        return 1;
+        ShowSystemError(L"Failed to load library");
+        CLEANUP_AND_EXIT();
     }
+    free(libPath);
+    libPath = NULL;
 
     main_t coreMain = (main_t)(uintptr_t)GetProcAddress(hCore, "CoreMain");
     if (!coreMain) {
-        ShowSystemError(L"Failed to load library function 'CoreMain':");
-        FreeLibrary(hCore);
-        return 1;
+        ShowSystemError(L"Failed to load library function");
+        CLEANUP_AND_EXIT();
     }
 
     // Convert utf16 argv to utf8
-    int argc = 0;
-    LPWSTR* argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
-    char** argv = (char**)malloc(argc * sizeof(char*));
+    argc = 0;
+    argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (!argvW) {
+        ShowSystemError(L"Failed to get command line");
+        CLEANUP_AND_EXIT();
+    }
+
+    argv = (char**)calloc(argc, sizeof(char*));
+    if (!argv) {
+        PresentErrorMessage(L"Failed to allocate memory for command line arguments");
+        CLEANUP_AND_EXIT();
+    }
 
     for (int i = 0; i < argc; ++i) {
         int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, NULL, 0, NULL, NULL);
+        if (!len) {
+            wchar_t msg[128];
+            _snwprintf(msg, _countof(msg), L"Failed to get length of converted command line argument %d", i);
+            ShowSystemError(msg);
+            CLEANUP_AND_EXIT();
+        }
+
         argv[i] = (char*)malloc(len);
-        WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, NULL, NULL);
+        if (!argv[i]) {
+            wchar_t msg[128];
+            _snwprintf(msg, _countof(msg), L"Failed to allocate memory for command line argument %d", i);
+            PresentErrorMessage(msg);
+            CLEANUP_AND_EXIT();
+        }
+
+        len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, NULL, NULL);
+        if (!len) {
+            wchar_t msg[128];
+            _snwprintf(msg, _countof(msg), L"Failed to convert command line argument to UTF-8 %d", i);
+            ShowSystemError(msg);
+            CLEANUP_AND_EXIT();
+        }
     }
     LocalFree(argvW);
+    argvW = NULL;
 
     ret = coreMain(argc, argv);
 
-    for (int i = 0; i < argc; ++i) {
-        free(argv[i]);
+cleanup:
+    if (exePath) free(exePath);
+    if (libPath) free(libPath);
+    if (hCore) FreeLibrary(hCore);
+    if (argvW) LocalFree(argvW);
+    if (argv) {
+        for (int i = 0; i < argc; ++i) {
+            if (argv[i]) free(argv[i]);
+        }
+        free(argv);
     }
-    free(argv);
-    FreeLibrary(hCore);
-
     return ret;
 }
 
@@ -115,21 +187,22 @@ int main() {
 #include <linux/limits.h>
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+#define LOAD_PATH L"/bin/core.so"
 
 int main(int argc, char* argv[]) {
     int ret = 0;
-    int cap = PATH_MAX;
     char* exePath = NULL;
     char* libPath = NULL;
     void* hCore = NULL;
 
+    // Get program path
+    int cap = PATH_MAX;
     exePath = (char*)malloc(sizeof(char) * cap);
     if (!exePath) {
-        perror("Failed to allocate memory for exe path");
+        perror("Failed to allocate memory to get executable path");
         CLEANUP_AND_EXIT();
     }
 
-    // Get program path
     while (1) {
         ssize_t len = readlink("/proc/self/exe", exePath, cap - 1);
         if (len == -1) {
@@ -139,9 +212,9 @@ int main(int argc, char* argv[]) {
 
         if (len == cap - 1) {
             cap += 100;
-            char* tmp = (char*)realloc(exePath, cap);
+            char* tmp = (char*)realloc(exePath, sizeof(char) * cap);
             if (!tmp) {
-                perror("Failed to reallocate memory for exe path");
+                perror("Failed to reallocate memory to get executable path");
                 CLEANUP_AND_EXIT();
             }
             exePath = tmp;
@@ -157,14 +230,14 @@ int main(int argc, char* argv[]) {
         *lastSlash = '\0';
     }
 
-    int libPathLen = (lastSlash - exePath) + 13;
-    libPath = (char*)malloc(sizeof(char) * libPathLen);
+    cap = (lastSlash - exePath) + (sizeof(LOAD_PATH) / sizeof(LOAD_PATH[0]));
+    libPath = (char*)malloc(sizeof(char) * cap);
     if (!libPath) {
         perror("Failed to allocate memory for core path");
         CLEANUP_AND_EXIT();
     }
 
-    snprintf(libPath, libPathLen, "%s/bin/core.so", exePath);
+    snprintf(libPath, cap, "%s" LOAD_PATH, exePath);
     free(exePath);
     exePath = NULL;
 

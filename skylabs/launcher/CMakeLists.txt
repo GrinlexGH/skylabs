@@ -18,6 +18,4 @@ target_sources(
         main.c
 )
 
-add_dependencies(${CURRENT_TARGET_NAME} core)
-
 skylabs_configure_target(${CURRENT_TARGET_NAME})
