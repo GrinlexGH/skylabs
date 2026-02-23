@@ -183,11 +183,15 @@ int main() {
 #include <dlfcn.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <linux/limits.h>
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+#define PERROR_EXIT_CHECK(expr, msg) do { if (expr) { perror(msg); CLEANUP_AND_EXIT(); } } while(0)
+#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { fprintf(stderr, msg, __VA_ARGS__); CLEANUP_AND_EXIT(); } } while(0)
+
 #define LOAD_PATH "/bin/core.so"
 
 int main(int argc, char* argv[]) {
@@ -199,25 +203,16 @@ int main(int argc, char* argv[]) {
     // Get program path
     int cap = PATH_MAX;
     exePath = malloc(sizeof(char) * cap);
-    if (!exePath) {
-        perror("Failed to allocate memory to get executable path");
-        CLEANUP_AND_EXIT();
-    }
+    PERROR_EXIT_CHECK(!exePath, "Failed to allocate memory to get executable path");
 
     while (1) {
         ssize_t len = readlink("/proc/self/exe", exePath, cap - 1);
-        if (len == -1) {
-            perror("Failed to get program path");
-            CLEANUP_AND_EXIT();
-        }
+        PERROR_EXIT_CHECK(len == -1, "Failed to get program path");
 
         if (len == cap - 1) {
             cap += 100;
             char* tmp = realloc(exePath, sizeof(char) * cap);
-            if (!tmp) {
-                perror("Failed to reallocate memory to get executable path");
-                CLEANUP_AND_EXIT();
-            }
+            PERROR_EXIT_CHECK(!tmp, "Failed to reallocate memory to get executable path");
             exePath = tmp;
         } else {
             exePath[len] = '\0';
@@ -227,35 +222,24 @@ int main(int argc, char* argv[]) {
 
     // Remove filename
     char* lastSlash = strrchr(exePath, '/');
-    if (lastSlash) {
-        *lastSlash = '\0';
-    }
+    *lastSlash = '\0';
 
     cap = (lastSlash - exePath) + (sizeof(LOAD_PATH) / sizeof(LOAD_PATH[0]));
     libPath = malloc(sizeof(char) * cap);
-    if (!libPath) {
-        perror("Failed to allocate memory for core path");
-        CLEANUP_AND_EXIT();
-    }
+    PERROR_EXIT_CHECK(!libPath, "Failed to allocate memory for core path");
 
     snprintf(libPath, cap, "%s" LOAD_PATH, exePath);
     free(exePath);
     exePath = NULL;
 
     hCore = dlopen(libPath, RTLD_LAZY);
-    if (!hCore) {
-        fprintf(stderr, "Failed to load library:\n%s\n", dlerror());
-        CLEANUP_AND_EXIT();
-    }
+    PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", dlerror());
     free(libPath);
     libPath = NULL;
 
-    main_t coreMain = (main_t)dlsym(hCore, "CoreMain");
+    main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
     const char* dlsymError = dlerror();
-    if (dlsymError) {
-        fprintf(stderr, "Failed to load library function:\n%s\n", dlsymError);
-        CLEANUP_AND_EXIT();
-    }
+    PRINTF_EXIT_CHECK(dlsymError, "Failed to load library function:\n%s\n", dlsymError);
 
     ret = coreMain(argc, argv);
 
