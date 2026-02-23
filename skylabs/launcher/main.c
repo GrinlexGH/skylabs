@@ -187,7 +187,7 @@ int main() {
 #include <linux/limits.h>
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
-#define LOAD_PATH L"/bin/core.so"
+#define LOAD_PATH "/bin/core.so"
 
 int main(int argc, char* argv[]) {
     int ret = 0;
