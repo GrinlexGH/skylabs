@@ -8,7 +8,7 @@ typedef int (*main_t)(int argc, char* argv[]);
 #include <stdio.h>
 #include <stdlib.h>
 
-static void ShowErrorW(const wchar_t* msg, const wchar_t* detail) {
+static void ShowError(const wchar_t* msg, const wchar_t* detail) {
     size_t len = wcslen(msg) + (detail ? wcslen(detail) : 0) + 10;
     wchar_t* buf = (wchar_t*)malloc(len * sizeof(wchar_t));
     if (buf) {
@@ -25,7 +25,7 @@ static void ShowSystemError(const wchar_t* msg) {
         NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPWSTR)&errorMsg, 0, NULL
     );
-    ShowErrorW(msg, errorMsg);
+    ShowError(msg, errorMsg);
     if (errorMsg) LocalFree(errorMsg);
 }
 
@@ -42,9 +42,12 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
             free(exePath);
             return 1;
         }
-        if (size < cap) break;
+
+        if (size < cap)
+            break;
+
         cap += 100;
-        exePath = (wchar_t*)realloc(exePath, cap * sizeof(wchar_t));
+        exePath = realloc(exePath, cap * sizeof(wchar_t));
     }
 
     // Remove filename
@@ -108,18 +111,45 @@ int main() {
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <linux/limits.h>
 
+#define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+
 int main(int argc, char* argv[]) {
-    char exePath[PATH_MAX];
+    int ret = 0;
+    int cap = PATH_MAX;
+    char* exePath = NULL;
+    char* libPath = NULL;
+    void* hCore = NULL;
+
+    exePath = (char*)malloc(sizeof(char) * cap);
+    if (!exePath) {
+        perror("Failed to allocate memory for exe path");
+        CLEANUP_AND_EXIT();
+    }
 
     // Get program path
-    ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
-    if (len == -1) {
-        perror("Failed to get program path");
-        return 1;
+    while (1) {
+        ssize_t len = readlink("/proc/self/exe", exePath, cap - 1);
+        if (len == -1) {
+            perror("Failed to get program path");
+            CLEANUP_AND_EXIT();
+        }
+
+        if (len == cap - 1) {
+            cap += 100;
+            char* tmp = (char*)realloc(exePath, cap);
+            if (!tmp) {
+                perror("Failed to reallocate memory for exe path");
+                CLEANUP_AND_EXIT();
+            }
+            exePath = tmp;
+        } else {
+            exePath[len] = '\0';
+            break;
+        }
     }
-    exePath[len] = '\0';
 
     // Remove filename
     char* lastSlash = strrchr(exePath, '/');
@@ -127,26 +157,38 @@ int main(int argc, char* argv[]) {
         *lastSlash = '\0';
     }
 
-    char libPath[PATH_MAX];
-    snprintf(libPath, sizeof(libPath), "%s/bin/core.so", exePath);
+    int libPathLen = (lastSlash - exePath) + 13;
+    libPath = (char*)malloc(sizeof(char) * libPathLen);
+    if (!libPath) {
+        perror("Failed to allocate memory for core path");
+        CLEANUP_AND_EXIT();
+    }
 
-    void* hCore = dlopen(libPath, RTLD_LAZY);
+    snprintf(libPath, libPathLen, "%s/bin/core.so", exePath);
+    free(exePath);
+    exePath = NULL;
+
+    hCore = dlopen(libPath, RTLD_LAZY);
     if (!hCore) {
         fprintf(stderr, "Failed to load library:\n%s\n", dlerror());
-        return 1;
+        CLEANUP_AND_EXIT();
     }
+    free(libPath);
+    libPath = NULL;
 
     main_t coreMain = (main_t)dlsym(hCore, "CoreMain");
-    const char* dlsym_error = dlerror();
-    if (dlsym_error) {
-        fprintf(stderr, "Failed to load library function:\n%s\n", dlsym_error);
-        dlclose(hCore);
-        return 1;
+    const char* dlsymError = dlerror();
+    if (dlsymError) {
+        fprintf(stderr, "Failed to load library function:\n%s\n", dlsymError);
+        CLEANUP_AND_EXIT();
     }
 
-    int ret = coreMain(argc, argv);
+    ret = coreMain(argc, argv);
 
-    dlclose(hCore);
+cleanup:
+    if (exePath) free(exePath);
+    if (libPath) free(libPath);
+    if (hCore) dlclose(hCore);
     return ret;
 }
 
