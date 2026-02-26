@@ -23,11 +23,8 @@ endif()
 # Global compilation options
 if(IS_GNU_LIKE)
     add_compile_options(
-        "-fdiagnostics-color=always" # I don't wanna read wall of white text on gray background
         "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
     )
-
-    add_compile_options("-march=native" "-mtune=native")
 
     if(WIN32 AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
         add_compile_options("-fansi-escape-codes")

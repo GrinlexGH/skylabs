@@ -1,17 +1,17 @@
 # public
 set(CURRENT_TARGET_NAME public)
 
-configure_file(
-    ${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in
-    project_info.hpp
-    @ONLY
-)
-
 add_library(${CURRENT_TARGET_NAME})
 set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES DEFINE_SYMBOL "PUBLIC_EXPORTS")
 
 include(GenerateExportHeader)
 generate_export_header(${CURRENT_TARGET_NAME})
+
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in
+    project_info.hpp
+    @ONLY
+)
 
 target_sources(
     ${CURRENT_TARGET_NAME}

@@ -24,9 +24,9 @@ file(GET_RUNTIME_DEPENDENCIES
         "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
     POST_EXCLUDE_REGEXES
         "^\/lib.*" "^\/usr\/lib.*"
-        "C:[\\\/]Windows[\\\/].*"
+        "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
     POST_INCLUDE_REGEXES
-        "vcruntime.*" "msvcp.*"
+        "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
 )
 
 if(_u_deps)
