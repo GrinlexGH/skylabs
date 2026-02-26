@@ -141,9 +141,7 @@ int main() {
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <linux/limits.h>
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
 #define PERROR_EXIT_CHECK(expr, msg) do { if (expr) { perror(msg); CLEANUP_AND_EXIT(); } } while(0)
