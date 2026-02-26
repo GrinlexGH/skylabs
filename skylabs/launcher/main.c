@@ -158,21 +158,18 @@ int main(int argc, char* argv[]) {
     void* hCore = NULL;
 
     // Get program path
-    int cap = PATH_MAX;
-    exePath = malloc(sizeof(char) * cap);
-    PERROR_EXIT_CHECK(!exePath, "Failed to allocate memory to get executable path");
-
     exePath = realpath("/proc/self/exe", NULL);
+    PERROR_EXIT_CHECK(!exePath, "Failed to get executable path");
 
     // Remove filename
     char* lastSlash = strrchr(exePath, '/');
     *lastSlash = '\0';
 
-    cap = (lastSlash - exePath) + (sizeof(LOAD_PATH) / sizeof(LOAD_PATH[0]));
-    libPath = malloc(sizeof(char) * cap);
+    int corePathLen = (lastSlash - exePath) + (sizeof(LOAD_PATH) / sizeof(LOAD_PATH[0]));
+    libPath = malloc(sizeof(char) * corePathLen);
     PERROR_EXIT_CHECK(!libPath, "Failed to allocate memory for core path");
 
-    snprintf(libPath, cap, "%s" LOAD_PATH, exePath);
+    snprintf(libPath, corePathLen, "%s" LOAD_PATH, exePath);
     free(exePath);
     exePath = NULL;
 
