@@ -49,8 +49,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     wchar_t* libPath = NULL;
     HMODULE hCore = NULL;
     int argc = 0;
-    char** argv = NULL;
     LPWSTR* argvW = NULL;
+    char** argv = NULL;
 
     // Get program path
     DWORD cap = MAX_PATH;
