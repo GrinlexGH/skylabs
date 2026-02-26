@@ -11,10 +11,6 @@ set_target_properties(${CURRENT_TARGET_NAME}
     # WIN32_EXECUTABLE $<CONFIG:Release> # Do not show console in release
 )
 
-if(IS_GNU_LIKE)
-    target_link_options(${CURRENT_TARGET_NAME} PRIVATE "-static")
-endif()
-
 set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
 
 target_sources(
