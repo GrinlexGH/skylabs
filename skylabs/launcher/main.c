@@ -135,7 +135,7 @@ int main() {
 }
 
 #elifdef PLATFORM_LINUX
-#define _POSIX_C_SOURCE 200112L
+#define _XOPEN_SOURCE 700
 
 #include <dlfcn.h>
 #include <stdio.h>
@@ -162,20 +162,7 @@ int main(int argc, char* argv[]) {
     exePath = malloc(sizeof(char) * cap);
     PERROR_EXIT_CHECK(!exePath, "Failed to allocate memory to get executable path");
 
-    while (1) {
-        ssize_t len = readlink("/proc/self/exe", exePath, cap - 1);
-        PERROR_EXIT_CHECK(len == -1, "Failed to get program path");
-
-        if (len == cap - 1) {
-            cap += 100;
-            char* tmp = realloc(exePath, sizeof(char) * cap);
-            PERROR_EXIT_CHECK(!tmp, "Failed to reallocate memory to get executable path");
-            exePath = tmp;
-        } else {
-            exePath[len] = '\0';
-            break;
-        }
-    }
+    exePath = realpath("/proc/self/exe", NULL);
 
     // Remove filename
     char* lastSlash = strrchr(exePath, '/');
