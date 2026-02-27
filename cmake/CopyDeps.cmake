@@ -8,17 +8,13 @@ if(NOT OUTPUT_DIR)
     message(FATAL_ERROR "OUTPUT_DIR is not defined")
 endif()
 
-if(DEFINED COMPILER)
-    cmake_path(GET COMPILER PARENT_PATH COMPILER_DIR)
-endif()
-
 file(GET_RUNTIME_DEPENDENCIES
     RESOLVED_DEPENDENCIES_VAR _r_deps
     UNRESOLVED_DEPENDENCIES_VAR _u_deps
     EXECUTABLES ${EXECUTABLE}
     LIBRARIES ${SHARED_LIBRARY}
     MODULES ${MODULE_LIBRARY}
-    DIRECTORIES ${COMPILER_DIR}
+    DIRECTORIES ${DIRECTORIES}
     PRE_EXCLUDE_REGEXES
         "api-ms-win-.*" "ext-ms-.*"
         "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"

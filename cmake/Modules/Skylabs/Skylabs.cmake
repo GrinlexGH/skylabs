@@ -24,10 +24,14 @@ function(skylabs_configure_target target_name)
             )
         endif()
 
+        # Get compilers path
+        cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_DIR)
+        cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_DIR)
+
         add_custom_command(TARGET ${target_name} POST_BUILD
             COMMAND ${CMAKE_COMMAND}
             "-DOUTPUT_DIR=$<TARGET_FILE_DIR:${target_name}>"
-            "-DCOMPILER=${CMAKE_CXX_COMPILER}"
+            "-DDIRECTORIES=${CXX_COMPILER_DIR};${C_COMPILER_DIR};${CONAN_RUNTIME_LIB_DIRS}"
             "-D${target_type}=$<TARGET_FILE:${target_name}>"
             -P ${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake
             ${cmd}
