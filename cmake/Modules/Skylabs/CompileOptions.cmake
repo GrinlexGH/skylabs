@@ -22,10 +22,6 @@ endif()
 
 # Global compilation options
 if(IS_GNU_LIKE)
-    add_compile_options(
-        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
-    )
-
     if(WIN32 AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
         add_compile_options("-fansi-escape-codes")
     endif()
@@ -33,7 +29,6 @@ elseif(IS_MSVC_LIKE)
     add_compile_options(
         "/utf-8" # No, I don't want to use one byte encoding in source files
         "/Zc:__cplusplus"
-        "$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
     )
 
     if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
@@ -42,10 +37,7 @@ elseif(IS_MSVC_LIKE)
 
     # Clang-cl doesn't support much options
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        add_compile_options(
-            "/MP"
-            "/analyze:external-"
-        )
+        add_compile_options("/MP" "/analyze:external-")
 
         if(CMAKE_INTERPROCEDURAL_OPTIMIZATION AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.35)
             add_compile_options("/Zc:checkGwOdr")
