@@ -7,8 +7,7 @@
 #include <skylabs/core/render/vulkan/surface.hpp>
 #include <skylabs/core/render/vulkan/swapchain.hpp>
 #include <skylabs/core/render/vulkan/sampler.hpp>
-#include <skylabs/core/render/vulkan/memory/device_buffer.hpp>
-#include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
+#include <skylabs/core/render/vulkan/memory/buffer.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline.hpp>
 
@@ -38,8 +37,8 @@ private:
     void UpdateComputeDescriptorSets();
     void UpdateSwapchainDescriptorSets();
     void ReleaseComputeBuffers();
-    void LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
-    void LoadModel(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
+    void LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
+    void LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
 
     CContext m_context { nullptr };
 
@@ -47,42 +46,51 @@ private:
     CSwapchain m_swapchain { nullptr };
 
     RG::CTextureManager m_textureManager { nullptr };
+    RG::CBufferManager m_bufferManager { nullptr };
     RG::CDescriptorManager m_descriptorManager { nullptr };
+
+    RG::BufferHandle m_uniformBuffer;
 
     RG::TextureHandle m_colorBuffer;
     RG::TextureHandle m_colorBufferMSAAx;
     RG::TextureHandle m_depthBufferMSAAx;
+    RG::DescriptorSetHandle m_mainDescriptorSet;
+    RG::TextureHandle m_modelTexture;
+    RG::BufferHandle m_vertexBuffer;
+    RG::BufferHandle m_indexBuffer;
 
     RG::TextureHandle m_computeBuffer;
+    RG::DescriptorSetHandle m_computeDescriptorSet;
+
+    RG::DescriptorSetHandle m_swapchainDescriptorSet;
 
 
 
 
     std::vector<CFrameData> m_frameData;
-    std::vector<CHostBuffer> m_uniformBuffers;
 
     vk::raii::CommandPool m_singleCommandPool { nullptr };
-    vk::raii::DescriptorPool m_descriptorPool { nullptr };
+    // vk::raii::DescriptorPool m_descriptorPool { nullptr };
 
-    vk::raii::DescriptorSetLayout m_descriptorSetLayoutMain { nullptr };
-    CDeviceBuffer m_vertexBuffer { nullptr };
-    CDeviceBuffer m_indexBuffer { nullptr };
-    CImage m_modelTexture { nullptr };
+    // vk::raii::DescriptorSetLayout m_descriptorSetLayoutMain { nullptr };
+    // std::vector<vk::DescriptorSet> m_descriptorSetsMain;
+    // CBuffer m_vertexBuffer { nullptr };
+    // CBuffer m_indexBuffer { nullptr };
+    // CImage m_modelTexture { nullptr };
     CSampler m_modelTextureSampler { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSetsMain;
     CPipeline m_pipelineMain { nullptr };
 
 
-    vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSetsCompute;
+    // vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
+    // std::vector<vk::DescriptorSet> m_descriptorSetsCompute;
     vk::raii::PipelineLayout m_computePipelineLayout { nullptr };
     vk::raii::Pipeline m_computePipeline { nullptr };
 
 
-    vk::raii::DescriptorSetLayout m_descriptorSetLayoutSwapchain { nullptr };
+    // vk::raii::DescriptorSetLayout m_descriptorSetLayoutSwapchain { nullptr };
+    // std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain;
     CSampler m_computeSampler { nullptr };
     CSampler m_mainSampler { nullptr };
-    std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain;
     CPipeline m_pipelineSwapchain { nullptr };
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 

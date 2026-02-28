@@ -2,27 +2,38 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
 namespace Vulkan {
-class CHostBuffer
+enum class MemoryLocation {
+    eDeviceOnly = 0,
+    eHostVisible,
+};
+
+class CBuffer
 {
 public:
-    explicit CHostBuffer(std::nullptr_t) {}
-    CHostBuffer(
+    explicit CBuffer(std::nullptr_t) {}
+    CBuffer(
         const CContext& context,
         vk::DeviceSize size,
-        vk::BufferUsageFlags usage
+        vk::BufferUsageFlags usage,
+        MemoryLocation location
     );
-    CHostBuffer(const CHostBuffer&) = delete;
-    CHostBuffer(CHostBuffer&&) noexcept = default;
-    CHostBuffer& operator=(const CHostBuffer&) = delete;
-    CHostBuffer& operator=(CHostBuffer&&) noexcept = default;
-    ~CHostBuffer();
+    CBuffer(const CBuffer&) = delete;
+    CBuffer(CBuffer&&) noexcept = default;
+    CBuffer& operator=(const CBuffer&) = delete;
+    CBuffer& operator=(CBuffer&&) noexcept = default;
+    ~CBuffer() = default;
 
     [[nodiscard]] const vma::raii::Buffer& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vma::raii::Buffer* operator->() const noexcept { return &m_handle; }
 
     [[nodiscard]] void* Data() const noexcept { return m_data; }
     [[nodiscard]] std::size_t Size() const noexcept { return m_size; }
-    [[nodiscard]] std::span<std::byte> Span() const { return { static_cast<std::byte*>(m_data), static_cast<std::size_t>(m_size) }; }
+    [[nodiscard]] std::span<std::byte> Span() const {
+        return m_data
+            ? std::span { static_cast<std::byte*>(m_data), static_cast<std::size_t>(m_size) }
+            : std::span<std::byte> {};
+    }
+
     [[nodiscard]] vk::BufferUsageFlags Usage() const noexcept { return m_usage; }
 
 private:

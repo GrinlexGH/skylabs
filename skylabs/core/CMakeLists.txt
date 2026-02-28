@@ -41,10 +41,8 @@ target_sources(
         render/vulkan/shader.cpp
         render/vulkan/memory/image.hpp
         render/vulkan/memory/image.cpp
-        render/vulkan/memory/device_buffer.hpp
-        render/vulkan/memory/device_buffer.cpp
-        render/vulkan/memory/host_buffer.hpp
-        render/vulkan/memory/host_buffer.cpp
+        render/vulkan/memory/buffer.hpp
+        render/vulkan/memory/buffer.cpp
         render/vulkan/sampler.hpp
         render/vulkan/sampler.cpp
         render/vulkan/pipeline.hpp

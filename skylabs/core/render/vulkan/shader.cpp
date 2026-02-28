@@ -1,18 +1,17 @@
 #include <skylabs/core/render/vulkan/shader.hpp>
 #include <skylabs/public/resource_system.hpp>
 
-#include <frozen/map.h>
-
-namespace {
-constexpr frozen::map<Vulkan::ShaderStageBits, vk::ShaderStageFlagBits, 3> g_shaderStageMap
-{
-    { Vulkan::ShaderStageBits::eVertex, vk::ShaderStageFlagBits::eVertex },
-    { Vulkan::ShaderStageBits::eFragment, vk::ShaderStageFlagBits::eFragment },
-    { Vulkan::ShaderStageBits::eCompute, vk::ShaderStageFlagBits::eCompute }
-};
+namespace Vulkan {
+vk::ShaderStageFlags GetVkShaderStageFlags(ShaderStage stage) {
+    vk::ShaderStageFlags flags;
+    for (auto const& [bit, vkBit] : g_shaderStageMap) {
+        if (stage & bit) {
+            flags |= vkBit;
+        }
+    }
+    return flags;
 }
 
-namespace Vulkan {
 CShader::CShader(const CContext& context, const ShaderStageBits type, const char* name) : m_type(type) {
     vk::ShaderModuleCreateInfo createInfo {};
 

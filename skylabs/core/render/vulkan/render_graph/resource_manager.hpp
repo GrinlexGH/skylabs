@@ -1,8 +1,9 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/memory/image.hpp>
-#include <skylabs/core/render/vulkan/memory/host_buffer.hpp>
+#include <skylabs/core/render/vulkan/memory/buffer.hpp>
 #include <skylabs/core/render/vulkan/shader.hpp>
+#include <skylabs/core/render/vulkan/sampler.hpp>
 #include <skylabs/public/utils.hpp>
 
 #include <variant>
@@ -68,6 +69,7 @@ public:
     ~CTextureManager() = default;
 
     [[nodiscard]] TextureHandle CreateTexture(const char* debugName, const TextureDescirption& description);
+    [[nodiscard]] TextureHandle ImportTexture(const char* debugName, CImage image);
 
     void GenerateTextures();
     [[nodiscard]] CImage& GetTexture(TextureHandle handle, int index = -1);
@@ -81,6 +83,7 @@ private:
     std::uint32_t m_inFlightCount = 0;
     std::uint32_t m_frameIndex = 0;
 
+    // TODO: too much info duplication
     struct TextureMeta
     {
         std::string m_debugName;
@@ -99,17 +102,98 @@ private:
     CImage CreateImage(const TextureMeta& meta);
 };
 
+
+enum class BufferUsageFlagBits : std::uint8_t
+{
+    eUniformBuffer = 1 << 0,
+};
+
+using BufferUsageFlags = Utils::Flags<BufferUsageFlagBits>;
+
+struct BufferDescirption
+{
+    std::uint32_t m_size = 0;
+    MemoryLocation m_location = MemoryLocation::eDeviceOnly;
+    BufferUsageFlags m_usage;
+    bool m_isInFlight = false;
+};
+
+struct BufferHandle
+{
+    unsigned int m_id = ~0;
+};
+
+class CBufferManager
+{
+public:
+    explicit CBufferManager(std::nullptr_t) {}
+    explicit CBufferManager(const CContext& context, std::uint32_t inFlightCount);
+    CBufferManager(const CBufferManager&) = delete;
+    CBufferManager(CBufferManager&&) noexcept = default;
+    CBufferManager& operator=(const CBufferManager&) = delete;
+    CBufferManager& operator=(CBufferManager&&) noexcept = default;
+    ~CBufferManager() = default;
+
+    [[nodiscard]] BufferHandle CreateBuffer(const char* debugName, const BufferDescirption& description);
+    [[nodiscard]] BufferHandle ImportBuffer(const char* debugName, CBuffer buffer);
+
+    void GenerateBuffers();
+    [[nodiscard]] CBuffer& GetBuffer(BufferHandle handle, int index = -1);
+
+    void SetFrameIndex(std::uint32_t newFrameIndex) { m_frameIndex = newFrameIndex; }
+
+private:
+    const CContext* m_context = nullptr;
+    std::uint32_t m_inFlightCount = 0;
+    std::uint32_t m_frameIndex = 0;
+
+    // TODO: too much info duplication
+    struct BufferMeta
+    {
+        std::string m_debugName;
+        BufferDescirption m_description;
+    };
+
+    struct Buffer
+    {
+        BufferMeta m_meta;
+        std::vector<CBuffer> m_buffers;
+    };
+
+    std::vector<Buffer> m_buffers;
+};
+
+
 enum class DescriptorType : std::uint8_t
 {
     eUniformBuffer = 0,
-    eStorageBuffer,
+    eStorageImage,
     eCombinedImageSampler
+};
+
+struct BufferDescriptorInfo {
+    BufferHandle m_buffer;
+};
+
+struct SampledImageDescriptorInfo {
+    TextureHandle m_image;
+    const CSampler* m_sampler = nullptr;
+};
+
+struct StorageImageDescriptorInfo {
+    TextureHandle m_image;
 };
 
 struct DescriptorDescription
 {
     DescriptorType m_type;
     ShaderStage m_shaderStages;
+    std::variant<BufferDescriptorInfo, SampledImageDescriptorInfo, StorageImageDescriptorInfo> m_info;
+};
+
+struct DescriptorSetHandle
+{
+    unsigned int m_id = ~0;
 };
 
 class CDescriptorManager
@@ -123,7 +207,16 @@ public:
     CDescriptorManager& operator=(CDescriptorManager&&) noexcept = default;
     ~CDescriptorManager() = default;
 
-    void CreateDescriptorSet(std::span<const DescriptorDescription> descriptors);
+    [[nodiscard]] DescriptorSetHandle CreateDescriptorSet(std::span<const DescriptorDescription> descriptors);
+
+    void CreateDescriptorPool();
+    void CreateDescriptorSets();
+    void UpdateDescriptorSets(CBufferManager& bufferManager, CTextureManager& textureManager);
+
+    [[nodiscard]] vk::DescriptorSet GetDescriptorSet(DescriptorSetHandle handle, int index = -1);
+    [[nodiscard]] const vk::raii::DescriptorSetLayout& GetDescriptorSetLayout(DescriptorSetHandle handle);
+
+    void SetFrameIndex(std::uint32_t newFrameIndex) { m_frameIndex = newFrameIndex; }
 
 private:
     const CContext* m_context = nullptr;
@@ -135,7 +228,14 @@ private:
         std::vector<DescriptorDescription> m_descriptors;
     };
 
-    std::vector<DescriptorSetMeta> m_descriptorSets;
+    struct DescriptorSet
+    {
+        DescriptorSetMeta meta;
+        vk::raii::DescriptorSetLayout m_layout { nullptr };
+        std::vector<vk::DescriptorSet> m_descriptorSets;
+    };
+
+    std::vector<DescriptorSet> m_descriptorSets;
 
     vk::raii::DescriptorPool m_pool { nullptr };
 };
@@ -149,4 +249,10 @@ struct Utils::FlagTraits<Vulkan::RG::TextureUsageBits>
         Vulkan::RG::TextureUsageBits::eAttachment |
         Vulkan::RG::TextureUsageBits::eDepthAttachment |
         Vulkan::RG::TextureUsageBits::eSampled;
+};
+
+template <>
+struct Utils::FlagTraits<Vulkan::RG::BufferUsageFlagBits>
+{
+    static constexpr Vulkan::RG::BufferUsageFlags allFlags = Vulkan::RG::BufferUsageFlagBits::eUniformBuffer;
 };

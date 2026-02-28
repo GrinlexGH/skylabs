@@ -1,15 +1,26 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
+#include <frozen/map.h>
+
 namespace Vulkan {
 enum class ShaderStageBits : std::uint8_t
 {
-    eVertex = 0,
-    eFragment,
-    eCompute
+    eVertex = 1 << 0,
+    eFragment = 1 << 1,
+    eCompute = 1 << 2,
 };
 
 using ShaderStage = Utils::Flags<ShaderStageBits>;
+
+constexpr inline frozen::map<ShaderStageBits, vk::ShaderStageFlagBits, 3> g_shaderStageMap
+{
+    { Vulkan::ShaderStageBits::eVertex, vk::ShaderStageFlagBits::eVertex },
+    { Vulkan::ShaderStageBits::eFragment, vk::ShaderStageFlagBits::eFragment },
+    { Vulkan::ShaderStageBits::eCompute, vk::ShaderStageFlagBits::eCompute }
+};
+
+vk::ShaderStageFlags GetVkShaderStageFlags(ShaderStage stage);
 
 class CShader
 {

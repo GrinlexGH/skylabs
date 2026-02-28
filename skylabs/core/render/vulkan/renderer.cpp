@@ -208,7 +208,7 @@ void CopyBuffer(
 
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
-    Vulkan::CHostBuffer& uniformBuffersMapped,
+    Vulkan::CBuffer& uniformBuffersMapped,
     const glm::mat4& view,
     const float deltaTime
 ) {
@@ -218,7 +218,7 @@ void UpdateUniformBuffer(
     const float time = duration<float>(currentTime - startTime).count();
 
     UniformBufferObject ubo {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), 1 * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), time / time * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = view;
 
     const auto fov = glm::radians(90.0f);
@@ -257,6 +257,29 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderWidth = m_swapchain.Extent().width;
     renderHeight = m_swapchain.Extent().height;
 
+    const std::uint32_t imageCount = m_swapchain.ImageCount();
+    m_renderFinishedSemaphores.reserve(imageCount);
+    for (std::size_t i = 0; i < imageCount; ++i) {
+        m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
+    }
+
+    m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
+
+    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
+        m_frameData.emplace_back(m_context);
+    }
+
+    CBuffer stagingBuffer { nullptr };
+    m_singleCommandPool = m_context.Device()->createCommandPool({
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        m_context.Device().GraphicsQueue().FamilyIndex()
+    });
+
+    m_mainSampler = CSampler { m_context };
+    m_computeSampler = CSampler { m_context };
+    m_modelTextureSampler = CSampler { m_context };
+
+
     m_textureManager = RG::CTextureManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
     auto& txm = m_textureManager;
 
@@ -278,121 +301,75 @@ CRenderer::CRenderer(const IWindow* const window) {
         .m_sampled = true
     });
 
-    txm.GenerateTextures();
-
-
-    const std::uint32_t imageCount = m_swapchain.ImageCount();
-    m_renderFinishedSemaphores.reserve(imageCount);
-    for (std::size_t i = 0; i < imageCount; ++i) {
-        m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
-    }
-
-    // auto findSupportedFormat = [this](const std::vector<vk::Format>& candidates, const vk::ImageTiling tiling, const vk::FormatFeatureFlags& features) -> vk::Format {
-    //     for (const vk::Format format : candidates) {
-    //         const vk::FormatProperties props = m_context.PhysicalDevice()->getFormatProperties(format);
-
-    //         if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
-    //             return format;
-    //         }
-    //         if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
-    //             return format;
-    //         }
-    //     }
-
-    //     throw std::runtime_error("Failed to find supported format!");
-    // };
-
-    // auto findDepthFormat = [&] -> vk::Format {
-    //     return findSupportedFormat(
-    //         { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint },
-    //         vk::ImageTiling::eOptimal,
-    //         vk::FormatFeatureFlagBits::eDepthStencilAttachment
-    //     );
-    // };
-
-    m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
-    m_uniformBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
-
-    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
-        m_frameData.emplace_back(m_context);
-
-        m_uniformBuffers.emplace_back(
-            m_context,
-            sizeof(UniformBufferObject),
-            vk::BufferUsageFlagBits::eUniformBuffer
-        );
-    }
-
-    CHostBuffer stagingBuffer { nullptr };
-    m_singleCommandPool = m_context.Device()->createCommandPool({
-        vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-        m_context.Device().GraphicsQueue().FamilyIndex()
+    m_computeBuffer = txm.CreateTexture("computePostProcess", {
+        .m_format = RG::TextureFormat::eRGBA8888Unorm,
+        .m_usage = RG::TextureUsageBits::eStorage | RG::TextureUsageBits::eSampled,
+        .m_extent = RG::RelativeTextureSize {}
     });
 
     LoadModelTexture(stagingBuffer, m_singleCommandPool);
+
+    txm.GenerateTextures();
+
+
+    m_bufferManager = RG::CBufferManager { m_context, FRAMES_IN_FLIGHT_COUNT };
+    auto& bfm = m_bufferManager;
+
+    m_uniformBuffer = bfm.CreateBuffer("global-uniform", {
+        .m_size = sizeof(UniformBufferObject),
+        .m_location = MemoryLocation::eHostVisible,
+        .m_usage = RG::BufferUsageFlagBits::eUniformBuffer,
+        .m_isInFlight = true,
+    });
+
     LoadModel(stagingBuffer, m_singleCommandPool);
 
-    m_modelTextureSampler = CSampler { m_context };
+    bfm.GenerateBuffers();
 
 
     m_descriptorManager = RG::CDescriptorManager { m_context, FRAMES_IN_FLIGHT_COUNT };
     auto& dsm = m_descriptorManager;
 
-    dsm.CreateDescriptorSet({{
-        { .m_type = RG::DescriptorType::eUniformBuffer, .m_shaderStages = ShaderStageBits::eVertex | ShaderStageBits::eFragment },
-        { .m_type = RG::DescriptorType::eCombinedImageSampler, .m_shaderStages = ShaderStageBits::eFragment },
+    m_mainDescriptorSet = dsm.CreateDescriptorSet({{
+        {
+            .m_type = RG::DescriptorType::eUniformBuffer,
+            .m_shaderStages = ShaderStageBits::eVertex | ShaderStageBits::eFragment,
+            .m_info = RG::BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
+        },
+        {
+            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_modelTexture, .m_sampler = &m_modelTextureSampler }
+        },
     }});
 
-    std::array<vk::DescriptorPoolSize, 3> poolSizes {};
-    poolSizes[0].type = vk::DescriptorType::eUniformBuffer;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-    poolSizes[1].type = vk::DescriptorType::eCombinedImageSampler;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT * 3);
-    poolSizes[2].type = vk::DescriptorType::eStorageImage;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
+    m_computeDescriptorSet = dsm.CreateDescriptorSet({{
+        {
+            .m_type = RG::DescriptorType::eStorageImage,
+            .m_shaderStages = ShaderStageBits::eCompute,
+            .m_info = RG::StorageImageDescriptorInfo { .m_image = m_computeBuffer }
+        },
+    }});
 
-    vk::DescriptorPoolCreateInfo poolInfo {};
-    poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT * 3);
+    m_swapchainDescriptorSet = dsm.CreateDescriptorSet({{
+        {
+            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_colorBuffer, .m_sampler = &m_mainSampler }
+        },
+        {
+            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = &m_computeSampler }
+        },
+    }});
 
-    m_descriptorPool = vk::raii::DescriptorPool { *m_context.Device(), poolInfo };
+    dsm.CreateDescriptorPool();
+    dsm.CreateDescriptorSets();
+    dsm.UpdateDescriptorSets(m_bufferManager, m_textureManager);
+
 
     // Main pipeline
-    // Descriptor sets layout
-    vk::DescriptorSetLayoutBinding uboLayoutBinding {};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
-    uboLayoutBinding.pImmutableSamplers = nullptr;
-
-    vk::DescriptorSetLayoutBinding samplerLayoutBinding {};
-    samplerLayoutBinding.binding = 1;
-    samplerLayoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    samplerLayoutBinding.descriptorCount = 1;
-    samplerLayoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-    samplerLayoutBinding.pImmutableSamplers = nullptr;
-
-    std::array bindings = { uboLayoutBinding, samplerLayoutBinding }; //!!!!
-
-    vk::DescriptorSetLayoutCreateInfo layoutInfo {};
-    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-
-    m_descriptorSetLayoutMain = vk::raii::DescriptorSetLayout { *m_context.Device(), layoutInfo };
-
-    // Descriptor sets
-    std::vector<vk::DescriptorSetLayout> layouts(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutMain);
-    vk::DescriptorSetAllocateInfo descriptorAllocInfo {};
-    descriptorAllocInfo.descriptorPool = m_descriptorPool;
-    descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-    descriptorAllocInfo.pSetLayouts = layouts.data();
-
-    m_descriptorSetsMain = (**m_context.Device()).allocateDescriptorSets(descriptorAllocInfo);
-
-    UpdateMainDescriptorSets();
-
     // Shaders
     const CShader vertexShader(m_context, ShaderStageBits::eVertex, "shader.vert.spv");
     const CShader fragmentShader(m_context, ShaderStageBits::eFragment, "shader.frag.spv");
@@ -412,7 +389,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_pipelineMain = CPipeline {
         m_context,
         shaderStages,
-        std::array { *m_descriptorSetLayoutMain },
+        std::array { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) },
         CVertexFormat { CVertex::GetAttributes() },
         renderingInfo,
         vk::SampleCountFlagBits::e8
@@ -420,46 +397,14 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 
     // Compute pipeline
-    m_computeBuffer = txm.CreateTexture("computePostProcess", {
-        .m_format = RG::TextureFormat::eRGBA8888Unorm,
-        .m_usage = RG::TextureUsageBits::eStorage | RG::TextureUsageBits::eSampled,
-        .m_extent = RG::RelativeTextureSize {}
-    });
-
-    txm.GenerateTextures();
-
-
-    // Descriptor set layout
-    vk::DescriptorSetLayoutBinding storageBinding {};
-    storageBinding.binding = 0;
-    storageBinding.descriptorCount = 1;
-    storageBinding.descriptorType = vk::DescriptorType::eStorageImage;
-    storageBinding.stageFlags = vk::ShaderStageFlagBits::eCompute;
-    storageBinding.pImmutableSamplers = nullptr;
-
-    std::array bindingsCompute = { storageBinding };
-    layoutInfo = vk::DescriptorSetLayoutCreateInfo {};
-    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindingsCompute.size());
-    layoutInfo.pBindings = bindingsCompute.data();
-    m_descriptorSetLayoutCompute = vk::raii::DescriptorSetLayout { *m_context.Device(), layoutInfo };
-
-    // Descriptor sets
-    layouts = std::vector<vk::DescriptorSetLayout>(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutCompute);
-    descriptorAllocInfo = vk::DescriptorSetAllocateInfo {};
-    descriptorAllocInfo.descriptorPool = m_descriptorPool;
-    descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-    descriptorAllocInfo.pSetLayouts = layouts.data();
-    m_descriptorSetsCompute = (**m_context.Device()).allocateDescriptorSets(descriptorAllocInfo);
-
-    UpdateComputeDescriptorSets();
-
     // Shaders
     CShader computeShader(m_context, ShaderStageBits::eCompute, "shader.comp.spv");
 
     // Pipeline
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &*m_descriptorSetLayoutCompute;
+    std::array computeDescriptorSetLayouts = { *dsm.GetDescriptorSetLayout(m_computeDescriptorSet) };
+    pipelineLayoutInfo.setLayoutCount = computeDescriptorSetLayouts.size();
+    pipelineLayoutInfo.pSetLayouts = computeDescriptorSetLayouts.data();
     m_computePipelineLayout = m_context.Device()->createPipelineLayout(pipelineLayoutInfo);
 
     vk::ComputePipelineCreateInfo computePipelineCreateInfo {};
@@ -469,43 +414,6 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 
     // Swapchain pipeline
-    // Descriptor set layout
-    vk::DescriptorSetLayoutBinding samplerBinding {};
-    samplerBinding.binding = 0;
-    samplerBinding.descriptorCount = 1;
-    samplerBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    samplerBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-    samplerBinding.pImmutableSamplers = nullptr;
-
-    vk::DescriptorSetLayoutBinding samplerBindingCompute {};
-    samplerBindingCompute.binding = 1;
-    samplerBindingCompute.descriptorCount = 1;
-    samplerBindingCompute.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-    samplerBindingCompute.stageFlags = vk::ShaderStageFlagBits::eFragment;
-    samplerBindingCompute.pImmutableSamplers = nullptr;
-
-    std::array bindingsSwapchain = { samplerBinding, samplerBindingCompute };
-
-    layoutInfo = vk::DescriptorSetLayoutCreateInfo {};
-    layoutInfo.bindingCount = static_cast<std::uint32_t>(bindingsSwapchain.size());
-    layoutInfo.pBindings = bindingsSwapchain.data();
-
-    m_descriptorSetLayoutSwapchain = vk::raii::DescriptorSetLayout { *m_context.Device(), layoutInfo };
-
-    // Descriptor sets
-    layouts = std::vector<vk::DescriptorSetLayout>(FRAMES_IN_FLIGHT_COUNT, m_descriptorSetLayoutSwapchain);
-    descriptorAllocInfo = vk::DescriptorSetAllocateInfo {};
-    descriptorAllocInfo.descriptorPool = m_descriptorPool;
-    descriptorAllocInfo.descriptorSetCount = static_cast<uint32_t>(FRAMES_IN_FLIGHT_COUNT);
-    descriptorAllocInfo.pSetLayouts = layouts.data();
-    m_descriptorSetsSwapchain = (**m_context.Device()).allocateDescriptorSets(descriptorAllocInfo);
-
-    // Samplers
-    m_mainSampler = CSampler { m_context };
-    m_computeSampler = CSampler { m_context };
-
-    UpdateSwapchainDescriptorSets();
-
     // Shaders
     const CShader vertexShaderSwapchain(m_context, ShaderStageBits::eVertex, "shaderSwapchain.vert.spv");
     const CShader fragmentShaderSwapchain(m_context, ShaderStageBits::eFragment, "shaderSwapchain.frag.spv");
@@ -524,7 +432,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_pipelineSwapchain = CPipeline {
         m_context,
         shaderStagesSwapchain,
-        std::array { *m_descriptorSetLayoutSwapchain },
+        std::array { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) },
         CVertexFormat {{}},
         renderingInfo,
         vk::SampleCountFlagBits::e1
@@ -555,6 +463,8 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 
 void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     m_textureManager.SetFrameIndex(m_frameIndex);
+    m_bufferManager.SetFrameIndex(m_frameIndex);
+    m_descriptorManager.SetFrameIndex(m_frameIndex);
     CFrameData& frameData = m_frameData[m_frameIndex];
     const CDevice& device = m_context.Device();
     auto& cmdMain = frameData.GetGraphicsCommandBuffers()[0];
@@ -566,7 +476,12 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto& colorBufferMSAA = m_textureManager.GetTexture(m_colorBufferMSAAx);
     auto& depthBufferMSAA = m_textureManager.GetTexture(m_depthBufferMSAAx);
     auto& computeBuffer = m_textureManager.GetTexture(m_computeBuffer);
-    auto& uniformBuffer = m_uniformBuffers.at(m_frameIndex);
+    auto& uniformBuffer = m_bufferManager.GetBuffer(m_uniformBuffer);
+    auto& vertexBuffer = m_bufferManager.GetBuffer(m_vertexBuffer);
+    auto& indexBuffer = m_bufferManager.GetBuffer(m_indexBuffer);
+    auto descriptorSetMain = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSet);
+    auto descriptorSetCompute = m_descriptorManager.GetDescriptorSet(m_computeDescriptorSet);
+    auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
 
     UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, deltaTime);
 
@@ -636,11 +551,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdMain.setViewport(0, viewport);
     vk::Rect2D scissor { { 0, 0 }, { renderWidth, renderHeight } };
     cmdMain.setScissor(0, scissor);
-    std::array<vk::Buffer, 1> vertexBuffers { *m_vertexBuffer };
+    std::array<vk::Buffer, 1> vertexBuffers { *vertexBuffer };
     std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
     cmdMain.bindVertexBuffers(0, vertexBuffers, offsets);
-    cmdMain.bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
-    cmdMain.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, m_descriptorSetsMain[m_frameIndex], {});
+    cmdMain.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    cmdMain.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, descriptorSetMain, {});
     cmdMain.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
     cmdMain.endRendering();
     cmdMain.end();
@@ -677,7 +592,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdComp.pipelineBarrier2(depAcquireCompute);
 
     cmdComp.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
-    cmdComp.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, m_descriptorSetsCompute[m_frameIndex], {});
+    cmdComp.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, descriptorSetCompute, {});
     cmdComp.dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
     vk::ImageMemoryBarrier2 releaseBarrier {};
@@ -757,7 +672,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     scissor = vk::Rect2D {{0, 0}, m_swapchain.Extent()};
     cmdFina.setScissor(0, scissor);
     cmdFina.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
-    cmdFina.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain.Layout(), 0, m_descriptorSetsSwapchain[m_frameIndex], {});
+    cmdFina.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
     cmdFina.draw(3, 1, 0, 0);
     cmdFina.endRendering();
 
@@ -839,96 +754,11 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
 
     ReleaseComputeBuffers();
 
-    UpdateMainDescriptorSets();
-    UpdateComputeDescriptorSets();
-    UpdateSwapchainDescriptorSets();
+    m_descriptorManager.UpdateDescriptorSets(m_bufferManager, m_textureManager);
 
     currentFrameData.RecreateImageAvailableSemaphore();
     m_swapchain.Recreate();
     m_isResized = false;
-}
-
-void CRenderer::UpdateMainDescriptorSets() {
-    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::DescriptorBufferInfo bufferInfo {};
-        bufferInfo.buffer = *m_uniformBuffers.at(i);
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(UniformBufferObject);
-
-        vk::DescriptorImageInfo imageInfo {};
-        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_modelTexture.View();
-        imageInfo.sampler = *m_modelTextureSampler;
-
-        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{};
-        descriptorWrites[0].dstSet = m_descriptorSetsMain[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
-        descriptorWrites[0].pImageInfo = nullptr;
-        descriptorWrites[0].pTexelBufferView = nullptr;
-
-        descriptorWrites[1].dstSet = m_descriptorSetsMain[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &imageInfo;
-
-        m_context.Device()->updateDescriptorSets(descriptorWrites, {});
-    }
-}
-
-void CRenderer::UpdateComputeDescriptorSets() {
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::DescriptorImageInfo imageInfo {};
-        imageInfo.imageLayout = vk::ImageLayout::eGeneral;
-        imageInfo.imageView = m_textureManager.GetTexture(m_computeBuffer, i).View();
-
-        vk::WriteDescriptorSet descriptorWrite {};
-        descriptorWrite.dstSet = m_descriptorSetsCompute[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pImageInfo = &imageInfo;
-
-        m_context.Device()->updateDescriptorSets(descriptorWrite, nullptr);
-    }
-}
-
-void CRenderer::UpdateSwapchainDescriptorSets() {
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; i++) {
-        vk::DescriptorImageInfo imageInfo {};
-        imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfo.imageView = m_textureManager.GetTexture(m_colorBuffer, i).View(); // m_colorBuffers[i].View();
-        imageInfo.sampler = *m_mainSampler;
-
-        vk::WriteDescriptorSet descriptorWrite {};
-        descriptorWrite.dstSet = m_descriptorSetsSwapchain[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pImageInfo = &imageInfo;
-
-        vk::DescriptorImageInfo imageInfoCompute {};
-        imageInfoCompute.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        imageInfoCompute.imageView = m_textureManager.GetTexture(m_computeBuffer, i).View();
-        imageInfoCompute.sampler = *m_computeSampler;
-
-        vk::WriteDescriptorSet descriptorWriteCompute {};
-        descriptorWriteCompute.dstSet = m_descriptorSetsSwapchain[i];
-        descriptorWriteCompute.dstBinding = 1;
-        descriptorWriteCompute.dstArrayElement = 0;
-        descriptorWriteCompute.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-        descriptorWriteCompute.descriptorCount = 1;
-        descriptorWriteCompute.pImageInfo = &imageInfoCompute;
-
-        m_context.Device()->updateDescriptorSets({ descriptorWrite, descriptorWriteCompute }, nullptr);
-    }
 }
 
 void CRenderer::ReleaseComputeBuffers() {
@@ -955,7 +785,7 @@ void CRenderer::ReleaseComputeBuffers() {
     EndSingleTimeCommands(m_context.Device(), cmd);
 }
 
-void CRenderer::LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
+void CRenderer::LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
     SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
     if (!imageRaw) {
         throw std::runtime_error("Failed to load texture image!");
@@ -965,15 +795,16 @@ void CRenderer::LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::Com
     const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 
     if (stagingBuffer.Size() < imageSize) {
-        stagingBuffer = CHostBuffer {
+        stagingBuffer = CBuffer {
             m_context,
             imageSize,
-            vk::BufferUsageFlagBits::eTransferSrc
+            vk::BufferUsageFlagBits::eTransferSrc,
+            MemoryLocation::eHostVisible
         };
     }
     std::memcpy(stagingBuffer.Data(), image->pixels, imageSize);
 
-    m_modelTexture = CImage {
+    CImage modelTexture = {
         m_context,
         vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) },
         vk::Format::eR8G8B8A8Srgb,
@@ -984,16 +815,18 @@ void CRenderer::LoadModelTexture(CHostBuffer& stagingBuffer, const vk::raii::Com
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
     {
-        m_modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
-        m_modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) });
-        GenerateMipmaps(*m_context.PhysicalDevice(), commandBuffer, m_modelTexture);
+        modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
+        modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) });
+        GenerateMipmaps(*m_context.PhysicalDevice(), commandBuffer, modelTexture);
     }
     EndSingleTimeCommands(m_context.Device(), commandBuffer);
+
+    m_modelTexture = m_textureManager.ImportTexture("ModelTexture", std::move(modelTexture));
 
     SDL_DestroySurface(image);
 }
 
-void CRenderer::LoadModel(CHostBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
+void CRenderer::LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
     const std::string MODEL_PATH = "assets/viking_room.obj";
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -1041,52 +874,60 @@ void CRenderer::LoadModel(CHostBuffer& stagingBuffer, const vk::raii::CommandPoo
 
     const vk::DeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
     if (stagingBuffer.Size() < vertexBufferSize) {
-        stagingBuffer = CHostBuffer {
+        stagingBuffer = CBuffer {
             m_context,
             vertexBufferSize,
-            vk::BufferUsageFlagBits::eTransferSrc
+            vk::BufferUsageFlagBits::eTransferSrc,
+            MemoryLocation::eHostVisible
         };
     }
 
     std::memcpy(stagingBuffer.Data(), vertices.data(), vertexBufferSize);
 
-    m_vertexBuffer = CDeviceBuffer {
+    CBuffer vertexBuffer {
         m_context,
         vertexBufferSize,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+        MemoryLocation::eDeviceOnly
     };
 
     CopyBuffer(
         m_context.Device(),
         commandPool,
         *stagingBuffer,
-        *m_vertexBuffer,
+        *vertexBuffer,
         vertexBufferSize
     );
 
     const vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
     if (stagingBuffer.Size() < indexBufferSize) {
-        stagingBuffer = CHostBuffer {
+        stagingBuffer = CBuffer {
             m_context,
             indexBufferSize,
-            vk::BufferUsageFlagBits::eTransferSrc
+            vk::BufferUsageFlagBits::eTransferSrc,
+            MemoryLocation::eHostVisible
         };
     }
 
+    m_vertexBuffer = m_bufferManager.ImportBuffer("vertexBuffer", std::move(vertexBuffer));
+
     std::memcpy(stagingBuffer.Data(), indices.data(), indexBufferSize);
 
-    m_indexBuffer = CDeviceBuffer {
+    CBuffer indexBuffer = {
         m_context,
         indexBufferSize,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+        MemoryLocation::eDeviceOnly
     };
 
     CopyBuffer(
         m_context.Device(),
         commandPool,
         *stagingBuffer,
-        *m_indexBuffer,
+        *indexBuffer,
         indexBufferSize
     );
+
+    m_indexBuffer = m_bufferManager.ImportBuffer("indexBuffer", std::move(indexBuffer));
 }
 }
