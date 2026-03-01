@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
-
 #include <skylabs/public/logging.hpp>
 #include <skylabs/core/render/vulkan/shader.hpp>
+#include <skylabs/core/camera.hpp>
 
 #include <glm/gtx/hash.hpp>
 #include <glm/ext/scalar_reciprocal.hpp>
@@ -26,6 +26,15 @@ std::vector vertices {
 };
 
 struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 lightproj;
+    glm::mat4 lightview;
+    glm::vec3 offset;
+};
+
+struct LightUBO {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
@@ -206,35 +215,50 @@ void CopyBuffer(
     EndSingleTimeCommands(device, commandBuffer);
 }
 
+void UpdateLightUniformBuffer(
+    Vulkan::CBuffer& uniformBuffersMapped,
+    const glm::mat4& lightView,
+    const glm::mat4& lightProj,
+    const float deltaTime
+) {
+    LightUBO ubo {};
+    // Модель должна быть идентична основной сцене
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = lightView;
+    ubo.proj = lightProj;
+
+    offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
+    if (glm::length(targetOffset - offset) < 0.0001f) offset = targetOffset;
+    ubo.offset = offset;
+
+    std::memcpy(uniformBuffersMapped.Data(), &ubo, sizeof(ubo));
+}
+
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
     Vulkan::CBuffer& uniformBuffersMapped,
     const glm::mat4& view,
-    const float deltaTime
+    const float deltaTime,
+    const glm::mat4& lightProj,
+    const glm::mat4& lightView
 ) {
-    using namespace std::chrono;
-    static auto startTime = high_resolution_clock::now();
-    const auto currentTime = high_resolution_clock::now();
-    const float time = duration<float>(currentTime - startTime).count();
-
     UniformBufferObject ubo {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time / time * glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = view;
 
-    const auto fov = glm::radians(90.0f);
-    const auto aspect = static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height);
-    const auto zNear = 0.01f;
-
-    float g = 1.0f / std::tan(0.5f * fov);
+    float g = 1.0f / std::tan(0.5f * glm::radians(90.0f));
     ubo.proj = glm::mat4(0.0f);
-    ubo.proj[0][0] = g / aspect;
+    ubo.proj[0][0] = g / (static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height));
     ubo.proj[1][1] = -g;
     ubo.proj[2][2] = 0.0f;
     ubo.proj[2][3] = -1.0f;
-    ubo.proj[3][2] = zNear;
+    ubo.proj[3][2] = 0.01f;
+
+    ubo.lightview = lightView;
+    ubo.lightproj = lightProj;
 
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
-    if (glm::length(targetOffset - offset) < 0.0001) offset = targetOffset;
+    if (glm::length(targetOffset - offset) < 0.0001f) offset = targetOffset;
     ubo.offset = offset;
 
     std::memcpy(uniformBuffersMapped.Data(), &ubo, sizeof(ubo));
@@ -279,6 +303,24 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_computeSampler = CSampler { m_context };
     m_modelTextureSampler = CSampler { m_context };
 
+    vk::SamplerCreateInfo createInfo {};
+    createInfo.magFilter = vk::Filter::eLinear;
+    createInfo.minFilter = vk::Filter::eLinear;
+    createInfo.addressModeU = vk::SamplerAddressMode::eClampToBorder;
+    createInfo.addressModeV = vk::SamplerAddressMode::eClampToBorder;
+    createInfo.addressModeW = vk::SamplerAddressMode::eClampToBorder;
+    createInfo.anisotropyEnable = vk::True;
+    createInfo.maxAnisotropy = m_context.PhysicalDevice()->getProperties2().properties.limits.maxSamplerAnisotropy;
+    createInfo.borderColor = vk::BorderColor::eFloatOpaqueBlack;
+    createInfo.unnormalizedCoordinates = vk::False;
+    createInfo.compareEnable = vk::True;
+    createInfo.compareOp = vk::CompareOp::eGreaterOrEqual;
+    createInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    createInfo.mipLodBias = 0.0f;
+    createInfo.minLod = 0.0f;
+    createInfo.maxLod = vk::LodClampNone;
+    m_samplerLight = vk::raii::Sampler { *m_context.Device(), createInfo };
+
 
     m_textureManager = RG::CTextureManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
     auto& txm = m_textureManager;
@@ -307,6 +349,12 @@ CRenderer::CRenderer(const IWindow* const window) {
         .m_extent = RG::RelativeTextureSize {}
     });
 
+    m_lightDepth = txm.CreateTexture("lightDepth", {
+        .m_format = RG::TextureFormat::eDepthOptimal,
+        .m_usage = RG::TextureUsageBits::eDepthAttachment | RG::TextureUsageBits::eSampled,
+        .m_extent = RG::AbsoluteTextureSize { .m_width = 2048, .m_height = 2048 }
+    });
+
     LoadModelTexture(stagingBuffer, m_singleCommandPool);
 
     txm.GenerateTextures();
@@ -320,6 +368,13 @@ CRenderer::CRenderer(const IWindow* const window) {
         .m_location = MemoryLocation::eHostVisible,
         .m_usage = RG::BufferUsageFlagBits::eUniformBuffer,
         .m_isInFlight = true,
+    });
+
+    m_lightUBO = bfm.CreateBuffer("light-uniform", {
+        .m_size = sizeof(LightUBO),
+        .m_location = MemoryLocation::eHostVisible,
+        .m_usage = RG::BufferUsageFlagBits::eUniformBuffer,
+        .m_isInFlight = false,
     });
 
     LoadModel(stagingBuffer, m_singleCommandPool);
@@ -339,7 +394,12 @@ CRenderer::CRenderer(const IWindow* const window) {
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
             .m_shaderStages = ShaderStageBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_modelTexture, .m_sampler = &m_modelTextureSampler }
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_modelTexture, .m_sampler = &*m_modelTextureSampler }
+        },
+        {
+            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_lightDepth, .m_sampler = &m_samplerLight }
         },
     }});
 
@@ -355,18 +415,46 @@ CRenderer::CRenderer(const IWindow* const window) {
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
             .m_shaderStages = ShaderStageBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_colorBuffer, .m_sampler = &m_mainSampler }
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_colorBuffer, .m_sampler = &*m_mainSampler }
         },
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
             .m_shaderStages = ShaderStageBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = &m_computeSampler }
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = &*m_computeSampler }
+        },
+    }});
+
+    m_lightDescriptorSet = dsm.CreateDescriptorSet({{
+        {
+            .m_type = RG::DescriptorType::eUniformBuffer,
+            .m_shaderStages = ShaderStageBits::eVertex | ShaderStageBits::eFragment,
+            .m_info = RG::BufferDescriptorInfo { .m_buffer = m_lightUBO }
         },
     }});
 
     dsm.CreateDescriptorPool();
     dsm.CreateDescriptorSets();
     dsm.UpdateDescriptorSets(m_bufferManager, m_textureManager);
+
+    // Light pipeline
+    const CShader vertexShaderLight(m_context, ShaderStageBits::eVertex, "light.vert.spv");
+
+    const std::array<vk::PipelineShaderStageCreateInfo, 1> shaderStagesLight = {
+        vertexShaderLight.PipelineShaderCreateInfo(),
+    };
+
+    // Pipeline
+    vk::PipelineRenderingCreateInfo renderingInfoLight {};
+    renderingInfoLight.depthAttachmentFormat = txm.GetTexture(m_lightDepth).Format();
+
+    m_lightPipeline = CPipeline {
+        m_context,
+        shaderStagesLight,
+        std::array { *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) },
+        CVertexFormat { CVertex::GetAttributes() },
+        renderingInfoLight,
+        vk::SampleCountFlagBits::e1
+    };
 
 
     // Main pipeline
@@ -470,8 +558,10 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto& cmdMain = frameData.GetGraphicsCommandBuffers()[0];
     auto& cmdComp = frameData.GetComputeCommandBuffers()[0];
     auto& cmdFina = frameData.GetGraphicsCommandBuffers()[1];
+    auto& cmdLight = frameData.GetGraphicsCommandBuffers()[2];
     auto& semMain = frameData.GetSemaphores()[0];
     auto& semComp = frameData.GetSemaphores()[1];
+    auto& semLight = frameData.GetSemaphores()[2];
     auto& colorBuffer = m_textureManager.GetTexture(m_colorBuffer);
     auto& colorBufferMSAA = m_textureManager.GetTexture(m_colorBufferMSAAx);
     auto& depthBufferMSAA = m_textureManager.GetTexture(m_depthBufferMSAAx);
@@ -479,11 +569,30 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto& uniformBuffer = m_bufferManager.GetBuffer(m_uniformBuffer);
     auto& vertexBuffer = m_bufferManager.GetBuffer(m_vertexBuffer);
     auto& indexBuffer = m_bufferManager.GetBuffer(m_indexBuffer);
+    auto& lightBuffer = m_textureManager.GetTexture(m_lightDepth);
+    auto& lightUBO = m_bufferManager.GetBuffer(m_lightUBO);
     auto descriptorSetMain = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSet);
     auto descriptorSetCompute = m_descriptorManager.GetDescriptorSet(m_computeDescriptorSet);
     auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
+    auto descriptorSetLight = m_descriptorManager.GetDescriptorSet(m_lightDescriptorSet);
 
-    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, deltaTime);
+    static int yO = -600;
+    // 1. Настраиваем камеру света
+    static CCamera lightCamera{ {1, 0, 1} };
+    lightCamera.ProcessMouseMovement(0, yO);
+    yO = 0;
+    float g = 1.0f / std::tan(0.5f * glm::radians(90.0f));
+    auto lightProj = glm::mat4(0.0f);
+    lightProj[0][0] = g / 1;
+    lightProj[1][1] = -g;
+    lightProj[2][2] = 0.0f;
+    lightProj[2][3] = -1.0f;
+    lightProj[3][2] = 0.01f;
+
+    glm::mat4 lightView = lightCamera.GetViewMatrix();
+
+    UpdateLightUniformBuffer(lightUBO, lightView, lightProj, deltaTime);
+    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, deltaTime, lightProj, lightView);
 
     // Wait for fence to ensure that the previous frame rendering is finished
     vk::Result result = device->waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -512,6 +621,53 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     device->resetFences({ frameData.GetFence() });
 
     // Recording render commands
+    cmdLight.reset();
+    cmdLight.begin({});
+
+    // Prepare attachments for main render
+    lightBuffer.TransitionLayout(cmdLight, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+    // light render
+    vk::RenderingAttachmentInfo depthAttachInfoLight {};
+    depthAttachInfoLight.imageView = lightBuffer.View();
+    depthAttachInfoLight.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    depthAttachInfoLight.loadOp = vk::AttachmentLoadOp::eClear;
+    depthAttachInfoLight.storeOp = vk::AttachmentStoreOp::eStore;
+    depthAttachInfoLight.clearValue.depthStencil = vk::ClearDepthStencilValue{0.0f, 0};
+
+    vk::RenderingInfo lightRenderInfo {};
+    lightRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, { 2048, 2048 } };
+    lightRenderInfo.layerCount = 1;
+    lightRenderInfo.pDepthAttachment = &depthAttachInfoLight;
+
+    cmdLight.beginRendering(lightRenderInfo);
+    cmdLight.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_lightPipeline);
+    vk::Viewport viewport { 0.0f, 0.0f, static_cast<float>(2048), static_cast<float>(2048), 0.0f, 1.0f };
+    cmdLight.setViewport(0, viewport);
+    vk::Rect2D scissor { { 0, 0 }, { 2048, 2048 } };
+    cmdLight.setScissor(0, scissor);
+    std::array<vk::Buffer, 1> vertexBuffers { *vertexBuffer };
+    cmdLight.setDepthBiasEnable(vk::True);
+    cmdLight.setDepthBias(-1.25f, 0.0f, -1.75f);
+    std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
+    cmdLight.bindVertexBuffers(0, vertexBuffers, offsets);
+    cmdLight.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    cmdLight.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_lightPipeline.Layout(), 0, descriptorSetLight, {});
+    cmdLight.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
+    cmdLight.endRendering();
+    cmdLight.end();
+
+    vk::SubmitInfo lightSubmit {};
+    lightSubmit.waitSemaphoreCount = 0;
+    lightSubmit.pWaitSemaphores = nullptr;
+    lightSubmit.pWaitDstStageMask = nullptr;
+    lightSubmit.commandBufferCount = 1;
+    lightSubmit.pCommandBuffers = &*cmdLight;
+    lightSubmit.signalSemaphoreCount = 1;
+    lightSubmit.pSignalSemaphores = &*semLight;
+    device.GraphicsQueue()->submit(lightSubmit);
+
+    // Recording render commands
     cmdMain.reset();
     cmdMain.begin({});
 
@@ -519,6 +675,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     colorBuffer.TransitionLayout(cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
     colorBufferMSAA.TransitionLayout(cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
     depthBufferMSAA.TransitionLayout(cmdMain, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    lightBuffer.TransitionLayout(cmdMain, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     // Main render
     vk::RenderingAttachmentInfo colorAttachInfo {};
@@ -526,7 +683,13 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachInfo.clearValue.color = std::array { 0.0f, 0.5f, 1.0f, 1.0f };
+    colorAttachInfo.clearValue.color =
+        vk::ClearColorValue(std::array<float, 4>{
+            11.0f / 255.0f,
+            16.0f / 255.0f,
+            38.0f / 255.0f,
+            1.0f
+        });
     colorAttachInfo.resolveImageView = colorBuffer.View();
     colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eAverage;
@@ -547,12 +710,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
 
     cmdMain.beginRendering(mainRenderInfo);
     cmdMain.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
-    vk::Viewport viewport { 0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f };
+    viewport = vk::Viewport { 0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f };
     cmdMain.setViewport(0, viewport);
-    vk::Rect2D scissor { { 0, 0 }, { renderWidth, renderHeight } };
+    scissor = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
     cmdMain.setScissor(0, scissor);
-    std::array<vk::Buffer, 1> vertexBuffers { *vertexBuffer };
-    std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
+    cmdMain.setDepthBiasEnable(vk::False);
     cmdMain.bindVertexBuffers(0, vertexBuffers, offsets);
     cmdMain.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
     cmdMain.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, descriptorSetMain, {});
@@ -560,10 +722,14 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdMain.endRendering();
     cmdMain.end();
 
+
+    std::array<vk::PipelineStageFlags, 1> waitStagesMain = {
+        vk::PipelineStageFlagBits::eFragmentShader
+    };
     vk::SubmitInfo mainSubmit {};
-    mainSubmit.waitSemaphoreCount = 0;
-    mainSubmit.pWaitSemaphores = nullptr;
-    mainSubmit.pWaitDstStageMask = nullptr;
+    mainSubmit.waitSemaphoreCount = 1;
+    mainSubmit.pWaitSemaphores = &*semLight;
+    mainSubmit.pWaitDstStageMask = waitStagesMain.data();
     mainSubmit.commandBufferCount = 1;
     mainSubmit.pCommandBuffers = &*cmdMain;
     mainSubmit.signalSemaphoreCount = 1;
@@ -671,6 +837,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdFina.setViewport(0, viewport);
     scissor = vk::Rect2D {{0, 0}, m_swapchain.Extent()};
     cmdFina.setScissor(0, scissor);
+    cmdFina.setDepthBiasEnable(vk::False);
     cmdFina.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
     cmdFina.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
     cmdFina.draw(3, 1, 0, 0);

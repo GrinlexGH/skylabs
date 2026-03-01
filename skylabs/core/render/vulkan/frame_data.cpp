@@ -25,13 +25,13 @@ CFrameData::CFrameData(const CContext& context) : m_context(&context) {
 
     m_graphicsCommandBuffers = vk::raii::CommandBuffers {
         *m_context->Device(),
-        { m_graphicsCommandPool, vk::CommandBufferLevel::ePrimary, 2 }
+        { m_graphicsCommandPool, vk::CommandBufferLevel::ePrimary, 3 }
     };
 
     m_fence = vk::raii::Fence { *m_context->Device(), { vk::FenceCreateFlagBits::eSignaled } };
     m_imageAvailableSemaphore = vk::raii::Semaphore { *m_context->Device(), vk::SemaphoreCreateInfo {} };
 
-    for (std::size_t i = 0; i < 2; ++i) {
+    for (std::size_t i = 0; i < 3; ++i) {
         m_semaphores.emplace_back(*m_context->Device(), vk::SemaphoreCreateInfo {});
     }
 }

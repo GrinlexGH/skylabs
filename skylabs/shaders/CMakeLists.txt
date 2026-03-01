@@ -7,6 +7,7 @@ set(SOURCES
     shaderSwapchain.frag.slang
     shaderSwapchain.vert.slang
     shader.comp.slang
+    light.vert.slang
 )
 
 set(IMPORTS

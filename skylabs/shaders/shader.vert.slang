@@ -9,15 +9,21 @@ struct VertexInput {
 VertexToFragment main(VertexInput input, uint vertexIndex : SV_VertexID) {
     VertexToFragment output;
 
-    float4x4 pvm = mul(ubo.proj, mul(ubo.view, ubo.model));
-
     float3 pos = input.position;
     if (vertexIndex >= 4) {
         pos += ubo.offset;
     }
 
-    output.outPosition = mul(pvm, float4(pos, 1.0));
+    float4 worldPos = mul(ubo.model, float4(pos, 1.0));
+
+    // Обычный рендеринг камеры
+    output.outPosition = mul(ubo.proj, mul(ubo.view, worldPos));
     output.fragTexCoord = input.texCoord;
+
+    // Вычисляем координаты для теней
+    float4 shadowPos = mul(ubo.lightproj, mul(ubo.lightview, worldPos));;
+
+    output.shadowCoord = shadowPos;
 
     return output;
 }

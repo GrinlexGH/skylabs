@@ -129,7 +129,6 @@ CImage CTextureManager::CreateImage(const TextureMeta& meta) {
     }
 
     if (desc.m_usage & TextureUsageBits::eSampled) {
-        aspects |= vk::ImageAspectFlagBits::eColor;
         usage |= vk::ImageUsageFlagBits::eSampled;
     }
 

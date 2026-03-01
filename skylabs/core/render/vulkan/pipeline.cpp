@@ -66,6 +66,8 @@ CPipeline::CPipeline(
     constexpr std::array dynamicStates = {
         vk::DynamicState::eViewport,
         vk::DynamicState::eScissor,
+        vk::DynamicState::eDepthBias,
+        vk::DynamicState::eDepthBiasEnable
     };
     vk::PipelineDynamicStateCreateInfo dynamicState {};
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());

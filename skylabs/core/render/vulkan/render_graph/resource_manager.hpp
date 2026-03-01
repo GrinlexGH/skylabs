@@ -177,7 +177,7 @@ struct BufferDescriptorInfo {
 
 struct SampledImageDescriptorInfo {
     TextureHandle m_image;
-    const CSampler* m_sampler = nullptr;
+    const vk::raii::Sampler* m_sampler = nullptr;
 };
 
 struct StorageImageDescriptorInfo {

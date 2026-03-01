@@ -65,6 +65,13 @@ private:
     RG::DescriptorSetHandle m_swapchainDescriptorSet;
 
 
+    RG::TextureHandle m_lightDepth;
+    RG::BufferHandle m_lightUBO;
+    RG::DescriptorSetHandle m_lightDescriptorSet;
+    CPipeline m_lightPipeline { nullptr };
+    vk::raii::Sampler m_samplerLight { nullptr };
+
+
 
 
     std::vector<CFrameData> m_frameData;
