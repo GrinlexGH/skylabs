@@ -4,7 +4,6 @@ struct UniformBufferObject {
     float4x4 proj;
     float4x4 lightproj;
     float4x4 lightview;
-    float3 offset;
 };
 
 struct VertexToFragment {

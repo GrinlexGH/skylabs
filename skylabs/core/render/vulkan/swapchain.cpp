@@ -59,7 +59,6 @@ void CSwapchain::CreateSwapchain(
 
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
-    //====================
     vk::SwapchainCreateInfoKHR createInfo;
     createInfo.pNext = nullptr;
     createInfo.surface = m_associatedSurface = surface;

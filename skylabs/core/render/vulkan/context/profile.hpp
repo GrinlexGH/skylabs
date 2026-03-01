@@ -25,12 +25,6 @@ namespace Vulkan {
 class CProfile
 {
 public:
-    struct CProfileMeta {
-        const char* m_name = nullptr;
-        std::uint32_t m_specVersion = 0;
-        std::uint32_t m_minApiVersion = 0;
-    };
-
     enum class Profile : std::uint8_t
     {
         eRoadmap2026,
@@ -52,7 +46,6 @@ public:
 
 private:
     Profile m_profile;
-    CProfileMeta m_profileMeta = {};
 
     [[nodiscard]] VpProfileProperties GenerateProperties() const;
 };

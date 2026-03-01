@@ -2,7 +2,6 @@ struct UniformBufferObject {
     float4x4 model;
     float4x4 view;
     float4x4 proj;
-    float3 offset;
 };
 
 [[vk::binding(0)]]
@@ -15,10 +14,10 @@ struct VertexInput {
 
 [shader("vertex")]
 float4 main(VertexInput input, uint vertexIndex : SV_VertexID) : SV_Position {
-    float3 pos = input.position;
+    float4 worldPos = float4(input.position, 1.0);
     if (vertexIndex >= 4) {
-        pos += ubo.offset;
+        worldPos = mul(ubo.model, worldPos);
     }
 
-    return mul(ubo.proj, mul(ubo.view, mul(ubo.model, float4(pos, 1.0))));
+    return mul(ubo.proj, mul(ubo.view, worldPos));
 }

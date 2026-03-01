@@ -14,7 +14,7 @@ public:
     ~CSurface();
 
     [[nodiscard]] vk::SurfaceKHR operator*() const noexcept { return m_handle; }
-    [[nodiscard]] vk::SurfaceKHR GetHandle() const noexcept { return m_handle; }
+    [[nodiscard]] vk::SurfaceKHR Handle() const noexcept { return m_handle; }
 
 private:
     vk::SurfaceKHR m_handle = nullptr;

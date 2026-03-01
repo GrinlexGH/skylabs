@@ -1,12 +1,9 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/context/profile.hpp>
-#include <skylabs/public/logging.hpp>
 
 #include <ranges>
 
 namespace Vulkan {
-CContext::CContext(const IWindow* const window) :
-    m_window(window)
+CContext::CContext(const IWindow* const window) : m_window(window)
 {
     bool initialized = false;
     for (const auto& profile : { CProfile::Profile::eRoadmap2024, CProfile::Profile::eRoadmap2022 }) {

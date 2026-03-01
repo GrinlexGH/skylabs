@@ -9,11 +9,17 @@
 #include <ranges>
 #include <cstring>
 
+struct ProfileMeta {
+    const char* m_name = nullptr;
+    std::uint32_t m_specVersion = 0;
+    std::uint32_t m_minApiVersion = 0;
+};
+
 namespace Vulkan {
-constexpr frozen::map<CProfile::Profile, CProfile::CProfileMeta, 3> g_profileMap = {
+constexpr frozen::map<CProfile::Profile, ProfileMeta, 3> g_profileMap = {
     {
         CProfile::Profile::eRoadmap2026,
-        CProfile::CProfileMeta {
+        ProfileMeta {
             .m_name = VP_KHR_ROADMAP_2026_NAME,
             .m_specVersion = VP_KHR_ROADMAP_2026_SPEC_VERSION,
             .m_minApiVersion = VP_KHR_ROADMAP_2026_MIN_API_VERSION
@@ -21,7 +27,7 @@ constexpr frozen::map<CProfile::Profile, CProfile::CProfileMeta, 3> g_profileMap
     },
     {
         CProfile::Profile::eRoadmap2024,
-        CProfile::CProfileMeta {
+        ProfileMeta {
             .m_name = VP_KHR_ROADMAP_2024_NAME,
             .m_specVersion = VP_KHR_ROADMAP_2024_SPEC_VERSION,
             .m_minApiVersion = VP_KHR_ROADMAP_2024_MIN_API_VERSION
@@ -29,7 +35,7 @@ constexpr frozen::map<CProfile::Profile, CProfile::CProfileMeta, 3> g_profileMap
     },
     {
         CProfile::Profile::eRoadmap2022,
-        CProfile::CProfileMeta {
+        ProfileMeta {
             .m_name = VP_KHR_ROADMAP_2022_NAME,
             .m_specVersion = VP_KHR_ROADMAP_2022_SPEC_VERSION,
             .m_minApiVersion = VP_KHR_ROADMAP_2022_MIN_API_VERSION
@@ -37,7 +43,7 @@ constexpr frozen::map<CProfile::Profile, CProfile::CProfileMeta, 3> g_profileMap
     }
 };
 
-CProfile::CProfile(const Profile profile) : m_profile(profile), m_profileMeta(g_profileMap.at(profile)) {}
+CProfile::CProfile(const Profile profile) : m_profile(profile) {}
 
 void CProfile::CheckInstanceSupport() const {
     VpProfileProperties currentProfile = GenerateProperties();
@@ -152,14 +158,14 @@ std::vector<VkExtensionProperties> CProfile::GetDeviceExtensions() const {
 }
 
 VpProfileProperties CProfile::GenerateProperties() const {
-    VpProfileProperties currentProfile;
+    ProfileMeta meta = g_profileMap.at(m_profile);
 
-    currentProfile.specVersion = m_profileMeta.m_specVersion;
-    std::ranges::copy_n(
-        m_profileMeta.m_name,
-        static_cast<int>(std::strlen(m_profileMeta.m_name) + 1),
-        currentProfile.profileName
-    );
+    VpProfileProperties currentProfile {
+        .profileName = {},
+        .specVersion = meta.m_specVersion
+    };
+
+    std::strncpy(currentProfile.profileName, meta.m_name, sizeof(currentProfile.profileName));
 
     return currentProfile;
 }

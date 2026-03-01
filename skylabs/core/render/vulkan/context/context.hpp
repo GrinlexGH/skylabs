@@ -9,7 +9,6 @@
 namespace Vulkan {
 //====================
 // Context stores vulkan globals needed to create vulkan objects
-//====================
 class CContext
 {
 public:

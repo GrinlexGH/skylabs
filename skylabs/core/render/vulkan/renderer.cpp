@@ -31,14 +31,12 @@ struct UniformBufferObject {
     glm::mat4 proj;
     glm::mat4 lightproj;
     glm::mat4 lightview;
-    glm::vec3 offset;
 };
 
 struct LightUBO {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
-    glm::vec3 offset;
 };
 
 glm::vec3 offset = {0.0f, 0.0f, 0.0f}; // то что реально уходит в UBO
@@ -222,14 +220,15 @@ void UpdateLightUniformBuffer(
     const float deltaTime
 ) {
     LightUBO ubo {};
-    // Модель должна быть идентична основной сцене
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = lightView;
     ubo.proj = lightProj;
 
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
     if (glm::length(targetOffset - offset) < 0.0001f) offset = targetOffset;
-    ubo.offset = offset;
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, offset);
+    model = glm::rotate(model, glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = model;
 
     std::memcpy(uniformBuffersMapped.Data(), &ubo, sizeof(ubo));
 }
@@ -259,7 +258,11 @@ void UpdateUniformBuffer(
 
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
     if (glm::length(targetOffset - offset) < 0.0001f) offset = targetOffset;
-    ubo.offset = offset;
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, offset);
+    model = glm::rotate(model, glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = model;
 
     std::memcpy(uniformBuffersMapped.Data(), &ubo, sizeof(ubo));
 }
@@ -270,9 +273,7 @@ std::uint32_t renderHeight = 0;
 
 namespace Vulkan {
 CRenderer::CRenderer(const IWindow* const window) {
-    if (window == nullptr) {
-        throw std::runtime_error("Cannot initialize vulkan renderer. Window is nullptr");
-    }
+    assert(window);
 
     m_context = CContext { window };
     m_surface = CSurface { m_context };
