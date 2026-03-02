@@ -1,5 +1,5 @@
 #pragma once
-#include <vulkan/vulkan.hpp>
+#include <skylabs/core/pch.hpp>
 
 namespace Vulkan::Utils {
 inline void AppendToPNextChain(void*& currentChain, void* newExtension) {

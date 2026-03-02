@@ -1,11 +1,5 @@
 #pragma once
-#include <iostream>
-#include <mutex>
-#include <array>
-#include <tuple>
-
-#include <stc.hpp>
-#include <fmt/format.h>
+#include <skylabs/public/pch.hpp>
 
 namespace Log {
 enum class Type : std::int8_t
@@ -14,7 +8,6 @@ enum class Type : std::int8_t
     eInfo,
     eWarning,
     eError,
-
     eCount
 };
 

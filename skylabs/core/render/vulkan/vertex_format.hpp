@@ -1,7 +1,6 @@
 #pragma once
+#include <skylabs/core/pch.hpp>
 #include <skylabs/core/render/vertex.hpp>
-
-#include <vulkan/vulkan.hpp>
 
 #include <span>
 

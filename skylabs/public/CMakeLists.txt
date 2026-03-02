@@ -37,6 +37,8 @@ target_sources(
             ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
 )
 
+target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
+
 target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     Boost::nowide
     stc::stc

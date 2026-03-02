@@ -1,13 +1,9 @@
-#include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/extensions.hpp>
 #include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
 
 #include <fmt/ranges.h>
-
-#include <ranges>
-#include <unordered_map>
 
 namespace {
 #ifdef DEBUG

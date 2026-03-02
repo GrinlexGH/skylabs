@@ -61,6 +61,8 @@ target_sources(
         SDL/keyboard.hpp
 )
 
+target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
+
 # No warnings in header factory file because of LTO in msvc
 if(IS_MSVC_LIKE)
     set_source_files_properties(header_factory.cpp PROPERTIES COMPILE_OPTIONS "/W1")

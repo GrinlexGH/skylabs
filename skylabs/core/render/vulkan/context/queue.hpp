@@ -1,5 +1,5 @@
 #pragma once
-#include <vulkan/vulkan_raii.hpp>
+#include <skylabs/core/pch.hpp>
 
 namespace Vulkan {
 class CQueue

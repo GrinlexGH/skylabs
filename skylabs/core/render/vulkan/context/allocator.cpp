@@ -1,5 +1,4 @@
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
-#include <skylabs/core/render/vulkan/context/profile.hpp>
 
 namespace Vulkan {
 CAllocator::CAllocator(

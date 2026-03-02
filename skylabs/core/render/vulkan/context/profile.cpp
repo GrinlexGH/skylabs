@@ -1,9 +1,7 @@
 #include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/public/logging.hpp>
 
-#include <fmt/format.h>
 #include <frozen/map.h>
-#include <vulkan/vulkan.hpp>
 
 #include <algorithm>
 #include <ranges>

@@ -2,10 +2,6 @@
 #include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/public/string_utils.hpp>
 
-#include <vulkan/vulkan_raii.hpp>
-
-#include <unordered_map>
-
 namespace Vulkan {
 class CInstance
 {

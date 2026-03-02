@@ -1,7 +1,5 @@
-#include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/core/render/vulkan/context/device.hpp>
 #include <skylabs/core/render/vulkan/context/extensions.hpp>
-#include <skylabs/public/logging.hpp>
 
 #include <fmt/ranges.h>
 

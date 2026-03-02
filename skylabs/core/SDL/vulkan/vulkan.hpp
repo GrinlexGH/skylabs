@@ -1,10 +1,7 @@
 #pragma once
-#include <SDL3/SDL_vulkan.h>
-#include <vulkan/vulkan.hpp>
+#include <skylabs/core/pch.hpp>
 
 #include <span>
-
-#include <fmt/format.h>
 
 namespace SDL::Vulkan {
 inline std::span<const char* const> GetInstanceExtensions() {

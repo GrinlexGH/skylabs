@@ -1,9 +1,8 @@
 #pragma once
+#include <skylabs/core/pch.hpp>
 #include <skylabs/core/window.hpp>
 
 #include <span>
-
-#include <vulkan/vulkan.hpp>
 
 namespace Vulkan {
 class IWindow : public ::IWindow

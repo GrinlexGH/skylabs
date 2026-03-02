@@ -5,8 +5,6 @@
 
 #include <stdexcept>
 
-#include <fmt/format.h>
-
 namespace SDL::Vulkan {
 CWindow::CWindow(const char* title, const int w, const int h, const SDL_WindowFlags flags) :
     m_handle(SDL_CreateWindow(title, w, h, SDL_WINDOW_VULKAN | flags))

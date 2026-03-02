@@ -1,7 +1,6 @@
 #pragma once
+#include <skylabs/core/pch.hpp>
 #include <skylabs/core/render/vulkan/context/device.hpp>
-
-#include <vk_mem_alloc_raii.hpp>
 
 namespace Vulkan {
 class CAllocator
