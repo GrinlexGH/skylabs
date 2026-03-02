@@ -100,8 +100,8 @@ CImage CTextureManager::CreateImage(const TextureMeta& meta) {
     vk::Extent2D extent;
     if (std::holds_alternative<RelativeTextureSize>(meta.m_description.m_extent)) {
         auto textureSize = std::get<RelativeTextureSize>(meta.m_description.m_extent);
-        extent.width = m_viewportExtent.m_width * textureSize.m_scaleX;
-        extent.height = m_viewportExtent.m_height * textureSize.m_scaleY;
+        extent.width = static_cast<std::uint32_t>(m_viewportExtent.m_width * textureSize.m_scaleX);
+        extent.height = static_cast<std::uint32_t>(m_viewportExtent.m_height * textureSize.m_scaleY);
     } else {
         auto textureSize = std::get<AbsoluteTextureSize>(meta.m_description.m_extent);
         extent.width = textureSize.m_width;

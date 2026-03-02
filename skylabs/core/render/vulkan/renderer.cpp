@@ -492,7 +492,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     // Pipeline
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
     std::array computeDescriptorSetLayouts = { *dsm.GetDescriptorSetLayout(m_computeDescriptorSet) };
-    pipelineLayoutInfo.setLayoutCount = computeDescriptorSetLayouts.size();
+    pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(computeDescriptorSetLayouts.size());
     pipelineLayoutInfo.pSetLayouts = computeDescriptorSetLayouts.data();
     m_computePipelineLayout = m_context.Device()->createPipelineLayout(pipelineLayoutInfo);
 
@@ -577,7 +577,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
     auto descriptorSetLight = m_descriptorManager.GetDescriptorSet(m_lightDescriptorSet);
 
-    static int yO = -600;
+    static float yO = -600;
     // 1. Настраиваем камеру света
     static CCamera lightCamera{ {1, 0, 1} };
     lightCamera.ProcessMouseMovement(0, yO);
@@ -881,7 +881,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         vk::PipelineStageFlagBits::eFragmentShader
     };
     vk::SubmitInfo finalSubmit{};
-    finalSubmit.waitSemaphoreCount = waitSems.size();
+    finalSubmit.waitSemaphoreCount = static_cast<std::uint32_t>(waitSems.size());
     finalSubmit.pWaitSemaphores = waitSems.data();
     finalSubmit.pWaitDstStageMask = waitStages.data();
     finalSubmit.commandBufferCount = 1;
@@ -941,7 +941,7 @@ void CRenderer::ReleaseComputeBuffers() {
         releaseBarrier.newLayout = vk::ImageLayout::eGeneral;
         releaseBarrier.srcQueueFamilyIndex = m_context.Device().GraphicsQueue().FamilyIndex();
         releaseBarrier.dstQueueFamilyIndex = m_context.Device().ComputeQueue().FamilyIndex();
-        releaseBarrier.image = *m_textureManager.GetTexture(m_computeBuffer, i);
+        releaseBarrier.image = *m_textureManager.GetTexture(m_computeBuffer, static_cast<int>(i));
         releaseBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
 
         vk::DependencyInfo releaseDependencyInfo {};

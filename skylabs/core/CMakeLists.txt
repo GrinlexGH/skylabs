@@ -63,13 +63,6 @@ target_sources(
 
 target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
 
-# No warnings in header factory file because of LTO in msvc
-if(IS_MSVC_LIKE)
-    set_source_files_properties(header_factory.cpp PROPERTIES COMPILE_OPTIONS "/W1")
-endif()
-
-add_dependencies(${CURRENT_TARGET_NAME} public shaders)
-
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     public
     SDL3::SDL3

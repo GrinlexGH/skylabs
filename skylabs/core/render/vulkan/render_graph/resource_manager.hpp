@@ -54,7 +54,7 @@ struct TextureDescirption
 
 struct TextureHandle
 {
-    unsigned int m_id = ~0;
+    unsigned int m_id = ~0u;
 };
 
 class CTextureManager
@@ -112,7 +112,7 @@ using BufferUsageFlags = Utils::Flags<BufferUsageFlagBits>;
 
 struct BufferDescirption
 {
-    std::uint32_t m_size = 0;
+    std::size_t m_size = 0;
     MemoryLocation m_location = MemoryLocation::eDeviceOnly;
     BufferUsageFlags m_usage;
     bool m_isInFlight = false;
@@ -120,7 +120,7 @@ struct BufferDescirption
 
 struct BufferHandle
 {
-    unsigned int m_id = ~0;
+    unsigned int m_id = ~0u;
 };
 
 class CBufferManager
@@ -193,7 +193,7 @@ struct DescriptorDescription
 
 struct DescriptorSetHandle
 {
-    unsigned int m_id = ~0;
+    unsigned int m_id = ~0u;
 };
 
 class CDescriptorManager
