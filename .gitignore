@@ -6,11 +6,8 @@
 .idea/
 
 # Build folders
-build/*
+build/
 out/
-
-# Third party compiled libs
-**/build/
 
 # Do not ignore vscode launch.json
 !.vscode/launch.json
