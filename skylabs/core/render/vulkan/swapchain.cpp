@@ -29,23 +29,16 @@ CSwapchain::CSwapchain(
     const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
-) : m_context(&context) {
-    Recreate(surface, imageCount, presentMode);
+) : m_context(&context), m_associatedSurface(surface) {
+    CreateSwapchain(surface, imageCount, presentMode);
 }
 
-void CSwapchain::Recreate() {
-    Recreate(m_associatedSurface, ImageCount(), m_presentMode);
-}
-
-void CSwapchain::Recreate(
-    const vk::SurfaceKHR& surface,
+CSwapchain::CSwapchain(
+    CSwapchain&& oldSwapchain,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
-) {
-    CreateSwapchain(surface, imageCount, presentMode, vk::raii::SwapchainKHR { std::move(m_handle) });
-
-    DestroyImages();
-    CreateImages();
+) : m_context(oldSwapchain.m_context), m_associatedSurface(oldSwapchain.m_associatedSurface) {
+    CreateSwapchain(m_associatedSurface, imageCount, presentMode, *oldSwapchain);
 }
 
 void CSwapchain::CreateSwapchain(
@@ -60,18 +53,12 @@ void CSwapchain::CreateSwapchain(
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
     vk::SwapchainCreateInfoKHR createInfo;
-    createInfo.pNext = nullptr;
     createInfo.surface = m_associatedSurface = surface;
 
     //====================
     const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice->getSurfaceCapabilitiesKHR(surface);
-    createInfo.minImageCount = std::clamp(
-        imageCount,
-        surfaceCapabilities.minImageCount,
-        surfaceCapabilities.maxImageCount ? surfaceCapabilities.maxImageCount : std::numeric_limits<std::uint32_t>::max()
-    );
+    createInfo.minImageCount = ChooseImageCount(surfaceCapabilities, imageCount);
 
-    //====================
     m_surfaceFormat = ChooseSurfaceFormat(physicalDevice->getSurfaceFormatsKHR(surface));
     createInfo.imageFormat = m_surfaceFormat.format;
     createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
@@ -98,30 +85,17 @@ void CSwapchain::CreateSwapchain(
     //====================
     createInfo.preTransform = surfaceCapabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-
-    //====================
-    if (const std::vector<vk::PresentModeKHR> presentModes = physicalDevice->getSurfacePresentModesKHR(surface);
-        !std::ranges::contains(presentModes, presentMode)
-    ) {
-        Log::Warning(
-            "Requested present mode ({}) is not available. Choosing ({})",
-            vk::to_string(presentMode),
-            vk::to_string(*presentModes.begin())
-        );
-        presentMode = *presentModes.begin();
-    }
-
-    createInfo.presentMode = m_presentMode = presentMode; // VSync
-
-    //====================
+    createInfo.presentMode = m_presentMode = ChoosePresentMode(presentMode);
     createInfo.clipped = vk::True;
     createInfo.oldSwapchain = oldSwapchain;
+    createInfo.pNext = nullptr;
 
-    //====================
     m_handle = vk::raii::SwapchainKHR { *device, createInfo };
+    CreateImages();
 }
 
 void CSwapchain::CreateImages() {
+    m_imageViews.clear();
     m_images = m_handle.getImages();
     m_imageViews.reserve(m_images.size());
 
@@ -144,10 +118,6 @@ void CSwapchain::CreateImages() {
     }
 }
 
-void CSwapchain::DestroyImages() {
-    m_imageViews.clear();
-}
-
 vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
@@ -161,5 +131,35 @@ vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& c
     actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
     return actualExtent;
+}
+
+std::uint32_t CSwapchain::ChooseImageCount(const vk::SurfaceCapabilitiesKHR& capabilities, std::uint32_t requestedCount) const {
+    return std::clamp(
+        requestedCount,
+        capabilities.minImageCount,
+        capabilities.maxImageCount ? capabilities.maxImageCount : std::numeric_limits<std::uint32_t>::max()
+    );
+}
+
+vk::PresentModeKHR CSwapchain::ChoosePresentMode(const vk::PresentModeKHR requestedMode) const {
+    const std::vector<vk::PresentModeKHR> availableModes =
+        m_context->PhysicalDevice()->getSurfacePresentModesKHR(m_associatedSurface);
+
+    if (std::ranges::contains(availableModes, requestedMode)) {
+        return requestedMode;
+    }
+
+    if (std::ranges::contains(availableModes, vk::PresentModeKHR::eMailbox)) {
+        Log::Warning("Requested mode not available. Falling back to Mailbox.");
+        return vk::PresentModeKHR::eMailbox;
+    }
+
+    if (std::ranges::contains(availableModes, vk::PresentModeKHR::eImmediate)) {
+        Log::Warning("Requested mode not available. Falling back to Immediate.");
+        return vk::PresentModeKHR::eImmediate;
+    }
+
+    Log::Warning("Using standard FIFO (V-Sync).");
+    return vk::PresentModeKHR::eFifo;
 }
 }

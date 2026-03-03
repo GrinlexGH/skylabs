@@ -12,6 +12,11 @@ public:
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode
     );
+    explicit CSwapchain(
+        CSwapchain&& oldSwapchain,
+        std::uint32_t imageCount,
+        vk::PresentModeKHR presentMode
+    );
     CSwapchain(const CSwapchain&) = delete;
     CSwapchain(CSwapchain&&) noexcept = default;
     CSwapchain& operator=(const CSwapchain&) = delete;
@@ -28,13 +33,7 @@ public:
 
     [[nodiscard]] const std::vector<vk::Image>& Images() const { return m_images; }
     [[nodiscard]] const std::vector<vk::raii::ImageView>& ImageViews() const { return m_imageViews; }
-    [[nodiscard]] std::uint32_t ImageCount() const {
-        assert(m_images.size() == m_imageViews.size());
-        return static_cast<std::uint32_t>(m_images.size());
-    }
-
-    void Recreate();
-    void Recreate(const vk::SurfaceKHR& surface, std::uint32_t imageCount, vk::PresentModeKHR presentMode);
+    [[nodiscard]] std::uint32_t ImageCount() const { return m_images.size(); }
 
 private:
     void CreateSwapchain(
@@ -44,20 +43,21 @@ private:
         const vk::raii::SwapchainKHR& oldSwapchain = nullptr
     );
     void CreateImages();
-    void DestroyImages();
 
     [[nodiscard]] vk::Extent2D ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
+    [[nodiscard]] std::uint32_t ChooseImageCount(const vk::SurfaceCapabilitiesKHR& capabilities, std::uint32_t requestedCount) const;
+    [[nodiscard]] vk::PresentModeKHR ChoosePresentMode(vk::PresentModeKHR requestedMode) const;
+
+    const CContext* m_context = nullptr;
 
     vk::raii::SwapchainKHR m_handle = nullptr;
 
     vk::SurfaceFormatKHR m_surfaceFormat;
-    vk::Extent2D m_extent;
-    vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eImmediate;
     vk::SurfaceKHR m_associatedSurface;
+    vk::Extent2D m_extent;
+    vk::PresentModeKHR m_presentMode;
 
     std::vector<vk::Image> m_images;
     std::vector<vk::raii::ImageView> m_imageViews;
-
-    const CContext* m_context = nullptr;
 };
 }

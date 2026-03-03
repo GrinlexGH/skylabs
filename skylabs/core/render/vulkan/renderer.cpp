@@ -277,7 +277,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_context = CContext { window };
     m_surface = CSurface { m_context };
-    m_swapchain = CSwapchain { m_context, *m_surface, 2, vk::PresentModeKHR::eImmediate };
+    m_swapchain = CSwapchain { m_context, *m_surface, 2, vk::PresentModeKHR::eMailbox };
 
     renderWidth = m_swapchain.Extent().width;
     renderHeight = m_swapchain.Extent().height;
@@ -925,7 +925,7 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
     m_descriptorManager.UpdateDescriptorSets(m_bufferManager, m_textureManager);
 
     currentFrameData.RecreateImageAvailableSemaphore();
-    m_swapchain.Recreate();
+    m_swapchain = CSwapchain { std::move(m_swapchain), m_swapchain.ImageCount(), m_swapchain.PresentMode() };
     m_isResized = false;
 }
 

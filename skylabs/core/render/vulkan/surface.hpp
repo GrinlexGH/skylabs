@@ -8,17 +8,16 @@ public:
     explicit CSurface(std::nullptr_t) {}
     explicit CSurface(const CContext& context);
     CSurface(const CSurface&) = delete;
-    CSurface(CSurface&& other) noexcept;
+    CSurface(CSurface&& other) noexcept = default;
     CSurface& operator=(const CSurface&) = delete;
-    CSurface& operator=(CSurface&& rhs) noexcept;
+    CSurface& operator=(CSurface&& rhs) noexcept = default;
     ~CSurface();
 
-    [[nodiscard]] vk::SurfaceKHR operator*() const noexcept { return m_handle; }
-    [[nodiscard]] vk::SurfaceKHR Handle() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::SurfaceKHR& operator*() const noexcept { return m_handle; }
 
 private:
-    vk::SurfaceKHR m_handle = nullptr;
-
     const CContext* m_context = nullptr;
+
+    vk::raii::SurfaceKHR m_handle { nullptr };
 };
 }
