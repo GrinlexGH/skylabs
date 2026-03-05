@@ -8,24 +8,31 @@ CContext::CContext(const IWindow* const window) : m_window(window)
     bool initialized = false;
     for (const auto& profile : { CProfile::Profile::eRoadmap2024, CProfile::Profile::eRoadmap2022 }) {
         m_profile = CProfile { profile };
+
+        VULKAN_HPP_DEFAULT_DISPATCHER.init();
+
+        if (!m_profile.CheckInstanceSupport())
+            continue;
+
         m_instance = CInstance { m_profile, m_window->GetRequiredInstanceExtensions() };
 
-        std::expected physicalDevice = SelectPhysicalDevice();
-        if (physicalDevice.has_value()) {
-            m_physicalDevice = physicalDevice.value();
-            m_device = CDevice { m_profile, m_window, m_instance, m_physicalDevice };
-            m_allocator = CAllocator { m_profile, *m_instance, *m_physicalDevice, m_device };
-            initialized = true;
-            break;
-        }
+        std::optional physicalDevice = SelectPhysicalDevice();
+        if (!physicalDevice.has_value())
+            continue;
+
+        m_physicalDevice = physicalDevice.value();
+        m_device = CDevice { m_profile, m_window, m_instance, m_physicalDevice };
+        m_allocator = CAllocator { m_profile, *m_instance, *m_physicalDevice, m_device };
+        initialized = true;
+        break;
     }
 
     if (!initialized) {
-        throw std::runtime_error("Failed to initialize vulkan context!");
+        throw std::runtime_error("Failed to initialize vulkan context");
     }
 }
 
-std::expected<CPhysicalDevice, const char*> CContext::SelectPhysicalDevice() {
+std::optional<CPhysicalDevice> CContext::SelectPhysicalDevice() {
     CPhysicalDevice selectedGPU { nullptr };
     int maxScore = 0;
 
@@ -38,7 +45,7 @@ std::expected<CPhysicalDevice, const char*> CContext::SelectPhysicalDevice() {
     }
 
     if (maxScore == 0) {
-        return std::unexpected("Failed to find a suitable GPU!");
+        return std::nullopt;
     }
 
     return selectedGPU;

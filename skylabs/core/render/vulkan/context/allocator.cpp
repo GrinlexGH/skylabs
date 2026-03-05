@@ -17,7 +17,7 @@ CAllocator::CAllocator(
 #endif
     };
 
-    // Available in roadmap
+    // Available in roadmap 2022
     vma::AllocatorCreateFlags flags =
         vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation
         | vma::AllocatorCreateFlagBits::eKhrBindMemory2

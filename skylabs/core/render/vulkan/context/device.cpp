@@ -39,7 +39,7 @@ CQueueFamilyIndices GetQueueFamilies(const Vulkan::IWindow* window, const vk::In
             graphicsFamily.emplace(i);
         }
 
-        // Graphics queue guarantees compute queue (but not on the same physical device...)
+        // Graphics queue guarantees compute queue
         if (!computeFamily.has_value() && queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) {
             computeFamily.emplace(i);
         }

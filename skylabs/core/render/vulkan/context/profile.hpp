@@ -15,7 +15,7 @@ public:
     explicit CProfile(std::nullptr_t) {}
     explicit CProfile(Profile profile);
 
-    void CheckInstanceSupport() const;
+    [[nodiscard]] bool CheckInstanceSupport() const;
     [[nodiscard]] bool CheckPhysicalDeviceSupport(VkInstance instance, const vk::raii::PhysicalDevice& physicalDevice) const;
     [[nodiscard]] VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const;
     [[nodiscard]] VkDevice CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo) const;

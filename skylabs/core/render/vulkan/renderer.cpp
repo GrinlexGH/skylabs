@@ -116,7 +116,7 @@ void GenerateMipmaps(
     const vk::FormatProperties formatProperties = physicalDevice.getFormatProperties(image.Format());
 
     if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
-        throw std::runtime_error("texture image format does not support linear blitting!");
+        throw std::runtime_error("texture image format does not support linear blitting");
     }
 
     vk::ImageMemoryBarrier barrier {};
@@ -956,7 +956,7 @@ void CRenderer::ReleaseComputeBuffers() {
 void CRenderer::LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
     SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
     if (!imageRaw) {
-        throw std::runtime_error("Failed to load texture image!");
+        throw std::runtime_error("Failed to load texture image");
     }
     SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
     SDL_DestroySurface(imageRaw);

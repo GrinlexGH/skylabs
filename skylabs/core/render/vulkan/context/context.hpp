@@ -4,7 +4,7 @@
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
 #include <skylabs/core/render/vulkan/context/profile.hpp>
 
-#include <expected>
+#include <optional>
 
 namespace Vulkan {
 //====================
@@ -30,7 +30,7 @@ public:
     [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_apiVersion; }
 
 private:
-    [[nodiscard]] std::expected<CPhysicalDevice, const char*> SelectPhysicalDevice();
+    [[nodiscard]] std::optional<CPhysicalDevice> SelectPhysicalDevice();
     [[nodiscard]] int RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const;
 
     const IWindow* m_window = nullptr;

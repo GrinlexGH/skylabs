@@ -43,17 +43,15 @@ constexpr frozen::map<CProfile::Profile, ProfileMeta, 3> g_profileMap = {
 
 CProfile::CProfile(const Profile profile) : m_profile(profile) {}
 
-void CProfile::CheckInstanceSupport() const {
+bool CProfile::CheckInstanceSupport() const {
     VpProfileProperties currentProfile = GenerateProperties();
 
     vk::Bool32 profileSupported;
     if (vpGetInstanceProfileSupport(nullptr, nullptr, &currentProfile, &profileSupported) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to get vulkan profile");
+        throw std::runtime_error("Failed to get instance profile support");
     }
 
-    if (!profileSupported) {
-        throw std::runtime_error(fmt::format("The vulkan profile {} is not supported", currentProfile.profileName));
-    }
+    return profileSupported;
 }
 
 bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, const vk::raii::PhysicalDevice& physicalDevice) const {
@@ -61,7 +59,7 @@ bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, const vk::raii::P
 
     vk::Bool32 profileSupported;
     if (vpGetPhysicalDeviceProfileSupport(nullptr, instance, *physicalDevice, &currentProfile, &profileSupported) != VK_SUCCESS) {
-        throw std::runtime_error("Cannot get physical device profile supported");
+        throw std::runtime_error("Failed to get physical device profile support");
     }
 
     auto getFeatures = [&]<typename T>() {
@@ -74,10 +72,11 @@ bool CProfile::CheckPhysicalDeviceSupport(VkInstance instance, const vk::raii::P
         return T {};
     };
 
+    // roadmap2022 + shaderDrawParameters
     if (m_profile == Profile::eRoadmap2022) {
         const auto features11 = getFeatures.operator()<vk::PhysicalDeviceVulkan11Features>();
         if (features11.shaderDrawParameters != vk::True) {
-            Log::Warning("Application needs shaderDrawParameter feature!");
+            Log::Warning("Application needs shaderDrawParameter feature");
             return false;
         }
     }

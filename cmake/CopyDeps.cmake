@@ -4,6 +4,8 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.3")
     cmake_policy(SET CMP0207 NEW)
 endif()
 
+message(STATUS "Resolving dependencies")
+
 if(NOT OUTPUT_DIR)
     message(FATAL_ERROR "OUTPUT_DIR is not defined")
 endif()

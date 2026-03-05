@@ -10,7 +10,7 @@ CWindow::CWindow(const char* title, const int w, const int h, const SDL_WindowFl
     m_handle(SDL_CreateWindow(title, w, h, SDL_WINDOW_VULKAN | flags))
 {
     if (!m_handle) {
-        throw std::runtime_error(fmt::format("Failed to create SDL window: {}!", SDL_GetError()));
+        throw std::runtime_error(fmt::format("Failed to create SDL window: {}", SDL_GetError()));
     }
 }
 

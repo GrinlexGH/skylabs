@@ -85,10 +85,6 @@ std::unordered_map<std::string_view, bool> RequestExtensions(const std::span<con
 
 namespace Vulkan {
 CInstance::CInstance(const CProfile profile, const std::span<const char* const> requiredExtensions) {
-    VULKAN_HPP_DEFAULT_DISPATCHER.init();
-
-    profile.CheckInstanceSupport();
-
     const vk::raii::Context context;
     const std::vector<const char*> enabledLayers = SetupLayers(context);
     const std::vector<const char*> enabledExtensions = SetupExtensions(profile, context, requiredExtensions, enabledLayers);
