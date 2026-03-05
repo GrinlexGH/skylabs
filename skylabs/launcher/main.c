@@ -80,7 +80,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     libPath = malloc(cap * sizeof(wchar_t));
     MESSAGE_EXIT_CHECK(!libPath, L"Failed to allocate memory for core path");
 
-    swprintf(libPath, cap, L"%s" LOAD_PATH, exePath);
+    swprintf(libPath, cap, L"%ls" LOAD_PATH, exePath);
     free(exePath);
     exePath = NULL;
 

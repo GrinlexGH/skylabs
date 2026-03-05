@@ -34,7 +34,7 @@ namespace ResourceSystem {
 
     const std::streampos fileSize = file.tellg();
 
-    std::vector<char> buffer(fileSize);
+    std::vector<char> buffer(static_cast<std::size_t>(fileSize));
 
     file.seekg(0);
     file.read(buffer.data(), fileSize);

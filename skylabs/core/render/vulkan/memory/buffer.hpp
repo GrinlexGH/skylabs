@@ -27,7 +27,7 @@ public:
     [[nodiscard]] const vma::raii::Buffer* operator->() const noexcept { return &m_handle; }
 
     [[nodiscard]] void* Data() const noexcept { return m_data; }
-    [[nodiscard]] std::size_t Size() const noexcept { return m_size; }
+    [[nodiscard]] std::size_t Size() const noexcept { return static_cast<std::size_t>(m_size); }
     [[nodiscard]] std::span<std::byte> Span() const {
         return m_data
             ? std::span { static_cast<std::byte*>(m_data), static_cast<std::size_t>(m_size) }

@@ -289,7 +289,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
-
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
         m_frameData.emplace_back(m_context);
     }
@@ -970,7 +969,7 @@ void CRenderer::LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::Command
             MemoryLocation::eHostVisible
         };
     }
-    std::memcpy(stagingBuffer.Data(), image->pixels, imageSize);
+    std::memcpy(stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
 
     CImage modelTexture = {
         m_context,
@@ -1050,7 +1049,7 @@ void CRenderer::LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& c
         };
     }
 
-    std::memcpy(stagingBuffer.Data(), vertices.data(), vertexBufferSize);
+    std::memcpy(stagingBuffer.Data(), vertices.data(), static_cast<std::size_t>(vertexBufferSize));
 
     CBuffer vertexBuffer {
         m_context,
@@ -1079,7 +1078,7 @@ void CRenderer::LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& c
 
     m_vertexBuffer = m_bufferManager.ImportBuffer("vertexBuffer", std::move(vertexBuffer));
 
-    std::memcpy(stagingBuffer.Data(), indices.data(), indexBufferSize);
+    std::memcpy(stagingBuffer.Data(), indices.data(), static_cast<std::size_t>(indexBufferSize));
 
     CBuffer indexBuffer = {
         m_context,

@@ -35,7 +35,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 std::vector<const char*> SetupLayers([[maybe_unused]] const vk::raii::Context& context) {
     std::vector<const char*> enabledLayers {};
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(ARCH_32)
     for (const auto& layerProperties : context.enumerateInstanceLayerProperties()) {
         if (std::strcmp(layerProperties.layerName, validationLayerName) == 0) {
             enabledLayers.push_back(validationLayerName);
