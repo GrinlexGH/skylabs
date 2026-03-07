@@ -302,25 +302,13 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_mainSampler = CSampler { m_context };
     m_computeSampler = CSampler { m_context };
     m_modelTextureSampler = CSampler { m_context };
-
-    vk::SamplerCreateInfo createInfo {};
-    createInfo.magFilter = vk::Filter::eLinear;
-    createInfo.minFilter = vk::Filter::eLinear;
-    createInfo.addressModeU = vk::SamplerAddressMode::eClampToBorder;
-    createInfo.addressModeV = vk::SamplerAddressMode::eClampToBorder;
-    createInfo.addressModeW = vk::SamplerAddressMode::eClampToBorder;
-    createInfo.anisotropyEnable = vk::True;
-    createInfo.maxAnisotropy = m_context.PhysicalDevice()->getProperties2().properties.limits.maxSamplerAnisotropy;
-    createInfo.borderColor = vk::BorderColor::eFloatOpaqueBlack;
-    createInfo.unnormalizedCoordinates = vk::False;
-    createInfo.compareEnable = vk::True;
-    createInfo.compareOp = vk::CompareOp::eGreaterOrEqual;
-    createInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
-    createInfo.mipLodBias = 0.0f;
-    createInfo.minLod = 0.0f;
-    createInfo.maxLod = vk::LodClampNone;
-    m_samplerLight = vk::raii::Sampler { *m_context.Device(), createInfo };
-
+    m_samplerLight = CSampler {
+        m_context, {
+            .m_filtering = vk::Filter::eLinear,
+            .m_compareOp = vk::CompareOp::eGreaterOrEqual,
+            .m_mipmapFiltering = vk::SamplerMipmapMode::eLinear,
+        }
+    };
 
     m_textureManager = RG::CTextureManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
     auto& txm = m_textureManager;
@@ -399,7 +387,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
             .m_shaderStages = ShaderStageBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_lightDepth, .m_sampler = &m_samplerLight }
+            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_lightDepth, .m_sampler = &*m_samplerLight }
         },
     }});
 

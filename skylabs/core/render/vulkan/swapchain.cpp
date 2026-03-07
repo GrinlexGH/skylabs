@@ -126,7 +126,6 @@ vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& c
     auto [width, height] = m_context->Window()->DrawableSize();
 
     vk::Extent2D actualExtent = { width, height };
-
     actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 

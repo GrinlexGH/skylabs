@@ -30,7 +30,7 @@ public:
     void Draw(glm::mat4 viewMat, float deltaTime) override;
 
 private:
-    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 2;
+    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;
 
     void Resize(CFrameData& currentFrameData);
     void UpdateMainDescriptorSets();
@@ -69,7 +69,7 @@ private:
     RG::BufferHandle m_lightUBO;
     RG::DescriptorSetHandle m_lightDescriptorSet;
     CPipeline m_lightPipeline { nullptr };
-    vk::raii::Sampler m_samplerLight { nullptr };
+    CSampler m_samplerLight { nullptr };
 
 
 
