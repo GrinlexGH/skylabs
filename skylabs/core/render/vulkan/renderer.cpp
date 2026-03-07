@@ -301,7 +301,13 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_mainSampler = CSampler { m_context };
     m_computeSampler = CSampler { m_context };
-    m_modelTextureSampler = CSampler { m_context };
+    m_modelTextureSampler = CSampler {
+        m_context, {
+            .m_filtering = vk::Filter::eLinear,
+            .m_anisotropy = SamplerCreateInfo::Anisotropy::e16,
+            .m_mipmapFiltering = vk::SamplerMipmapMode::eLinear,
+        }
+    };
     m_samplerLight = CSampler {
         m_context, {
             .m_filtering = vk::Filter::eLinear,
