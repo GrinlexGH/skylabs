@@ -61,7 +61,7 @@ function(skylabs_configure_target target_name)
         $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:
             $<$<BOOL:${IS_GNU_LIKE}>:
                 -Wall -Wextra -Wpedantic
-                $<$<AND:$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes>
+                $<$<AND:$<BOOL:${WIN32}>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes>
             >
             $<$<BOOL:${IS_MSVC_LIKE}>:
                 /utf-8 /Zc:__cplusplus /W4
