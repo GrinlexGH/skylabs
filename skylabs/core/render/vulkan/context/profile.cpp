@@ -162,7 +162,7 @@ VpProfileProperties CProfile::GenerateProperties() const {
         .specVersion = meta.m_specVersion
     };
 
-    std::strncpy(currentProfile.profileName, meta.m_name, sizeof(currentProfile.profileName));
+    std::strncpy(currentProfile.profileName, meta.m_name, sizeof(currentProfile.profileName) - 1);
 
     return currentProfile;
 }

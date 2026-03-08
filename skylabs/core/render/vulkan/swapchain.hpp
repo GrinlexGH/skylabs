@@ -33,7 +33,7 @@ public:
 
     [[nodiscard]] const std::vector<vk::Image>& Images() const { return m_images; }
     [[nodiscard]] const std::vector<vk::raii::ImageView>& ImageViews() const { return m_imageViews; }
-    [[nodiscard]] std::uint32_t ImageCount() const { return m_images.size(); }
+    [[nodiscard]] std::uint32_t ImageCount() const { return static_cast<std::uint32_t>(m_images.size()); }
 
 private:
     void CreateSwapchain(

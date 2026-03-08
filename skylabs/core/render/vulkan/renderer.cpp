@@ -249,7 +249,6 @@ void UpdateUniformBuffer(
     ubo.proj = glm::mat4(0.0f);
     ubo.proj[0][0] = g / (static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height));
     ubo.proj[1][1] = -g;
-    ubo.proj[2][2] = 0.0f;
     ubo.proj[2][3] = -1.0f;
     ubo.proj[3][2] = 0.01f;
 
