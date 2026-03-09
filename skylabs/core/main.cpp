@@ -39,7 +39,7 @@ void EnableVTP() {
     constexpr DWORD flags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
 
     DWORD originalMode = 0;
-    if (!GetConsoleMode(handle, &originalMode) && (originalMode & flags) == flags) {
+    if (GetConsoleMode(handle, &originalMode) && (originalMode & flags) == flags) {
         Log::Debug("Virtual Terminal Processing already set for STD_OUTPUT.");
         return;
     }
