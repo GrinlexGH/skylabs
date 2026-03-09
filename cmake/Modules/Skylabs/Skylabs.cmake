@@ -155,7 +155,6 @@ function(skylabs_configure_target target_name)
         "\"-DDIRECTORIES=${CXX_COMPILER_DIR};${C_COMPILER_DIR}\""
         "\"-D${target_type}=$<TARGET_FILE:${target_name}>\""
         -P ${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake
-        ${cmd}
         COMMENT "Resolving and copying symlinked dependencies..."
     )
 endfunction()
