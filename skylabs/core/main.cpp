@@ -32,20 +32,25 @@ std::string GetLastErrorMessage() {
 void EnableVTP() {
     const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (handle == INVALID_HANDLE_VALUE) {
-        Log::Error("Invalid handle for STD_OUTPUT (GetStdHandle fail): {}", GetLastErrorMessage());
+        Log::Error("Failed to get stdout handle: {}", GetLastErrorMessage());
         return;
     }
 
-    constexpr DWORD flags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
+    constexpr DWORD VTP_FLAGS = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
 
     DWORD originalMode = 0;
-    if (GetConsoleMode(handle, &originalMode) && (originalMode & flags) == flags) {
-        Log::Debug("Virtual Terminal Processing already set for STD_OUTPUT.");
+    if (!GetConsoleMode(handle, &originalMode)) {
+        Log::Error("Failed to get console mode: {}", GetLastErrorMessage());
         return;
     }
 
-    if (!SetConsoleMode(handle, originalMode | flags)) {
-        Log::Warning("Failed to set mode for STD_OUTPUT (SetConsoleMode fail). Error: {}", GetLastErrorMessage());
+    if ((originalMode & VTP_FLAGS) == VTP_FLAGS) {
+        Log::Debug("Virtual terminal processing already set for STD_OUTPUT.");
+        return;
+    }
+
+    if (!SetConsoleMode(handle, originalMode | VTP_FLAGS)) {
+        Log::Error("Failed to set virtual terminal processing flags: {}", GetLastErrorMessage());
     }
 }
 }
