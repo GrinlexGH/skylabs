@@ -1,5 +1,4 @@
 #include <skylabs/core/render/vulkan/render_graph/resource_manager.hpp>
-#include <skylabs/public/logging.hpp>
 
 #include <frozen/map.h>
 #include <deque>
