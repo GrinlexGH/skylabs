@@ -8,7 +8,7 @@ public:
     explicit CImage(std::nullptr_t) {}
     CImage(
         const CContext& context,
-        const vk::Extent2D& extent,
+        const vk::Extent3D& extent,
         vk::Format format,
         vk::ImageUsageFlags usage,
         vk::ImageAspectFlags imageAspectFlags,
@@ -27,7 +27,7 @@ public:
     [[nodiscard]] const vk::raii::ImageView& View() const noexcept { return m_view; }
     [[nodiscard]] vk::ImageLayout Layout() const noexcept { return m_layout; }
     [[nodiscard]] vk::Format Format() const noexcept { return m_format; }
-    [[nodiscard]] vk::Extent2D Extent() const noexcept { return m_extent; }
+    [[nodiscard]] vk::Extent3D Extent() const noexcept { return m_extent; }
     [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
     [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
 
@@ -53,7 +53,7 @@ private:
     vk::raii::ImageView m_view = nullptr;
 
     vk::Format m_format = vk::Format::eUndefined;
-    vk::Extent2D m_extent;
+    vk::Extent3D m_extent;
     std::uint32_t m_mipLevels = 1;
     vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
     vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;

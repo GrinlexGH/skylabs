@@ -52,7 +52,7 @@ TextureHandle CTextureManager::ImportTexture(const char* debugName, CImage image
     TextureHandle handle{ static_cast<unsigned int>(m_textures.size()) };
     Texture entry;
     entry.m_info.m_debugName = debugName;
-    entry.m_info.m_description.m_extent = AbsoluteTextureSize{ .m_width = image.Extent().width, .m_height = image.Extent().height };
+    entry.m_info.m_description.m_extent = vk::Extent3D { image.Extent().width, image.Extent().height, 1 };
     entry.m_images.push_back(std::move(image));
     m_textures.push_back(std::move(entry));
     return handle;
@@ -74,7 +74,7 @@ void CTextureManager::GenerateTextures() {
             images.push_back(std::move(image));
         }
 
-        return std::holds_alternative<AbsoluteTextureSize>(meta.m_description.m_extent);
+        return std::holds_alternative<vk::Extent3D>(meta.m_description.m_extent);
     });
 }
 
@@ -96,15 +96,13 @@ void CTextureManager::Resize(const Utils::Extent2D newViewportExtent) {
 CImage CTextureManager::CreateImage(const TextureMeta& meta) {
     TextureDescirption desc = meta.m_description;
 
-    vk::Extent2D extent;
+    vk::Extent3D extent { 1, 1, 1 };
     if (std::holds_alternative<RelativeTextureSize>(meta.m_description.m_extent)) {
         auto textureSize = std::get<RelativeTextureSize>(meta.m_description.m_extent);
         extent.width = static_cast<std::uint32_t>(m_viewportExtent.m_width * textureSize.m_scaleX);
         extent.height = static_cast<std::uint32_t>(m_viewportExtent.m_height * textureSize.m_scaleY);
     } else {
-        auto textureSize = std::get<AbsoluteTextureSize>(meta.m_description.m_extent);
-        extent.width = textureSize.m_width;
-        extent.height = textureSize.m_height;
+        extent = std::get<vk::Extent3D>(meta.m_description.m_extent);
     }
 
     vk::Format format;
@@ -276,7 +274,7 @@ void CDescriptorManager::CreateDescriptorSets() {
             binding.binding = i;
             binding.descriptorType = g_descriptorTypeMap.at(desc.m_type);
             binding.descriptorCount = 1;
-            binding.stageFlags = GetVkShaderStageFlags(desc.m_shaderStages);
+            binding.stageFlags = desc.m_shaderStages;
 
             bindings.push_back(binding);
         }

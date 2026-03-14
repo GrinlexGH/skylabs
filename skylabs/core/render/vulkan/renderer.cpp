@@ -345,7 +345,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_lightDepth = txm.CreateTexture("lightDepth", {
         .m_format = RG::TextureFormat::eDepthOptimal,
         .m_usage = RG::TextureUsageBits::eDepthAttachment | RG::TextureUsageBits::eSampled,
-        .m_extent = RG::AbsoluteTextureSize { .m_width = 2048, .m_height = 2048 }
+        .m_extent = vk::Extent3D { 2048, 2048, 1 }
     });
 
     LoadModelTexture(stagingBuffer, m_singleCommandPool);
@@ -379,19 +379,19 @@ CRenderer::CRenderer(const IWindow* const window) {
     auto& dsm = m_descriptorManager;
 
     m_mainDescriptorSet = dsm.CreateDescriptorSet({{
-        {
+       RG::DescriptorDescription {
             .m_type = RG::DescriptorType::eUniformBuffer,
-            .m_shaderStages = ShaderStageBits::eVertex | ShaderStageBits::eFragment,
+            .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
         },
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
-            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::SampledImageDescriptorInfo { .m_image = m_modelTexture, .m_sampler = &*m_modelTextureSampler }
         },
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
-            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::SampledImageDescriptorInfo { .m_image = m_lightDepth, .m_sampler = &*m_samplerLight }
         },
     }});
@@ -399,7 +399,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_computeDescriptorSet = dsm.CreateDescriptorSet({{
         {
             .m_type = RG::DescriptorType::eStorageImage,
-            .m_shaderStages = ShaderStageBits::eCompute,
+            .m_shaderStages = vk::ShaderStageFlagBits::eCompute,
             .m_info = RG::StorageImageDescriptorInfo { .m_image = m_computeBuffer }
         },
     }});
@@ -407,12 +407,12 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_swapchainDescriptorSet = dsm.CreateDescriptorSet({{
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
-            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::SampledImageDescriptorInfo { .m_image = m_colorBuffer, .m_sampler = &*m_mainSampler }
         },
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
-            .m_shaderStages = ShaderStageBits::eFragment,
+            .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = &*m_computeSampler }
         },
     }});
@@ -420,7 +420,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_lightDescriptorSet = dsm.CreateDescriptorSet({{
         {
             .m_type = RG::DescriptorType::eUniformBuffer,
-            .m_shaderStages = ShaderStageBits::eVertex | ShaderStageBits::eFragment,
+            .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::BufferDescriptorInfo { .m_buffer = m_lightUBO }
         },
     }});
@@ -430,11 +430,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     dsm.UpdateDescriptorSets(m_bufferManager, m_textureManager);
 
     // Light pipeline
-    const CShader vertexShaderLight(m_context, ShaderStageBits::eVertex, "light.vert.spv");
-
-    const std::array<vk::PipelineShaderStageCreateInfo, 1> shaderStagesLight = {
-        vertexShaderLight.PipelineShaderCreateInfo(),
-    };
+    const CShader vertexShaderLight(m_context, vk::ShaderStageFlagBits::eVertex, "light.vert.spv");
+    std::array lightShaders = { &vertexShaderLight };
 
     // Pipeline
     vk::PipelineRenderingCreateInfo renderingInfoLight {};
@@ -442,8 +439,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_lightPipeline = CPipeline {
         m_context,
-        shaderStagesLight,
-        std::array { *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) },
+        lightShaders,
+        {{ *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) }},
         CVertexFormat { CVertex::GetAttributes() },
         renderingInfoLight,
         vk::SampleCountFlagBits::e1
@@ -452,13 +449,9 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Main pipeline
     // Shaders
-    const CShader vertexShader(m_context, ShaderStageBits::eVertex, "shader.vert.spv");
-    const CShader fragmentShader(m_context, ShaderStageBits::eFragment, "shader.frag.spv");
-
-    const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = {
-        vertexShader.PipelineShaderCreateInfo(),
-        fragmentShader.PipelineShaderCreateInfo(),
-    };
+    const CShader vertexShader(m_context, vk::ShaderStageFlagBits::eVertex, "shader.vert.spv");
+    const CShader fragmentShader(m_context, vk::ShaderStageFlagBits::eFragment, "shader.frag.spv");
+    std::array mainShaders = { &vertexShader, &fragmentShader };
 
     // Pipeline
     std::array<vk::Format, 1> colorFormats = { txm.GetTexture(m_colorBuffer).Format() };
@@ -469,7 +462,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_pipelineMain = CPipeline {
         m_context,
-        shaderStages,
+        mainShaders,
         std::array { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) },
         CVertexFormat { CVertex::GetAttributes() },
         renderingInfo,
@@ -479,7 +472,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Compute pipeline
     // Shaders
-    CShader computeShader(m_context, ShaderStageBits::eCompute, "shader.comp.spv");
+    CShader computeShader(m_context, vk::ShaderStageFlagBits::eCompute, "shader.comp.spv");
 
     // Pipeline
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
@@ -489,20 +482,20 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_computePipelineLayout = m_context.Device()->createPipelineLayout(pipelineLayoutInfo);
 
     vk::ComputePipelineCreateInfo computePipelineCreateInfo {};
-    computePipelineCreateInfo.stage = computeShader.PipelineShaderCreateInfo();
+    vk::PipelineShaderStageCreateInfo computeShaderCreateInfo {};
+    computeShaderCreateInfo.stage = computeShader.Stage();
+    computeShaderCreateInfo.module = *computeShader;
+    computeShaderCreateInfo.pName = "main";
+    computePipelineCreateInfo.stage = computeShaderCreateInfo;
     computePipelineCreateInfo.layout = m_computePipelineLayout;
     m_computePipeline = m_context.Device()->createComputePipeline(nullptr, computePipelineCreateInfo);
 
 
     // Swapchain pipeline
     // Shaders
-    const CShader vertexShaderSwapchain(m_context, ShaderStageBits::eVertex, "shaderSwapchain.vert.spv");
-    const CShader fragmentShaderSwapchain(m_context, ShaderStageBits::eFragment, "shaderSwapchain.frag.spv");
-
-    const std::array shaderStagesSwapchain = {
-        vertexShaderSwapchain.PipelineShaderCreateInfo(),
-        fragmentShaderSwapchain.PipelineShaderCreateInfo(),
-    };
+    const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "shaderSwapchain.vert.spv");
+    const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "shaderSwapchain.frag.spv");
+    std::array swapchainShaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain };
 
     // Pipeline
     std::array<vk::Format, 1> swapchainColorFormats { m_swapchain.SurfaceFormat().format };
@@ -512,7 +505,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_pipelineSwapchain = CPipeline {
         m_context,
-        shaderStagesSwapchain,
+        swapchainShaders,
         std::array { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) },
         CVertexFormat {{}},
         renderingInfo,
@@ -966,7 +959,7 @@ void CRenderer::LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::Command
 
     CImage modelTexture = {
         m_context,
-        vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) },
+        vk::Extent3D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
         vk::Format::eR8G8B8A8Srgb,
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         vk::ImageAspectFlagBits::eColor,

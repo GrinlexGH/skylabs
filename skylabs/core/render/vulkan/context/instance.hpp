@@ -29,7 +29,7 @@ private:
 
     vk::raii::Instance m_handle { nullptr };
 
-    UnorderedStringSet m_enabledExtensions;
+    StringUnorderedSet m_enabledExtensions;
 
 #ifdef DEBUG
     vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger { nullptr };

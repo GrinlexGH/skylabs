@@ -66,7 +66,7 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
 namespace Vulkan {
 CImage::CImage(
     const CContext& context,
-    const vk::Extent2D& extent,
+    const vk::Extent3D& extent,
     const vk::Format format,
     const vk::ImageUsageFlags usage,
     const vk::ImageAspectFlags imageAspectFlags,
@@ -81,7 +81,7 @@ CImage::CImage(
     vk::ImageCreateInfo imageInfo {};
     imageInfo.imageType = vk::ImageType::e2D;
     imageInfo.format = m_format;
-    imageInfo.extent = vk::Extent3D { extent, 1 };
+    imageInfo.extent = extent;
     imageInfo.mipLevels = m_mipLevels;
     imageInfo.arrayLayers = 1;
     imageInfo.samples = m_sampleCount;
@@ -113,7 +113,7 @@ void CImage::Clear() {
     m_handle.clear();
     m_view.clear();
     m_format = vk::Format::eUndefined;
-    m_extent = vk::Extent2D {};
+    m_extent = vk::Extent3D {};
     m_mipLevels = 1;
     m_sampleCount = vk::SampleCountFlagBits::e1;
     m_layout = vk::ImageLayout::eUndefined;

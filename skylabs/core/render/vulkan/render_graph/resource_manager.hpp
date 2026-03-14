@@ -10,13 +10,6 @@
 #include <filesystem>
 
 namespace Vulkan::RG {
-struct AbsoluteTextureSize
-{
-    std::uint32_t m_width = 1;
-    std::uint32_t m_height = 1;
-    std::uint32_t m_depth = 1;
-};
-
 struct RelativeTextureSize
 {
     float m_scaleX = 1.0f;
@@ -24,7 +17,7 @@ struct RelativeTextureSize
     std::uint32_t m_depth = 1;
 };
 
-using TextureExtent = std::variant<AbsoluteTextureSize, RelativeTextureSize>;
+using TextureExtent = std::variant<vk::Extent3D, RelativeTextureSize>;
 
 enum class TextureFormat : std::uint8_t
 {
@@ -187,7 +180,7 @@ struct StorageImageDescriptorInfo {
 struct DescriptorDescription
 {
     DescriptorType m_type;
-    ShaderStage m_shaderStages;
+    vk::ShaderStageFlags m_shaderStages;
     std::variant<BufferDescriptorInfo, SampledImageDescriptorInfo, StorageImageDescriptorInfo> m_info;
 };
 

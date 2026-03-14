@@ -3,7 +3,7 @@
 namespace Vulkan {
 CPipeline::CPipeline(
     const CContext& context,
-    const std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
+    const std::span<const CShader*> shaders,
     const std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
     const CVertexFormat& vertexFormat,
     const vk::PipelineRenderingCreateInfo& renderingInfo,
@@ -87,9 +87,19 @@ CPipeline::CPipeline(
 
     m_layout = vk::raii::PipelineLayout { *context.Device(), pipelineLayoutInfo };
 
+    std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo {};
+    shaderCreateInfo.reserve(shaders.size());
+    for (std::size_t i = 0; i < shaders.size(); ++i) {
+        vk::PipelineShaderStageCreateInfo ci {};
+        ci.stage = shaders[i]->Stage();
+        ci.module = **shaders[i];
+        ci.pName = "main";
+        shaderCreateInfo.push_back(ci);
+    }
+
     vk::GraphicsPipelineCreateInfo pipelineInfo {};
-    pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderStages.size());
-    pipelineInfo.pStages = shaderStages.data();
+    pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderCreateInfo.size());
+    pipelineInfo.pStages = shaderCreateInfo.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;

@@ -36,7 +36,7 @@ private:
 
     vk::raii::Device m_handle { nullptr };
 
-    UnorderedStringSet m_enabledExtensions;
+    StringUnorderedSet m_enabledExtensions;
 
     CQueue m_graphicsQueue { nullptr };
     CQueue m_presentQueue { nullptr };

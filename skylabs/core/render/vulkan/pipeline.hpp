@@ -1,6 +1,7 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/vertex_format.hpp>
+#include <skylabs/core/render/vulkan/shader.hpp>
 
 namespace Vulkan {
 class CPipeline
@@ -9,7 +10,7 @@ public:
     explicit CPipeline(std::nullptr_t) {}
     explicit CPipeline(
         const CContext& context,
-        std::span<const vk::PipelineShaderStageCreateInfo> shaderStages,
+        std::span<const CShader*> shaders,
         std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
         const CVertexFormat& vertexFormat,
         const vk::PipelineRenderingCreateInfo& renderingInfo,

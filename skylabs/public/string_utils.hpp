@@ -17,5 +17,5 @@ struct StringHash {
     }
 };
 
-using UnorderedStringSet =
+using StringUnorderedSet =
     std::unordered_set<std::string, StringHash, std::equal_to<>>;
