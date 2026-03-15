@@ -47,6 +47,10 @@ target_sources(
         render/vulkan/resources/sampler.cpp
         render/vulkan/pipeline/graphics_pipeline.hpp
         render/vulkan/pipeline/graphics_pipeline.cpp
+        render/vulkan/pipeline/pipeline_layout_cache.hpp
+        render/vulkan/pipeline/pipeline_layout_cache.cpp
+        render/vulkan/pipeline/descriptor_layout_cache.hpp
+        render/vulkan/pipeline/descriptor_layout_cache.cpp
         render/vulkan/render_graph/resource_manager.hpp
         render/vulkan/render_graph/resource_manager.cpp
         render/vertex.hpp
