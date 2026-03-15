@@ -1,21 +1,37 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/vertex_format.hpp>
 #include <skylabs/core/render/vulkan/shader.hpp>
+#include <skylabs/core/render/vertex.hpp>
+
+#include <vector>
 
 namespace Vulkan {
+struct PipelineInputData
+{
+    std::vector<vk::DescriptorSetLayout> m_descriptorSets = {};
+    std::vector<vk::PushConstantRange> m_pushConstants = {};
+};
+
+struct VertexBufferBinding
+{
+    vk::VertexInputBindingDescription m_description = {};
+    std::vector<CVertexAttribute> m_attributes = {};
+};
+
+struct GraphicsPipelineCreateInfo
+{
+    PipelineInputData m_input = {};
+    std::vector<const CShader*> m_shaders = {};
+    std::vector<VertexBufferBinding> m_vertexBindings = {};
+    vk::PipelineRenderingCreateInfo m_renderingInfo = {};
+    vk::SampleCountFlagBits m_sampling = vk::SampleCountFlagBits::e1;
+};
+
 class CPipeline
 {
 public:
     explicit CPipeline(std::nullptr_t) {}
-    explicit CPipeline(
-        const CContext& context,
-        std::span<const CShader*> shaders,
-        std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
-        const CVertexFormat& vertexFormat,
-        const vk::PipelineRenderingCreateInfo& renderingInfo,
-        vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1
-    );
+    explicit CPipeline(const CContext& context, GraphicsPipelineCreateInfo options = {});
     CPipeline(const CPipeline&) = delete;
     CPipeline(CPipeline&&) noexcept = default;
     CPipeline& operator=(const CPipeline&) = delete;

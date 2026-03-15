@@ -1,7 +1,7 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/memory/image.hpp>
-#include <skylabs/core/render/vulkan/memory/buffer.hpp>
+#include <skylabs/core/render/vulkan/image.hpp>
+#include <skylabs/core/render/vulkan/buffer.hpp>
 #include <skylabs/core/render/vulkan/shader.hpp>
 #include <skylabs/core/render/vulkan/sampler.hpp>
 #include <skylabs/public/utils.hpp>

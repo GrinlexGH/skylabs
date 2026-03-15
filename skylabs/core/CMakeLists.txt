@@ -39,16 +39,14 @@ target_sources(
         render/vulkan/frame_data.cpp
         render/vulkan/shader.hpp
         render/vulkan/shader.cpp
-        render/vulkan/memory/image.hpp
-        render/vulkan/memory/image.cpp
-        render/vulkan/memory/buffer.hpp
-        render/vulkan/memory/buffer.cpp
+        render/vulkan/image.hpp
+        render/vulkan/image.cpp
+        render/vulkan/buffer.hpp
+        render/vulkan/buffer.cpp
         render/vulkan/sampler.hpp
         render/vulkan/sampler.cpp
         render/vulkan/pipeline.hpp
         render/vulkan/pipeline.cpp
-        render/vulkan/vertex_format.hpp
-        render/vulkan/vertex_format.cpp
         render/vulkan/render_graph/resource_manager.hpp
         render/vulkan/render_graph/resource_manager.cpp
         render/vertex.hpp

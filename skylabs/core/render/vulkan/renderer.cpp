@@ -10,6 +10,7 @@
 #include <tiny_obj_loader.h>
 
 #include <chrono>
+#include <ranges>
 #include <random>
 
 template<> struct std::hash<CVertex> {
@@ -431,42 +432,37 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Light pipeline
     const CShader vertexShaderLight(m_context, vk::ShaderStageFlagBits::eVertex, "light.vert.spv");
-    std::array lightShaders = { &vertexShaderLight };
 
     // Pipeline
-    vk::PipelineRenderingCreateInfo renderingInfoLight {};
-    renderingInfoLight.depthAttachmentFormat = txm.GetTexture(m_lightDepth).Format();
-
-    m_lightPipeline = CPipeline {
-        m_context,
-        lightShaders,
-        {{ *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) }},
-        CVertexFormat { CVertex::GetAttributes() },
-        renderingInfoLight,
-        vk::SampleCountFlagBits::e1
-    };
+    m_lightPipeline = CPipeline { m_context, {
+        .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) } },
+        .m_shaders = { &vertexShaderLight },
+        .m_vertexBindings = {{
+            .m_description = { 0, sizeof(CVertex) },
+            .m_attributes = {{ CVertex::GetAttributes()[0] }},
+        }},
+        .m_renderingInfo = { {}, {}, txm.GetTexture(m_lightDepth).Format() },
+    }};
 
 
     // Main pipeline
     // Shaders
     const CShader vertexShader(m_context, vk::ShaderStageFlagBits::eVertex, "shader.vert.spv");
     const CShader fragmentShader(m_context, vk::ShaderStageFlagBits::eFragment, "shader.frag.spv");
-    std::array mainShaders = { &vertexShader, &fragmentShader };
 
     // Pipeline
     std::array<vk::Format, 1> colorFormats = { txm.GetTexture(m_colorBuffer).Format() };
-    vk::PipelineRenderingCreateInfo renderingInfo {};
-    renderingInfo.colorAttachmentCount = static_cast<std::uint32_t>(colorFormats.size());
-    renderingInfo.pColorAttachmentFormats = colorFormats.data();
-    renderingInfo.depthAttachmentFormat = txm.GetTexture(m_depthBufferMSAAx).Format();
 
-    m_pipelineMain = CPipeline {
-        m_context,
-        mainShaders,
-        std::array { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) },
-        CVertexFormat { CVertex::GetAttributes() },
-        renderingInfo,
-        vk::SampleCountFlagBits::e8
+    m_pipelineMain = CPipeline { m_context, {
+        .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) } },
+        .m_shaders = { &vertexShader, &fragmentShader },
+        .m_vertexBindings = {{
+            .m_description = { 0, sizeof(CVertex) },
+            .m_attributes = CVertex::GetAttributes() | std::ranges::to<std::vector>(),
+        }},
+        .m_renderingInfo = { {}, colorFormats, txm.GetTexture(m_depthBufferMSAAx).Format() },
+        .m_sampling =  vk::SampleCountFlagBits::e8
+    }
     };
 
 
@@ -495,22 +491,14 @@ CRenderer::CRenderer(const IWindow* const window) {
     // Shaders
     const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "shaderSwapchain.vert.spv");
     const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "shaderSwapchain.frag.spv");
-    std::array swapchainShaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain };
 
     // Pipeline
     std::array<vk::Format, 1> swapchainColorFormats { m_swapchain.SurfaceFormat().format };
-    renderingInfo = vk::PipelineRenderingCreateInfo {};
-    renderingInfo.colorAttachmentCount = static_cast<std::uint32_t>(swapchainColorFormats.size());
-    renderingInfo.pColorAttachmentFormats = swapchainColorFormats.data();
-
-    m_pipelineSwapchain = CPipeline {
-        m_context,
-        swapchainShaders,
-        std::array { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) },
-        CVertexFormat {{}},
-        renderingInfo,
-        vk::SampleCountFlagBits::e1
-    };
+    m_pipelineSwapchain = CPipeline { m_context, {
+        .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) } },
+        .m_shaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain },
+        .m_renderingInfo = { {}, swapchainColorFormats }
+    }};
 
     // Release barriers to finish a cirlcle in the Draw method
     ReleaseComputeBuffers();

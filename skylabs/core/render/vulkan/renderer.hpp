@@ -7,8 +7,8 @@
 #include <skylabs/core/render/vulkan/surface.hpp>
 #include <skylabs/core/render/vulkan/swapchain.hpp>
 #include <skylabs/core/render/vulkan/sampler.hpp>
-#include <skylabs/core/render/vulkan/memory/buffer.hpp>
-#include <skylabs/core/render/vulkan/memory/image.hpp>
+#include <skylabs/core/render/vulkan/buffer.hpp>
+#include <skylabs/core/render/vulkan/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline.hpp>
 
 void MoveForward();

@@ -3,7 +3,6 @@
 #include <glm/vec3.hpp>
 
 #include <array>
-#include <cstdint>
 
 enum class VertexFormat : std::uint8_t {
     Float32x2,

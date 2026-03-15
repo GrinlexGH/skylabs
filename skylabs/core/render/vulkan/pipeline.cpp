@@ -1,21 +1,48 @@
 #include <skylabs/core/render/vulkan/pipeline.hpp>
 
+#include <ranges>
+
+namespace {
+constexpr vk::Format ToVkFormat(const VertexFormat format) {
+    switch (format) {
+        case VertexFormat::Float32x2: return vk::Format::eR32G32Sfloat;
+        case VertexFormat::Float32x3: return vk::Format::eR32G32B32Sfloat;
+    }
+    std::unreachable();
+}
+
+std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(std::span<const Vulkan::VertexBufferBinding> bindings) {
+    std::vector<vk::VertexInputAttributeDescription> descriptions;
+    descriptions.reserve(bindings.size());
+
+    for (const auto& [description, attributes] : bindings) {
+        for (std::uint32_t i = 0; const auto& [format, offset] : attributes) {
+            vk::VertexInputAttributeDescription attributeDescription {};
+            attributeDescription.binding = description.binding;
+            attributeDescription.location = i;
+            attributeDescription.format = ToVkFormat(format);
+            attributeDescription.offset = offset;
+            descriptions.push_back(attributeDescription);
+            ++i;
+        }
+    }
+
+    return descriptions;
+}
+}
+
 namespace Vulkan {
-CPipeline::CPipeline(
-    const CContext& context,
-    const std::span<const CShader*> shaders,
-    const std::span<const vk::DescriptorSetLayout> descriptorSetLayouts,
-    const CVertexFormat& vertexFormat,
-    const vk::PipelineRenderingCreateInfo& renderingInfo,
-    const vk::SampleCountFlagBits sampleCount
-) {
+CPipeline::CPipeline(const CContext& context, GraphicsPipelineCreateInfo options) {
+    const std::vector vertexAttributeDescriptions = GenerateAttributeDescriptions(options.m_vertexBindings);
+    const std::vector vertexBindingDescriptions =
+        std::views::transform(options.m_vertexBindings, [](Vulkan::VertexBufferBinding& binding) { return binding.m_description; })
+        | std::ranges::to<std::vector>();
+
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
-    const std::vector<vk::VertexInputBindingDescription>& bindingDescriptions = vertexFormat.GetBindingDescriptions();
-    const std::vector<vk::VertexInputAttributeDescription>& attributeDescriptions = vertexFormat.GetAttributeDescriptions();
-    vertexInputInfo.vertexBindingDescriptionCount = static_cast<std::uint32_t>(bindingDescriptions.size());
-    vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<std::uint32_t>(vertexBindingDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = vertexBindingDescriptions.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(vertexAttributeDescriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly {};
     inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
@@ -36,7 +63,7 @@ CPipeline::CPipeline(
 
     vk::PipelineMultisampleStateCreateInfo multisampling {};
     multisampling.sampleShadingEnable = vk::False;
-    multisampling.rasterizationSamples = sampleCount;
+    multisampling.rasterizationSamples = options.m_sampling;
 
     vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
     colorBlendAttachment.colorWriteMask =
@@ -81,18 +108,18 @@ CPipeline::CPipeline(
     depthStencil.stencilTestEnable = vk::False;
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
-    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
-    pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+    pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(options.m_input.m_descriptorSets.size());
+    pipelineLayoutInfo.pSetLayouts = options.m_input.m_descriptorSets.data();
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
     m_layout = vk::raii::PipelineLayout { *context.Device(), pipelineLayoutInfo };
 
     std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo {};
-    shaderCreateInfo.reserve(shaders.size());
-    for (std::size_t i = 0; i < shaders.size(); ++i) {
+    shaderCreateInfo.reserve(options.m_shaders.size());
+    for (std::size_t i = 0; i < options.m_shaders.size(); ++i) {
         vk::PipelineShaderStageCreateInfo ci {};
-        ci.stage = shaders[i]->Stage();
-        ci.module = **shaders[i];
+        ci.stage = options.m_shaders[i]->Stage();
+        ci.module = **options.m_shaders[i];
         ci.pName = "main";
         shaderCreateInfo.push_back(ci);
     }
@@ -112,7 +139,7 @@ CPipeline::CPipeline(
     pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.pNext = &renderingInfo;
+    pipelineInfo.pNext = &options.m_renderingInfo;
 
     m_handle = vk::raii::Pipeline { (*context.Device()), nullptr, pipelineInfo };
 }
