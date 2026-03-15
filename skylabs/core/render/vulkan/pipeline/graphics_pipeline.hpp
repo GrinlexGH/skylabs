@@ -1,6 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/shader.hpp>
+#include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/core/render/vertex.hpp>
 
 #include <vector>
@@ -27,20 +27,19 @@ struct GraphicsPipelineCreateInfo
     vk::SampleCountFlagBits m_sampling = vk::SampleCountFlagBits::e1;
 };
 
-class CPipeline
+class CGraphicsPipeline
 {
 public:
-    explicit CPipeline(std::nullptr_t) {}
-    explicit CPipeline(const CContext& context, GraphicsPipelineCreateInfo options = {});
-    CPipeline(const CPipeline&) = delete;
-    CPipeline(CPipeline&&) noexcept = default;
-    CPipeline& operator=(const CPipeline&) = delete;
-    CPipeline& operator=(CPipeline&&) noexcept = default;
-    ~CPipeline() = default;
+    explicit CGraphicsPipeline(std::nullptr_t) {}
+    explicit CGraphicsPipeline(const CContext& context, GraphicsPipelineCreateInfo options = {});
+    CGraphicsPipeline(const CGraphicsPipeline&) = delete;
+    CGraphicsPipeline(CGraphicsPipeline&&) noexcept = default;
+    CGraphicsPipeline& operator=(const CGraphicsPipeline&) = delete;
+    CGraphicsPipeline& operator=(CGraphicsPipeline&&) noexcept = default;
+    ~CGraphicsPipeline() = default;
 
     [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }
-    [[nodiscard]] const vk::raii::Pipeline& Handle() const noexcept { return m_handle; }
 
     [[nodiscard]] const vk::raii::PipelineLayout& Layout() { return m_layout; }
 

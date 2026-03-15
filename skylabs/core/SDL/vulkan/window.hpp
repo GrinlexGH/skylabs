@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/window.hpp>
+#include <skylabs/core/render/vulkan/platform/window.hpp>
 
 #include <SDL3/SDL.h>
 

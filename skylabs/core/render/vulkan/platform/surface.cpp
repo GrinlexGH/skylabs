@@ -1,5 +1,5 @@
 #include <skylabs/core/pch.hpp>
-#include <skylabs/core/render/vulkan/surface.hpp>
+#include <skylabs/core/render/vulkan/platform/surface.hpp>
 
 namespace Vulkan {
 CSurface::CSurface(const CContext& context) : m_context(&context) {

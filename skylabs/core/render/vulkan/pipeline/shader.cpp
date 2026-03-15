@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/shader.hpp>
+#include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/public/resource_system.hpp>
 
 namespace Vulkan {

@@ -1,6 +1,6 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
-#include <skylabs/core/render/vulkan/shader.hpp>
+#include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/core/camera.hpp>
 
 #include <glm/gtx/hash.hpp>
@@ -434,7 +434,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     const CShader vertexShaderLight(m_context, vk::ShaderStageFlagBits::eVertex, "light.vert.spv");
 
     // Pipeline
-    m_lightPipeline = CPipeline { m_context, {
+    m_lightPipeline = CGraphicsPipeline { m_context, {
         .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) } },
         .m_shaders = { &vertexShaderLight },
         .m_vertexBindings = {{
@@ -453,7 +453,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     // Pipeline
     std::array<vk::Format, 1> colorFormats = { txm.GetTexture(m_colorBuffer).Format() };
 
-    m_pipelineMain = CPipeline { m_context, {
+    m_pipelineMain = CGraphicsPipeline { m_context, {
         .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) } },
         .m_shaders = { &vertexShader, &fragmentShader },
         .m_vertexBindings = {{
@@ -494,7 +494,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Pipeline
     std::array<vk::Format, 1> swapchainColorFormats { m_swapchain.SurfaceFormat().format };
-    m_pipelineSwapchain = CPipeline { m_context, {
+    m_pipelineSwapchain = CGraphicsPipeline { m_context, {
         .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) } },
         .m_shaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain },
         .m_renderingInfo = { {}, swapchainColorFormats }

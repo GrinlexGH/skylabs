@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/image.hpp>
+#include <skylabs/core/render/vulkan/resources/image.hpp>
 
 namespace {
 vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout) {

@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/sampler.hpp>
+#include <skylabs/core/render/vulkan/resources/sampler.hpp>
 
 namespace Vulkan {
 CSampler::CSampler(

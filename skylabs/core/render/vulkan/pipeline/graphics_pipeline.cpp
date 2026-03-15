@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/pipeline.hpp>
+#include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 
 #include <ranges>
 
@@ -32,7 +32,7 @@ std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(s
 }
 
 namespace Vulkan {
-CPipeline::CPipeline(const CContext& context, GraphicsPipelineCreateInfo options) {
+CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCreateInfo options) {
     const std::vector vertexAttributeDescriptions = GenerateAttributeDescriptions(options.m_vertexBindings);
     const std::vector vertexBindingDescriptions =
         std::views::transform(options.m_vertexBindings, [](Vulkan::VertexBufferBinding& binding) { return binding.m_description; })
@@ -110,7 +110,8 @@ CPipeline::CPipeline(const CContext& context, GraphicsPipelineCreateInfo options
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
     pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(options.m_input.m_descriptorSets.size());
     pipelineLayoutInfo.pSetLayouts = options.m_input.m_descriptorSets.data();
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    pipelineLayoutInfo.pushConstantRangeCount = static_cast<std::uint32_t>(options.m_input.m_pushConstants.size());
+    pipelineLayoutInfo.pPushConstantRanges = options.m_input.m_pushConstants.data();
 
     m_layout = vk::raii::PipelineLayout { *context.Device(), pipelineLayoutInfo };
 
@@ -138,7 +139,7 @@ CPipeline::CPipeline(const CContext& context, GraphicsPipelineCreateInfo options
     pipelineInfo.layout = m_layout;
     pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineHandle = nullptr;
     pipelineInfo.pNext = &options.m_renderingInfo;
 
     m_handle = vk::raii::Pipeline { (*context.Device()), nullptr, pipelineInfo };

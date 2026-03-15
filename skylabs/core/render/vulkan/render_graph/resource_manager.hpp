@@ -1,9 +1,9 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/image.hpp>
-#include <skylabs/core/render/vulkan/buffer.hpp>
-#include <skylabs/core/render/vulkan/shader.hpp>
-#include <skylabs/core/render/vulkan/sampler.hpp>
+#include <skylabs/core/render/vulkan/resources/image.hpp>
+#include <skylabs/core/render/vulkan/resources/buffer.hpp>
+#include <skylabs/core/render/vulkan/pipeline/shader.hpp>
+#include <skylabs/core/render/vulkan/resources/sampler.hpp>
 #include <skylabs/public/utils.hpp>
 
 #include <variant>

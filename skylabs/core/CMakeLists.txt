@@ -14,7 +14,7 @@ target_sources(
         window.hpp
         camera.hpp
         render/renderer.hpp
-        render/vulkan/window.hpp
+        render/vulkan/platform/window.hpp
         render/vulkan/renderer.hpp
         render/vulkan/renderer.cpp
         render/vulkan/context/profile.hpp
@@ -31,22 +31,22 @@ target_sources(
         render/vulkan/context/device.cpp
         render/vulkan/context/context.hpp
         render/vulkan/context/context.cpp
-        render/vulkan/surface.hpp
-        render/vulkan/surface.cpp
-        render/vulkan/swapchain.hpp
-        render/vulkan/swapchain.cpp
+        render/vulkan/platform/surface.hpp
+        render/vulkan/platform/surface.cpp
+        render/vulkan/platform/swapchain.hpp
+        render/vulkan/platform/swapchain.cpp
         render/vulkan/frame_data.hpp
         render/vulkan/frame_data.cpp
-        render/vulkan/shader.hpp
-        render/vulkan/shader.cpp
-        render/vulkan/image.hpp
-        render/vulkan/image.cpp
-        render/vulkan/buffer.hpp
-        render/vulkan/buffer.cpp
-        render/vulkan/sampler.hpp
-        render/vulkan/sampler.cpp
-        render/vulkan/pipeline.hpp
-        render/vulkan/pipeline.cpp
+        render/vulkan/pipeline/shader.hpp
+        render/vulkan/pipeline/shader.cpp
+        render/vulkan/resources/image.hpp
+        render/vulkan/resources/image.cpp
+        render/vulkan/resources/buffer.hpp
+        render/vulkan/resources/buffer.cpp
+        render/vulkan/resources/sampler.hpp
+        render/vulkan/resources/sampler.cpp
+        render/vulkan/pipeline/graphics_pipeline.hpp
+        render/vulkan/pipeline/graphics_pipeline.cpp
         render/vulkan/render_graph/resource_manager.hpp
         render/vulkan/render_graph/resource_manager.cpp
         render/vertex.hpp

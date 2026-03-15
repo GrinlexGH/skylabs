@@ -4,12 +4,12 @@
 #include <skylabs/core/render/vulkan/render_graph/resource_manager.hpp>
 
 #include <skylabs/core/render/vulkan/frame_data.hpp>
-#include <skylabs/core/render/vulkan/surface.hpp>
-#include <skylabs/core/render/vulkan/swapchain.hpp>
-#include <skylabs/core/render/vulkan/sampler.hpp>
-#include <skylabs/core/render/vulkan/buffer.hpp>
-#include <skylabs/core/render/vulkan/image.hpp>
-#include <skylabs/core/render/vulkan/pipeline.hpp>
+#include <skylabs/core/render/vulkan/platform/surface.hpp>
+#include <skylabs/core/render/vulkan/platform/swapchain.hpp>
+#include <skylabs/core/render/vulkan/resources/sampler.hpp>
+#include <skylabs/core/render/vulkan/resources/buffer.hpp>
+#include <skylabs/core/render/vulkan/resources/image.hpp>
+#include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 
 void MoveForward();
 void MoveBackward();
@@ -68,7 +68,7 @@ private:
     RG::TextureHandle m_lightDepth;
     RG::BufferHandle m_lightUBO;
     RG::DescriptorSetHandle m_lightDescriptorSet;
-    CPipeline m_lightPipeline { nullptr };
+    CGraphicsPipeline m_lightPipeline { nullptr };
     CSampler m_samplerLight { nullptr };
 
 
@@ -85,7 +85,7 @@ private:
     // CBuffer m_indexBuffer { nullptr };
     // CImage m_modelTexture { nullptr };
     CSampler m_modelTextureSampler { nullptr };
-    CPipeline m_pipelineMain { nullptr };
+    CGraphicsPipeline m_pipelineMain { nullptr };
 
 
     // vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
@@ -98,7 +98,7 @@ private:
     // std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain;
     CSampler m_computeSampler { nullptr };
     CSampler m_mainSampler { nullptr };
-    CPipeline m_pipelineSwapchain { nullptr };
+    CGraphicsPipeline m_pipelineSwapchain { nullptr };
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
     std::uint32_t m_frameIndex = 0;
