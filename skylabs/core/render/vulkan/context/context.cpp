@@ -9,8 +9,6 @@ CContext::CContext(const IWindow* const window) : m_window(window)
     for (const auto& profile : { CProfile::Profile::eRoadmap2024, CProfile::Profile::eRoadmap2022 }) {
         m_profile = CProfile { profile };
 
-        VULKAN_HPP_DEFAULT_DISPATCHER.init();
-
         if (!m_profile.CheckInstanceSupport())
             continue;
 

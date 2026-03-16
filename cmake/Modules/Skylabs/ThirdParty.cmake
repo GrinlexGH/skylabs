@@ -18,4 +18,4 @@ find_package(simple_term_colors CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(frozen CONFIG REQUIRED)
 
-find_package(benchmark CONFIG REQUIRED)
+find_package(catch2 CONFIG REQUIRED)

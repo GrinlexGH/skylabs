@@ -41,7 +41,9 @@ constexpr frozen::map<CProfile::Profile, ProfileMeta, 3> g_profileMap = {
     }
 };
 
-CProfile::CProfile(const Profile profile) : m_profile(profile) {}
+CProfile::CProfile(const Profile profile) : m_profile(profile) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.init();
+}
 
 bool CProfile::CheckInstanceSupport() const {
     VpProfileProperties currentProfile = GenerateProperties();

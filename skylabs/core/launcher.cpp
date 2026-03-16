@@ -124,29 +124,25 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::Vulkan::CWi
 }
 
 // #define ENABLE_BENCHMARKS
-#include <benchmark/benchmark.h>
 
 #ifdef ENABLE_BENCHMARKS
-namespace {
-void BM_CreateInstance(benchmark::State& state) {
-    for (auto _ : state) {
-        Vulkan::CInstance instance({}, {});
-    }
-}
-}
+#include <catch2/catch_all.hpp>
 
-BENCHMARK(BM_CreateInstance)->Unit(benchmark::kMillisecond)->Iterations(50);
+TEST_CASE("Vulkan Performance", "[benchmark]") {
+    const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
+
+    BENCHMARK("CreateInstance") {
+        return Vulkan::CContext { &window };
+    };
+}
 #endif
 
 void CLauncher::Main() {
-#ifdef ENABLE_BENCHMARKS
-    int argc = 0;
-    char** argv = nullptr;
-    ::benchmark::Initialize(&argc, argv);
-    ::benchmark::RunSpecifiedBenchmarks();
-#endif
-
     const SDL::CContext sdl(SDL_INIT_VIDEO);
+
+#ifdef ENABLE_BENCHMARKS
+    Catch::Session().run();
+#endif
 
     const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
     SDL_SetWindowRelativeMouseMode(window.Handle(), true);
