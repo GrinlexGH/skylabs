@@ -76,6 +76,7 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     Catch2::Catch2
     frozen::frozen
     SteamworksSDK::SteamworksSDK
+    spirv-reflect::spirv-reflect
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})

@@ -30,10 +30,6 @@ if(Slangc_FOUND AND NOT TARGET Slangc::slangc)
     set_target_properties(Slangc::slangc PROPERTIES
         IMPORTED_LOCATION "${Slangc_EXECUTABLE}"
     )
-
-    if(NOT TARGET Vulkan::slangc)
-        add_executable(Vulkan::slangc ALIAS Slangc::slangc)
-    endif()
 endif()
 
 mark_as_advanced(Slangc_EXECUTABLE)

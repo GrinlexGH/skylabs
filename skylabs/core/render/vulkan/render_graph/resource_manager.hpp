@@ -4,6 +4,7 @@
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/core/render/vulkan/resources/sampler.hpp>
+#include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
 #include <skylabs/public/utils.hpp>
 
 #include <variant>
@@ -207,7 +208,7 @@ public:
     void UpdateDescriptorSets(CBufferManager& bufferManager, CTextureManager& textureManager);
 
     [[nodiscard]] vk::DescriptorSet GetDescriptorSet(DescriptorSetHandle handle, int index = -1);
-    [[nodiscard]] const vk::raii::DescriptorSetLayout& GetDescriptorSetLayout(DescriptorSetHandle handle);
+    [[nodiscard]] const vk::raii::DescriptorSetLayout* GetDescriptorSetLayout(DescriptorSetHandle handle);
 
     void SetFrameIndex(std::uint32_t newFrameIndex) { m_frameIndex = newFrameIndex; }
 
@@ -215,6 +216,8 @@ private:
     const CContext* m_context = nullptr;
     std::uint32_t m_inFlightCount = 0;
     std::uint32_t m_frameIndex = 0;
+
+    CDescriptorLayoutCache m_layoutCache { nullptr };
 
     struct DescriptorSetMeta
     {
@@ -224,7 +227,7 @@ private:
     struct DescriptorSet
     {
         DescriptorSetMeta meta;
-        vk::raii::DescriptorSetLayout m_layout { nullptr };
+        const vk::raii::DescriptorSetLayout* m_layout = nullptr;
         std::vector<vk::DescriptorSet> m_descriptorSets;
     };
 

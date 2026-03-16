@@ -221,7 +221,7 @@ CBuffer& CBufferManager::GetBuffer(BufferHandle handle, int index) {
 CDescriptorManager::CDescriptorManager(
     const CContext& context,
     std::uint32_t inFlightCount
-) : m_context(&context), m_inFlightCount(inFlightCount)
+) : m_context(&context), m_inFlightCount(inFlightCount), m_layoutCache(context)
 { }
 
 DescriptorSetHandle CDescriptorManager::CreateDescriptorSet(std::span<const DescriptorDescription> descriptors) {
@@ -265,7 +265,8 @@ void CDescriptorManager::CreateDescriptorPool() {
 void CDescriptorManager::CreateDescriptorSets() {
     auto& device = *m_context->Device();
 
-    for (auto& set : m_descriptorSets) {
+for (auto& set : m_descriptorSets) {
+        // 1. Собираем биндинги из описаний (метаданных)
         std::vector<vk::DescriptorSetLayoutBinding> bindings;
         for (uint32_t i = 0; i < set.meta.m_descriptors.size(); ++i) {
             const auto& desc = set.meta.m_descriptors[i];
@@ -279,13 +280,9 @@ void CDescriptorManager::CreateDescriptorSets() {
             bindings.push_back(binding);
         }
 
-        vk::DescriptorSetLayoutCreateInfo layoutInfo {};
-        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
+        set.m_layout = &m_layoutCache.GetLayout(std::move(bindings));
 
-        set.m_layout = vk::raii::DescriptorSetLayout{ device, layoutInfo };
-
-        std::vector<vk::DescriptorSetLayout> layouts(m_inFlightCount, *set.m_layout);
+        std::vector<vk::DescriptorSetLayout> layouts(m_inFlightCount, **set.m_layout);
 
         vk::DescriptorSetAllocateInfo allocInfo {};
         allocInfo.descriptorPool = *m_pool;
@@ -370,7 +367,7 @@ vk::DescriptorSet CDescriptorManager::GetDescriptorSet(DescriptorSetHandle handl
     return m_descriptorSets.at(handle.m_id).m_descriptorSets.at((index == -1) ? m_frameIndex : static_cast<std::uint32_t>(index));
 }
 
-const vk::raii::DescriptorSetLayout& CDescriptorManager::GetDescriptorSetLayout(DescriptorSetHandle handle) {
+const vk::raii::DescriptorSetLayout* CDescriptorManager::GetDescriptorSetLayout(DescriptorSetHandle handle) {
     return m_descriptorSets.at(handle.m_id).m_layout;
 }
 }

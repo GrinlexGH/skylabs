@@ -9,6 +9,7 @@ find_package(SDL3_image CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
 find_package(Slangc REQUIRED)
+find_package(spirv-reflect REQUIRED)
 
 # Misc libraries
 find_package(Boost COMPONENTS nowide CONFIG REQUIRED)

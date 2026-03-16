@@ -472,7 +472,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Pipeline
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
-    std::array computeDescriptorSetLayouts = { *dsm.GetDescriptorSetLayout(m_computeDescriptorSet) };
+    std::array computeDescriptorSetLayouts = { **dsm.GetDescriptorSetLayout(m_computeDescriptorSet) };
     pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(computeDescriptorSetLayouts.size());
     pipelineLayoutInfo.pSetLayouts = computeDescriptorSetLayouts.data();
     m_computePipelineLayout = m_context.Device()->createPipelineLayout(pipelineLayoutInfo);
