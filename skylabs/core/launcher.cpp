@@ -5,6 +5,7 @@
 #include <skylabs/core/SDL/vulkan/window.hpp>
 #include <skylabs/core/camera.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
+#include <skylabs/public/logging.hpp>
 
 #include <steam/steam_api.h>
 
@@ -150,6 +151,11 @@ void CLauncher::Main() {
     const std::unique_ptr<IRenderer> renderer = Vulkan::CRenderer::TryToCreate(&window);
     if (!renderer) {
         throw std::runtime_error { "Cannot initialize vulkan!\n" };
+    }
+
+    auto profiles = Vulkan::CProfile::GetAvailableProfiles();
+    for (const auto& profile : profiles) {
+        Log::Debug("{}:{}", profile.profileName, profile.specVersion);
     }
 
     MainLoop(renderer, window);

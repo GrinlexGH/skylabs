@@ -31,7 +31,8 @@ const vk::raii::PipelineLayout& CPipelineLayoutCache::GetLayout(PipelineLayoutIn
 
     vk::PipelineLayoutCreateInfo createInfo { {}, info.m_descriptorSetLayouts, info.m_pushConstants };
 
-    auto [insertedIt, success] = m_cache.emplace(std::move(info), vk::raii::PipelineLayout { *m_context->Device(), createInfo });
+    vk::raii::PipelineLayout layout { *m_context->Device(), createInfo };
+    auto [insertedIt, success] = m_cache.emplace(std::move(info), std::move(layout));
 
     return insertedIt->second;
 }

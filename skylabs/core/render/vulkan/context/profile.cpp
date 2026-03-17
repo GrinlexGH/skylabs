@@ -42,7 +42,12 @@ constexpr frozen::map<CProfile::Profile, ProfileMeta, 3> g_profileMap = {
 };
 
 CProfile::CProfile(const Profile profile) : m_profile(profile) {
-    VULKAN_HPP_DEFAULT_DISPATCHER.init();
+    static std::once_flag flag;
+    std::call_once(flag, []() { VULKAN_HPP_DEFAULT_DISPATCHER.init(); });
+}
+
+std::string CProfile::GetProfileName() {
+    return { g_profileMap.at(m_profile).m_name };
 }
 
 bool CProfile::CheckInstanceSupport() const {
@@ -117,6 +122,20 @@ VkDevice CProfile::CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceC
     }
 
     return device;
+}
+
+std::vector<VpProfileProperties> CProfile::GetAvailableProfiles() {
+    std::uint32_t profileCount;
+    if (vpGetProfiles(nullptr, &profileCount, nullptr) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get profiles count");
+    }
+
+    std::vector<VpProfileProperties> profiles(profileCount);
+    if (vpGetProfiles(nullptr, &profileCount, profiles.data()) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get device extensions");
+    }
+
+    return profiles;
 }
 
 std::uint32_t CProfile::GetAPIVersion() const {

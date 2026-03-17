@@ -5,13 +5,15 @@
 
 namespace Vulkan {
 CShader::CShader(const CContext& context, const vk::ShaderStageFlagBits type, const char* name) : m_stage(type) {
-    const std::vector<char> vertexShaderSource = ResourceSystem::LoadShader(name);
+    const std::vector<char> code = ResourceSystem::LoadShader(name);
 
     vk::ShaderModuleCreateInfo createInfo {};
-    createInfo.codeSize = vertexShaderSource.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(vertexShaderSource.data());
+    createInfo.codeSize = code.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
     m_handle = vk::raii::ShaderModule { *context.Device(), createInfo };
+
+    Reflect(code);
 }
 
 void CShader::Reflect(const std::vector<char>& code) {

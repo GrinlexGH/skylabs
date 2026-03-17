@@ -1,4 +1,5 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/public/logging.hpp>
 
 #include <ranges>
 
@@ -6,7 +7,11 @@ namespace Vulkan {
 CContext::CContext(const IWindow* const window) : m_window(window)
 {
     bool initialized = false;
-    for (const auto& profile : { CProfile::Profile::eRoadmap2024, CProfile::Profile::eRoadmap2022 }) {
+    for (const auto& profile : {
+        CProfile::Profile::eRoadmap2026,
+        CProfile::Profile::eRoadmap2024,
+        CProfile::Profile::eRoadmap2022
+    }) {
         m_profile = CProfile { profile };
 
         if (!m_profile.CheckInstanceSupport())
@@ -22,6 +27,7 @@ CContext::CContext(const IWindow* const window) : m_window(window)
         m_device = CDevice { m_profile, m_window, m_instance, m_physicalDevice };
         m_allocator = CAllocator { m_profile, *m_instance, *m_physicalDevice, m_device };
         initialized = true;
+        Log::Debug("Choosed profile {}", m_profile.GetProfileName());
         break;
     }
 

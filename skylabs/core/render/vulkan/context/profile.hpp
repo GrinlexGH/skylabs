@@ -15,6 +15,8 @@ public:
     explicit CProfile(std::nullptr_t) {}
     explicit CProfile(Profile profile);
 
+    [[nodiscard]] std::string GetProfileName();
+
     [[nodiscard]] bool CheckInstanceSupport() const;
     [[nodiscard]] bool CheckPhysicalDeviceSupport(VkInstance instance, const vk::raii::PhysicalDevice& physicalDevice) const;
     [[nodiscard]] VkInstance CreateInstance(const VkInstanceCreateInfo& instanceCreateInfo) const;
@@ -23,6 +25,8 @@ public:
     [[nodiscard]] std::vector<VkExtensionProperties> GetInstanceExtensions() const;
     [[nodiscard]] std::vector<VkExtensionProperties> GetDeviceExtensions() const;
     [[nodiscard]] Profile GetCurrentProfile() const { return m_profile; }
+
+    [[nodiscard]] static std::vector<VpProfileProperties> GetAvailableProfiles();
 
 private:
     Profile m_profile;
