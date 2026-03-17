@@ -282,6 +282,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     renderWidth = m_swapchain.Extent().width;
     renderHeight = m_swapchain.Extent().height;
 
+    m_pipelineLayoutCache = CPipelineLayoutCache { m_context };
+
     const std::uint32_t imageCount = m_swapchain.ImageCount();
     m_renderFinishedSemaphores.reserve(imageCount);
     for (std::size_t i = 0; i < imageCount; ++i) {
@@ -433,9 +435,13 @@ CRenderer::CRenderer(const IWindow* const window) {
     // Light pipeline
     const CShader vertexShaderLight(m_context, vk::ShaderStageFlagBits::eVertex, "light.vert.spv");
 
+    const vk::raii::PipelineLayout& lightPipelineLayout = m_pipelineLayoutCache.GetLayout({
+        { *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) }
+    });
+
     // Pipeline
     m_lightPipeline = CGraphicsPipeline { m_context, {
-        .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_lightDescriptorSet) } },
+        .m_layout = *lightPipelineLayout,
         .m_shaders = { &vertexShaderLight },
         .m_vertexBindings = {{
             .m_description = { 0, sizeof(CVertex) },
@@ -451,10 +457,14 @@ CRenderer::CRenderer(const IWindow* const window) {
     const CShader fragmentShader(m_context, vk::ShaderStageFlagBits::eFragment, "shader.frag.spv");
 
     // Pipeline
+    const vk::raii::PipelineLayout& mainPipelineLayout = m_pipelineLayoutCache.GetLayout({
+        { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) }
+    });
+
     std::array<vk::Format, 1> colorFormats = { txm.GetTexture(m_colorBuffer).Format() };
 
     m_pipelineMain = CGraphicsPipeline { m_context, {
-        .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) } },
+        .m_layout = *mainPipelineLayout,
         .m_shaders = { &vertexShader, &fragmentShader },
         .m_vertexBindings = {{
             .m_description = { 0, sizeof(CVertex) },
@@ -492,10 +502,14 @@ CRenderer::CRenderer(const IWindow* const window) {
     const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "shaderSwapchain.vert.spv");
     const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "shaderSwapchain.frag.spv");
 
+    const vk::raii::PipelineLayout& swapchainPipelineLayout = m_pipelineLayoutCache.GetLayout({
+        { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) }
+    });
+
     // Pipeline
     std::array<vk::Format, 1> swapchainColorFormats { m_swapchain.SurfaceFormat().format };
     m_pipelineSwapchain = CGraphicsPipeline { m_context, {
-        .m_input = { .m_descriptorSets = { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) } },
+        .m_layout = swapchainPipelineLayout,
         .m_shaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain },
         .m_renderingInfo = { {}, swapchainColorFormats }
     }};
@@ -626,7 +640,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
     cmdLight.bindVertexBuffers(0, vertexBuffers, offsets);
     cmdLight.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
-    cmdLight.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_lightPipeline.Layout(), 0, descriptorSetLight, {});
+    cmdLight.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_lightPipeline.Layout(), 0, descriptorSetLight, {});
     cmdLight.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
     cmdLight.endRendering();
     cmdLight.end();
@@ -691,7 +705,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdMain.setDepthBiasEnable(vk::False);
     cmdMain.bindVertexBuffers(0, vertexBuffers, offsets);
     cmdMain.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
-    cmdMain.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineMain.Layout(), 0, descriptorSetMain, {});
+    cmdMain.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMain, {});
     cmdMain.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
     cmdMain.endRendering();
     cmdMain.end();
@@ -813,7 +827,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdFina.setScissor(0, scissor);
     cmdFina.setDepthBiasEnable(vk::False);
     cmdFina.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
-    cmdFina.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
+    cmdFina.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
     cmdFina.draw(3, 1, 0, 0);
     cmdFina.endRendering();
 

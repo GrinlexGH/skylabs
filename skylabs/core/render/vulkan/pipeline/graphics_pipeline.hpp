@@ -6,12 +6,6 @@
 #include <vector>
 
 namespace Vulkan {
-struct PipelineInputData
-{
-    std::vector<vk::DescriptorSetLayout> m_descriptorSets = {};
-    std::vector<vk::PushConstantRange> m_pushConstants = {};
-};
-
 struct VertexBufferBinding
 {
     vk::VertexInputBindingDescription m_description = {};
@@ -20,7 +14,7 @@ struct VertexBufferBinding
 
 struct GraphicsPipelineCreateInfo
 {
-    PipelineInputData m_input = {};
+    vk::PipelineLayout m_layout = {};
     std::vector<const CShader*> m_shaders = {};
     std::vector<VertexBufferBinding> m_vertexBindings = {};
     vk::PipelineRenderingCreateInfo m_renderingInfo = {};
@@ -41,10 +35,10 @@ public:
     [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] const vk::raii::PipelineLayout& Layout() { return m_layout; }
+    [[nodiscard]] vk::PipelineLayout Layout() { return m_layout; }
 
 private:
     vk::raii::Pipeline m_handle { nullptr };
-    vk::raii::PipelineLayout m_layout { nullptr };
+    vk::PipelineLayout m_layout { nullptr };
 };
 }

@@ -107,14 +107,6 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     depthStencil.depthBoundsTestEnable = vk::False;
     depthStencil.stencilTestEnable = vk::False;
 
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
-    pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(options.m_input.m_descriptorSets.size());
-    pipelineLayoutInfo.pSetLayouts = options.m_input.m_descriptorSets.data();
-    pipelineLayoutInfo.pushConstantRangeCount = static_cast<std::uint32_t>(options.m_input.m_pushConstants.size());
-    pipelineLayoutInfo.pPushConstantRanges = options.m_input.m_pushConstants.data();
-
-    m_layout = vk::raii::PipelineLayout { *context.Device(), pipelineLayoutInfo };
-
     std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo {};
     shaderCreateInfo.reserve(options.m_shaders.size());
     for (std::size_t i = 0; i < options.m_shaders.size(); ++i) {
@@ -136,7 +128,7 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = m_layout;
+    pipelineInfo.layout = m_layout = options.m_layout;
     pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = nullptr;

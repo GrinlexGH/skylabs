@@ -265,8 +265,7 @@ void CDescriptorManager::CreateDescriptorPool() {
 void CDescriptorManager::CreateDescriptorSets() {
     auto& device = *m_context->Device();
 
-for (auto& set : m_descriptorSets) {
-        // 1. Собираем биндинги из описаний (метаданных)
+    for (auto& set : m_descriptorSets) {
         std::vector<vk::DescriptorSetLayoutBinding> bindings;
         for (uint32_t i = 0; i < set.meta.m_descriptors.size(); ++i) {
             const auto& desc = set.meta.m_descriptors[i];
@@ -280,7 +279,7 @@ for (auto& set : m_descriptorSets) {
             bindings.push_back(binding);
         }
 
-        set.m_layout = &m_layoutCache.GetLayout(std::move(bindings));
+        set.m_layout = &m_layoutCache.GetLayout({ std::move(bindings) });
 
         std::vector<vk::DescriptorSetLayout> layouts(m_inFlightCount, **set.m_layout);
 

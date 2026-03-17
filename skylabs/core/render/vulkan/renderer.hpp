@@ -10,6 +10,7 @@
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
+#include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 
 void MoveForward();
 void MoveBackward();
@@ -45,6 +46,8 @@ private:
     CSurface m_surface { nullptr };
     CSwapchain m_swapchain { nullptr };
 
+    CPipelineLayoutCache m_pipelineLayoutCache { nullptr };
+
     RG::CTextureManager m_textureManager { nullptr };
     RG::CBufferManager m_bufferManager { nullptr };
     RG::CDescriptorManager m_descriptorManager { nullptr };
@@ -75,27 +78,16 @@ private:
 
 
     std::vector<CFrameData> m_frameData;
-
     vk::raii::CommandPool m_singleCommandPool { nullptr };
-    // vk::raii::DescriptorPool m_descriptorPool { nullptr };
 
-    // vk::raii::DescriptorSetLayout m_descriptorSetLayoutMain { nullptr };
-    // std::vector<vk::DescriptorSet> m_descriptorSetsMain;
-    // CBuffer m_vertexBuffer { nullptr };
-    // CBuffer m_indexBuffer { nullptr };
-    // CImage m_modelTexture { nullptr };
     CSampler m_modelTextureSampler { nullptr };
     CGraphicsPipeline m_pipelineMain { nullptr };
 
 
-    // vk::raii::DescriptorSetLayout m_descriptorSetLayoutCompute { nullptr };
-    // std::vector<vk::DescriptorSet> m_descriptorSetsCompute;
     vk::raii::PipelineLayout m_computePipelineLayout { nullptr };
     vk::raii::Pipeline m_computePipeline { nullptr };
 
 
-    // vk::raii::DescriptorSetLayout m_descriptorSetLayoutSwapchain { nullptr };
-    // std::vector<vk::DescriptorSet> m_descriptorSetsSwapchain;
     CSampler m_computeSampler { nullptr };
     CSampler m_mainSampler { nullptr };
     CGraphicsPipeline m_pipelineSwapchain { nullptr };
