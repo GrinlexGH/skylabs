@@ -1,10 +1,10 @@
 #pragma once
-#include <skylabs/core/render/vulkan/platform/window.hpp>
+#include <skylabs/core/window.hpp>
 
 #include <SDL3/SDL.h>
 
-namespace SDL::Vulkan {
-class CWindow final : public ::Vulkan::IWindow
+namespace SDL {
+class CWindow final : public IWindow
 {
 public:
     CWindow() = delete;
@@ -20,10 +20,11 @@ public:
 
     [[nodiscard]] Utils::Extent2D DrawableSize() const override;
 
+    // Vulkan
     [[nodiscard]] std::span<const char* const> GetRequiredInstanceExtensions() const override;
-    [[nodiscard]] vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const override;
-    void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const override;
-    [[nodiscard]] bool IsQueueFamilySupportPresent(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, std::uint32_t index) const override;
+    [[nodiscard]] bool IsQueueFamilySupportPresent(vk::Instance instance, vk::PhysicalDevice physicalDevice, std::uint32_t index) const override;
+    [[nodiscard]] vk::SurfaceKHR CreateSurface(vk::Instance instance) const override;
+    void DestroySurface(vk::Instance instance, vk::SurfaceKHR& surface) const override;
 
 private:
     SDL_Window* m_handle = nullptr;

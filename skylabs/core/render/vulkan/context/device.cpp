@@ -28,7 +28,7 @@ std::unordered_map<std::string, bool> RequestExtensions() {
     return requestedExtensions;
 }
 
-CQueueFamilyIndices GetQueueFamilies(const Vulkan::IWindow* window, const vk::Instance instance, const Vulkan::CPhysicalDevice& gpu) {
+CQueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance instance, const Vulkan::CPhysicalDevice& gpu) {
     std::optional<std::uint32_t> graphicsFamily;
     std::optional<std::uint32_t> presentFamily;
     std::optional<std::uint32_t> computeFamily;

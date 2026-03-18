@@ -2,7 +2,7 @@
 
 #include <skylabs/core/SDL/context.hpp>
 #include <skylabs/core/SDL/keyboard.hpp>
-#include <skylabs/core/SDL/vulkan/window.hpp>
+#include <skylabs/core/SDL/window.hpp>
 #include <skylabs/core/camera.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
@@ -13,7 +13,7 @@
 
 CCamera g_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
 
-void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::Vulkan::CWindow& window) {
+void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::CWindow& window) {
     bool quit = false;
     while (!quit) {
         static float deltaTime = 0.0f;
@@ -145,7 +145,7 @@ void CLauncher::Main() {
     Catch::Session().run();
 #endif
 
-    const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
+    const SDL::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     SDL_SetWindowRelativeMouseMode(*window, true);
 
     const std::unique_ptr<IRenderer> renderer = Vulkan::CRenderer::TryToCreate(&window);

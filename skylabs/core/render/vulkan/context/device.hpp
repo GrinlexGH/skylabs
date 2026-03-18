@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/platform/window.hpp>
+#include <skylabs/core/window.hpp>
 #include <skylabs/core/render/vulkan/context/profile.hpp>
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>

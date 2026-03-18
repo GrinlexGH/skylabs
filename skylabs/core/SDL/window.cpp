@@ -1,13 +1,12 @@
-#include <skylabs/core/SDL/vulkan/window.hpp>
-
+#include <skylabs/core/SDL/window.hpp>
 #include <skylabs/core/SDL/video.hpp>
-#include <skylabs/core/SDL/vulkan/vulkan.hpp>
+#include <skylabs/core/SDL/vulkan.hpp>
 
 #include <stdexcept>
 
-namespace SDL::Vulkan {
+namespace SDL {
 CWindow::CWindow(const char* title, const int w, const int h, const SDL_WindowFlags flags) :
-    m_handle(SDL_CreateWindow(title, w, h, SDL_WINDOW_VULKAN | flags))
+    m_handle(SDL_CreateWindow(title, w, h, flags))
 {
     if (!m_handle) {
         throw std::runtime_error(fmt::format("Failed to create SDL window: {}", SDL_GetError()));
@@ -36,24 +35,25 @@ Utils::Extent2D CWindow::DrawableSize() const {
     return GetWindowSizeInPixels(m_handle);
 }
 
+// Vulkan
 std::span<const char* const> CWindow::GetRequiredInstanceExtensions() const {
-    return GetInstanceExtensions();
+    return Vulkan::GetInstanceExtensions();
 }
 
-vk::SurfaceKHR CWindow::CreateSurface(const vk::Instance& instance) const {
+vk::SurfaceKHR CWindow::CreateSurface(const vk::Instance instance) const {
     return Vulkan::CreateSurface(m_handle, instance);
 }
 
-void CWindow::DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const {
+void CWindow::DestroySurface(const vk::Instance instance, vk::SurfaceKHR& surface) const {
     Vulkan::DestroySurface(instance, surface);
     surface = nullptr;
 }
 
 bool CWindow::IsQueueFamilySupportPresent(
-    const vk::Instance& instance,
-    const vk::PhysicalDevice& physicalDevice,
+    const vk::Instance instance,
+    const vk::PhysicalDevice physicalDevice,
     const uint32_t index
 ) const {
-    return GetPresentationSupport(instance, physicalDevice, index);
+    return Vulkan::GetPresentationSupport(instance, physicalDevice, index);
 }
 }
