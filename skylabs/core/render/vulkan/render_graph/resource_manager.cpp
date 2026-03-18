@@ -113,15 +113,12 @@ CImage CTextureManager::CreateImage(const TextureMeta& meta) {
         default: std::unreachable();
     };
 
-    vk::ImageAspectFlags aspects;
     vk::ImageUsageFlags usage;
     if (desc.m_usage & TextureUsageBits::eAttachment) {
-        aspects |= vk::ImageAspectFlagBits::eColor;
         usage |= vk::ImageUsageFlagBits::eColorAttachment;
     }
 
     if (desc.m_usage & TextureUsageBits::eDepthAttachment) {
-        aspects |= vk::ImageAspectFlagBits::eDepth;
         usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
     }
 
@@ -130,22 +127,12 @@ CImage CTextureManager::CreateImage(const TextureMeta& meta) {
     }
 
     if (desc.m_usage & TextureUsageBits::eStorage) {
-        aspects |= vk::ImageAspectFlagBits::eColor;
         usage |= vk::ImageUsageFlagBits::eStorage;
     }
 
     vk::SampleCountFlagBits sampleCount = desc.m_sampled ? vk::SampleCountFlagBits::e8 : vk::SampleCountFlagBits::e1;
-    std::uint32_t mipLevels = desc.m_mipLevels;
 
-    return CImage {
-        *m_context,
-        extent,
-        format,
-        usage,
-        aspects,
-        mipLevels,
-        sampleCount
-    };
+    return CImage { *m_context, { extent, format, desc.m_mipLevels, desc.m_arrayLevels, sampleCount, usage } };
 }
 
 

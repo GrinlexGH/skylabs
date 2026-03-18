@@ -44,6 +44,7 @@ struct TextureDescirption
     TextureExtent m_extent = RelativeTextureSize {};
     bool m_sampled = false;
     std::uint32_t m_mipLevels = 1;
+    std::uint32_t m_arrayLevels = 1;
 };
 
 struct TextureHandle

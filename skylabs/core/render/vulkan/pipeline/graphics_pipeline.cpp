@@ -85,10 +85,10 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     colorBlending.logicOp = vk::LogicOp::eCopy;
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
-    colorBlending.blendConstants.at(0) = 0.0f;
-    colorBlending.blendConstants.at(1) = 0.0f;
-    colorBlending.blendConstants.at(2) = 0.0f;
-    colorBlending.blendConstants.at(3) = 0.0f;
+    colorBlending.blendConstants[0] = 0.0f;
+    colorBlending.blendConstants[1] = 0.0f;
+    colorBlending.blendConstants[2] = 0.0f;
+    colorBlending.blendConstants[3] = 0.0f;
 
     constexpr std::array dynamicStates = {
         vk::DynamicState::eViewport,

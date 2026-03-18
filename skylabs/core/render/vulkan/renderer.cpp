@@ -958,14 +958,12 @@ void CRenderer::LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::Command
     }
     std::memcpy(stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
 
-    CImage modelTexture = {
-        m_context,
-        vk::Extent3D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-        vk::ImageAspectFlagBits::eColor,
-        static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1
-    };
+    CImage modelTexture { m_context, {
+        .m_extent = vk::Extent3D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
+        .m_format = vk::Format::eR8G8B8A8Srgb,
+        .m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1,
+        .m_usageFlags = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+    }};
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
     {
