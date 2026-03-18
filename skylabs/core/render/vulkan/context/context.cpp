@@ -17,13 +17,13 @@ CContext::CContext(const IWindow* const window) : m_window(window)
         if (!m_profile.CheckInstanceSupport())
             continue;
 
-        m_instance = CInstance { m_profile, m_window->GetRequiredInstanceExtensions() };
+        m_instance = CInstance { m_profile, { m_window->GetRequiredInstanceExtensions() } };
 
         std::optional physicalDevice = SelectPhysicalDevice();
         if (!physicalDevice.has_value())
             continue;
 
-        m_physicalDevice = physicalDevice.value();
+        m_physicalDevice = *physicalDevice;
         m_device = CDevice { m_profile, m_window, m_instance, m_physicalDevice };
         m_allocator = CAllocator { m_profile, *m_instance, *m_physicalDevice, m_device };
         initialized = true;

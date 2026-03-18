@@ -243,7 +243,6 @@ void UpdateUniformBuffer(
     const glm::mat4& lightView
 ) {
     UniformBufferObject ubo {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view = view;
 
     float g = 1.0f / std::tan(0.5f * glm::radians(90.0f));

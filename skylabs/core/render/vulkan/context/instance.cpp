@@ -84,10 +84,10 @@ std::unordered_map<std::string_view, bool> RequestExtensions(const std::span<con
 }
 
 namespace Vulkan {
-CInstance::CInstance(const CProfile profile, const std::span<const char* const> requiredExtensions) {
+CInstance::CInstance(const CProfile profile, InstanceCreateInfo options) {
     const vk::raii::Context context;
     const std::vector<const char*> enabledLayers = SetupLayers(context);
-    const std::vector<const char*> enabledExtensions = SetupExtensions(profile, context, requiredExtensions, enabledLayers);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(profile, context, options.m_requiredExtensions, enabledLayers);
 
     // Enable extensions
     void* pNext = nullptr;
@@ -95,7 +95,7 @@ CInstance::CInstance(const CProfile profile, const std::span<const char* const> 
 #ifdef DEBUG
     bool isDebugUtilsEnabled = false;
     vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {};
-    if (IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
+    if (options.m_setupDebugMessenger && IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
         debugUtilsCreateInfo.messageSeverity =
             vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
             vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |

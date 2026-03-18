@@ -4,6 +4,7 @@ namespace {
 vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout) {
     auto getStageMask = [](const vk::ImageLayout layout) -> std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2> {
         switch (layout) {
+            case vk::ImageLayout::ePresentSrcKHR:
             case vk::ImageLayout::eUndefined:
                 return {
                     vk::PipelineStageFlagBits2::eNone,
@@ -32,12 +33,6 @@ vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk
                 return {
                     vk::PipelineStageFlagBits2::eTransfer,
                     vk::AccessFlagBits2::eTransferWrite
-                };
-
-            case vk::ImageLayout::ePresentSrcKHR:
-                return {
-                    vk::PipelineStageFlagBits2::eNone,
-                    vk::AccessFlagBits2::eNone
                 };
 
             case vk::ImageLayout::eGeneral:

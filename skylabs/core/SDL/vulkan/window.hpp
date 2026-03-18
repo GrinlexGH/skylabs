@@ -17,18 +17,13 @@ public:
     ~CWindow() override;
 
     [[nodiscard]] SDL_Window* operator*() const noexcept { return m_handle; }
-    [[nodiscard]] SDL_Window* Handle() const noexcept { return m_handle; }
 
     [[nodiscard]] Utils::Extent2D DrawableSize() const override;
+
     [[nodiscard]] std::span<const char* const> GetRequiredInstanceExtensions() const override;
     [[nodiscard]] vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const override;
     void DestroySurface(const vk::Instance& instance, vk::SurfaceKHR& surface) const override;
-
-    [[nodiscard]] bool IsQueueFamilySupportPresent(
-        const vk::Instance& instance,
-        const vk::PhysicalDevice& physicalDevice,
-        std::uint32_t index
-    ) const override;
+    [[nodiscard]] bool IsQueueFamilySupportPresent(const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, std::uint32_t index) const override;
 
 private:
     SDL_Window* m_handle = nullptr;

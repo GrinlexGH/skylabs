@@ -26,7 +26,7 @@ vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>
 namespace Vulkan {
 CSwapchain::CSwapchain(
     const CContext& context,
-    const vk::SurfaceKHR& surface,
+    const vk::SurfaceKHR surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
 ) : m_context(&context), m_associatedSurface(surface) {
@@ -42,7 +42,7 @@ CSwapchain::CSwapchain(
 }
 
 void CSwapchain::CreateSwapchain(
-    const vk::SurfaceKHR& surface,
+    const vk::SurfaceKHR surface,
     const std::uint32_t imageCount,
     vk::PresentModeKHR presentMode,
     const vk::raii::SwapchainKHR& oldSwapchain

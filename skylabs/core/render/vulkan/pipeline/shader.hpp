@@ -26,7 +26,7 @@ public:
 
 private:
     vk::raii::ShaderModule m_handle = nullptr;
-    vk::ShaderStageFlagBits m_stage;
+    vk::ShaderStageFlagBits m_stage = vk::ShaderStageFlagBits::eAll;
     ShaderReflectionData m_reflection;
 
     void Reflect(const std::vector<char>& code);

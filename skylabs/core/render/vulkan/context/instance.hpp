@@ -3,11 +3,17 @@
 #include <skylabs/public/string_utils.hpp>
 
 namespace Vulkan {
+struct InstanceCreateInfo
+{
+    std::span<const char* const> m_requiredExtensions {};
+    bool m_setupDebugMessenger = true;
+};
+
 class CInstance
 {
 public:
     explicit CInstance(std::nullptr_t) {}
-    explicit CInstance(CProfile profile, std::span<const char* const> requiredExtensions = {});
+    explicit CInstance(CProfile profile, InstanceCreateInfo options = {});
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
     CInstance& operator=(CInstance&) = delete;

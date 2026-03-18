@@ -146,7 +146,7 @@ void CLauncher::Main() {
 #endif
 
     const SDL::Vulkan::CWindow window("Skylabs", 640, 480, SDL_WINDOW_RESIZABLE);
-    SDL_SetWindowRelativeMouseMode(window.Handle(), true);
+    SDL_SetWindowRelativeMouseMode(*window, true);
 
     const std::unique_ptr<IRenderer> renderer = Vulkan::CRenderer::TryToCreate(&window);
     if (!renderer) {

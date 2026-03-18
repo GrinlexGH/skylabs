@@ -85,7 +85,7 @@ CImage& CTextureManager::GetTexture(TextureHandle handle, int index) {
         return entry.m_images[0];
     }
 
-    return entry.m_images.at((index == -1) ? m_frameIndex : static_cast<uint32_t>(index));
+    return entry.m_images[(index == -1) ? m_frameIndex : static_cast<uint32_t>(index)];
 }
 
 void CTextureManager::Resize(const Utils::Extent2D newViewportExtent) {
@@ -211,10 +211,10 @@ CBuffer& CBufferManager::GetBuffer(BufferHandle handle, int index) {
     auto& entry = m_buffers.at(handle.m_id);
 
     if (entry.m_buffers.size() == 1) {
-        return entry.m_buffers.at(0);
+        return entry.m_buffers[0];
     }
 
-    return entry.m_buffers.at((index == -1) ? m_frameIndex : static_cast<std::uint32_t>(index));
+    return entry.m_buffers[(index == -1) ? m_frameIndex : static_cast<std::uint32_t>(index)];
 }
 
 
@@ -247,7 +247,7 @@ void CDescriptorManager::CreateDescriptorPool() {
     for (auto const& [rgType, vkType] : g_descriptorTypeMap) {
         uint32_t count = counts[static_cast<size_t>(rgType)];
         if (count > 0) {
-            poolSizes.push_back({ vkType, count });
+            poolSizes.emplace_back(vkType, count);
         }
     }
 

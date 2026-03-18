@@ -8,7 +8,7 @@ public:
     explicit CSwapchain(std::nullptr_t) {}
     explicit CSwapchain(
         const CContext& context,
-        const vk::SurfaceKHR& surface,
+        vk::SurfaceKHR surface,
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode
     );
@@ -37,7 +37,7 @@ public:
 
 private:
     void CreateSwapchain(
-        const vk::SurfaceKHR& surface,
+        vk::SurfaceKHR surface,
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode,
         const vk::raii::SwapchainKHR& oldSwapchain = nullptr
@@ -55,7 +55,7 @@ private:
     vk::SurfaceFormatKHR m_surfaceFormat;
     vk::SurfaceKHR m_associatedSurface;
     vk::Extent2D m_extent;
-    vk::PresentModeKHR m_presentMode;
+    vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eFifo;
 
     std::vector<vk::Image> m_images;
     std::vector<vk::raii::ImageView> m_imageViews;

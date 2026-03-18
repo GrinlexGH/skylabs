@@ -29,7 +29,7 @@ public:
     [[nodiscard]] static std::vector<VpProfileProperties> GetAvailableProfiles();
 
 private:
-    Profile m_profile;
+    Profile m_profile = Profile::eRoadmap2022;
 
     [[nodiscard]] VpProfileProperties GenerateProperties() const;
 };
