@@ -32,8 +32,8 @@ public:
     [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
     [[nodiscard]] std::uint32_t ArrayLevels() const noexcept { return m_arrayLevels; }
     [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
-    [[nodiscard]] vk::ImageLayout Layout() const noexcept { return m_layout; }
 
+    [[nodiscard]] vk::ImageLayout Layout() const noexcept { return m_layout; }
     void SetLayout(const vk::ImageLayout layout) noexcept { m_layout = layout; }
 
     void Clear();
