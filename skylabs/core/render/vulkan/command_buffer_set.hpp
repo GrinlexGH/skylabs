@@ -1,5 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/core/render/vulkan/command_buffer.hpp>
 
 namespace Vulkan {
 struct CommandBuffersCount
@@ -19,8 +20,8 @@ public:
     CCommandBufferSet& operator=(CCommandBufferSet&&) noexcept = default;
     ~CCommandBufferSet() = default;
 
-    const vk::raii::CommandBuffers& PrimaryBuffers() const { return m_primaryBuffers; }
-    const vk::raii::CommandBuffers& SecondaryBuffers() const { return m_secondaryBuffers; }
+    const std::vector<CCommandBuffer>& PrimaryBuffers() const { return m_primaryBuffersWrap; }
+    const std::vector<CCommandBuffer>& SecondaryBuffers() const { return m_secondaryBuffersWrap; }
 
     void Realloc(CommandBuffersCount newBufferCount);
 
@@ -29,5 +30,7 @@ private:
     vk::raii::CommandPool m_pool { nullptr };
     vk::raii::CommandBuffers m_primaryBuffers { nullptr };
     vk::raii::CommandBuffers m_secondaryBuffers { nullptr };
+    std::vector<CCommandBuffer> m_primaryBuffersWrap {};
+    std::vector<CCommandBuffer> m_secondaryBuffersWrap {};
 };
 }

@@ -608,11 +608,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     device->resetFences({ frameData.GetFence() });
 
     // Recording render commands
-    cmdLight.reset();
-    cmdLight.begin({});
+    cmdLight->reset();
+    cmdLight->begin({});
 
     // Prepare attachments for main render
-    lightBuffer.TransitionLayout(cmdLight, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    lightBuffer.TransitionLayout(*cmdLight, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     // light render
     vk::RenderingAttachmentInfo depthAttachInfoLight {};
@@ -627,42 +627,42 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     lightRenderInfo.layerCount = 1;
     lightRenderInfo.pDepthAttachment = &depthAttachInfoLight;
 
-    cmdLight.beginRendering(lightRenderInfo);
-    cmdLight.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_lightPipeline);
+    cmdLight->beginRendering(lightRenderInfo);
+    cmdLight->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_lightPipeline);
     vk::Viewport viewport { 0.0f, 0.0f, static_cast<float>(2048), static_cast<float>(2048), 0.0f, 1.0f };
-    cmdLight.setViewport(0, viewport);
+    cmdLight->setViewport(0, viewport);
     vk::Rect2D scissor { { 0, 0 }, { 2048, 2048 } };
-    cmdLight.setScissor(0, scissor);
+    cmdLight->setScissor(0, scissor);
     std::array<vk::Buffer, 1> vertexBuffers { *vertexBuffer };
-    cmdLight.setDepthBiasEnable(vk::True);
-    cmdLight.setDepthBias(-1.25f, 0.0f, -1.75f);
+    cmdLight->setDepthBiasEnable(vk::True);
+    cmdLight->setDepthBias(-1.25f, 0.0f, -1.75f);
     std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
-    cmdLight.bindVertexBuffers(0, vertexBuffers, offsets);
-    cmdLight.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
-    cmdLight.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_lightPipeline.Layout(), 0, descriptorSetLight, {});
-    cmdLight.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
-    cmdLight.endRendering();
-    cmdLight.end();
+    cmdLight->bindVertexBuffers(0, vertexBuffers, offsets);
+    cmdLight->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    cmdLight->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_lightPipeline.Layout(), 0, descriptorSetLight, {});
+    cmdLight->drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
+    cmdLight->endRendering();
+    cmdLight->end();
 
     vk::SubmitInfo lightSubmit {};
     lightSubmit.waitSemaphoreCount = 0;
     lightSubmit.pWaitSemaphores = nullptr;
     lightSubmit.pWaitDstStageMask = nullptr;
     lightSubmit.commandBufferCount = 1;
-    lightSubmit.pCommandBuffers = &*cmdLight;
+    lightSubmit.pCommandBuffers = &**cmdLight;
     lightSubmit.signalSemaphoreCount = 1;
     lightSubmit.pSignalSemaphores = &*semLight;
     device.GraphicsQueue()->submit(lightSubmit);
 
     // Recording render commands
-    cmdMain.reset();
-    cmdMain.begin({});
+    cmdMain->reset();
+    cmdMain->begin({});
 
     // Prepare attachments for main render
-    colorBuffer.TransitionLayout(cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
-    colorBufferMSAA.TransitionLayout(cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
-    depthBufferMSAA.TransitionLayout(cmdMain, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-    lightBuffer.TransitionLayout(cmdMain, vk::ImageLayout::eShaderReadOnlyOptimal);
+    colorBuffer.TransitionLayout(*cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
+    colorBufferMSAA.TransitionLayout(*cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
+    depthBufferMSAA.TransitionLayout(*cmdMain, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    lightBuffer.TransitionLayout(*cmdMain, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     // Main render
     vk::RenderingAttachmentInfo colorAttachInfo {};
@@ -695,19 +695,19 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
     mainRenderInfo.pDepthAttachment = &depthAttachInfo;
 
-    cmdMain.beginRendering(mainRenderInfo);
-    cmdMain.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
+    cmdMain->beginRendering(mainRenderInfo);
+    cmdMain->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
     viewport = vk::Viewport { 0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f };
-    cmdMain.setViewport(0, viewport);
+    cmdMain->setViewport(0, viewport);
     scissor = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
-    cmdMain.setScissor(0, scissor);
-    cmdMain.setDepthBiasEnable(vk::False);
-    cmdMain.bindVertexBuffers(0, vertexBuffers, offsets);
-    cmdMain.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
-    cmdMain.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMain, {});
-    cmdMain.drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
-    cmdMain.endRendering();
-    cmdMain.end();
+    cmdMain->setScissor(0, scissor);
+    cmdMain->setDepthBiasEnable(vk::False);
+    cmdMain->bindVertexBuffers(0, vertexBuffers, offsets);
+    cmdMain->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    cmdMain->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMain, {});
+    cmdMain->drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
+    cmdMain->endRendering();
+    cmdMain->end();
 
 
     std::array<vk::PipelineStageFlags, 1> waitStagesMain = {
@@ -718,14 +718,14 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     mainSubmit.pWaitSemaphores = &*semLight;
     mainSubmit.pWaitDstStageMask = waitStagesMain.data();
     mainSubmit.commandBufferCount = 1;
-    mainSubmit.pCommandBuffers = &*cmdMain;
+    mainSubmit.pCommandBuffers = &**cmdMain;
     mainSubmit.signalSemaphoreCount = 1;
     mainSubmit.pSignalSemaphores = &*semMain;
     device.GraphicsQueue()->submit(mainSubmit);
 
     // Compute
-    cmdComp.reset();
-    cmdComp.begin({});
+    cmdComp->reset();
+    cmdComp->begin({});
 
     vk::ImageMemoryBarrier2 acquireCompute {};
     acquireCompute.srcStageMask = vk::PipelineStageFlagBits2::eNone;
@@ -742,11 +742,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     vk::DependencyInfo depAcquireCompute {};
     depAcquireCompute.imageMemoryBarrierCount = 1;
     depAcquireCompute.pImageMemoryBarriers = &acquireCompute;
-    cmdComp.pipelineBarrier2(depAcquireCompute);
+    cmdComp->pipelineBarrier2(depAcquireCompute);
 
-    cmdComp.bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
-    cmdComp.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, descriptorSetCompute, {});
-    cmdComp.dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
+    cmdComp->bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
+    cmdComp->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, descriptorSetCompute, {});
+    cmdComp->dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
     vk::ImageMemoryBarrier2 releaseBarrier {};
     releaseBarrier.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader;
@@ -764,21 +764,21 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     releaseDependencyInfo.imageMemoryBarrierCount = 1;
     releaseDependencyInfo.pImageMemoryBarriers = &releaseBarrier;
 
-    cmdComp.pipelineBarrier2(releaseDependencyInfo);
+    cmdComp->pipelineBarrier2(releaseDependencyInfo);
 
-    cmdComp.end();
+    cmdComp->end();
 
     vk::SubmitInfo compSubmit {};
     compSubmit.waitSemaphoreCount = 0;
     compSubmit.commandBufferCount = 1;
-    compSubmit.pCommandBuffers = &*cmdComp;
+    compSubmit.pCommandBuffers = &**cmdComp;
     compSubmit.signalSemaphoreCount = 1;
     compSubmit.pSignalSemaphores = &*semComp;
     device.ComputeQueue()->submit(compSubmit);
 
     // Prepare attachments for swapchain read
-    cmdFina.reset();
-    cmdFina.begin({});
+    cmdFina->reset();
+    cmdFina->begin({});
 
     vk::ImageMemoryBarrier2 acquireGraphics {};
     acquireGraphics.srcStageMask = vk::PipelineStageFlagBits2::eNone;
@@ -795,11 +795,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     vk::DependencyInfo depAcquireGraph {};
     depAcquireGraph.imageMemoryBarrierCount = 1;
     depAcquireGraph.pImageMemoryBarriers = &acquireGraphics;
-    cmdFina.pipelineBarrier2(depAcquireGraph);
+    cmdFina->pipelineBarrier2(depAcquireGraph);
 
-    colorBuffer.TransitionLayout(cmdFina, vk::ImageLayout::eShaderReadOnlyOptimal);
+    colorBuffer.TransitionLayout(*cmdFina, vk::ImageLayout::eShaderReadOnlyOptimal);
     CImage::CmdTransitionLayout(
-        cmdFina,
+        *cmdFina,
         m_swapchain.Images()[imageIndex],
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eColorAttachmentOptimal
@@ -819,16 +819,16 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     swapchainRenderInfo.colorAttachmentCount = 1;
     swapchainRenderInfo.pColorAttachments = &swapchainAttachInfo;
 
-    cmdFina.beginRendering(swapchainRenderInfo);
+    cmdFina->beginRendering(swapchainRenderInfo);
     viewport = vk::Viewport {0.0f, 0.0f, static_cast<float>(m_swapchain.Extent().width), static_cast<float>(m_swapchain.Extent().height), 0.0f, 1.0f};
-    cmdFina.setViewport(0, viewport);
+    cmdFina->setViewport(0, viewport);
     scissor = vk::Rect2D {{0, 0}, m_swapchain.Extent()};
-    cmdFina.setScissor(0, scissor);
-    cmdFina.setDepthBiasEnable(vk::False);
-    cmdFina.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
-    cmdFina.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
-    cmdFina.draw(3, 1, 0, 0);
-    cmdFina.endRendering();
+    cmdFina->setScissor(0, scissor);
+    cmdFina->setDepthBiasEnable(vk::False);
+    cmdFina->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
+    cmdFina->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
+    cmdFina->draw(3, 1, 0, 0);
+    cmdFina->endRendering();
 
     vk::ImageMemoryBarrier2 releaseGraphics {};
     releaseGraphics.srcStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
@@ -845,19 +845,19 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     vk::DependencyInfo depReleaseGraph {};
     depReleaseGraph.imageMemoryBarrierCount = 1;
     depReleaseGraph.pImageMemoryBarriers = &releaseGraphics;
-    cmdFina.pipelineBarrier2(depReleaseGraph);
+    cmdFina->pipelineBarrier2(depReleaseGraph);
 
     computeBuffer.SetLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
     // Prepare for presentation
     CImage::CmdTransitionLayout(
-        cmdFina,
+        *cmdFina,
         m_swapchain.Images()[imageIndex],
         vk::ImageLayout::eColorAttachmentOptimal,
         vk::ImageLayout::ePresentSrcKHR
     );
 
-    cmdFina.end();
+    cmdFina->end();
 
     // Submit command buffer
     std::array<vk::Semaphore, 3> waitSems = { *frameData.GetImageAvailableSemaphore(), semMain, semComp };
@@ -871,7 +871,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     finalSubmit.pWaitSemaphores = waitSems.data();
     finalSubmit.pWaitDstStageMask = waitStages.data();
     finalSubmit.commandBufferCount = 1;
-    finalSubmit.pCommandBuffers = &*cmdFina;
+    finalSubmit.pCommandBuffers = &**cmdFina;
     finalSubmit.signalSemaphoreCount = 1;
     finalSubmit.pSignalSemaphores = &*m_renderFinishedSemaphores[imageIndex];
     device.GraphicsQueue()->submit(finalSubmit, frameData.GetFence());

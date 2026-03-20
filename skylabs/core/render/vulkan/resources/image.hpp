@@ -39,7 +39,7 @@ public:
     void Clear();
 
     static void CmdTransitionLayout(
-        const vk::raii::CommandBuffer& cmd,
+        const vk::CommandBuffer& cmd,
         vk::Image image,
         vk::ImageLayout oldLayout,
         vk::ImageLayout newLayout,
@@ -47,9 +47,9 @@ public:
         std::uint32_t mipLevels = 1
     );
 
-    void TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, vk::ImageLayout newLayout);
+    void TransitionLayout(const vk::CommandBuffer& commandBuffer, vk::ImageLayout newLayout);
 
-    void CopyBufferToImage(const vk::raii::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const;
+    void CopyBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const;
 
 private:
     vma::raii::Image m_handle { nullptr };

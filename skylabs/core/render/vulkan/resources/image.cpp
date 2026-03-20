@@ -132,7 +132,7 @@ void CImage::Clear() {
 }
 
 void CImage::CmdTransitionLayout(
-    const vk::raii::CommandBuffer& cmd,
+    const vk::CommandBuffer& cmd,
     const vk::Image image,
     const vk::ImageLayout oldLayout,
     const vk::ImageLayout newLayout,
@@ -160,13 +160,13 @@ void CImage::CmdTransitionLayout(
     cmd.pipelineBarrier2(dependencyInfo);
 }
 
-void CImage::TransitionLayout(const vk::raii::CommandBuffer& commandBuffer, const vk::ImageLayout newLayout) {
+void CImage::TransitionLayout(const vk::CommandBuffer& commandBuffer, const vk::ImageLayout newLayout) {
     CmdTransitionLayout(commandBuffer, *m_handle, m_layout, newLayout, m_aspectFlags, m_mipLevels);
     m_layout = newLayout;
 }
 
 void CImage::CopyBufferToImage(
-    const vk::raii::CommandBuffer& commandBuffer,
+    const vk::CommandBuffer& commandBuffer,
     const vk::Buffer& buffer,
     const vk::Extent2D& extent
 ) const {
