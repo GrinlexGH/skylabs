@@ -1,63 +1,5 @@
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 
-namespace {
-vk::ImageMemoryBarrier2 GetBarrierData(const vk::ImageLayout oldLayout, const vk::ImageLayout newLayout) {
-    auto getStageMask = [](const vk::ImageLayout layout) -> std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2> {
-        switch (layout) {
-            case vk::ImageLayout::ePresentSrcKHR:
-            case vk::ImageLayout::eUndefined:
-                return {
-                    vk::PipelineStageFlagBits2::eNone,
-                    vk::AccessFlagBits2::eNone
-                };
-
-            case vk::ImageLayout::eColorAttachmentOptimal:
-                return {
-                    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                    vk::AccessFlagBits2::eColorAttachmentWrite
-                };
-
-            case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-                return {
-                    vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-                    vk::AccessFlagBits2::eDepthStencilAttachmentWrite
-                };
-
-            case vk::ImageLayout::eShaderReadOnlyOptimal:
-                return {
-                    vk::PipelineStageFlagBits2::eFragmentShader,
-                    vk::AccessFlagBits2::eShaderRead
-                };
-
-            case vk::ImageLayout::eTransferDstOptimal:
-                return {
-                    vk::PipelineStageFlagBits2::eTransfer,
-                    vk::AccessFlagBits2::eTransferWrite
-                };
-
-            case vk::ImageLayout::eGeneral:
-                return {
-                    vk::PipelineStageFlagBits2::eComputeShader,
-                    vk::AccessFlagBits2::eShaderWrite
-                };
-
-            default:
-                assert(false && "Unsupported layout transition");
-                return {
-                    vk::PipelineStageFlagBits2::eAllCommands,
-                    vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite
-                };
-        }
-    };
-
-    vk::ImageMemoryBarrier2 barrier {};
-    std::tie(barrier.srcStageMask, barrier.srcAccessMask) = getStageMask(oldLayout);
-    std::tie(barrier.dstStageMask, barrier.dstAccessMask) = getStageMask(newLayout);
-
-    return barrier;
-}
-}
-
 namespace Vulkan {
 CImage::CImage(const CContext& context, const ImageCreateInfo options) {
     vk::ImageViewType viewType;
@@ -129,40 +71,6 @@ void CImage::Clear() {
     m_sampleCount = vk::SampleCountFlagBits::e1;
     m_layout = vk::ImageLayout::eUndefined;
     m_aspectFlags = vk::ImageAspectFlagBits::eNone;
-}
-
-void CImage::CmdTransitionLayout(
-    const vk::CommandBuffer& cmd,
-    const vk::Image image,
-    const vk::ImageLayout oldLayout,
-    const vk::ImageLayout newLayout,
-    const vk::ImageAspectFlags aspectMask,
-    const std::uint32_t mipLevels
-) {
-    auto barrier = GetBarrierData(oldLayout, newLayout);
-
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
-    barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
-    barrier.image = image;
-
-    barrier.subresourceRange.aspectMask = aspectMask;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = mipLevels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    vk::DependencyInfo dependencyInfo {};
-    dependencyInfo.imageMemoryBarrierCount = 1;
-    dependencyInfo.pImageMemoryBarriers = &barrier;
-
-    cmd.pipelineBarrier2(dependencyInfo);
-}
-
-void CImage::TransitionLayout(const vk::CommandBuffer& commandBuffer, const vk::ImageLayout newLayout) {
-    CmdTransitionLayout(commandBuffer, *m_handle, m_layout, newLayout, m_aspectFlags, m_mipLevels);
-    m_layout = newLayout;
 }
 
 void CImage::CopyBufferToImage(

@@ -14,6 +14,8 @@ struct ImageCreateInfo
 
 class CImage
 {
+    friend class CCommandBuffer;
+
 public:
     explicit CImage(std::nullptr_t) {}
     explicit CImage(const CContext& context, ImageCreateInfo options = {});
@@ -32,28 +34,16 @@ public:
     [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
     [[nodiscard]] std::uint32_t ArrayLevels() const noexcept { return m_arrayLevels; }
     [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
-
     [[nodiscard]] vk::ImageLayout Layout() const noexcept { return m_layout; }
-    void SetLayout(const vk::ImageLayout layout) noexcept { m_layout = layout; }
+    [[nodiscard]] vk::ImageAspectFlags AspectFlags() const noexcept { return m_aspectFlags; }
 
     void Clear();
-
-    static void CmdTransitionLayout(
-        const vk::CommandBuffer& cmd,
-        vk::Image image,
-        vk::ImageLayout oldLayout,
-        vk::ImageLayout newLayout,
-        vk::ImageAspectFlags aspectMask = vk::ImageAspectFlagBits::eColor,
-        std::uint32_t mipLevels = 1
-    );
-
-    void TransitionLayout(const vk::CommandBuffer& commandBuffer, vk::ImageLayout newLayout);
 
     void CopyBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const;
 
 private:
     vma::raii::Image m_handle { nullptr };
-    vk::raii::ImageView m_view = nullptr;
+    vk::raii::ImageView m_view { nullptr };
 
     vk::Format m_format = vk::Format::eUndefined;
     vk::Extent3D m_extent {};

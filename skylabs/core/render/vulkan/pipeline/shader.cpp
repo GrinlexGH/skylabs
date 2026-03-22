@@ -7,9 +7,9 @@ namespace Vulkan {
 CShader::CShader(const CContext& context, const vk::ShaderStageFlagBits type, const char* name) : m_stage(type) {
     const std::vector<char> code = ResourceSystem::LoadShader(name);
 
-    vk::ShaderModuleCreateInfo createInfo {};
-    createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+    auto createInfo = vk::ShaderModuleCreateInfo {}
+        .setPCode(reinterpret_cast<const uint32_t*>(code.data()))
+        .setCodeSize(code.size());
 
     m_handle = vk::raii::ShaderModule { *context.Device(), createInfo };
 

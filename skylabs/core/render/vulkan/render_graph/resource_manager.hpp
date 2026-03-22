@@ -202,7 +202,7 @@ public:
     CDescriptorManager& operator=(CDescriptorManager&&) noexcept = default;
     ~CDescriptorManager() = default;
 
-    [[nodiscard]] DescriptorSetHandle CreateDescriptorSet(std::span<const DescriptorDescription> descriptors);
+    [[nodiscard]] DescriptorSetHandle CreateDescriptorSet(std::initializer_list<const DescriptorDescription> descriptors);
 
     void CreateDescriptorPool();
     void CreateDescriptorSets();

@@ -211,7 +211,7 @@ CDescriptorManager::CDescriptorManager(
 ) : m_context(&context), m_inFlightCount(inFlightCount), m_layoutCache(context)
 { }
 
-DescriptorSetHandle CDescriptorManager::CreateDescriptorSet(std::span<const DescriptorDescription> descriptors) {
+DescriptorSetHandle CDescriptorManager::CreateDescriptorSet(std::initializer_list<const DescriptorDescription> descriptors) {
     DescriptorSetHandle handle { static_cast<unsigned int>(m_descriptorSets.size()) };
     m_descriptorSets.emplace_back(DescriptorSetMeta { .m_descriptors = std::vector(descriptors.begin(), descriptors.end()) });
     return handle;

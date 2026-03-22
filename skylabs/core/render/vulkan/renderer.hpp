@@ -31,7 +31,7 @@ public:
     void Draw(glm::mat4 viewMat, float deltaTime) override;
 
 private:
-    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;
+    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 1;
 
     void Resize(CFrameData& currentFrameData);
     void UpdateMainDescriptorSets();

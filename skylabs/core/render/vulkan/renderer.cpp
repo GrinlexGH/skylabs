@@ -380,8 +380,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_descriptorManager = RG::CDescriptorManager { m_context, FRAMES_IN_FLIGHT_COUNT };
     auto& dsm = m_descriptorManager;
 
-    m_mainDescriptorSet = dsm.CreateDescriptorSet({{
-       RG::DescriptorDescription {
+    m_mainDescriptorSet = dsm.CreateDescriptorSet({
+        {
             .m_type = RG::DescriptorType::eUniformBuffer,
             .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
@@ -396,17 +396,17 @@ CRenderer::CRenderer(const IWindow* const window) {
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::SampledImageDescriptorInfo { .m_image = m_lightDepth, .m_sampler = &*m_samplerLight }
         },
-    }});
+    });
 
-    m_computeDescriptorSet = dsm.CreateDescriptorSet({{
+    m_computeDescriptorSet = dsm.CreateDescriptorSet({
         {
             .m_type = RG::DescriptorType::eStorageImage,
             .m_shaderStages = vk::ShaderStageFlagBits::eCompute,
             .m_info = RG::StorageImageDescriptorInfo { .m_image = m_computeBuffer }
         },
-    }});
+    });
 
-    m_swapchainDescriptorSet = dsm.CreateDescriptorSet({{
+    m_swapchainDescriptorSet = dsm.CreateDescriptorSet({
         {
             .m_type = RG::DescriptorType::eCombinedImageSampler,
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
@@ -417,15 +417,15 @@ CRenderer::CRenderer(const IWindow* const window) {
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = &*m_computeSampler }
         },
-    }});
+    });
 
-    m_lightDescriptorSet = dsm.CreateDescriptorSet({{
+    m_lightDescriptorSet = dsm.CreateDescriptorSet({
         {
             .m_type = RG::DescriptorType::eUniformBuffer,
             .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
             .m_info = RG::BufferDescriptorInfo { .m_buffer = m_lightUBO }
         },
-    }});
+    });
 
     dsm.CreateDescriptorPool();
     dsm.CreateDescriptorSets();
@@ -612,7 +612,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdLight->begin({});
 
     // Prepare attachments for main render
-    lightBuffer.TransitionLayout(*cmdLight, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    cmdLight.TransitionLayout(lightBuffer, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     // light render
     vk::RenderingAttachmentInfo depthAttachInfoLight {};
@@ -659,10 +659,12 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdMain->begin({});
 
     // Prepare attachments for main render
-    colorBuffer.TransitionLayout(*cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
-    colorBufferMSAA.TransitionLayout(*cmdMain, vk::ImageLayout::eColorAttachmentOptimal);
-    depthBufferMSAA.TransitionLayout(*cmdMain, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-    lightBuffer.TransitionLayout(*cmdMain, vk::ImageLayout::eShaderReadOnlyOptimal);
+    cmdMain.TransitionLayout({
+        { colorBuffer, vk::ImageLayout::eColorAttachmentOptimal },
+        { colorBufferMSAA, vk::ImageLayout::eColorAttachmentOptimal },
+        { depthBufferMSAA, vk::ImageLayout::eDepthStencilAttachmentOptimal },
+        { lightBuffer, vk::ImageLayout::eShaderReadOnlyOptimal }
+    });
 
     // Main render
     vk::RenderingAttachmentInfo colorAttachInfo {};
@@ -727,44 +729,13 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdComp->reset();
     cmdComp->begin({});
 
-    vk::ImageMemoryBarrier2 acquireCompute {};
-    acquireCompute.srcStageMask = vk::PipelineStageFlagBits2::eNone;
-    acquireCompute.srcAccessMask = vk::AccessFlagBits2::eNone;
-    acquireCompute.dstStageMask = vk::PipelineStageFlagBits2::eComputeShader;
-    acquireCompute.dstAccessMask = vk::AccessFlagBits2::eShaderWrite;
-    acquireCompute.oldLayout = computeBuffer.Layout();
-    acquireCompute.newLayout = vk::ImageLayout::eGeneral;
-    acquireCompute.srcQueueFamilyIndex = device.GraphicsQueue().FamilyIndex();
-    acquireCompute.dstQueueFamilyIndex = device.ComputeQueue().FamilyIndex();
-    acquireCompute.image = *computeBuffer;
-    acquireCompute.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-
-    vk::DependencyInfo depAcquireCompute {};
-    depAcquireCompute.imageMemoryBarrierCount = 1;
-    depAcquireCompute.pImageMemoryBarriers = &acquireCompute;
-    cmdComp->pipelineBarrier2(depAcquireCompute);
+    cmdComp.AcquireOwnership(computeBuffer, device.GraphicsQueue().FamilyIndex(), device.ComputeQueue().FamilyIndex(), vk::ImageLayout::eGeneral);
 
     cmdComp->bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
     cmdComp->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, descriptorSetCompute, {});
     cmdComp->dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
-    vk::ImageMemoryBarrier2 releaseBarrier {};
-    releaseBarrier.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader;
-    releaseBarrier.srcAccessMask = vk::AccessFlagBits2::eShaderWrite;
-    releaseBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
-    releaseBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
-    releaseBarrier.oldLayout = vk::ImageLayout::eGeneral;
-    releaseBarrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-    releaseBarrier.srcQueueFamilyIndex = device.ComputeQueue().FamilyIndex();
-    releaseBarrier.dstQueueFamilyIndex = device.GraphicsQueue().FamilyIndex();
-    releaseBarrier.image = *computeBuffer;
-    releaseBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-
-    vk::DependencyInfo releaseDependencyInfo {};
-    releaseDependencyInfo.imageMemoryBarrierCount = 1;
-    releaseDependencyInfo.pImageMemoryBarriers = &releaseBarrier;
-
-    cmdComp->pipelineBarrier2(releaseDependencyInfo);
+    cmdComp.ReleaseOwnership(computeBuffer, device.ComputeQueue().FamilyIndex(), device.GraphicsQueue().FamilyIndex(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
     cmdComp->end();
 
@@ -780,30 +751,10 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdFina->reset();
     cmdFina->begin({});
 
-    vk::ImageMemoryBarrier2 acquireGraphics {};
-    acquireGraphics.srcStageMask = vk::PipelineStageFlagBits2::eNone;
-    acquireGraphics.srcAccessMask = vk::AccessFlagBits2::eNone;
-    acquireGraphics.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
-    acquireGraphics.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
-    acquireGraphics.oldLayout = vk::ImageLayout::eGeneral;
-    acquireGraphics.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-    acquireGraphics.srcQueueFamilyIndex = device.ComputeQueue().FamilyIndex();
-    acquireGraphics.dstQueueFamilyIndex = device.GraphicsQueue().FamilyIndex();
-    acquireGraphics.image = *computeBuffer;
-    acquireGraphics.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+    cmdFina.AcquireOwnership(computeBuffer, device.ComputeQueue().FamilyIndex(), device.GraphicsQueue().FamilyIndex(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    vk::DependencyInfo depAcquireGraph {};
-    depAcquireGraph.imageMemoryBarrierCount = 1;
-    depAcquireGraph.pImageMemoryBarriers = &acquireGraphics;
-    cmdFina->pipelineBarrier2(depAcquireGraph);
-
-    colorBuffer.TransitionLayout(*cmdFina, vk::ImageLayout::eShaderReadOnlyOptimal);
-    CImage::CmdTransitionLayout(
-        *cmdFina,
-        m_swapchain.Images()[imageIndex],
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eColorAttachmentOptimal
-    );
+    cmdFina.TransitionLayout(colorBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
+    cmdFina.TransitionLayout(m_swapchain.Images()[imageIndex], vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 
     // Render to fullscreen triangle
     vk::RenderingAttachmentInfo swapchainAttachInfo {};
@@ -830,32 +781,10 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     cmdFina->draw(3, 1, 0, 0);
     cmdFina->endRendering();
 
-    vk::ImageMemoryBarrier2 releaseGraphics {};
-    releaseGraphics.srcStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
-    releaseGraphics.srcAccessMask = vk::AccessFlagBits2::eShaderRead;
-    releaseGraphics.dstStageMask = vk::PipelineStageFlagBits2::eNone;
-    releaseGraphics.dstAccessMask = vk::AccessFlagBits2::eNone;
-    releaseGraphics.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-    releaseGraphics.newLayout = vk::ImageLayout::eGeneral;
-    releaseGraphics.srcQueueFamilyIndex = device.GraphicsQueue().FamilyIndex();
-    releaseGraphics.dstQueueFamilyIndex = device.ComputeQueue().FamilyIndex();
-    releaseGraphics.image = *computeBuffer;
-    releaseGraphics.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-
-    vk::DependencyInfo depReleaseGraph {};
-    depReleaseGraph.imageMemoryBarrierCount = 1;
-    depReleaseGraph.pImageMemoryBarriers = &releaseGraphics;
-    cmdFina->pipelineBarrier2(depReleaseGraph);
-
-    computeBuffer.SetLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+    cmdFina.ReleaseOwnership(computeBuffer, device.GraphicsQueue().FamilyIndex(), device.ComputeQueue().FamilyIndex(), vk::ImageLayout::eGeneral);
 
     // Prepare for presentation
-    CImage::CmdTransitionLayout(
-        *cmdFina,
-        m_swapchain.Images()[imageIndex],
-        vk::ImageLayout::eColorAttachmentOptimal,
-        vk::ImageLayout::ePresentSrcKHR
-    );
+    cmdFina.TransitionLayout(m_swapchain.Images()[imageIndex], vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
 
     cmdFina->end();
 
@@ -918,23 +847,13 @@ void CRenderer::Resize(CFrameData& currentFrameData) {
 void CRenderer::ReleaseComputeBuffers() {
     auto cmd = BeginSingleTimeCommands(*m_context.Device(), m_singleCommandPool);
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
-        vk::ImageMemoryBarrier2 releaseBarrier {};
-        releaseBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
-        releaseBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
-        releaseBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
-        releaseBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
-        releaseBarrier.oldLayout = vk::ImageLayout::eUndefined;
-        releaseBarrier.newLayout = vk::ImageLayout::eGeneral;
-        releaseBarrier.srcQueueFamilyIndex = m_context.Device().GraphicsQueue().FamilyIndex();
-        releaseBarrier.dstQueueFamilyIndex = m_context.Device().ComputeQueue().FamilyIndex();
-        releaseBarrier.image = *m_textureManager.GetTexture(m_computeBuffer, static_cast<int>(i));
-        releaseBarrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-
-        vk::DependencyInfo releaseDependencyInfo {};
-        releaseDependencyInfo.imageMemoryBarrierCount = 1;
-        releaseDependencyInfo.pImageMemoryBarriers = &releaseBarrier;
-
-        cmd.pipelineBarrier2(releaseDependencyInfo);
+        CCommandBuffer cmdd { cmd };
+        cmdd.ReleaseOwnership(
+            m_textureManager.GetTexture(m_computeBuffer, static_cast<int>(i)),
+            m_context.Device().GraphicsQueue().FamilyIndex(),
+            m_context.Device().ComputeQueue().FamilyIndex(),
+            vk::ImageLayout::eGeneral
+        );
     }
     EndSingleTimeCommands(m_context.Device(), cmd);
 }
@@ -967,7 +886,8 @@ void CRenderer::LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::Command
 
     vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
     {
-        modelTexture.TransitionLayout(commandBuffer, vk::ImageLayout::eTransferDstOptimal);
+        CCommandBuffer cmd {commandBuffer};
+        cmd.TransitionLayout(modelTexture, vk::ImageLayout::eTransferDstOptimal);
         modelTexture.CopyBufferToImage(commandBuffer, *stagingBuffer, vk::Extent2D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h) });
         GenerateMipmaps(*m_context.PhysicalDevice(), commandBuffer, modelTexture);
     }
