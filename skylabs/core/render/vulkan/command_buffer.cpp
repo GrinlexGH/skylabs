@@ -68,9 +68,53 @@ vk::ImageMemoryBarrier2 GetBarrierData(
 }
 
 namespace Vulkan {
+ImageBarrierInfo::ImageBarrierInfo(
+    CImage& img,
+    vk::PipelineStageFlags2 dstStage, vk::AccessFlags2 dstAccess,
+    vk::ImageLayout newLayout,
+    std::uint32_t srcQueue, std::uint32_t dstQueue
+) {
+    m_sourceCImage = &img;
+    m_barrier.image = *img;
+    m_barrier.srcStageMask = img.SyncState().m_stage;
+    m_barrier.srcAccessMask = img.SyncState().m_access;
+    m_barrier.dstStageMask = dstStage;
+    m_barrier.dstAccessMask = dstAccess;
+    m_barrier.oldLayout = img.SyncState().m_layout;
+    m_barrier.newLayout = newLayout;
+    m_barrier.srcQueueFamilyIndex = srcQueue;
+    m_barrier.dstQueueFamilyIndex = dstQueue;
+    m_barrier.subresourceRange = img.FullRange();
+}
+
+ImageBarrierInfo::ImageBarrierInfo(vk::ImageMemoryBarrier2 barrier) : m_barrier(barrier) {}
+
 CCommandBuffer::CCommandBuffer(const vk::raii::CommandBuffer& commandBuffer) :
     m_handle(&commandBuffer)
 {}
+
+void CCommandBuffer::PipelineBarrier(std::vector<ImageBarrierInfo> imageBarriers) const {
+    if (imageBarriers.size() == 0) return;
+
+    std::vector<vk::ImageMemoryBarrier2> barriers;
+    barriers.reserve(imageBarriers.size());
+
+    for (const auto& t : imageBarriers) {
+        barriers.push_back(t.m_barrier);
+
+        if (t.m_sourceCImage) {
+            t.m_sourceCImage->m_syncState.m_stage = t.m_barrier.dstStageMask;
+            t.m_sourceCImage->m_syncState.m_access = t.m_barrier.dstAccessMask;
+            t.m_sourceCImage->m_syncState.m_layout = t.m_barrier.newLayout;
+        }
+    }
+
+    vk::DependencyInfo dependencyInfo {};
+    dependencyInfo.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size());
+    dependencyInfo.pImageMemoryBarriers = barriers.data();
+
+    m_handle->pipelineBarrier2(dependencyInfo);
+}
 
 vk::ImageMemoryBarrier2 CCommandBuffer::CreateImageBarrier(
     vk::Image image,
@@ -92,78 +136,16 @@ vk::ImageMemoryBarrier2 CCommandBuffer::CreateImageBarrier(
     return barrier;
 }
 
-void CCommandBuffer::TransitionLayout(
-    vk::Image image,
-    vk::ImageLayout oldLayout,
-    vk::ImageLayout newLayout,
-    vk::ImageAspectFlags aspectMask,
-    std::uint32_t mipLevels,
-    std::uint32_t arrayLevels
-) const {
-    auto barrier = CreateImageBarrier(image, oldLayout, newLayout, aspectMask, mipLevels, arrayLevels);
-
-    vk::DependencyInfo dependencyInfo {};
-    dependencyInfo.imageMemoryBarrierCount = 1;
-    dependencyInfo.pImageMemoryBarriers = &barrier;
-
-    m_handle->pipelineBarrier2(dependencyInfo);
-}
-
-void CCommandBuffer::TransitionLayout(CImage& image, vk::ImageLayout newLayout) const {
-    TransitionLayout(
-        *image.m_handle,
-        image.m_layout,
-        newLayout,
-        image.m_aspectFlags,
-        image.m_mipLevels,
-        image.m_arrayLevels
-    );
-
-    image.m_layout = newLayout;
-}
-
-void CCommandBuffer::TransitionLayout(std::initializer_list<ImageBarrierInfo> transitions) const {
-    if (transitions.size() == 0) return;
-
-    std::vector<vk::ImageMemoryBarrier2> barriers;
-    barriers.reserve(transitions.size());
-
-    for (const auto& t : transitions) {
-        barriers.push_back(CreateImageBarrier(
-            t.m_image,
-            t.m_oldLayout,
-            t.m_newLayout,
-            t.m_aspectMask,
-            t.m_mipLevels,
-            t.m_arrayLevels
-        ));
-
-        if (t.m_sourceCImage) {
-            t.m_sourceCImage->m_layout = t.m_newLayout;
-        }
-    }
-
-    vk::DependencyInfo dependencyInfo {};
-    dependencyInfo.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size());
-    dependencyInfo.pImageMemoryBarriers = barriers.data();
-
-    m_handle->pipelineBarrier2(dependencyInfo);
-}
-
 void CCommandBuffer::ReleaseOwnership(
     const CImage& image,
     uint32_t srcQueue,
     uint32_t dstQueue,
     vk::ImageLayout newLayout
 ) const {
-    auto barrier = GetBarrierData(image.Layout(), newLayout, srcQueue, dstQueue, BarrierType::Release);
+    auto barrier = GetBarrierData(image.m_syncState.m_layout, newLayout, srcQueue, dstQueue, BarrierType::Release);
 
     barrier.image = *image;
-    barrier.subresourceRange.aspectMask = image.AspectFlags();
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = image.MipLevels();
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = image.ArrayLevels();
+    barrier.subresourceRange = image.FullRange();
 
     vk::DependencyInfo dependencyInfo {};
     dependencyInfo.imageMemoryBarrierCount = 1;
@@ -178,14 +160,10 @@ void CCommandBuffer::AcquireOwnership(
     uint32_t dstQueue,
     vk::ImageLayout newLayout
 ) const {
-    auto barrier = GetBarrierData(image.Layout(), newLayout, srcQueue, dstQueue, BarrierType::Acquire);
+    auto barrier = GetBarrierData(image.m_syncState.m_layout, newLayout, srcQueue, dstQueue, BarrierType::Acquire);
 
     barrier.image = *image;
-    barrier.subresourceRange.aspectMask = image.AspectFlags();
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = image.MipLevels();
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = image.ArrayLevels();
+    barrier.subresourceRange = image.FullRange();
 
     vk::DependencyInfo dependencyInfo {};
     dependencyInfo.imageMemoryBarrierCount = 1;
@@ -193,102 +171,6 @@ void CCommandBuffer::AcquireOwnership(
 
     m_handle->pipelineBarrier2(dependencyInfo);
 
-    image.m_layout = newLayout;
-}
-
-void CCommandBuffer::ReleaseOwnership(std::initializer_list<ImageBarrierInfo> releases) const {
-    if (releases.size() == 0) return;
-
-    std::vector<vk::ImageMemoryBarrier2> barriers;
-    barriers.reserve(releases.size());
-
-    for (auto& t : releases) {
-        if (t.m_sourceCImage) {
-            auto barrier = GetBarrierData(
-                t.m_oldLayout,
-                t.m_newLayout,
-                t.m_srcQueue,
-                t.m_dstQueue,
-                BarrierType::Release
-            );
-
-            barrier.image = t.m_image;
-            barrier.subresourceRange.aspectMask = t.m_aspectMask;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = t.m_arrayLevels;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = t.m_arrayLevels;
-
-            barriers.push_back(barrier);
-
-            t.m_sourceCImage->m_layout = t.m_newLayout;
-        } else {
-            vk::ImageMemoryBarrier2 barrier;
-            barrier.image = t.m_image;
-            barrier.srcQueueFamilyIndex = t.m_srcQueue;
-            barrier.dstQueueFamilyIndex = t.m_dstQueue;
-            barrier.subresourceRange.aspectMask = t.m_aspectMask;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = t.m_arrayLevels;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = t.m_arrayLevels;
-
-            barriers.push_back(barrier);
-        }
-    }
-
-    vk::DependencyInfo dependencyInfo {};
-    dependencyInfo.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size());
-    dependencyInfo.pImageMemoryBarriers = barriers.data();
-
-    m_handle->pipelineBarrier2(dependencyInfo);
-}
-
-void CCommandBuffer::AcquireOwnership(std::initializer_list<ImageBarrierInfo> transfers) const {
-    if (transfers.size() == 0) return;
-
-    std::vector<vk::ImageMemoryBarrier2> barriers;
-    barriers.reserve(transfers.size());
-
-    for (auto& t : transfers) {
-        if (t.m_sourceCImage) {
-            auto barrier = GetBarrierData(
-                t.m_oldLayout,
-                t.m_newLayout,
-                t.m_srcQueue,
-                t.m_dstQueue,
-                BarrierType::Acquire
-            );
-
-            barrier.image = t.m_image;
-            barrier.subresourceRange.aspectMask = t.m_aspectMask;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = t.m_arrayLevels;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = t.m_arrayLevels;
-
-            barriers.push_back(barrier);
-
-            t.m_sourceCImage->m_layout = t.m_newLayout;
-        } else {
-            vk::ImageMemoryBarrier2 barrier;
-            barrier.image = t.m_image;
-            barrier.srcQueueFamilyIndex = t.m_srcQueue;
-            barrier.dstQueueFamilyIndex = t.m_dstQueue;
-            barrier.subresourceRange.aspectMask = t.m_aspectMask;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = t.m_arrayLevels;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = t.m_arrayLevels;
-
-            barriers.push_back(barrier);
-        }
-    }
-
-    vk::DependencyInfo dependencyInfo {};
-    dependencyInfo.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size());
-    dependencyInfo.pImageMemoryBarriers = barriers.data();
-
-    m_handle->pipelineBarrier2(dependencyInfo);
+    image.m_syncState.m_layout = newLayout;
 }
 }

@@ -149,16 +149,16 @@ vk::PresentModeKHR CSwapchain::ChoosePresentMode(const vk::PresentModeKHR reques
     }
 
     if (std::ranges::contains(availableModes, vk::PresentModeKHR::eMailbox)) {
-        Log::Warning("Requested mode not available. Falling back to Mailbox.");
+        Log::Warning("Requested mode not available. Falling back to Mailbox");
         return vk::PresentModeKHR::eMailbox;
     }
 
     if (std::ranges::contains(availableModes, vk::PresentModeKHR::eImmediate)) {
-        Log::Warning("Requested mode not available. Falling back to Immediate.");
+        Log::Warning("Requested mode not available. Falling back to Immediate");
         return vk::PresentModeKHR::eImmediate;
     }
 
-    Log::Warning("Using standard FIFO (V-Sync).");
+    Log::Warning("Using standard FIFO (V-Sync)");
     return vk::PresentModeKHR::eFifo;
 }
 }

@@ -69,7 +69,6 @@ void CImage::Clear() {
     m_extent = vk::Extent3D {};
     m_mipLevels = 1;
     m_sampleCount = vk::SampleCountFlagBits::e1;
-    m_layout = vk::ImageLayout::eUndefined;
     m_aspectFlags = vk::ImageAspectFlagBits::eNone;
 }
 

@@ -153,10 +153,5 @@ void CLauncher::Main() {
         throw std::runtime_error { "Cannot initialize vulkan!\n" };
     }
 
-    auto profiles = Vulkan::CProfile::GetAvailableProfiles();
-    for (const auto& profile : profiles) {
-        Log::Debug("{}:{}", profile.profileName, profile.specVersion);
-    }
-
     MainLoop(renderer, window);
 }

@@ -11,31 +11,25 @@ enum class BarrierType : std::uint8_t
 };
 
 struct ImageBarrierInfo {
-    vk::Image m_image;
-    vk::ImageLayout m_oldLayout;
-    vk::ImageLayout m_newLayout;
-    vk::ImageAspectFlags m_aspectMask = vk::ImageAspectFlagBits::eColor;
-    uint32_t m_mipLevels = 1;
-    uint32_t m_arrayLevels = 1;
-    uint32_t m_srcQueue = vk::QueueFamilyIgnored;
-    uint32_t m_dstQueue = vk::QueueFamilyIgnored;
+    vk::ImageMemoryBarrier2 m_barrier {
+        {}, {},
+        {}, {},
+        vk::ImageLayout::eUndefined, vk::ImageLayout::eUndefined,
+        vk::QueueFamilyIgnored, vk::QueueFamilyIgnored,
+        {}, {}
+    };
 
     CImage* m_sourceCImage = nullptr;
 
-    ImageBarrierInfo(CImage& img, vk::ImageLayout nextLayout)
-        : m_image(*img), m_oldLayout(img.Layout()), m_newLayout(nextLayout),
-          m_aspectMask(img.AspectFlags()), m_mipLevels(img.MipLevels()),
-          m_arrayLevels(img.ArrayLevels()), m_sourceCImage(&img) {}
-
-    ImageBarrierInfo(CImage& img, uint32_t srcQ, uint32_t dstQ, vk::ImageLayout nextLayout)
-        : m_image(*img), m_oldLayout(img.Layout()), m_newLayout(nextLayout),
-          m_aspectMask(img.AspectFlags()), m_mipLevels(img.MipLevels()),
-          m_arrayLevels(img.ArrayLevels()), m_srcQueue(srcQ), m_dstQueue(dstQ),
-          m_sourceCImage(&img) {}
-
-    ImageBarrierInfo(vk::Image img, vk::ImageLayout oldL, vk::ImageLayout newL,
-                     vk::ImageAspectFlags aspect = vk::ImageAspectFlagBits::eColor)
-        : m_image(img), m_oldLayout(oldL), m_newLayout(newL), m_aspectMask(aspect) {}
+    ImageBarrierInfo(vk::ImageMemoryBarrier2 barrier);
+    ImageBarrierInfo(
+        CImage& img,
+        vk::PipelineStageFlags2 dstStage,
+        vk::AccessFlags2 dstAccess,
+        vk::ImageLayout newLayout,
+        std::uint32_t srcQueue = vk::QueueFamilyIgnored,
+        std::uint32_t dstQueue = vk::QueueFamilyIgnored
+    );
 };
 
 class CCommandBuffer
@@ -47,21 +41,10 @@ public:
     [[nodiscard]] const vk::raii::CommandBuffer& operator*() const noexcept { return *m_handle; }
     [[nodiscard]] const vk::raii::CommandBuffer* operator->() const noexcept { return m_handle; }
 
-    void TransitionLayout(std::initializer_list<ImageBarrierInfo> transitions) const;
-    void TransitionLayout(CImage& image, vk::ImageLayout newLayout) const;
-    void TransitionLayout(
-        vk::Image image,
-        vk::ImageLayout oldLayout,
-        vk::ImageLayout newLayout,
-        vk::ImageAspectFlags aspectMask = vk::ImageAspectFlagBits::eColor,
-        std::uint32_t mipLevels = 1,
-        std::uint32_t arrayLevels = 1
-    ) const;
+    void PipelineBarrier(std::vector<ImageBarrierInfo> imageBarriers) const;
 
-    void ReleaseOwnership(std::initializer_list<ImageBarrierInfo> releases) const;
     void ReleaseOwnership(const CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, vk::ImageLayout newLayout) const;
 
-    void AcquireOwnership(std::initializer_list<ImageBarrierInfo> acquires) const;
     void AcquireOwnership(CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, vk::ImageLayout newLayout) const;
 
 private:

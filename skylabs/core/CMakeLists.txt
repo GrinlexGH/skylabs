@@ -56,6 +56,8 @@ target_sources(
         render/vulkan/pipeline/descriptor_layout_cache.cpp
         render/vulkan/render_graph/resource_manager.hpp
         render/vulkan/render_graph/resource_manager.cpp
+        render/vulkan/render_graph/graph.hpp
+        render/vulkan/render_graph/graph.cpp
         render/vertex.hpp
         SDL/context.cpp
         SDL/context.hpp
