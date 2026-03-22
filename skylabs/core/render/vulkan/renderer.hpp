@@ -10,6 +10,7 @@
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
+#include <skylabs/core/render/vulkan/pipeline/compute_pipeline.hpp>
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 
 void MoveForward();
@@ -84,8 +85,7 @@ private:
     CGraphicsPipeline m_pipelineMain { nullptr };
 
 
-    vk::raii::PipelineLayout m_computePipelineLayout { nullptr };
-    vk::raii::Pipeline m_computePipeline { nullptr };
+    CComputePipeline m_computePipeline { nullptr };
 
 
     CSampler m_computeSampler { nullptr };

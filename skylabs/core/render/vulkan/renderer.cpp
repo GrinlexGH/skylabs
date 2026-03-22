@@ -481,20 +481,10 @@ CRenderer::CRenderer(const IWindow* const window) {
     CShader computeShader(m_context, vk::ShaderStageFlagBits::eCompute, "shader.comp.spv");
 
     // Pipeline
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo {};
-    std::array computeDescriptorSetLayouts = { **dsm.GetDescriptorSetLayout(m_computeDescriptorSet) };
-    pipelineLayoutInfo.setLayoutCount = static_cast<std::uint32_t>(computeDescriptorSetLayouts.size());
-    pipelineLayoutInfo.pSetLayouts = computeDescriptorSetLayouts.data();
-    m_computePipelineLayout = m_context.Device()->createPipelineLayout(pipelineLayoutInfo);
-
-    vk::ComputePipelineCreateInfo computePipelineCreateInfo {};
-    vk::PipelineShaderStageCreateInfo computeShaderCreateInfo {};
-    computeShaderCreateInfo.stage = computeShader.Stage();
-    computeShaderCreateInfo.module = *computeShader;
-    computeShaderCreateInfo.pName = "main";
-    computePipelineCreateInfo.stage = computeShaderCreateInfo;
-    computePipelineCreateInfo.layout = m_computePipelineLayout;
-    m_computePipeline = m_context.Device()->createComputePipeline(nullptr, computePipelineCreateInfo);
+    m_computePipeline = CComputePipeline { m_context, {
+        .m_layout = m_pipelineLayoutCache.GetLayout({ { **dsm.GetDescriptorSetLayout(m_computeDescriptorSet) } }),
+        .m_shader = &computeShader
+    }};
 
 
     // Swapchain pipeline
@@ -737,8 +727,8 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         // Compute
         cmdComp.AcquireOwnership(computeBuffer, device.GraphicsQueue().FamilyIndex(), device.ComputeQueue().FamilyIndex(), vk::ImageLayout::eGeneral);
 
-        cmdComp->bindPipeline(vk::PipelineBindPoint::eCompute, m_computePipeline);
-        cmdComp->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipelineLayout, 0, descriptorSetCompute, {});
+        cmdComp->bindPipeline(vk::PipelineBindPoint::eCompute, *m_computePipeline);
+        cmdComp->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipeline.Layout(), 0, descriptorSetCompute, {});
         cmdComp->dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
 
         cmdComp.ReleaseOwnership(computeBuffer, device.ComputeQueue().FamilyIndex(), device.GraphicsQueue().FamilyIndex(), vk::ImageLayout::eShaderReadOnlyOptimal);
