@@ -56,8 +56,12 @@ target_sources(
         render/vulkan/pipeline/pipeline_layout_cache.cpp
         render/vulkan/pipeline/descriptor_layout_cache.hpp
         render/vulkan/pipeline/descriptor_layout_cache.cpp
-        render/vulkan/render_graph/resource_manager.hpp
-        render/vulkan/render_graph/resource_manager.cpp
+        render/vulkan/render_graph/buffer_pool.hpp
+        render/vulkan/render_graph/buffer_pool.cpp
+        render/vulkan/render_graph/texture_pool.hpp
+        render/vulkan/render_graph/texture_pool.cpp
+        render/vulkan/render_graph/descriptor_pool.hpp
+        render/vulkan/render_graph/descriptor_pool.cpp
         render/vulkan/render_graph/graph.hpp
         render/vulkan/render_graph/graph.cpp
         render/vertex.hpp

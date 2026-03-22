@@ -318,36 +318,36 @@ CRenderer::CRenderer(const IWindow* const window) {
         }
     };
 
-    m_textureManager = RG::CTextureManager { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
+    m_textureManager = CTexturePool { m_context, { .m_width = renderWidth, .m_height = renderHeight }, FRAMES_IN_FLIGHT_COUNT };
     auto& txm = m_textureManager;
 
     m_colorBuffer = txm.CreateTexture("colorBuffer", {
-        .m_usage = RG::TextureUsageBits::eAttachment | RG::TextureUsageBits::eSampled,
-        .m_extent = RG::RelativeTextureSize {}
+        .m_usage = TextureUsageBits::eAttachment | TextureUsageBits::eSampled,
+        .m_extent = RelativeTextureSize {}
     });
 
     m_colorBufferMSAAx = txm.CreateTexture("colorBufferMSAAx", {
-        .m_usage = RG::TextureUsageBits::eAttachment,
-        .m_extent = RG::RelativeTextureSize {},
+        .m_usage = TextureUsageBits::eAttachment,
+        .m_extent = RelativeTextureSize {},
         .m_sampled = true
     });
 
     m_depthBufferMSAAx = txm.CreateTexture("depthBufferMSAAx", {
-        .m_format = RG::TextureFormat::eDepthOptimal,
-        .m_usage = RG::TextureUsageBits::eDepthAttachment,
-        .m_extent = RG::RelativeTextureSize {},
+        .m_format = TextureFormat::eDepthOptimal,
+        .m_usage = TextureUsageBits::eDepthAttachment,
+        .m_extent = RelativeTextureSize {},
         .m_sampled = true
     });
 
     m_computeBuffer = txm.CreateTexture("computePostProcess", {
-        .m_format = RG::TextureFormat::eRGBA8888Unorm,
-        .m_usage = RG::TextureUsageBits::eStorage | RG::TextureUsageBits::eSampled,
-        .m_extent = RG::RelativeTextureSize {}
+        .m_format = TextureFormat::eRGBA8888Unorm,
+        .m_usage = TextureUsageBits::eStorage | TextureUsageBits::eSampled,
+        .m_extent = RelativeTextureSize {}
     });
 
     m_lightDepth = txm.CreateTexture("lightDepth", {
-        .m_format = RG::TextureFormat::eDepthOptimal,
-        .m_usage = RG::TextureUsageBits::eDepthAttachment | RG::TextureUsageBits::eSampled,
+        .m_format = TextureFormat::eDepthOptimal,
+        .m_usage = TextureUsageBits::eDepthAttachment | TextureUsageBits::eSampled,
         .m_extent = vk::Extent3D { 2048, 2048, 1 }
     });
 
@@ -356,20 +356,20 @@ CRenderer::CRenderer(const IWindow* const window) {
     txm.GenerateTextures();
 
 
-    m_bufferManager = RG::CBufferManager { m_context, FRAMES_IN_FLIGHT_COUNT };
+    m_bufferManager = CBufferPool { m_context, FRAMES_IN_FLIGHT_COUNT };
     auto& bfm = m_bufferManager;
 
     m_uniformBuffer = bfm.CreateBuffer("global-uniform", {
         .m_size = sizeof(UniformBufferObject),
         .m_location = MemoryLocation::eHostVisible,
-        .m_usage = RG::BufferUsageFlagBits::eUniformBuffer,
+        .m_usage = BufferUsageFlagBits::eUniformBuffer,
         .m_isInFlight = true,
     });
 
     m_lightUBO = bfm.CreateBuffer("light-uniform", {
         .m_size = sizeof(LightUBO),
         .m_location = MemoryLocation::eHostVisible,
-        .m_usage = RG::BufferUsageFlagBits::eUniformBuffer,
+        .m_usage = BufferUsageFlagBits::eUniformBuffer,
         .m_isInFlight = false,
     });
 
@@ -378,53 +378,53 @@ CRenderer::CRenderer(const IWindow* const window) {
     bfm.GenerateBuffers();
 
 
-    m_descriptorManager = RG::CDescriptorManager { m_context, FRAMES_IN_FLIGHT_COUNT };
+    m_descriptorManager = CDescriptorPool{ m_context, FRAMES_IN_FLIGHT_COUNT };
     auto& dsm = m_descriptorManager;
 
     m_mainDescriptorSet = dsm.CreateDescriptorSet({
         {
-            .m_type = RG::DescriptorType::eUniformBuffer,
+            .m_type = DescriptorType::eUniformBuffer,
             .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
-            .m_info = RG::BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
+            .m_info = BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
         },
         {
-            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_type = DescriptorType::eCombinedImageSampler,
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_modelTexture, .m_sampler = &*m_modelTextureSampler }
+            .m_info = SampledImageDescriptorInfo { .m_image = m_modelTexture, .m_sampler = *m_modelTextureSampler }
         },
         {
-            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_type = DescriptorType::eCombinedImageSampler,
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_lightDepth, .m_sampler = &*m_samplerLight }
+            .m_info = SampledImageDescriptorInfo { .m_image = m_lightDepth, .m_sampler = *m_samplerLight }
         },
     });
 
     m_computeDescriptorSet = dsm.CreateDescriptorSet({
         {
-            .m_type = RG::DescriptorType::eStorageImage,
+            .m_type = DescriptorType::eStorageImage,
             .m_shaderStages = vk::ShaderStageFlagBits::eCompute,
-            .m_info = RG::StorageImageDescriptorInfo { .m_image = m_computeBuffer }
+            .m_info = StorageImageDescriptorInfo { .m_image = m_computeBuffer }
         },
     });
 
     m_swapchainDescriptorSet = dsm.CreateDescriptorSet({
         {
-            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_type = DescriptorType::eCombinedImageSampler,
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_colorBuffer, .m_sampler = &*m_mainSampler }
+            .m_info = SampledImageDescriptorInfo { .m_image = m_colorBuffer, .m_sampler = *m_mainSampler }
         },
         {
-            .m_type = RG::DescriptorType::eCombinedImageSampler,
+            .m_type = DescriptorType::eCombinedImageSampler,
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = RG::SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = &*m_computeSampler }
+            .m_info = SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = *m_computeSampler }
         },
     });
 
     m_lightDescriptorSet = dsm.CreateDescriptorSet({
         {
-            .m_type = RG::DescriptorType::eUniformBuffer,
+            .m_type = DescriptorType::eUniformBuffer,
             .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
-            .m_info = RG::BufferDescriptorInfo { .m_buffer = m_lightUBO }
+            .m_info = BufferDescriptorInfo { .m_buffer = m_lightUBO }
         },
     });
 

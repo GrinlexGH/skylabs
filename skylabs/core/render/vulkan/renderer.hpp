@@ -1,7 +1,7 @@
 #pragma once
 #include <skylabs/core/render/renderer.hpp>
 
-#include <skylabs/core/render/vulkan/render_graph/resource_manager.hpp>
+#include <skylabs/core/render/vulkan/render_graph/descriptor_pool.hpp>
 
 #include <skylabs/core/render/vulkan/frame_data.hpp>
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
@@ -49,29 +49,29 @@ private:
 
     CPipelineLayoutCache m_pipelineLayoutCache { nullptr };
 
-    RG::CTextureManager m_textureManager { nullptr };
-    RG::CBufferManager m_bufferManager { nullptr };
-    RG::CDescriptorManager m_descriptorManager { nullptr };
+    CTexturePool m_textureManager { nullptr };
+    CBufferPool m_bufferManager { nullptr };
+    CDescriptorPool m_descriptorManager { nullptr };
 
-    RG::BufferHandle m_uniformBuffer;
+    BufferHandle m_uniformBuffer;
 
-    RG::TextureHandle m_colorBuffer;
-    RG::TextureHandle m_colorBufferMSAAx;
-    RG::TextureHandle m_depthBufferMSAAx;
-    RG::DescriptorSetHandle m_mainDescriptorSet;
-    RG::TextureHandle m_modelTexture;
-    RG::BufferHandle m_vertexBuffer;
-    RG::BufferHandle m_indexBuffer;
+    TextureHandle m_colorBuffer;
+    TextureHandle m_colorBufferMSAAx;
+    TextureHandle m_depthBufferMSAAx;
+    DescriptorSetHandle m_mainDescriptorSet;
+    TextureHandle m_modelTexture;
+    BufferHandle m_vertexBuffer;
+    BufferHandle m_indexBuffer;
 
-    RG::TextureHandle m_computeBuffer;
-    RG::DescriptorSetHandle m_computeDescriptorSet;
+    TextureHandle m_computeBuffer;
+    DescriptorSetHandle m_computeDescriptorSet;
 
-    RG::DescriptorSetHandle m_swapchainDescriptorSet;
+    DescriptorSetHandle m_swapchainDescriptorSet;
 
 
-    RG::TextureHandle m_lightDepth;
-    RG::BufferHandle m_lightUBO;
-    RG::DescriptorSetHandle m_lightDescriptorSet;
+    TextureHandle m_lightDepth;
+    BufferHandle m_lightUBO;
+    DescriptorSetHandle m_lightDescriptorSet;
     CGraphicsPipeline m_lightPipeline { nullptr };
     CSampler m_samplerLight { nullptr };
 

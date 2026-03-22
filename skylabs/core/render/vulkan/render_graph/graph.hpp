@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/core/render/vulkan/render_graph/resource_manager.hpp>
 #include <skylabs/core/render/vulkan/command_buffer.hpp>
 
 namespace Vulkan::RG {
