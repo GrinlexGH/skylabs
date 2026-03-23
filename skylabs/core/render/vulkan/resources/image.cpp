@@ -12,7 +12,7 @@ vk::ImageViewType DetermineViewType(vk::Extent3D extent, std::uint32_t layers) {
     return vk::ImageViewType::e3D;
 }
 
-[[nodiscard]] vk::ImageType DetermineType(vk::Extent3D extent, std::uint32_t layers) {
+vk::ImageType DetermineType(vk::Extent3D extent, std::uint32_t layers) {
     if (extent.height == 1 && extent.depth == 1) {
         return vk::ImageType::e1D;
     }
@@ -91,15 +91,5 @@ void CImage::CreateView(const vk::raii::Device& device, vk::ImageViewType viewTy
     viewInfo.format = m_format;
     viewInfo.subresourceRange = { m_aspectFlags, 0, m_mipLevels, 0, m_arrayLevels };
     m_view = vk::raii::ImageView { device, viewInfo };
-}
-
-void CImage::Clear() {
-    m_handle.clear();
-    m_view.clear();
-    m_format = vk::Format::eUndefined;
-    m_extent = vk::Extent3D {};
-    m_mipLevels = 1;
-    m_sampleCount = vk::SampleCountFlagBits::e1;
-    m_aspectFlags = vk::ImageAspectFlagBits::eNone;
 }
 }

@@ -66,12 +66,11 @@ public:
     [[nodiscard]] ImageSyncState SyncState() const noexcept { return m_syncState; }
     void SetSyncState(ImageSyncState state) noexcept { m_syncState = state; }
 
-    void Clear();
-
 private:
     void CreateView(const vk::raii::Device& device, vk::ImageViewType viewType);
 
     vk::Image m_rawHandle { nullptr };
+
     vma::raii::Image m_handle { nullptr };
     vk::raii::ImageView m_view { nullptr };
 
