@@ -1,34 +1,59 @@
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 
-namespace Vulkan {
-CImage::CImage(const CContext& context, const ImageCreateInfo options) {
-    vk::ImageViewType viewType;
-
-    vk::ImageCreateInfo imageInfo {};
-    imageInfo.format = m_format = options.m_format;
-    imageInfo.extent = m_extent = options.m_extent;
-
-    if (imageInfo.extent.height == 1 && imageInfo.extent.depth == 1) {
-        imageInfo.imageType = vk::ImageType::e1D;
-        if (options.m_arrayLevels == 1)
-            viewType = vk::ImageViewType::e1D;
-        else
-            viewType = vk::ImageViewType::e1DArray;
-    } else if (imageInfo.extent.depth == 1) {
-        imageInfo.imageType = vk::ImageType::e2D;
-        if (options.m_arrayLevels == 1)
-            viewType = vk::ImageViewType::e2D;
-        else
-            viewType = vk::ImageViewType::e2DArray;
-    } else {
-        assert(options.m_arrayLevels == 1);
-        imageInfo.imageType = vk::ImageType::e3D;
-        viewType = vk::ImageViewType::e3D;
+namespace {
+vk::ImageViewType DetermineViewType(vk::Extent3D extent, std::uint32_t layers) {
+    if (extent.height == 1 && extent.depth == 1) {
+        return (layers == 1) ? vk::ImageViewType::e1D : vk::ImageViewType::e1DArray;
     }
+    if (extent.depth == 1) {
+        return (layers == 1) ? vk::ImageViewType::e2D : vk::ImageViewType::e2DArray;
+    }
+    assert(layers == 1);
+    return vk::ImageViewType::e3D;
+}
 
-    imageInfo.mipLevels = m_mipLevels = options.m_mipLevels;
-    imageInfo.arrayLayers = m_arrayLevels = options.m_arrayLevels;
-    imageInfo.samples = m_sampleCount = options.m_sampleCount;
+[[nodiscard]] vk::ImageType DetermineType(vk::Extent3D extent, std::uint32_t layers) {
+    if (extent.height == 1 && extent.depth == 1) {
+        return vk::ImageType::e1D;
+    }
+    if (extent.depth == 1) {
+        return vk::ImageType::e2D;
+    }
+    assert(layers == 1);
+    return vk::ImageType::e3D;
+}
+
+vk::ImageAspectFlags DetermineAspect(vk::Format format) {
+    switch (format) {
+        case vk::Format::eD32Sfloat:
+        case vk::Format::eD16Unorm:
+            return vk::ImageAspectFlagBits::eDepth;
+        case vk::Format::eD24UnormS8Uint:
+        case vk::Format::eD32SfloatS8Uint:
+            return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+        default:
+            return vk::ImageAspectFlagBits::eColor;
+    }
+}
+}
+
+namespace Vulkan {
+CImage::CImage(
+    const CContext& context,
+    const ImageCreateInfo options
+) : m_format(options.m_format), m_extent(options.m_extent),
+    m_mipLevels(options.m_mipLevels), m_arrayLevels(options.m_arrayLevels), m_sampleCount(options.m_sampleCount),
+    m_aspectFlags(DetermineAspect(m_format))
+{
+    vk::ImageCreateInfo imageInfo {};
+    imageInfo.format = m_format;
+    imageInfo.extent = m_extent;
+
+    imageInfo.imageType = DetermineType(m_extent, m_arrayLevels);
+
+    imageInfo.mipLevels = m_mipLevels;
+    imageInfo.arrayLayers = m_arrayLevels;
+    imageInfo.samples = m_sampleCount;
     imageInfo.tiling = vk::ImageTiling::eOptimal;
     imageInfo.usage = options.m_usageFlags;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
@@ -40,26 +65,32 @@ CImage::CImage(const CContext& context, const ImageCreateInfo options) {
     allocInfo.requiredFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
     m_handle = vma::raii::Image { *context.Allocator(), imageInfo, allocInfo };
+    m_rawHandle = *m_handle;
 
-    if (m_format == vk::Format::eD32Sfloat || m_format == vk::Format::eD16Unorm) {
-        m_aspectFlags = vk::ImageAspectFlagBits::eDepth;
-    } else if (m_format == vk::Format::eD24UnormS8Uint || m_format == vk::Format::eD32SfloatS8Uint) {
-        m_aspectFlags = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
-    } else {
-        m_aspectFlags = vk::ImageAspectFlagBits::eColor;
-    }
+    CreateView(*context.Device(), DetermineViewType(m_extent, m_arrayLevels));
+}
 
-    vk::ImageViewCreateInfo imageViewInfo {};
-    imageViewInfo.image = *m_handle;
-    imageViewInfo.viewType = viewType;
-    imageViewInfo.format = m_format;
-    imageViewInfo.subresourceRange.aspectMask = m_aspectFlags;
-    imageViewInfo.subresourceRange.baseMipLevel = 0;
-    imageViewInfo.subresourceRange.levelCount = m_mipLevels;
-    imageViewInfo.subresourceRange.baseArrayLayer = 0;
-    imageViewInfo.subresourceRange.layerCount = m_arrayLevels;
+CImage::CImage(
+    const CContext& context,
+    vk::Image imported,
+    vk::Extent3D extent, vk::Format format,
+    std::uint32_t mipLevels, std::uint32_t arrayLevels,
+    vk::SampleCountFlagBits sampleCount
+) : m_rawHandle(imported),
+    m_format(format), m_extent(extent),
+    m_mipLevels(mipLevels), m_arrayLevels(arrayLevels), m_sampleCount(sampleCount),
+    m_aspectFlags(DetermineAspect(m_format))
+{
+    CreateView(*context.Device(), DetermineViewType(m_extent, m_arrayLevels));
+}
 
-    m_view = vk::raii::ImageView { *context.Device(), imageViewInfo };
+void CImage::CreateView(const vk::raii::Device& device, vk::ImageViewType viewType) {
+    vk::ImageViewCreateInfo viewInfo {};
+    viewInfo.image = m_rawHandle;
+    viewInfo.viewType = viewType;
+    viewInfo.format = m_format;
+    viewInfo.subresourceRange = { m_aspectFlags, 0, m_mipLevels, 0, m_arrayLevels };
+    m_view = vk::raii::ImageView { device, viewInfo };
 }
 
 void CImage::Clear() {

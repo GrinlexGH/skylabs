@@ -1,33 +1,74 @@
 #pragma once
-#include <skylabs/core/render/vulkan/command_buffer.hpp>
+#include <skylabs/core/render/vulkan/command_buffer_set.hpp>
 
 namespace Vulkan::RG {
-struct PassRequirements {
+struct PassRequirements
+{
     Vulkan::CImage* m_image;
     Vulkan::Usage m_usage;
+
+    vk::Image m_importedImage = nullptr;
+    Vulkan::Usage m_initialUsage;
+
+    PassRequirements(CImage& img, Usage usage) : m_image(&img), m_usage(usage) {}
+    PassRequirements(vk::Image img, Usage initialUsage, Usage lastUsage) : m_usage(lastUsage), m_importedImage(img), m_initialUsage(initialUsage) {}
+};
+
+struct WaitSemaphore
+{
+    vk::Semaphore m_semaphore;
+    vk::PipelineStageFlags m_stage;
+};
+
+struct PassSync
+{
+    std::vector<vk::Semaphore> m_signalSemaphores;
+    std::vector<WaitSemaphore> m_waitSemaphores;
+    vk::Fence m_fence = nullptr;
+};
+
+enum class PassType : std::uint8_t
+{
+    eGraphics,
+    eCompute
 };
 
 struct Pass
 {
-    const CCommandBuffer& m_cmd;
+    PassSync m_sync {};
+    PassType m_type = PassType::eGraphics;
     std::vector<PassRequirements> m_requirements;
-    std::function<void()> m_execute;
+    std::function<void(const CCommandBuffer&)> m_execute;
 };
 
 class CRenderGraph
 {
 public:
     explicit CRenderGraph(std::nullptr_t) {}
+    explicit CRenderGraph(const CContext& context, unsigned int inFlightCount) :
+        m_context(&context),
+        m_inFlightCount(inFlightCount),
+        m_graphicsQueues(context, context.Device().GraphicsQueue().FamilyIndex(), { 3 * inFlightCount }),
+        m_computeQueues(context, context.Device().ComputeQueue().FamilyIndex(), { 1 * inFlightCount })
+    {}
     CRenderGraph(const CRenderGraph&) = delete;
     CRenderGraph(CRenderGraph&&) noexcept = default;
     CRenderGraph& operator=(const CRenderGraph&) = delete;
     CRenderGraph& operator=(CRenderGraph&&) noexcept = default;
     ~CRenderGraph() = default;
 
+    void Clear() { m_passes.clear(); }
     void AddPass(Pass pass);
     void Execute();
 
 private:
+    const CContext* m_context = nullptr;
+
+    unsigned int m_inFlightCount = 1;
+    unsigned int m_inFlightIndex = 0;
+
+    CCommandBufferSet m_graphicsQueues { nullptr };
+    CCommandBufferSet m_computeQueues { nullptr };
     std::vector<Pass> m_passes;
 };
 }

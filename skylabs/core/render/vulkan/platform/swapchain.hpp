@@ -1,5 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/core/render/vulkan/resources/image.hpp>
 
 namespace Vulkan {
 class CSwapchain
@@ -31,9 +32,7 @@ public:
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
     [[nodiscard]] vk::SurfaceKHR Surface() const { return m_associatedSurface; }
 
-    [[nodiscard]] const std::vector<vk::Image>& Images() const { return m_images; }
-    [[nodiscard]] const std::vector<vk::raii::ImageView>& ImageViews() const { return m_imageViews; }
-    [[nodiscard]] std::uint32_t ImageCount() const { return static_cast<std::uint32_t>(m_images.size()); }
+    [[nodiscard]] const std::vector<CImage>& Images() const { return m_images; }
 
 private:
     void CreateSwapchain(
@@ -57,7 +56,6 @@ private:
     vk::Extent2D m_extent;
     vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eFifo;
 
-    std::vector<vk::Image> m_images;
-    std::vector<vk::raii::ImageView> m_imageViews;
+    std::vector<CImage> m_images;
 };
 }

@@ -2,9 +2,6 @@
 
 namespace Vulkan {
 CFrameData::CFrameData(const CContext& context) : m_context(&context) {
-    m_graphicsCommandBuffers = CCommandBufferSet { context, context.Device().GraphicsQueue().FamilyIndex(), { 3 } };
-    m_computeCommandBuffers = CCommandBufferSet { context, context.Device().ComputeQueue().FamilyIndex(), { 1 } };
-
     m_fence = vk::raii::Fence { *m_context->Device(), { vk::FenceCreateFlagBits::eSignaled } };
     m_imageAvailableSemaphore = vk::raii::Semaphore { *m_context->Device(), vk::SemaphoreCreateInfo {} };
 

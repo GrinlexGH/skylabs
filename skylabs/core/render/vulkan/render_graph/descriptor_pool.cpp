@@ -49,7 +49,6 @@ void CDescriptorPool::CreateDescriptorPool() {
     if (poolSizes.empty()) return;
 
     vk::DescriptorPoolCreateInfo poolInfo {};
-    poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
     poolInfo.maxSets = totalSets;
     poolInfo.poolSizeCount = static_cast<std::uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
@@ -62,7 +61,7 @@ void CDescriptorPool::CreateDescriptorSets() {
 
     for (auto& set : m_descriptorSets) {
         std::vector<vk::DescriptorSetLayoutBinding> bindings;
-        for (uint32_t i = 0; i < set.meta.m_descriptors.size(); ++i) {
+        for (std::uint32_t i = 0; i < set.meta.m_descriptors.size(); ++i) {
             const auto& desc = set.meta.m_descriptors[i];
 
             vk::DescriptorSetLayoutBinding binding {};
@@ -110,42 +109,39 @@ void CDescriptorPool::UpdateDescriptorSets(
                 write.descriptorType = g_descriptorTypeMap.at(desc.m_type);
                 write.descriptorCount = 1;
 
-                std::visit([&](auto&& info) {
-                    using T = std::decay_t<decltype(info)>;
+                if (std::holds_alternative<BufferDescriptorInfo>(desc.m_info)) {
+                    auto info = std::get<BufferDescriptorInfo>(desc.m_info);
+                    CBuffer& buffer = bufferManager.GetBuffer(info.m_buffer, frameIdx);
 
-                    if constexpr (std::is_same_v<T, BufferDescriptorInfo>) {
-                        CBuffer& buffer = bufferManager.GetBuffer(info.m_buffer, frameIdx);
+                    vk::DescriptorBufferInfo bInfo {};
+                    bInfo.buffer = *buffer;
+                    bInfo.offset = 0;
+                    bInfo.range = VK_WHOLE_SIZE;
 
-                        vk::DescriptorBufferInfo bInfo {};
-                        bInfo.buffer = *buffer;
-                        bInfo.offset = 0;
-                        bInfo.range = VK_WHOLE_SIZE;
+                    bufferInfos.push_back(bInfo);
+                    write.pBufferInfo = &bufferInfos.back();
+                } else if (std::holds_alternative<SampledImageDescriptorInfo>(desc.m_info)) {
+                    auto info = std::get<SampledImageDescriptorInfo>(desc.m_info);
+                    CImage& image = textureManager.GetTexture(info.m_image, frameIdx);
 
-                        bufferInfos.push_back(bInfo);
-                        write.pBufferInfo = &bufferInfos.back();
-                    }
-                    else if constexpr (std::is_same_v<T, SampledImageDescriptorInfo>) {
-                        CImage& image = textureManager.GetTexture(info.m_image, frameIdx);
+                    vk::DescriptorImageInfo iInfo {};
+                    iInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+                    iInfo.imageView = image.View();
+                    iInfo.sampler = info.m_sampler;
 
-                        vk::DescriptorImageInfo iInfo {};
-                        iInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-                        iInfo.imageView = image.View();
-                        iInfo.sampler = info.m_sampler;
+                    imageInfos.push_back(iInfo);
+                    write.pImageInfo = &imageInfos.back();
+                } else if (std::holds_alternative<StorageImageDescriptorInfo>(desc.m_info)) {
+                    auto info = std::get<StorageImageDescriptorInfo>(desc.m_info);
+                    CImage& image = textureManager.GetTexture(info.m_image, frameIdx);
 
-                        imageInfos.push_back(iInfo);
-                        write.pImageInfo = &imageInfos.back();
-                    }
-                    else if constexpr (std::is_same_v<T, StorageImageDescriptorInfo>) {
-                        CImage& image = textureManager.GetTexture(info.m_image, frameIdx);
+                    vk::DescriptorImageInfo iInfo {};
+                    iInfo.imageLayout = vk::ImageLayout::eGeneral;
+                    iInfo.imageView = image.View();
 
-                        vk::DescriptorImageInfo iInfo {};
-                        iInfo.imageLayout = vk::ImageLayout::eGeneral;
-                        iInfo.imageView = image.View();
-
-                        imageInfos.push_back(iInfo);
-                        write.pImageInfo = &imageInfos.back();
-                    }
-                }, desc.m_info);
+                    imageInfos.push_back(iInfo);
+                    write.pImageInfo = &imageInfos.back();
+                }
 
                 descriptorWrites.push_back(write);
             }

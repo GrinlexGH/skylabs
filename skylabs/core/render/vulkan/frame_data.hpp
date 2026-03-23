@@ -14,8 +14,6 @@ public:
     CFrameData& operator=(CFrameData&&) noexcept = default;
     ~CFrameData() = default;
 
-    [[nodiscard]] const std::vector<CCommandBuffer>& GetComputeCommandBuffers() const { return m_computeCommandBuffers.PrimaryBuffers(); }
-    [[nodiscard]] const std::vector<CCommandBuffer>& GetGraphicsCommandBuffers() const { return m_graphicsCommandBuffers.PrimaryBuffers(); }
     [[nodiscard]] const vk::raii::Fence& GetFence() const { return m_fence; }
     [[nodiscard]] const vk::raii::Semaphore& GetImageAvailableSemaphore() const { return m_imageAvailableSemaphore; }
     [[nodiscard]] const std::vector<vk::raii::Semaphore>& GetSemaphores() const { return m_semaphores; }
@@ -25,8 +23,6 @@ public:
 private:
     const CContext* m_context = nullptr;
 
-    CCommandBufferSet m_graphicsCommandBuffers { nullptr };
-    CCommandBufferSet m_computeCommandBuffers { nullptr };
     vk::raii::Fence m_fence = nullptr;
     vk::raii::Semaphore m_imageAvailableSemaphore = nullptr;
     std::vector<vk::raii::Semaphore> m_semaphores;

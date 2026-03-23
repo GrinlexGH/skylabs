@@ -1,6 +1,7 @@
 #pragma once
 #include <skylabs/core/render/renderer.hpp>
 
+#include <skylabs/core/render/vulkan/render_graph/graph.hpp>
 #include <skylabs/core/render/vulkan/render_graph/descriptor_pool.hpp>
 
 #include <skylabs/core/render/vulkan/frame_data.hpp>
@@ -46,6 +47,8 @@ private:
 
     CSurface m_surface { nullptr };
     CSwapchain m_swapchain { nullptr };
+
+    RG::CRenderGraph m_graph { nullptr };
 
     CPipelineLayoutCache m_pipelineLayoutCache { nullptr };
 

@@ -45,14 +45,19 @@ class CImage
 public:
     explicit CImage(std::nullptr_t) {}
     explicit CImage(const CContext& context, ImageCreateInfo options = {});
+    explicit CImage(const CContext& context,
+        vk::Image imported,
+        vk::Extent3D extent, vk::Format format,
+        std::uint32_t mipLevels, std::uint32_t arrayLevels,
+        vk::SampleCountFlagBits sampleCount
+    );
     CImage(const CImage&) = delete;
     CImage(CImage&&) noexcept = default;
     CImage& operator=(const CImage&) = delete;
     CImage& operator=(CImage&&) noexcept = default;
     ~CImage() = default;
 
-    [[nodiscard]] vk::Image operator*() const noexcept { return *m_handle; }
-    [[nodiscard]] const vk::Image* operator->() const noexcept { return &*m_handle; }
+    [[nodiscard]] vk::Image operator*() const noexcept { return m_rawHandle; }
 
     [[nodiscard]] const vk::raii::ImageView& View() const noexcept { return m_view; }
     [[nodiscard]] vk::Format Format() const noexcept { return m_format; }
@@ -71,6 +76,9 @@ public:
     void CopyBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const;
 
 private:
+    void CreateView(const vk::raii::Device& device, vk::ImageViewType viewType);
+
+    vk::Image m_rawHandle { nullptr };
     vma::raii::Image m_handle { nullptr };
     vk::raii::ImageView m_view { nullptr };
 

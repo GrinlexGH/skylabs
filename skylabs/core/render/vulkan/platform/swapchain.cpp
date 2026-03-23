@@ -95,26 +95,9 @@ void CSwapchain::CreateSwapchain(
 }
 
 void CSwapchain::CreateImages() {
-    m_imageViews.clear();
-    m_images = m_handle.getImages();
-    m_imageViews.reserve(m_images.size());
-
-    for (const auto& image : m_images) {
-        vk::ImageViewCreateInfo imageViewInfo {};
-        imageViewInfo.image = image;
-        imageViewInfo.viewType = vk::ImageViewType::e2D;
-        imageViewInfo.format = m_surfaceFormat.format;
-        imageViewInfo.components.r = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.components.g = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.components.b = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.components.a = vk::ComponentSwizzle::eIdentity;
-        imageViewInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        imageViewInfo.subresourceRange.baseMipLevel = 0;
-        imageViewInfo.subresourceRange.levelCount = 1;
-        imageViewInfo.subresourceRange.baseArrayLayer = 0;
-        imageViewInfo.subresourceRange.layerCount = 1;
-
-        m_imageViews.emplace_back(*m_context->Device(), imageViewInfo);
+    m_images.clear();
+    for (auto& image : m_handle.getImages()) {
+        m_images.emplace_back(*m_context, image, vk::Extent3D { m_extent, 1 }, m_surfaceFormat.format, 1, 1, vk::SampleCountFlagBits::e1);
     }
 }
 

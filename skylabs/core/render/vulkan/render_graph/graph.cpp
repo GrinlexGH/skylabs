@@ -37,12 +37,15 @@ void CRenderGraph::AddPass(Pass pass) {
 }
 
 void CRenderGraph::Execute() {
+    int graphicsI = 0;
+    int computeI = 0;
     for (auto& p : m_passes) {
+        auto cmd = p.m_type == PassType::eGraphics ? m_graphicsQueues.PrimaryBuffers()[m_inFlightIndex * 3 + graphicsI++] : m_computeQueues.PrimaryBuffers()[m_inFlightIndex + computeI++];
         std::vector<Vulkan::ImageBarrierInfo> syncBarriers;
 
         for (auto& req : p.m_requirements) {
             if (req.m_image->SyncState().m_usage != req.m_usage) {
-                
+
                 auto [stage, access, layout] = MapUsageToVulkan(req.m_usage);
 
                 syncBarriers.push_back({ *req.m_image, stage, access, layout });
@@ -53,14 +56,39 @@ void CRenderGraph::Execute() {
             }
         }
 
-        p.m_cmd->reset();
-        p.m_cmd->begin({});
+        cmd->reset();
+        cmd->begin({});
 
         if (!syncBarriers.empty()) {
-            p.m_cmd.PipelineBarrier(syncBarriers);
+            cmd.PipelineBarrier(syncBarriers);
         }
 
-        p.m_execute();
+        p.m_execute(cmd);
+
+        std::vector<vk::Semaphore> waitSems;
+        std::vector<vk::PipelineStageFlags> waitStages;
+        waitSems.reserve(p.m_sync.m_waitSemaphores.size());
+        waitStages.reserve(p.m_sync.m_waitSemaphores.size());
+        for (auto& waitSem : p.m_sync.m_waitSemaphores) {
+            waitSems.push_back(waitSem.m_semaphore);
+            waitStages.push_back(waitSem.m_stage);
+        }
+
+        vk::SubmitInfo finalSubmit {};
+        finalSubmit.waitSemaphoreCount = static_cast<std::uint32_t>(p.m_sync.m_waitSemaphores.size());
+        finalSubmit.pWaitSemaphores = waitSems.data();
+        finalSubmit.pWaitDstStageMask = waitStages.data();
+        finalSubmit.commandBufferCount = 1;
+        finalSubmit.pCommandBuffers = &**cmd;
+        finalSubmit.signalSemaphoreCount = p.m_sync.m_signalSemaphores.size();
+        finalSubmit.pSignalSemaphores = p.m_sync.m_signalSemaphores.data();
+        if (p.m_type == PassType::eGraphics) {
+            m_context->Device().GraphicsQueue()->submit(finalSubmit, p.m_sync.m_fence);
+        } else {
+            m_context->Device().ComputeQueue()->submit(finalSubmit, p.m_sync.m_fence);
+        }
     }
+
+    m_inFlightIndex = (m_inFlightIndex + 1) % m_inFlightCount;
 }
 }
