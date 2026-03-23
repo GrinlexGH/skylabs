@@ -32,7 +32,7 @@ public:
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
     [[nodiscard]] vk::SurfaceKHR Surface() const { return m_associatedSurface; }
 
-    [[nodiscard]] const std::vector<CImage>& Images() const { return m_images; }
+    [[nodiscard]] std::span<CImage> Images() { return m_images; }
 
 private:
     void CreateSwapchain(

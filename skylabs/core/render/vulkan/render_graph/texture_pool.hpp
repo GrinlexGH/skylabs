@@ -1,7 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
-#include <skylabs/public/utils.hpp>
 
 #include <variant>
 
@@ -15,29 +13,12 @@ struct RelativeTextureSize
 
 using TextureExtent = std::variant<vk::Extent3D, RelativeTextureSize>;
 
-enum class TextureFormat : std::uint8_t
-{
-    eRGBA8888Srgb = 0,
-    eRGBA8888Unorm,
-    eDepthOptimal
-};
-
-enum class TextureUsageBits : std::uint8_t
-{
-    eAttachment = 1 << 0,
-    eDepthAttachment = 1 << 1,
-    eSampled = 1 << 2,
-    eStorage = 1 << 3
-};
-
-using TextureUsage = Utils::Flags<TextureUsageBits>;
-
 struct TextureDescirption
 {
-    TextureFormat m_format = TextureFormat::eRGBA8888Srgb;
-    TextureUsage m_usage = TextureUsageBits::eSampled;
     TextureExtent m_extent = RelativeTextureSize {};
-    bool m_sampled = false;
+    vk::Format m_format = vk::Format::eR8G8B8A8Srgb;
+    vk::ImageUsageFlags m_usage = vk::ImageUsageFlagBits::eSampled;
+    vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
     std::uint32_t m_mipLevels = 1;
     std::uint32_t m_arrayLevels = 1;
 };
@@ -51,7 +32,7 @@ class CTexturePool
 {
 public:
     explicit CTexturePool(std::nullptr_t) {}
-    explicit CTexturePool(const CContext& context, Utils::Extent2D viewportExtent, std::uint32_t inFlightCount);
+    explicit CTexturePool(const CContext& context, vk::Extent2D viewportExtent, std::uint32_t inFlightCount);
     CTexturePool(const CTexturePool&) = delete;
     CTexturePool(CTexturePool&&) noexcept = default;
     CTexturePool& operator=(const CTexturePool&) = delete;
@@ -64,12 +45,12 @@ public:
     void GenerateTextures();
     [[nodiscard]] CImage& GetTexture(TextureHandle handle, int index = -1);
 
-    void Resize(Utils::Extent2D newViewportExtent);
+    void Resize(vk::Extent2D newViewportExtent);
     void SetFrameIndex(std::uint32_t newFrameIndex) { m_frameIndex = newFrameIndex; }
 
 private:
     const CContext* m_context = nullptr;
-    Utils::Extent2D m_viewportExtent;
+    vk::Extent2D m_viewportExtent;
     std::uint32_t m_inFlightCount = 0;
     std::uint32_t m_frameIndex = 0;
 
@@ -92,13 +73,3 @@ private:
     CImage CreateImage(const TextureMeta& meta);
 };
 }
-
-template <>
-struct Utils::FlagTraits<Vulkan::TextureUsageBits>
-{
-    static constexpr bool isBitmask = true;
-    static constexpr Vulkan::TextureUsage allFlags =
-        Vulkan::TextureUsageBits::eAttachment |
-        Vulkan::TextureUsageBits::eDepthAttachment |
-        Vulkan::TextureUsageBits::eSampled;
-};

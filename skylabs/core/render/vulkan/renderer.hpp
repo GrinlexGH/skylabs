@@ -33,13 +33,9 @@ public:
     void Draw(glm::mat4 viewMat, float deltaTime) override;
 
 private:
-    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;
+    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 2;
 
     void Resize(CFrameData& currentFrameData);
-    void UpdateMainDescriptorSets();
-    void UpdateComputeDescriptorSets();
-    void UpdateSwapchainDescriptorSets();
-    void ReleaseComputeBuffers();
     void LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
     void LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
 

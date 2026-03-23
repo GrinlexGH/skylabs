@@ -10,22 +10,16 @@ enum class Usage : std::uint8_t
     eDepthRead,
     eSampledFragment,
     eComputeWrite,
+    eTransferWrite,
     ePresent
 };
 
+std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2, vk::ImageLayout> MapUsageToVulkan(Usage usage);
+
 struct ImageSyncState
 {
-    vk::PipelineStageFlags2 m_stage = vk::PipelineStageFlagBits2::eNone;
-    vk::AccessFlags2 m_access = vk::AccessFlagBits2::eNone;
-    vk::ImageLayout m_layout = vk::ImageLayout::eUndefined;
-    std::uint32_t m_queue = vk::QueueFamilyIgnored;
     Usage m_usage = Usage::eNone;
-
-    static inline const ImageSyncState ColorWrite() { return { vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite, vk::ImageLayout::eColorAttachmentOptimal }; }
-    static inline const ImageSyncState DepthWrite() { return { vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests, vk::AccessFlagBits2::eDepthStencilAttachmentWrite, vk::ImageLayout::eDepthStencilAttachmentOptimal }; }
-    static inline const ImageSyncState ShaderRead() { return { vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal }; }
-    static inline const ImageSyncState ComputeWrite() { return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite, vk::ImageLayout::eGeneral }; }
-    static inline const ImageSyncState Present() { return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone, vk::ImageLayout::ePresentSrcKHR }; }
+    std::uint32_t m_queue = vk::QueueFamilyIgnored;
 };
 
 struct ImageCreateInfo
@@ -40,7 +34,7 @@ struct ImageCreateInfo
 
 class CImage
 {
-    friend class CCommandBuffer;
+    friend class CRenderGraph;
 
 public:
     explicit CImage(std::nullptr_t) {}
@@ -58,6 +52,7 @@ public:
     ~CImage() = default;
 
     [[nodiscard]] vk::Image operator*() const noexcept { return m_rawHandle; }
+    [[nodiscard]] const vk::raii::Image& operator->() const noexcept { return m_handle; }
 
     [[nodiscard]] const vk::raii::ImageView& View() const noexcept { return m_view; }
     [[nodiscard]] vk::Format Format() const noexcept { return m_format; }
@@ -67,13 +62,11 @@ public:
     [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
     [[nodiscard]] vk::ImageAspectFlags AspectFlags() const noexcept { return m_aspectFlags; }
     [[nodiscard]] vk::ImageSubresourceRange FullRange() const noexcept { return { m_aspectFlags, 0, m_mipLevels, 0, m_arrayLevels }; }
-    [[nodiscard]] ImageSyncState SyncState() const noexcept { return m_syncState; }
 
+    [[nodiscard]] ImageSyncState SyncState() const noexcept { return m_syncState; }
     void SetSyncState(ImageSyncState state) noexcept { m_syncState = state; }
 
     void Clear();
-
-    void CopyBufferToImage(const vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Extent2D& extent) const;
 
 private:
     void CreateView(const vk::raii::Device& device, vk::ImageViewType viewType);

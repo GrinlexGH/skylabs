@@ -4,14 +4,11 @@
 namespace Vulkan::RG {
 struct PassRequirements
 {
-    Vulkan::CImage* m_image;
-    Vulkan::Usage m_usage;
+    CImage& m_image;
+    Usage m_usage;
+    Usage m_usageAfter = Usage::eNone;
 
-    vk::Image m_importedImage = nullptr;
-    Vulkan::Usage m_initialUsage;
-
-    PassRequirements(CImage& img, Usage usage) : m_image(&img), m_usage(usage) {}
-    PassRequirements(vk::Image img, Usage initialUsage, Usage lastUsage) : m_usage(lastUsage), m_importedImage(img), m_initialUsage(initialUsage) {}
+    PassRequirements(CImage& img, Usage usage, Usage usageAfter = Usage::eNone) : m_image(img), m_usage(usage), m_usageAfter(usageAfter) {}
 };
 
 struct WaitSemaphore

@@ -102,25 +102,4 @@ void CImage::Clear() {
     m_sampleCount = vk::SampleCountFlagBits::e1;
     m_aspectFlags = vk::ImageAspectFlagBits::eNone;
 }
-
-void CImage::CopyBufferToImage(
-    const vk::CommandBuffer& commandBuffer,
-    const vk::Buffer& buffer,
-    const vk::Extent2D& extent
-) const {
-    vk::BufferImageCopy region;
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = vk::Offset3D {0, 0, 0};
-    region.imageExtent = vk::Extent3D { extent, 1 };
-
-    commandBuffer.copyBufferToImage(buffer, *m_handle, vk::ImageLayout::eTransferDstOptimal, region);
-}
 }

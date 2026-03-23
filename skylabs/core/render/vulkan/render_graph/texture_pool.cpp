@@ -3,7 +3,7 @@
 namespace Vulkan {
 CTexturePool::CTexturePool(
     const CContext& context,
-    Utils::Extent2D viewportExtent,
+    vk::Extent2D viewportExtent,
     std::uint32_t inFlightCount
 ) : m_context(&context), m_viewportExtent(viewportExtent), m_inFlightCount(inFlightCount)
 { }
@@ -47,7 +47,7 @@ void CTexturePool::GenerateTextures() {
             images.push_back(std::move(image));
         }
 
-        return std::holds_alternative<vk::Extent3D>(meta.m_description.m_extent);
+        return !std::holds_alternative<RelativeTextureSize>(meta.m_description.m_extent);
     });
 }
 
@@ -61,7 +61,7 @@ CImage& CTexturePool::GetTexture(TextureHandle handle, int index) {
     return entry.m_images[(index == -1) ? m_frameIndex : static_cast<uint32_t>(index)];
 }
 
-void CTexturePool::Resize(const Utils::Extent2D newViewportExtent) {
+void CTexturePool::Resize(const vk::Extent2D newViewportExtent) {
     m_viewportExtent = newViewportExtent;
     GenerateTextures();
 }
@@ -72,39 +72,12 @@ CImage CTexturePool::CreateImage(const TextureMeta& meta) {
     vk::Extent3D extent { 1, 1, 1 };
     if (std::holds_alternative<RelativeTextureSize>(meta.m_description.m_extent)) {
         auto textureSize = std::get<RelativeTextureSize>(meta.m_description.m_extent);
-        extent.width = static_cast<std::uint32_t>(m_viewportExtent.m_width * textureSize.m_scaleX);
-        extent.height = static_cast<std::uint32_t>(m_viewportExtent.m_height * textureSize.m_scaleY);
+        extent.width = static_cast<std::uint32_t>(m_viewportExtent.width * textureSize.m_scaleX);
+        extent.height = static_cast<std::uint32_t>(m_viewportExtent.height * textureSize.m_scaleY);
     } else {
         extent = std::get<vk::Extent3D>(meta.m_description.m_extent);
     }
 
-    vk::Format format;
-    switch (desc.m_format) {
-        case TextureFormat::eRGBA8888Srgb: format = vk::Format::eR8G8B8A8Srgb; break;
-        case TextureFormat::eRGBA8888Unorm: format = vk::Format::eR8G8B8A8Unorm; break;
-        case TextureFormat::eDepthOptimal: format = vk::Format::eD32Sfloat; break; // TODO: Find formats
-        default: std::unreachable();
-    };
-
-    vk::ImageUsageFlags usage;
-    if (desc.m_usage & TextureUsageBits::eAttachment) {
-        usage |= vk::ImageUsageFlagBits::eColorAttachment;
-    }
-
-    if (desc.m_usage & TextureUsageBits::eDepthAttachment) {
-        usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
-    }
-
-    if (desc.m_usage & TextureUsageBits::eSampled) {
-        usage |= vk::ImageUsageFlagBits::eSampled;
-    }
-
-    if (desc.m_usage & TextureUsageBits::eStorage) {
-        usage |= vk::ImageUsageFlagBits::eStorage;
-    }
-
-    vk::SampleCountFlagBits sampleCount = desc.m_sampled ? vk::SampleCountFlagBits::e8 : vk::SampleCountFlagBits::e1;
-
-    return CImage { *m_context, { extent, format, desc.m_mipLevels, desc.m_arrayLevels, sampleCount, usage } };
+    return CImage { *m_context, { extent, desc.m_format, desc.m_mipLevels, desc.m_arrayLevels, desc.m_sampleCount, desc.m_usage } };
 }
 }

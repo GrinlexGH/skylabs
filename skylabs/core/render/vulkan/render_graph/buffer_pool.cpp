@@ -1,24 +1,5 @@
 #include <skylabs/core/render/vulkan/render_graph/buffer_pool.hpp>
 
-#include <frozen/map.h>
-
-namespace {
-constexpr frozen::map<Vulkan::BufferUsageFlagBits, vk::BufferUsageFlagBits, 1> g_BufferUsageMap
-{
-    { Vulkan::BufferUsageFlagBits::eUniformBuffer, vk::BufferUsageFlagBits::eUniformBuffer },
-};
-
-vk::BufferUsageFlags GetVkBufferUsageFlags(Vulkan::BufferUsageFlags stage) {
-    vk::BufferUsageFlags flags;
-    for (auto const& [bit, vkBit] : g_BufferUsageMap) {
-        if (stage & bit) {
-            flags |= vkBit;
-        }
-    }
-    return flags;
-}
-}
-
 namespace Vulkan {
 CBufferPool::CBufferPool(
     const CContext& context,
@@ -51,7 +32,7 @@ void CBufferPool::GenerateBuffers() {
         return CBuffer {
             *m_context,
             meta.m_description.m_size,
-            GetVkBufferUsageFlags(meta.m_description.m_usage),
+            meta.m_description.m_usage,
             meta.m_description.m_location
         };
     };

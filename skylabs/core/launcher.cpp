@@ -121,7 +121,6 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::CWindow& wi
             renderer->Draw(g_camera.GetViewMatrix(), deltaTime);
         }
     }
-    SteamAPI_RunCallbacks();
 }
 
 // #define ENABLE_BENCHMARKS

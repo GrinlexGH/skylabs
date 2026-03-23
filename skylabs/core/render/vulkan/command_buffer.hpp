@@ -1,35 +1,14 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
+#include <skylabs/core/render/vulkan/resources/buffer.hpp>
 
 namespace Vulkan {
-enum class BarrierType : std::uint8_t
+struct ImageBarrierInfo
 {
-    Regular,
-    Release,
-    Acquire
-};
-
-struct ImageBarrierInfo {
-    vk::ImageMemoryBarrier2 m_barrier {
-        {}, {},
-        {}, {},
-        vk::ImageLayout::eUndefined, vk::ImageLayout::eUndefined,
-        vk::QueueFamilyIgnored, vk::QueueFamilyIgnored,
-        {}, {}
-    };
-
-    CImage* m_sourceCImage = nullptr;
-
-    ImageBarrierInfo(vk::ImageMemoryBarrier2 barrier);
-    ImageBarrierInfo(
-        CImage& img,
-        vk::PipelineStageFlags2 dstStage,
-        vk::AccessFlags2 dstAccess,
-        vk::ImageLayout newLayout,
-        std::uint32_t srcQueue = vk::QueueFamilyIgnored,
-        std::uint32_t dstQueue = vk::QueueFamilyIgnored
-    );
+    const CImage& m_image;
+    Usage m_oldUsage = Usage::eNone;
+    Usage m_newUsage = Usage::eNone;
 };
 
 class CCommandBuffer
@@ -43,20 +22,12 @@ public:
 
     void PipelineBarrier(std::vector<ImageBarrierInfo> imageBarriers) const;
 
-    void ReleaseOwnership(const CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, vk::ImageLayout newLayout) const;
+    void ReleaseOwnership(const CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, Usage oldUsage, Usage newUsage) const;
+    void AcquireOwnership(CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, Usage oldUsage, Usage newUsage) const;
 
-    void AcquireOwnership(CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, vk::ImageLayout newLayout) const;
+    void Copy(const CImage& dst, const CBuffer& src) const;
 
 private:
     const vk::raii::CommandBuffer* m_handle = nullptr;
-
-    vk::ImageMemoryBarrier2 CreateImageBarrier(
-        vk::Image image,
-        vk::ImageLayout oldLayout,
-        vk::ImageLayout newLayout,
-        vk::ImageAspectFlags aspectMask,
-        uint32_t mipLevels,
-        uint32_t arrayLayers
-    ) const;
 };
 }

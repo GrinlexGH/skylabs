@@ -26,7 +26,7 @@ struct StorageImageDescriptorInfo {
 
 struct DescriptorDescription
 {
-    DescriptorType m_type;
+    vk::DescriptorType m_type;
     vk::ShaderStageFlags m_shaderStages;
     std::variant<BufferDescriptorInfo, SampledImageDescriptorInfo, StorageImageDescriptorInfo> m_info;
 };

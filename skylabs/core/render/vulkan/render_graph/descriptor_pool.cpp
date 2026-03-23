@@ -1,16 +1,6 @@
 #include <skylabs/core/render/vulkan/render_graph/descriptor_pool.hpp>
 
-#include <frozen/map.h>
 #include <deque>
-
-namespace {
-constexpr frozen::map<Vulkan::DescriptorType, vk::DescriptorType, 3> g_descriptorTypeMap
-{
-    { Vulkan::DescriptorType::eUniformBuffer, vk::DescriptorType::eUniformBuffer },
-    { Vulkan::DescriptorType::eStorageImage, vk::DescriptorType::eStorageImage },
-    { Vulkan::DescriptorType::eCombinedImageSampler, vk::DescriptorType::eCombinedImageSampler },
-};
-}
 
 namespace Vulkan {
 CDescriptorPool::CDescriptorPool(
@@ -26,24 +16,23 @@ DescriptorSetHandle CDescriptorPool::CreateDescriptorSet(std::initializer_list<c
 }
 
 void CDescriptorPool::CreateDescriptorPool() {
-    std::array<uint32_t, 3> counts {};
-    std::uint32_t totalSets = 0;
+    std::unordered_map<vk::DescriptorType, unsigned int> typeCount;
+    unsigned int totalTypes = 0;
+    unsigned int totalSets = 0;
 
     for (const auto& set : m_descriptorSets) {
         totalSets += m_inFlightCount;
         for (const auto& desc : set.meta.m_descriptors) {
-            counts[static_cast<std::size_t>(desc.m_type)] += m_inFlightCount;
+            typeCount[desc.m_type] += m_inFlightCount;
+            totalTypes += m_inFlightCount;
         }
     }
 
     std::vector<vk::DescriptorPoolSize> poolSizes;
-    poolSizes.reserve(counts.size());
+    poolSizes.reserve(totalTypes);
 
-    for (auto const& [rgType, vkType] : g_descriptorTypeMap) {
-        uint32_t count = counts[static_cast<size_t>(rgType)];
-        if (count > 0) {
-            poolSizes.emplace_back(vkType, count);
-        }
+    for (auto const& [type, count] : typeCount) {
+        poolSizes.emplace_back(type, count);
     }
 
     if (poolSizes.empty()) return;
@@ -66,7 +55,7 @@ void CDescriptorPool::CreateDescriptorSets() {
 
             vk::DescriptorSetLayoutBinding binding {};
             binding.binding = i;
-            binding.descriptorType = g_descriptorTypeMap.at(desc.m_type);
+            binding.descriptorType = desc.m_type;
             binding.descriptorCount = 1;
             binding.stageFlags = desc.m_shaderStages;
 
@@ -106,7 +95,7 @@ void CDescriptorPool::UpdateDescriptorSets(
                 write.dstSet = set.m_descriptorSets[frameIdx];
                 write.dstBinding = bindingIdx;
                 write.dstArrayElement = 0;
-                write.descriptorType = g_descriptorTypeMap.at(desc.m_type);
+                write.descriptorType = desc.m_type;
                 write.descriptorCount = 1;
 
                 if (std::holds_alternative<BufferDescriptorInfo>(desc.m_info)) {

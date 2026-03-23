@@ -1,23 +1,12 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
-#include <skylabs/public/utils.hpp>
-
-#include <variant>
 
 namespace Vulkan {
-enum class BufferUsageFlagBits : std::uint8_t
-{
-    eUniformBuffer = 1 << 0,
-};
-
-using BufferUsageFlags = Utils::Flags<BufferUsageFlagBits>;
-
 struct BufferDescirption
 {
     std::size_t m_size = 0;
     MemoryLocation m_location = MemoryLocation::eDeviceOnly;
-    BufferUsageFlags m_usage;
+    vk::BufferUsageFlags m_usage;
     bool m_isInFlight = false;
 };
 
@@ -66,9 +55,3 @@ private:
     std::vector<Buffer> m_buffers;
 };
 }
-
-template <>
-struct Utils::FlagTraits<Vulkan::BufferUsageFlagBits>
-{
-    static constexpr Vulkan::BufferUsageFlags allFlags = Vulkan::BufferUsageFlagBits::eUniformBuffer;
-};
