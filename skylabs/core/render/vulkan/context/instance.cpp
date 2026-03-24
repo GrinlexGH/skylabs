@@ -84,10 +84,28 @@ std::unordered_map<std::string_view, bool> RequestExtensions(const std::span<con
 }
 
 namespace Vulkan {
-CInstance::CInstance(const CProfile profile, InstanceCreateInfo options) {
+CInstance::CInstance(InstanceCreateInfo options) {
+    VULKAN_HPP_DEFAULT_DISPATCHER.init();
     const vk::raii::Context context;
+
+    // API version
+    if (!context.getDispatcher()->vkEnumerateInstanceVersion) {
+        throw std::runtime_error("Vulkan 1.0 is not supported");
+    }
+
+    const std::uint32_t currentApiVersion = context.enumerateInstanceVersion();
+
+    if (currentApiVersion >= vk::ApiVersion14) {
+        m_apiVersion = vk::ApiVersion14;
+    } else if (currentApiVersion >= vk::ApiVersion13) {
+        m_apiVersion = vk::ApiVersion13;
+    } else {
+        throw std::runtime_error("Vulkan below 1.3 is not supported");
+    }
+
+    // Extensions & layers
     const std::vector<const char*> enabledLayers = SetupLayers(context);
-    const std::vector<const char*> enabledExtensions = SetupExtensions(profile, context, options.m_requiredExtensions, enabledLayers);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(context, options.m_requiredExtensions, enabledLayers);
 
     // Enable extensions
     void* pNext = nullptr;
@@ -107,7 +125,7 @@ CInstance::CInstance(const CProfile profile, InstanceCreateInfo options) {
             vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
         debugUtilsCreateInfo.pfnUserCallback = DebugCallback;
 
-        Utils::AppendToPNextChain(pNext, &debugUtilsCreateInfo);
+        Utils::LinkPNextChain(pNext, &debugUtilsCreateInfo);
 
         isDebugUtilsEnabled = true;
     }
@@ -118,7 +136,7 @@ CInstance::CInstance(const CProfile profile, InstanceCreateInfo options) {
     applicationInfo.applicationVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     applicationInfo.pEngineName = Skylabs::NAME;
     applicationInfo.engineVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
-    applicationInfo.apiVersion = profile.GetAPIVersion();
+    applicationInfo.apiVersion = m_apiVersion;
 
     vk::InstanceCreateInfo instanceCreateInfo {};
     instanceCreateInfo.pNext = pNext;
@@ -128,7 +146,7 @@ CInstance::CInstance(const CProfile profile, InstanceCreateInfo options) {
     instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     instanceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
-    m_handle = vk::raii::Instance { context, profile.CreateInstance(instanceCreateInfo) };
+    m_handle = vk::raii::Instance { context, instanceCreateInfo };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
 #ifdef DEBUG
@@ -139,7 +157,6 @@ CInstance::CInstance(const CProfile profile, InstanceCreateInfo options) {
 }
 
 std::vector<const char*> CInstance::SetupExtensions(
-    const CProfile profile,
     const vk::raii::Context& context,
     const std::span<const char* const> requiredExtensions,
     const std::vector<const char*>& enabledLayers
@@ -155,7 +172,7 @@ std::vector<const char*> CInstance::SetupExtensions(
 
     std::vector<std::string_view> missingExtensions {};
     for (const auto& [name, required] : requestedExtensions) {
-        if (!m_enabledExtensions.contains(name) && required) {
+        if (required && !m_enabledExtensions.contains(name)) {
             missingExtensions.emplace_back(name);
         }
     }
@@ -172,11 +189,6 @@ std::vector<const char*> CInstance::SetupExtensions(
     enabledExtensions.reserve(m_enabledExtensions.size());
     for (const auto& ext : m_enabledExtensions) {
         enabledExtensions.push_back(ext.c_str());
-    }
-
-    // Add extensions from profile
-    for (const auto& [name, _] : profile.GetInstanceExtensions()) {
-        m_enabledExtensions.insert(name);
     }
 
     return enabledExtensions;

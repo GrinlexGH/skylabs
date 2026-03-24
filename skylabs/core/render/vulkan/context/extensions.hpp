@@ -2,17 +2,9 @@
 #include <skylabs/core/pch.hpp>
 
 namespace Vulkan::Utils {
-inline void AppendToPNextChain(void*& currentChain, void* newExtension) {
-    if (currentChain == nullptr) {
-        currentChain = newExtension;
-        return;
-    }
-
-    auto* current = static_cast<vk::BaseOutStructure*>(currentChain);
-    while (current->pNext != nullptr) {
-        current = current->pNext;
-    }
-
-    current->pNext = static_cast<vk::BaseOutStructure*>(newExtension);
+inline void LinkPNextChain(void*& currentChain, void* newExtension) {
+    auto* newStruct = static_cast<vk::BaseOutStructure*>(newExtension);
+    newStruct->pNext = static_cast<vk::BaseOutStructure*>(currentChain);
+    currentChain = newExtension;
 }
 }

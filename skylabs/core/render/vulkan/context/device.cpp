@@ -3,35 +3,47 @@
 
 #include <fmt/ranges.h>
 
-struct CQueueFamilyIndices
+struct QueueFamilyIndices
 {
     std::uint32_t m_graphicsFamily = 0;
     std::uint32_t m_presentFamily = 0;
     std::uint32_t m_computeFamily = 0;
+    std::uint32_t m_transferFamily = 0;
 };
 
 namespace {
+template<typename T>
+void RequireFeature(const T& available, T& target, vk::Bool32 T::*member, const char* name) {
+    if (available.*member == vk::True) {
+        target.*member = vk::True;
+    } else {
+        throw std::runtime_error(std::string("Device doesn't support ") + name);
+    }
+}
+
+template<typename T>
+void OptionalFeature(const T& available, T& target, vk::Bool32 T::*member, bool& capFlag) {
+    if (available.*member == vk::True) {
+        target.*member = vk::True;
+        capFlag = true;
+    }
+}
+
 std::unordered_map<std::string, bool> RequestExtensions() {
     std::unordered_map<std::string, bool> requestedExtensions;
     auto requestExtension = [&](const char* name, bool required = false) { requestedExtensions.try_emplace(name, required); };
 
     requestExtension(vk::KHRSwapchainExtensionName, true);
-
-    requestExtension(vk::EXTMemoryBudgetExtensionName, false);
-    requestExtension(vk::AMDDeviceCoherentMemoryExtensionName, false);
-    requestExtension(vk::EXTMemoryPriorityExtensionName, false);
     requestExtension(vk::KHRMaintenance5ExtensionName, false);
-#ifdef PLATFORM_WINDOWS
-    requestExtension(vk::KHRExternalMemoryWin32ExtensionName, false);
-#endif
 
     return requestedExtensions;
 }
 
-CQueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance instance, const Vulkan::CPhysicalDevice& gpu) {
+QueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance instance, const Vulkan::CPhysicalDevice& gpu) {
     std::optional<std::uint32_t> graphicsFamily;
     std::optional<std::uint32_t> presentFamily;
     std::optional<std::uint32_t> computeFamily;
+    std::optional<std::uint32_t> transferFamily;
     const std::vector<vk::QueueFamilyProperties>& queueFamilies = gpu->getQueueFamilyProperties();
 
     for (std::uint32_t i = 0; i < queueFamilies.size(); ++i) {
@@ -39,9 +51,18 @@ CQueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance i
             graphicsFamily.emplace(i);
         }
 
-        // Graphics queue guarantees compute queue
+        // Graphics queue guarantees compute
         if (!computeFamily.has_value() && queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) {
             computeFamily.emplace(i);
+        }
+
+        // Graphics queue guarantees compute
+        if (!transferFamily.has_value() &&
+            (queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer ||
+            queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics ||
+            queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute)
+        ) {
+            transferFamily.emplace(i);
         }
 
         if (!presentFamily.has_value() && window->IsQueueFamilySupportPresent(instance, *gpu, i)) {
@@ -63,11 +84,21 @@ CQueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance i
         }
     }
 
-    return { .m_graphicsFamily = *graphicsFamily, .m_presentFamily = *presentFamily, .m_computeFamily = *computeFamily };
+    // Search for dedicated transfer queue family
+    for (std::uint32_t i = 0; i < queueFamilies.size(); ++i) {
+        if (!(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) &&
+            queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer
+        ) {
+            transferFamily.emplace(i);
+            break;
+        }
+    }
+
+    return { *graphicsFamily, *presentFamily, *computeFamily, *transferFamily };
 };
 
-std::vector<vk::DeviceQueueCreateInfo> GetQueueCreateInfos(const CQueueFamilyIndices& indices) {
-    std::array uniqueQueueFamilies { indices.m_graphicsFamily, indices.m_presentFamily, indices.m_computeFamily };
+std::vector<vk::DeviceQueueCreateInfo> GetQueueCreateInfos(const QueueFamilyIndices& indices) {
+    std::array uniqueQueueFamilies { indices.m_graphicsFamily, indices.m_presentFamily, indices.m_computeFamily, indices.m_transferFamily };
     std::ranges::sort(uniqueQueueFamilies);
     const std::size_t uniqueCount = std::distance(uniqueQueueFamilies.begin(), std::ranges::unique(uniqueQueueFamilies).begin());
 
@@ -88,26 +119,57 @@ std::vector<vk::DeviceQueueCreateInfo> GetQueueCreateInfos(const CQueueFamilyInd
 
 namespace Vulkan {
 CDevice::CDevice(
-    const CProfile profile,
     const IWindow* window,
     const CInstance& instance,
     const CPhysicalDevice& physicalDevice
 ) {
-    // Setup queue create infos
-    const CQueueFamilyIndices queueFamilyIndices = GetQueueFamilies(window, **instance, physicalDevice);
-    const std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(queueFamilyIndices);
-
     // Setup features
-    const std::vector<const char*> enabledExtensions = SetupExtensions(profile, physicalDevice);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(physicalDevice);
+
+    auto features = physicalDevice->getFeatures2<vk::PhysicalDeviceFeatures2,
+        vk::PhysicalDeviceVulkan11Features,
+        vk::PhysicalDeviceVulkan13Features,
+        vk::PhysicalDeviceVulkan14Features,
+        vk::PhysicalDeviceMaintenance5Features
+    >();
 
     void* pNext = nullptr;
-    vk::PhysicalDeviceVulkan11Features features11;
 
-    // Enable shader draw parameters on roadmap 2022 profile
-    if (profile.GetCurrentProfile() == CProfile::Profile::eRoadmap2022) {
-        features11.shaderDrawParameters = vk::True;
-        Utils::AppendToPNextChain(pNext, &features11);
+    const auto& availableFeatures = features.get<vk::PhysicalDeviceFeatures2>();
+    const auto& availableFeatures11 = features.get<vk::PhysicalDeviceVulkan11Features>();
+    const auto& availableFeatures13 = features.get<vk::PhysicalDeviceVulkan13Features>();
+    vk::PhysicalDeviceFeatures2 features2 {};
+    vk::PhysicalDeviceVulkan11Features features11 {};
+    vk::PhysicalDeviceVulkan13Features features13 {};
+    vk::PhysicalDeviceVulkan14Features features14 {};
+    vk::PhysicalDeviceMaintenance5Features maintenance5Features {};
+
+    RequireFeature(availableFeatures.features, features2.features, &vk::PhysicalDeviceFeatures::samplerAnisotropy, "samplerAnisotropy");
+    RequireFeature(availableFeatures11, features11, &vk::PhysicalDeviceVulkan11Features::shaderDrawParameters, "shaderDrawParameters");
+    RequireFeature(availableFeatures13, features13, &vk::PhysicalDeviceVulkan13Features::synchronization2, "synchronization2");
+    RequireFeature(availableFeatures13, features13, &vk::PhysicalDeviceVulkan13Features::dynamicRendering, "dynamicRendering");
+    RequireFeature(availableFeatures13, features13, &vk::PhysicalDeviceVulkan13Features::maintenance4, "maintenance4");
+
+    if (instance.ApiVersion() == vk::ApiVersion14) {
+        const auto& availableFeatures14 = features.get<vk::PhysicalDeviceVulkan14Features>();
+        OptionalFeature(availableFeatures14, features14, &vk::PhysicalDeviceVulkan14Features::maintenance5, m_caps.m_maintenance5);
+        Utils::LinkPNextChain(pNext, &features14);
+    } else {
+        if (m_enabledExtensions.contains(vk::KHRMaintenance5ExtensionName)) {
+            const auto& availableMaintenance5Features = features.get<vk::PhysicalDeviceMaintenance5Features>();
+            OptionalFeature(availableMaintenance5Features, maintenance5Features, &vk::PhysicalDeviceMaintenance5Features::maintenance5, m_caps.m_maintenance5);
+            Utils::LinkPNextChain(pNext, &maintenance5Features);
+        }
     }
+
+    Utils::LinkPNextChain(pNext, &features2);
+    Utils::LinkPNextChain(pNext, &features11);
+    Utils::LinkPNextChain(pNext, &features13);
+
+    // Setup queue create infos
+    const QueueFamilyIndices queueFamilyIndices = GetQueueFamilies(window, **instance, physicalDevice);
+    const std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(queueFamilyIndices);
+
 
     vk::DeviceCreateInfo deviceCreateInfo;
     deviceCreateInfo.pNext = pNext;
@@ -116,15 +178,16 @@ CDevice::CDevice(
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = !enabledExtensions.empty() ? enabledExtensions.data() : nullptr;
 
-    m_handle = vk::raii::Device { *physicalDevice, profile.CreateDevice(**physicalDevice, deviceCreateInfo) };
+    m_handle = vk::raii::Device { *physicalDevice, deviceCreateInfo };
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
     m_graphicsQueue = CQueue { m_handle, queueFamilyIndices.m_graphicsFamily, 0 };
     m_presentQueue = CQueue { m_handle, queueFamilyIndices.m_presentFamily, 0 };
     m_computeQueue = CQueue { m_handle, queueFamilyIndices.m_computeFamily, 0 };
+    m_transferQueue = CQueue { m_handle, queueFamilyIndices.m_transferFamily, 0 };
 }
 
-std::vector<const char*> CDevice::SetupExtensions(const CProfile profile, const CPhysicalDevice& gpu) {
+std::vector<const char*> CDevice::SetupExtensions(const CPhysicalDevice& gpu) {
     const std::unordered_map<std::string, bool> requestedExtensions = RequestExtensions();
 
     // Find these extensions
@@ -153,11 +216,6 @@ std::vector<const char*> CDevice::SetupExtensions(const CProfile profile, const 
     enabledExtensions.reserve(m_enabledExtensions.size());
     for (const auto& ext : m_enabledExtensions) {
         enabledExtensions.push_back(ext.c_str());
-    }
-
-    // Add extensions from profile
-    for (const auto& [name, _] : profile.GetDeviceExtensions()) {
-        m_enabledExtensions.insert(name);
     }
 
     return enabledExtensions;

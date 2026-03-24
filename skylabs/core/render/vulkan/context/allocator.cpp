@@ -2,39 +2,21 @@
 
 namespace Vulkan {
 CAllocator::CAllocator(
-    const CProfile profile,
-    const vk::raii::Instance& instance,
+    const CInstance& instance,
     const vk::raii::PhysicalDevice& physicalDevice,
     const CDevice& device
 ) {
-    constexpr std::array extensionAndFlagMap = {
-        std::pair { vk::EXTMemoryBudgetExtensionName, vma::AllocatorCreateFlagBits::eExtMemoryBudget },
-        std::pair { vk::AMDDeviceCoherentMemoryExtensionName, vma::AllocatorCreateFlagBits::eAmdDeviceCoherentMemory },
-        std::pair { vk::EXTMemoryPriorityExtensionName, vma::AllocatorCreateFlagBits::eExtMemoryPriority },
-        std::pair { vk::KHRMaintenance5ExtensionName, vma::AllocatorCreateFlagBits::eKhrMaintenance5 },
-#ifdef PLATFORM_WINDOWS
-        std::pair { vk::KHRExternalMemoryWin32ExtensionName, vma::AllocatorCreateFlagBits::eKhrExternalMemoryWin32 },
-#endif
-    };
+    vma::AllocatorCreateFlags flags = vma::AllocatorCreateFlagBits::eKhrMaintenance4;
 
-    // Available in roadmap 2022
-    vma::AllocatorCreateFlags flags =
-        vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation
-        | vma::AllocatorCreateFlagBits::eKhrBindMemory2
-        | vma::AllocatorCreateFlagBits::eBufferDeviceAddress
-        | vma::AllocatorCreateFlagBits::eKhrMaintenance4;
-
-    for (const auto& [ext, flag] : extensionAndFlagMap) {
-        if (device.IsExtensionEnabled(ext)) {
-            flags |= flag;
-        }
+    if (device.Caps().m_maintenance5) {
+        flags |= vma::AllocatorCreateFlagBits::eKhrMaintenance5;
     }
 
     vma::AllocatorCreateInfo allocatorCreateInfo;
     allocatorCreateInfo.flags = flags;
-    allocatorCreateInfo.vulkanApiVersion = profile.GetAPIVersion();
+    allocatorCreateInfo.vulkanApiVersion = instance.ApiVersion();
     allocatorCreateInfo.physicalDevice = physicalDevice;
 
-    m_handle = vma::raii::Allocator { instance, *device, allocatorCreateInfo };
+    m_handle = vma::raii::Allocator { *instance, *device, allocatorCreateInfo };
 }
 }

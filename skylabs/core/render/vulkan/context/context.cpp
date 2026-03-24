@@ -4,36 +4,17 @@
 #include <ranges>
 
 namespace Vulkan {
-CContext::CContext(const IWindow* const window) : m_window(window)
-{
-    bool initialized = false;
-    for (const auto& profile : {
-        CProfile::Profile::eRoadmap2026,
-        CProfile::Profile::eRoadmap2024,
-        CProfile::Profile::eRoadmap2022
-    }) {
-        m_profile = CProfile { profile };
+CContext::CContext(const IWindow* const window) : m_window(window) {
+    m_instance = CInstance { { m_window->GetRequiredInstanceExtensions() } };
 
-        if (!m_profile.CheckInstanceSupport())
-            continue;
-
-        m_instance = CInstance { m_profile, { m_window->GetRequiredInstanceExtensions() } };
-
-        std::optional physicalDevice = SelectPhysicalDevice();
-        if (!physicalDevice.has_value())
-            continue;
-
-        m_physicalDevice = *physicalDevice;
-        m_device = CDevice { m_profile, m_window, m_instance, m_physicalDevice };
-        m_allocator = CAllocator { m_profile, *m_instance, *m_physicalDevice, m_device };
-        initialized = true;
-        Log::Debug("Choosed profile {}", m_profile.GetProfileName());
-        break;
+    std::optional physicalDevice = SelectPhysicalDevice();
+    if (!physicalDevice.has_value()) {
+        throw std::runtime_error("No suitable vulkan device available");
     }
 
-    if (!initialized) {
-        throw std::runtime_error("Failed to initialize vulkan context");
-    }
+    m_physicalDevice = *physicalDevice;
+    m_device = CDevice { m_window, m_instance, m_physicalDevice };
+    m_allocator = CAllocator { m_instance, *m_physicalDevice, m_device };
 }
 
 std::optional<CPhysicalDevice> CContext::SelectPhysicalDevice() {
@@ -58,10 +39,11 @@ std::optional<CPhysicalDevice> CContext::SelectPhysicalDevice() {
 int CContext::RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const {
     int score = 0;
 
-    if (!m_profile.CheckPhysicalDeviceSupport(**m_instance, *physicalDevice))
+    vk::PhysicalDeviceProperties deviceProperties = physicalDevice->getProperties2().properties;
+    if (deviceProperties.apiVersion < m_instance.ApiVersion())
         return score;
 
-    switch (physicalDevice->getProperties2().properties.deviceType) {
+    switch (deviceProperties.deviceType) {
         case vk::PhysicalDeviceType::eDiscreteGpu: score += 2000; break;
         case vk::PhysicalDeviceType::eIntegratedGpu: score += 800; break;
         case vk::PhysicalDeviceType::eVirtualGpu: score += 500; break;

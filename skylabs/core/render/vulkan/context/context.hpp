@@ -2,7 +2,6 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/device.hpp>
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
-#include <skylabs/core/render/vulkan/context/profile.hpp>
 
 #include <optional>
 
@@ -34,7 +33,6 @@ private:
     [[nodiscard]] int RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const;
 
     const IWindow* m_window = nullptr;
-    CProfile m_profile { nullptr };
     CInstance m_instance { nullptr };
     CPhysicalDevice m_physicalDevice { nullptr };
     CDevice m_device { nullptr };

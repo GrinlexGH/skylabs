@@ -20,8 +20,6 @@ target_sources(
         render/vulkan/command_buffer.cpp
         render/vulkan/command_buffer_set.hpp
         render/vulkan/command_buffer_set.cpp
-        render/vulkan/context/profile.hpp
-        render/vulkan/context/profile.cpp
         render/vulkan/context/allocator.hpp
         render/vulkan/context/allocator.cpp
         render/vulkan/context/instance.hpp

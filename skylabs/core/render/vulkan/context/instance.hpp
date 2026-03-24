@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/profile.hpp>
+#include <skylabs/core/pch.hpp>
 #include <skylabs/public/string_utils.hpp>
 
 namespace Vulkan {
@@ -13,7 +13,7 @@ class CInstance
 {
 public:
     explicit CInstance(std::nullptr_t) {}
-    explicit CInstance(CProfile profile, InstanceCreateInfo options = {});
+    explicit CInstance(InstanceCreateInfo options = {});
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
     CInstance& operator=(CInstance&) = delete;
@@ -24,10 +24,10 @@ public:
     [[nodiscard]] const vk::raii::Instance* operator->() const noexcept { return &m_handle; }
 
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return m_enabledExtensions.contains(name); }
+    [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_apiVersion; }
 
 private:
     [[nodiscard]] std::vector<const char*> SetupExtensions(
-        CProfile profile,
         const vk::raii::Context& context,
         std::span<const char* const> requiredExtensions,
         const std::vector<const char*>& enabledLayers
@@ -35,6 +35,7 @@ private:
 
     vk::raii::Instance m_handle { nullptr };
 
+    std::uint32_t m_apiVersion = vk::ApiVersion10;
     StringUnorderedSet m_enabledExtensions;
 
 #ifdef DEBUG

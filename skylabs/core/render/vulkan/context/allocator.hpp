@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
 #include <skylabs/core/render/vulkan/context/device.hpp>
 
 namespace Vulkan {
@@ -8,8 +7,7 @@ class CAllocator
 public:
     explicit CAllocator(std::nullptr_t) {}
     explicit CAllocator(
-        CProfile profile,
-        const vk::raii::Instance& instance,
+        const CInstance& instance,
         const vk::raii::PhysicalDevice& physicalDevice,
         const CDevice& device
     );
