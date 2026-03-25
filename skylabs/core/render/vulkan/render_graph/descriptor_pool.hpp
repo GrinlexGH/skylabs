@@ -24,11 +24,21 @@ struct StorageImageDescriptorInfo {
     TextureHandle m_image;
 };
 
+struct StorageBufferDescriptorInfo {
+    BufferHandle m_buffer;
+    int m_frameOffset = 0;
+};
+
 struct DescriptorDescription
 {
     vk::DescriptorType m_type;
     vk::ShaderStageFlags m_shaderStages;
-    std::variant<BufferDescriptorInfo, SampledImageDescriptorInfo, StorageImageDescriptorInfo> m_info;
+    std::variant<
+        BufferDescriptorInfo,
+        SampledImageDescriptorInfo,
+        StorageImageDescriptorInfo,
+        StorageBufferDescriptorInfo
+    > m_info;
 };
 
 struct DescriptorSetHandle

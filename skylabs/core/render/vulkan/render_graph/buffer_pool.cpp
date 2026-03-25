@@ -9,17 +9,32 @@ CBufferPool::CBufferPool(
 
 BufferHandle CBufferPool::CreateBuffer(const char* debugName, const BufferDescirption& description) {
     BufferHandle handle { static_cast<unsigned int>(m_buffers.size()) };
-    m_buffers.emplace_back(BufferMeta { .m_debugName = debugName, .m_description = description });
+    m_buffers.emplace_back(debugName, description);
     return handle;
 }
 
 BufferHandle CBufferPool::ImportBuffer(const char* debugName, CBuffer buffer) {
-    BufferHandle handle{ static_cast<unsigned int>(m_buffers.size()) };
+    std::vector<CBuffer> vec;
+    vec.push_back(std::move(buffer));
+    return ImportBuffer(debugName, std::move(vec));
+}
+
+BufferHandle CBufferPool::ImportBuffer(const char* debugName, std::vector<CBuffer> buffers) {
+    std::size_t count = buffers.size();
+
+    if (count != 1 && count != m_inFlightCount) {
+        throw std::runtime_error(fmt::format(
+            "BufferPool Error: '{}' import count ({}) doesn't match inFlightCount ({})", 
+            debugName, count, m_inFlightCount));
+    }
+
+    BufferHandle handle { static_cast<unsigned int>(m_buffers.size()) };
     Buffer entry;
-    entry.m_meta.m_debugName = debugName;
-    entry.m_meta.m_description.m_size = buffer.Size();
-    entry.m_meta.m_description.m_isInFlight = false;
-    entry.m_buffers.push_back(std::move(buffer));
+    entry.m_debugName = debugName;
+    entry.m_description.m_size = buffers[0].Size();
+    entry.m_description.m_isInFlight = (count > 1);
+    entry.m_buffers = std::move(buffers);
+
     m_buffers.push_back(std::move(entry));
     return handle;
 }
@@ -28,33 +43,33 @@ void CBufferPool::GenerateBuffers() {
     const bool hasDebug =
         m_context->Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName);
 
-    auto createBuffer = [this](BufferMeta meta) {
+    auto createBuffer = [this](BufferDescirption meta) {
         return CBuffer {
             *m_context,
-            meta.m_description.m_size,
-            meta.m_description.m_usage,
-            meta.m_description.m_location
+            meta.m_size,
+            meta.m_usage,
+            meta.m_location
         };
     };
 
-    for (auto& [meta, buffers] : m_buffers) {
+    for (auto& [debugName, desc, buffers] : m_buffers) {
         if (!buffers.empty())
             continue;
 
-        if (meta.m_description.m_isInFlight) {
+        if (desc.m_isInFlight) {
             buffers.clear();
             buffers.reserve(m_inFlightCount);
 
             for (std::size_t i = 0; i < m_inFlightCount; ++i) {
-                CBuffer buffer = createBuffer(meta);
+                CBuffer buffer = createBuffer(desc);
 
                 if (hasDebug)
-                    m_context->Device()->setDebugUtilsObjectNameEXT(**buffer, fmt::format("{}-{}", meta.m_debugName, i));
+                    m_context->Device()->setDebugUtilsObjectNameEXT(**buffer, fmt::format("{}-{}", debugName, i));
 
                 buffers.push_back(std::move(buffer));
             }
         } else {
-            buffers.push_back(createBuffer(meta));
+            buffers.push_back(createBuffer(desc));
         }
     }
 }
@@ -66,6 +81,7 @@ CBuffer& CBufferPool::GetBuffer(BufferHandle handle, int index) {
         return entry.m_buffers[0];
     }
 
-    return entry.m_buffers[(index == -1) ? m_frameIndex : static_cast<std::uint32_t>(index)];
+    const std::uint32_t finalIndex = (index == -1) ? m_frameIndex : static_cast<uint32_t>(index);
+    return entry.m_buffers[finalIndex % m_inFlightCount];
 }
 }

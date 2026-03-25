@@ -1,16 +1,39 @@
-WTexture2D<float4> outImage;
+struct Particle {
+    float2 position;
+    float2 velocity;
+    float4 color;
+};
+
+struct PushConstants {
+    float deltaTime;
+};
+
+[[vk::push_constant]]
+PushConstants pc;
+
+[[vk::binding(0, 0)]]
+StructuredBuffer<Particle> particlesIn;
+
+[[vk::binding(1, 0)]]
+RWStructuredBuffer<Particle> particlesOut;
 
 [shader("compute")]
-[numthreads(8, 8, 1)]
-void main(uint3 threadId: SV_DispatchThreadID, uint3 groupId: SV_GroupID) {
-    uint2 pixel = threadId.xy;
-    uint2 size;
-    outImage.GetDimensions(size.x, size.y);
+[numthreads(256, 1, 1)]
+void main(uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    uint index = dispatchThreadID.x;
 
-    if (pixel.x >= size.x || pixel.y >= size.y)
-        return;
+    Particle particle = particlesIn[index];
 
-    float4 color = float4(groupId.x / 32.0f, groupId.y / 32.0f, 0.0f, 1.0f);
+    particle.position += particle.velocity * pc.deltaTime * 100.0f;
 
-    outImage.Store(pixel, color);
+    if (particle.position.x <= -1.0 || particle.position.x >= 1.0) {
+        particle.velocity.x = -particle.velocity.x;
+    }
+    
+    if (particle.position.y <= -1.0 || particle.position.y >= 1.0) {
+        particle.velocity.y = -particle.velocity.y;
+    }
+
+    particlesOut[index] = particle;
 }

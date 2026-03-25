@@ -28,6 +28,7 @@ public:
 
     [[nodiscard]] BufferHandle CreateBuffer(const char* debugName, const BufferDescirption& description);
     [[nodiscard]] BufferHandle ImportBuffer(const char* debugName, CBuffer buffer);
+    [[nodiscard]] BufferHandle ImportBuffer(const char* debugName, std::vector<CBuffer> buffer);
 
     void GenerateBuffers();
     [[nodiscard]] CBuffer& GetBuffer(BufferHandle handle, int index = -1);
@@ -39,16 +40,10 @@ private:
     std::uint32_t m_inFlightCount = 0;
     std::uint32_t m_frameIndex = 0;
 
-    // TODO: too much info duplication
-    struct BufferMeta
+    struct Buffer
     {
         std::string m_debugName;
         BufferDescirption m_description;
-    };
-
-    struct Buffer
-    {
-        BufferMeta m_meta;
         std::vector<CBuffer> m_buffers;
     };
 

@@ -45,7 +45,7 @@ public:
     explicit CRenderGraph(const CContext& context, unsigned int inFlightCount) :
         m_context(&context),
         m_inFlightCount(inFlightCount),
-        m_graphicsQueues(context, context.Device().GraphicsQueue().FamilyIndex(), { 3 * inFlightCount }),
+        m_graphicsQueues(context, context.Device().GraphicsQueue().FamilyIndex(), { 4 * inFlightCount }),
         m_computeQueues(context, context.Device().ComputeQueue().FamilyIndex(), { 1 * inFlightCount })
     {}
     CRenderGraph(const CRenderGraph&) = delete;

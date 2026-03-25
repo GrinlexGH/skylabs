@@ -4,6 +4,8 @@ set(CURRENT_TARGET_NAME shaders)
 set(SOURCES
     shader.frag.slang
     shader.vert.slang
+    particle.vert.slang
+    particle.frag.slang
     shaderSwapchain.frag.slang
     shaderSwapchain.vert.slang
     shader.comp.slang

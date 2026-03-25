@@ -46,6 +46,8 @@ target_sources(
         render/vulkan/resources/buffer.cpp
         render/vulkan/resources/sampler.hpp
         render/vulkan/resources/sampler.cpp
+        render/vulkan/resources/sync_state.hpp
+        render/vulkan/resources/sync_state.cpp
         render/vulkan/pipeline/graphics_pipeline.hpp
         render/vulkan/pipeline/graphics_pipeline.cpp
         render/vulkan/pipeline/compute_pipeline.hpp

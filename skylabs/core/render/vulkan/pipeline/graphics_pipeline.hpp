@@ -18,6 +18,7 @@ struct GraphicsPipelineCreateInfo
     std::vector<const CShader*> m_shaders = {};
     std::vector<VertexBufferBinding> m_vertexBindings = {};
     vk::PipelineRenderingCreateInfo m_renderingInfo = {};
+    vk::PrimitiveTopology m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     vk::SampleCountFlagBits m_sampling = vk::SampleCountFlagBits::e1;
 };
 

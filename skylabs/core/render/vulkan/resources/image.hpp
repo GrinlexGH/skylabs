@@ -1,27 +1,8 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/core/render/vulkan/resources/sync_state.hpp>
 
 namespace Vulkan {
-enum class Usage : std::uint8_t
-{
-    eNone,
-    eColorAttachment,
-    eDepthWrite,
-    eDepthRead,
-    eSampledFragment,
-    eComputeWrite,
-    eTransferWrite,
-    ePresent
-};
-
-std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2, vk::ImageLayout> MapUsageToVulkan(Usage usage);
-
-struct ImageSyncState
-{
-    Usage m_usage = Usage::eNone;
-    std::uint32_t m_queue = vk::QueueFamilyIgnored;
-};
-
 struct ImageCreateInfo
 {
     vk::Extent3D m_extent {};
@@ -63,8 +44,8 @@ public:
     [[nodiscard]] vk::ImageAspectFlags AspectFlags() const noexcept { return m_aspectFlags; }
     [[nodiscard]] vk::ImageSubresourceRange FullRange() const noexcept { return { m_aspectFlags, 0, m_mipLevels, 0, m_arrayLevels }; }
 
-    [[nodiscard]] ImageSyncState SyncState() const noexcept { return m_syncState; }
-    void SetSyncState(ImageSyncState state) noexcept { m_syncState = state; }
+    [[nodiscard]] ResourceSyncState SyncState() const noexcept { return m_syncState; }
+    void SetSyncState(ResourceSyncState state) noexcept { m_syncState = state; }
 
 private:
     void CreateView(const vk::raii::Device& device, vk::ImageViewType viewType);
@@ -81,6 +62,6 @@ private:
     vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
     vk::ImageAspectFlags m_aspectFlags = vk::ImageAspectFlagBits::eNone;
 
-    ImageSyncState m_syncState {};
+    ResourceSyncState m_syncState {};
 };
 }

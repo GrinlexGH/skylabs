@@ -3,12 +3,36 @@
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 
+#include <variant>
+#include <optional>
+
 namespace Vulkan {
-struct ImageBarrierInfo
+enum class BarrierType : std::uint8_t
+{
+    eRegular,
+    eRelease,
+    eAcquire
+};
+
+struct ImageBarrier
 {
     const CImage& m_image;
+    vk::ImageSubresourceRange m_range {};
     Usage m_oldUsage = Usage::eNone;
     Usage m_newUsage = Usage::eNone;
+    BarrierType m_type = BarrierType::eRegular;
+    std::uint32_t srcQueue = vk::QueueFamilyIgnored;
+    std::uint32_t dstQueue = vk::QueueFamilyIgnored;
+};
+
+struct BufferBarrier
+{
+    const CBuffer& m_buffer;
+    Usage m_oldUsage = Usage::eNone;
+    Usage m_newUsage = Usage::eNone;
+    BarrierType m_type = BarrierType::eRegular;
+    std::uint32_t srcQueue = vk::QueueFamilyIgnored;
+    std::uint32_t dstQueue = vk::QueueFamilyIgnored;
 };
 
 class CCommandBuffer
@@ -20,12 +44,12 @@ public:
     [[nodiscard]] const vk::raii::CommandBuffer& operator*() const noexcept { return *m_handle; }
     [[nodiscard]] const vk::raii::CommandBuffer* operator->() const noexcept { return m_handle; }
 
-    void PipelineBarrier(std::vector<ImageBarrierInfo> imageBarriers) const;
-
-    void ReleaseOwnership(const CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, Usage oldUsage, Usage newUsage) const;
-    void AcquireOwnership(CImage& image, std::uint32_t srcQueue, std::uint32_t dstQueue, Usage oldUsage, Usage newUsage) const;
+    void PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const;
 
     void Copy(const CImage& dst, const CBuffer& src) const;
+    void Copy(const CBuffer& dst, const CBuffer& src, vk::DeviceSize size) const;
+
+    void GenerateMipmaps(const CImage& image, Usage srcUsage = Usage::eTransferWrite, Usage dstUsage = Usage::eSampledFragment) const;
 
 private:
     const vk::raii::CommandBuffer* m_handle = nullptr;

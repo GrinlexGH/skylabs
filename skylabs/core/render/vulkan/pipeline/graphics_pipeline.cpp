@@ -7,6 +7,7 @@ constexpr vk::Format ToVkFormat(const VertexFormat format) {
     switch (format) {
         case VertexFormat::Float32x2: return vk::Format::eR32G32Sfloat;
         case VertexFormat::Float32x3: return vk::Format::eR32G32B32Sfloat;
+        case VertexFormat::Float32x4: return vk::Format::eR32G32B32A32Sfloat;
     }
     std::unreachable();
 }
@@ -45,7 +46,7 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     vertexInputInfo.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly {};
-    inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
+    inputAssembly.topology = options.m_primitiveTopology;
     inputAssembly.primitiveRestartEnable = vk::False;
 
     vk::PipelineViewportStateCreateInfo viewportState {};

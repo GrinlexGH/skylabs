@@ -38,6 +38,7 @@ private:
     void Resize(CFrameData& currentFrameData);
     void LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
     void LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
+    void GenerateRandomParticles(Vulkan::CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
 
     CContext m_context { nullptr };
 
@@ -48,48 +49,53 @@ private:
 
     CPipelineLayoutCache m_pipelineLayoutCache { nullptr };
 
+    std::vector<CFrameData> m_frameData;
+    vk::raii::CommandPool m_singleCommandPool { nullptr };
+
     CTexturePool m_textureManager { nullptr };
     CBufferPool m_bufferManager { nullptr };
     CDescriptorPool m_descriptorManager { nullptr };
 
+    // Light pipeline
+    TextureHandle m_lightDepth;
+    BufferHandle m_lightUBO;
+
+    DescriptorSetHandle m_lightDescriptorSet;
+    CGraphicsPipeline m_lightPipeline { nullptr };
+
+    // Main pipeline
     BufferHandle m_uniformBuffer;
+    TextureHandle m_modelTexture;
+    CSampler m_modelTextureSampler { nullptr };
+    CSampler m_samplerLight { nullptr };
+    BufferHandle m_vertexBuffer;
+    BufferHandle m_indexBuffer;
 
     TextureHandle m_colorBuffer;
     TextureHandle m_colorBufferMSAAx;
     TextureHandle m_depthBufferMSAAx;
+
     DescriptorSetHandle m_mainDescriptorSet;
-    TextureHandle m_modelTexture;
-    BufferHandle m_vertexBuffer;
-    BufferHandle m_indexBuffer;
-
-    TextureHandle m_computeBuffer;
-    DescriptorSetHandle m_computeDescriptorSet;
-
-    DescriptorSetHandle m_swapchainDescriptorSet;
-
-
-    TextureHandle m_lightDepth;
-    BufferHandle m_lightUBO;
-    DescriptorSetHandle m_lightDescriptorSet;
-    CGraphicsPipeline m_lightPipeline { nullptr };
-    CSampler m_samplerLight { nullptr };
-
-
-
-
-    std::vector<CFrameData> m_frameData;
-    vk::raii::CommandPool m_singleCommandPool { nullptr };
-
-    CSampler m_modelTextureSampler { nullptr };
     CGraphicsPipeline m_pipelineMain { nullptr };
 
+    // Compute pipeline
+    BufferHandle m_computeBuffer;
 
+    DescriptorSetHandle m_computeDescriptorSet;
     CComputePipeline m_computePipeline { nullptr };
 
+    // Compute to image pipeline
+    TextureHandle m_computeFinalImage;
 
+    CGraphicsPipeline m_particlePipeline { nullptr };
+
+    // Final swapchain pipeline
     CSampler m_computeSampler { nullptr };
     CSampler m_mainSampler { nullptr };
+
+    DescriptorSetHandle m_swapchainDescriptorSet;
     CGraphicsPipeline m_pipelineSwapchain { nullptr };
+
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
     std::uint32_t m_frameIndex = 0;

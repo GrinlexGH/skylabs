@@ -7,6 +7,7 @@
 enum class VertexFormat : std::uint8_t {
     Float32x2,
     Float32x3,
+    Float32x4,
 };
 
 struct CVertexAttribute
@@ -29,5 +30,19 @@ struct CVertex
 
     friend constexpr bool operator==(const CVertex& lhs, const CVertex& rhs) {
         return lhs.m_position == rhs.m_position && lhs.m_texCoord == rhs.m_texCoord;
+    }
+};
+
+struct CParticle
+{
+    glm::vec2 m_pos;
+    glm::vec2 m_vel;
+    glm::vec4 m_col;
+
+    static constexpr std::array<CVertexAttribute, 2> GetAttributes() {
+        return {
+            CVertexAttribute { .m_format = VertexFormat::Float32x2, .m_offset = offsetof(CParticle, m_pos) },
+            CVertexAttribute { .m_format = VertexFormat::Float32x4, .m_offset = offsetof(CParticle, m_col) },
+        };
     }
 };

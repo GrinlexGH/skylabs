@@ -58,7 +58,8 @@ CImage& CTexturePool::GetTexture(TextureHandle handle, int index) {
         return entry.m_images[0];
     }
 
-    return entry.m_images[(index == -1) ? m_frameIndex : static_cast<uint32_t>(index)];
+    const std::uint32_t finalIndex = (index == -1) ? m_frameIndex : static_cast<uint32_t>(index);
+    return entry.m_images[finalIndex % m_inFlightCount];
 }
 
 void CTexturePool::Resize(const vk::Extent2D newViewportExtent) {

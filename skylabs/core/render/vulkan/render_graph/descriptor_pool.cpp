@@ -130,6 +130,21 @@ void CDescriptorPool::UpdateDescriptorSets(
 
                     imageInfos.push_back(iInfo);
                     write.pImageInfo = &imageInfos.back();
+                }  else if (std::holds_alternative<StorageBufferDescriptorInfo>(desc.m_info)) {
+                    auto info = std::get<StorageBufferDescriptorInfo>(desc.m_info);
+
+                    int targetFrame = (static_cast<int>(frameIdx) + info.m_frameOffset) % static_cast<int>(m_inFlightCount);
+                    if (targetFrame < 0) targetFrame += m_inFlightCount;
+
+                    CBuffer& buffer = bufferManager.GetBuffer(info.m_buffer, targetFrame);
+
+                    vk::DescriptorBufferInfo bInfo {};
+                    bInfo.buffer = *buffer;
+                    bInfo.offset = 0;
+                    bInfo.range = VK_WHOLE_SIZE;
+
+                    bufferInfos.push_back(bInfo);
+                    write.pBufferInfo = &bufferInfos.back();
                 }
 
                 descriptorWrites.push_back(write);

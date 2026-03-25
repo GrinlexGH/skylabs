@@ -41,6 +41,11 @@ struct LightUBO {
     glm::mat4 proj;
 };
 
+struct ComputePushConstants
+{
+    float deltaTime;
+};
+
 glm::vec3 offset = {0.0f, 0.0f, 0.0f}; // то что реально уходит в UBO
 glm::vec3 targetOffset  = {0.0f, 0.0f, 0.0f}; // то куда хотим прийти
 
@@ -54,6 +59,9 @@ std::vector<std::uint16_t> indices = {
 };
 
 namespace {
+std::uint32_t renderWidth = 0;
+std::uint32_t renderHeight = 0;
+
 std::pair<vk::Result, uint32_t> SwapchainNextImageWrapper(
     const vk::raii::SwapchainKHR& swapchain,
     const uint64_t timeout,
@@ -85,11 +93,7 @@ vk::raii::CommandBuffer BeginSingleTimeCommands(
     allocInfo.commandBufferCount = 1;
 
     vk::raii::CommandBuffers commandBuffers { device, allocInfo };
-
-    vk::CommandBufferBeginInfo beginInfo {};
-    beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-
-    commandBuffers[0].begin(beginInfo);
+    commandBuffers[0].begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 
     return vk::raii::CommandBuffer { std::move(commandBuffers[0]) };
 }
@@ -110,165 +114,62 @@ void EndSingleTimeCommands(
     commandBuffer.clear();
 }
 
-void GenerateMipmaps(
-    const vk::raii::PhysicalDevice& physicalDevice,
-    const vk::raii::CommandBuffer& cmd,
-    const Vulkan::CImage& image
-) {
-    const vk::FormatProperties formatProperties = physicalDevice.getFormatProperties(image.Format());
+glm::mat4 ReverseZPerspective(int width, int height, float fov = 90) {
+    glm::mat4 proj;
+    float g = 1.0f / std::tan(0.5f * glm::radians(fov));
+    proj = glm::mat4(0.0f);
+    proj[0][0] = g / (static_cast<float>(width) / static_cast<float>(height));
+    proj[1][1] = -g;
+    proj[2][3] = -1.0f;
+    proj[3][2] = 0.01f;
 
-    if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
-        throw std::runtime_error("texture image format does not support linear blitting");
-    }
-
-    vk::ImageMemoryBarrier barrier {};
-    barrier.image = *image;
-    barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
-    barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
-    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.subresourceRange.levelCount = 1;
-
-    int32_t mipWidth = static_cast<std::int32_t>(image.Extent().width);
-    int32_t mipHeight = static_cast<std::int32_t>(image.Extent().height);
-
-    for (uint32_t i = 1; i < image.MipLevels(); i++) {
-        barrier.subresourceRange.baseMipLevel = i - 1;
-        barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-        barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-
-        cmd.pipelineBarrier(
-            vk::PipelineStageFlagBits::eTransfer,
-            vk::PipelineStageFlagBits::eTransfer,
-            {}, {}, {},
-            barrier
-        );
-
-        vk::ImageBlit blit {};
-        blit.srcOffsets[0] = {{ 0, 0, 0 }};
-        blit.srcOffsets[1] = {{ mipWidth, mipHeight, 1 }};
-        blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-        blit.srcSubresource.mipLevel = i - 1;
-        blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = 1;
-        blit.dstOffsets[0] = {{ 0, 0, 0 }};
-        blit.dstOffsets[1] = {{ mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 }};
-        blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-        blit.dstSubresource.mipLevel = i;
-        blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = 1;
-
-        cmd.blitImage(
-            *image, vk::ImageLayout::eTransferSrcOptimal,
-            *image, vk::ImageLayout::eTransferDstOptimal,
-            blit,
-            vk::Filter::eNearest
-        );
-
-        barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
-        barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
-        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-        cmd.pipelineBarrier(
-            vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader,
-            {}, {}, {},
-            barrier
-        );
-
-        if (mipWidth > 1) mipWidth /= 2;
-        if (mipHeight > 1) mipHeight /= 2;
-    }
-
-    barrier.subresourceRange.baseMipLevel = image.MipLevels() - 1;
-    barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-    barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-    cmd.pipelineBarrier(
-        vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {},
-        {}, {},
-        barrier
-    );
-}
-
-void CopyBuffer(
-    const Vulkan::CDevice& device,
-    const vk::raii::CommandPool& commandPool,
-    const vk::Buffer srcBuffer,
-    const vk::Buffer dstBuffer,
-    const vk::DeviceSize size
-) {
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*device, commandPool);
-
-    vk::BufferCopy copyRegion;
-    copyRegion.srcOffset = 0;
-    copyRegion.dstOffset = 0;
-    copyRegion.size = size;
-
-    commandBuffer.copyBuffer(srcBuffer, dstBuffer, copyRegion);
-
-    EndSingleTimeCommands(device, commandBuffer);
-}
-
-void UpdateLightUniformBuffer(
-    Vulkan::CBuffer& uniformBuffersMapped,
-    const glm::mat4& lightView,
-    const glm::mat4& lightProj,
-    const float deltaTime
-) {
-    LightUBO ubo {};
-    ubo.view = lightView;
-    ubo.proj = lightProj;
-
-    offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
-    if (glm::length(targetOffset - offset) < 0.0001f) offset = targetOffset;
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, offset);
-    model = glm::rotate(model, glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.model = model;
-
-    std::memcpy(uniformBuffersMapped.Data(), &ubo, sizeof(ubo));
+    return proj;
 }
 
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
-    Vulkan::CBuffer& uniformBuffersMapped,
+    Vulkan::CBuffer& lightBuffer,
+    Vulkan::CBuffer& uniformBuffer,
     const glm::mat4& view,
-    const float deltaTime,
-    const glm::mat4& lightProj,
-    const glm::mat4& lightView
+    const float deltaTime
 ) {
-    UniformBufferObject ubo {};
-    ubo.view = view;
+    // Static lLight source
+    static float yO = -600;
+    static CCamera lightCamera{ {1, 0, 1} };
+    lightCamera.ProcessMouseMovement(0, yO);
+    yO = 0;
 
-    float g = 1.0f / std::tan(0.5f * glm::radians(90.0f));
-    ubo.proj = glm::mat4(0.0f);
-    ubo.proj[0][0] = g / (static_cast<float>(cameraDimensions.width) / static_cast<float>(cameraDimensions.height));
-    ubo.proj[1][1] = -g;
-    ubo.proj[2][3] = -1.0f;
-    ubo.proj[3][2] = 0.01f;
-
-    ubo.lightview = lightView;
-    ubo.lightproj = lightProj;
-
+    // Model offset
     offset = glm::mix(offset, targetOffset, lerpSpeed * deltaTime);
     if (glm::length(targetOffset - offset) < 0.0001f) offset = targetOffset;
 
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, offset);
     model = glm::rotate(model, glm::radians(5.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.model = model;
 
-    std::memcpy(uniformBuffersMapped.Data(), &ubo, sizeof(ubo));
+    // Light UBO
+    glm::mat4 lightView = lightCamera.GetViewMatrix();
+    glm::mat4 lightProj = ReverseZPerspective(1, 1);
+
+    LightUBO lightUBO {
+        .model = model,
+        .view = lightView,
+        .proj = lightProj
+    };
+
+    std::memcpy(lightBuffer.Data(), &lightUBO, sizeof(lightUBO));
+
+    // UBO
+    UniformBufferObject ubo {
+        .model = model,
+        .view = view,
+        .proj = ReverseZPerspective(cameraDimensions.width, cameraDimensions.height),
+        .lightproj = lightProj,
+        .lightview = lightView,
+    };
+
+    std::memcpy(uniformBuffer.Data(), &ubo, sizeof(ubo));
 }
-
-std::uint32_t renderWidth = 0;
-std::uint32_t renderHeight = 0;
 }
 
 namespace Vulkan {
@@ -341,16 +242,15 @@ CRenderer::CRenderer(const IWindow* const window) {
         .m_sampleCount = vk::SampleCountFlagBits::e8
     });
 
-    m_computeBuffer = txm.CreateTexture("computePostProcess", {
-        .m_extent = RelativeTextureSize {},
-        .m_format = vk::Format::eR8G8B8A8Unorm,
-        .m_usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
-    });
-
     m_lightDepth = txm.CreateTexture("lightDepth", {
         .m_extent = vk::Extent3D { 2048, 2048, 1 },
         .m_format = vk::Format::eD32Sfloat,
         .m_usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
+    });
+
+    m_computeFinalImage = txm.CreateTexture("computeFina", {
+        .m_extent = RelativeTextureSize {},
+        .m_usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
     });
 
     LoadModelTexture(stagingBuffer, m_singleCommandPool);
@@ -376,6 +276,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     });
 
     LoadModel(stagingBuffer, m_singleCommandPool);
+    GenerateRandomParticles(stagingBuffer, m_singleCommandPool);
 
     bfm.GenerateBuffers();
 
@@ -403,9 +304,14 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_computeDescriptorSet = dsm.CreateDescriptorSet({
         {
-            .m_type = vk::DescriptorType::eStorageImage,
+            .m_type = vk::DescriptorType::eStorageBuffer,
             .m_shaderStages = vk::ShaderStageFlagBits::eCompute,
-            .m_info = StorageImageDescriptorInfo { .m_image = m_computeBuffer }
+            .m_info = StorageBufferDescriptorInfo { .m_buffer = m_computeBuffer, .m_frameOffset = -1 }
+        },
+        {
+            .m_type = vk::DescriptorType::eStorageBuffer,
+            .m_shaderStages = vk::ShaderStageFlagBits::eCompute,
+            .m_info = StorageBufferDescriptorInfo { .m_buffer = m_computeBuffer, .m_frameOffset = 0 }
         },
     });
 
@@ -418,7 +324,7 @@ CRenderer::CRenderer(const IWindow* const window) {
         {
             .m_type = vk::DescriptorType::eCombinedImageSampler,
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = SampledImageDescriptorInfo { .m_image = m_computeBuffer, .m_sampler = *m_computeSampler }
+            .m_info = SampledImageDescriptorInfo { .m_image = m_computeFinalImage, .m_sampler = *m_computeSampler }
         },
     });
 
@@ -484,10 +390,31 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Pipeline
     m_computePipeline = CComputePipeline { m_context, {
-        .m_layout = m_pipelineLayoutCache.GetLayout({ { **dsm.GetDescriptorSetLayout(m_computeDescriptorSet) } }),
+        .m_layout = m_pipelineLayoutCache.GetLayout({
+            { **dsm.GetDescriptorSetLayout(m_computeDescriptorSet) },
+            {
+                { vk::ShaderStageFlagBits::eCompute, 0, sizeof(ComputePushConstants) },
+            }
+        }),
         .m_shader = &computeShader
     }};
 
+    // Generate particle image
+    const CShader particleVert(m_context, vk::ShaderStageFlagBits::eVertex, "particle.vert.spv");
+    const CShader particleFrag(m_context, vk::ShaderStageFlagBits::eFragment, "particle.frag.spv");
+
+    std::array<vk::Format, 1> colorFormatsParticle = { txm.GetTexture(m_computeFinalImage).Format() };
+    m_particlePipeline = CGraphicsPipeline { m_context, {
+        .m_layout = m_pipelineLayoutCache.GetLayout({}),
+        .m_shaders = { &particleVert, &particleFrag },
+        .m_vertexBindings = {{
+            .m_description = { 0, sizeof(CParticle) },
+            .m_attributes = CParticle::GetAttributes() | std::ranges::to<std::vector>(),
+        }},
+        .m_renderingInfo = { {}, colorFormatsParticle },
+        .m_primitiveTopology = vk::PrimitiveTopology::ePointList,
+        .m_sampling = vk::SampleCountFlagBits::e1
+    }};
 
     // Swapchain pipeline
     // Shaders
@@ -535,37 +462,27 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
     auto& semMain = frameData.GetSemaphores()[0];
     auto& semComp = frameData.GetSemaphores()[1];
     auto& semLight = frameData.GetSemaphores()[2];
+    auto& semCompImg = frameData.GetSemaphores()[3];
+
+    auto& uniformBuffer = m_bufferManager.GetBuffer(m_uniformBuffer);
     auto& colorBuffer = m_textureManager.GetTexture(m_colorBuffer);
     auto& colorBufferMSAA = m_textureManager.GetTexture(m_colorBufferMSAAx);
     auto& depthBufferMSAA = m_textureManager.GetTexture(m_depthBufferMSAAx);
-    auto& computeBuffer = m_textureManager.GetTexture(m_computeBuffer);
-    auto& uniformBuffer = m_bufferManager.GetBuffer(m_uniformBuffer);
     auto& vertexBuffer = m_bufferManager.GetBuffer(m_vertexBuffer);
     auto& indexBuffer = m_bufferManager.GetBuffer(m_indexBuffer);
-    auto& lightBuffer = m_textureManager.GetTexture(m_lightDepth);
-    auto& lightUBO = m_bufferManager.GetBuffer(m_lightUBO);
     auto descriptorSetMain = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSet);
-    auto descriptorSetCompute = m_descriptorManager.GetDescriptorSet(m_computeDescriptorSet);
-    auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
+
+    auto& lightUBO = m_bufferManager.GetBuffer(m_lightUBO);
+    auto& lightBuffer = m_textureManager.GetTexture(m_lightDepth);
     auto descriptorSetLight = m_descriptorManager.GetDescriptorSet(m_lightDescriptorSet);
 
-    static float yO = -600;
-    // 1. Настраиваем камеру света
-    static CCamera lightCamera{ {1, 0, 1} };
-    lightCamera.ProcessMouseMovement(0, yO);
-    yO = 0;
-    float g = 1.0f / std::tan(0.5f * glm::radians(90.0f));
-    auto lightProj = glm::mat4(0.0f);
-    lightProj[0][0] = g / 1;
-    lightProj[1][1] = -g;
-    lightProj[2][2] = 0.0f;
-    lightProj[2][3] = -1.0f;
-    lightProj[3][2] = 0.01f;
+    auto& computeBuffer = m_bufferManager.GetBuffer(m_computeBuffer);
+    auto descriptorSetCompute = m_descriptorManager.GetDescriptorSet(m_computeDescriptorSet);
 
-    glm::mat4 lightView = lightCamera.GetViewMatrix();
+    auto& computeBufferFinalImg = m_textureManager.GetTexture(m_computeFinalImage);
+    auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
 
-    UpdateLightUniformBuffer(lightUBO, lightView, lightProj, deltaTime);
-    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, deltaTime, lightProj, lightView);
+    UpdateUniformBuffer(m_swapchain.Extent(), lightUBO, uniformBuffer, view, deltaTime);
 
     // Wait for fence to ensure that the previous frame rendering is finished
     vk::Result result = device->waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -599,14 +516,13 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         .m_sync = { { *semLight }, {} },
         .m_requirements = { { lightBuffer, Usage::eDepthWrite } },
         .m_execute = [&](const CCommandBuffer& cmd) {
-        // Recording render commands
-        // light render
+        // Light
         vk::RenderingAttachmentInfo depthAttachInfoLight {};
         depthAttachInfoLight.imageView = lightBuffer.View();
         depthAttachInfoLight.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
         depthAttachInfoLight.loadOp = vk::AttachmentLoadOp::eClear;
         depthAttachInfoLight.storeOp = vk::AttachmentStoreOp::eStore;
-        depthAttachInfoLight.clearValue.depthStencil = vk::ClearDepthStencilValue{0.0f, 0};
+        depthAttachInfoLight.clearValue.depthStencil = vk::ClearDepthStencilValue { 0.0f, 0 };
 
         vk::RenderingInfo lightRenderInfo {};
         lightRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, { 2048, 2048 } };
@@ -640,7 +556,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             { lightBuffer, Usage::eSampledFragment },
         },
         .m_execute = [&](const CCommandBuffer& cmd) {
-        // Recording render commands
         // Main render
         vk::RenderingAttachmentInfo colorAttachInfo {};
         colorAttachInfo.imageView = colorBufferMSAA.View();
@@ -648,7 +563,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
         colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
         colorAttachInfo.clearValue.color =
-            vk::ClearColorValue(std::array<float, 4>{
+            vk::ClearColorValue(std::array<float, 4> {
                 11.0f / 255.0f,
                 16.0f / 255.0f,
                 38.0f / 255.0f,
@@ -663,7 +578,7 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         depthAttachInfo.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
         depthAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
         depthAttachInfo.storeOp = vk::AttachmentStoreOp::eDontCare;
-        depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue{0.0f, 0};
+        depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue { 0.0f, 0 };
 
         vk::RenderingInfo mainRenderInfo {};
         mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
@@ -688,27 +603,77 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         cmd->endRendering();
     }});
 
-
     m_graph.AddPass({
         .m_sync = { { *semComp }, {} },
         .m_type = RG::PassType::eCompute,
         .m_requirements = { },
         .m_execute = [&](const CCommandBuffer& cmd) {
-        // Compute
-        if (computeBuffer.SyncState().m_usage != Usage::eNone) {
-            cmd.AcquireOwnership(computeBuffer, device.GraphicsQueue().FamilyIndex(), device.ComputeQueue().FamilyIndex(), Usage::eSampledFragment, Usage::eComputeWrite);
-            auto ss = computeBuffer.SyncState();
-            ss.m_usage = Usage::eComputeWrite;
-            computeBuffer.SetSyncState(ss);
+        // Compute particle positions
+        auto ss = computeBuffer.SyncState();
+        if (ss.m_usage == Usage::eNone) {
+            cmd.PipelineBarrier({ BufferBarrier { computeBuffer, computeBuffer.SyncState().m_usage, Usage::eComputeWrite } });
         } else {
-            cmd.PipelineBarrier({{ computeBuffer, Usage::eNone, Usage::eComputeWrite }});
+            cmd.PipelineBarrier({ BufferBarrier {
+                computeBuffer, computeBuffer.SyncState().m_usage, Usage::eComputeWrite,
+                BarrierType::eAcquire, m_context.Device().GraphicsQueue().FamilyIndex(), m_context.Device().ComputeQueue().FamilyIndex()
+            }});
         }
+        ss.m_usage = Usage::eComputeWrite;
+        computeBuffer.SetSyncState(ss);
 
         cmd->bindPipeline(vk::PipelineBindPoint::eCompute, *m_computePipeline);
+        cmd->pushConstants<ComputePushConstants>(m_computePipeline.Layout(), vk::ShaderStageFlagBits::eCompute, 0, { ComputePushConstants {deltaTime} });
         cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipeline.Layout(), 0, descriptorSetCompute, {});
-        cmd->dispatch((renderWidth + 7) / 8, (renderHeight + 7) / 8, 1);
+        cmd->dispatch(10240 / 256, 1, 1);
 
-        cmd.ReleaseOwnership(computeBuffer, device.ComputeQueue().FamilyIndex(), device.GraphicsQueue().FamilyIndex(), Usage::eComputeWrite, Usage::eSampledFragment);
+        cmd.PipelineBarrier({ BufferBarrier {
+            computeBuffer, computeBuffer.SyncState().m_usage, Usage::eVertexRead,
+            BarrierType::eRelease, m_context.Device().ComputeQueue().FamilyIndex(), m_context.Device().GraphicsQueue().FamilyIndex()
+        }});
+    }});
+
+    m_graph.AddPass({
+        .m_sync = { { *semCompImg }, { { semComp, vk::PipelineStageFlagBits::eVertexInput } } },
+        .m_requirements = { { computeBufferFinalImg, Usage::eColorAttachment } },
+        .m_execute = [&](const CCommandBuffer& cmd) {
+        // Create image from particle positions
+        cmd.PipelineBarrier({ BufferBarrier {
+            computeBuffer, computeBuffer.SyncState().m_usage, Usage::eVertexRead,
+            BarrierType::eAcquire, m_context.Device().ComputeQueue().FamilyIndex(), m_context.Device().GraphicsQueue().FamilyIndex()
+        }});
+        auto ss = computeBuffer.SyncState();
+        ss.m_usage = Usage::eVertexRead;
+        computeBuffer.SetSyncState(ss);
+
+        vk::RenderingAttachmentInfo colorAttachInfo {};
+        colorAttachInfo.imageView = computeBufferFinalImg.View();
+        colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+        colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+        colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
+        colorAttachInfo.clearValue.color =
+            vk::ClearColorValue(std::array<float, 4> { 0.0f, 0.0f, 0.0f, 0.0f });
+
+        vk::RenderingInfo mainRenderInfo {};
+        mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
+        mainRenderInfo.layerCount = 1;
+        mainRenderInfo.colorAttachmentCount = 1;
+        mainRenderInfo.pColorAttachments = &colorAttachInfo;
+
+        cmd->beginRendering(mainRenderInfo);
+        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_particlePipeline);
+        auto viewport = vk::Viewport { 0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f };
+        cmd->setViewport(0, viewport);
+        auto scissor = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
+        cmd->setScissor(0, scissor);
+        cmd->setDepthBiasEnable(vk::False);
+        cmd->bindVertexBuffers(0, { *computeBuffer }, { 0 });
+        cmd->draw(computeBuffer.Size(), 1, 0, 0);
+        cmd->endRendering();
+
+        cmd.PipelineBarrier({ BufferBarrier {
+            computeBuffer, computeBuffer.SyncState().m_usage, Usage::eComputeWrite,
+            BarrierType::eRelease, m_context.Device().GraphicsQueue().FamilyIndex(), m_context.Device().ComputeQueue().FamilyIndex()
+        }});
     }});
 
 
@@ -718,19 +683,17 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
             {
                 { *frameData.GetImageAvailableSemaphore(), vk::PipelineStageFlagBits::eColorAttachmentOutput },
                 { semMain, vk::PipelineStageFlagBits::eColorAttachmentOutput },
-                { semComp, vk::PipelineStageFlagBits::eFragmentShader },
+                { semCompImg, vk::PipelineStageFlagBits::eColorAttachmentOutput },
             },
             frameData.GetFence()
         },
         .m_requirements = {
             { colorBuffer, Usage::eSampledFragment },
+            { computeBufferFinalImg, Usage::eSampledFragment },
             { m_swapchain.Images()[imageIndex], Usage::eColorAttachment, Usage::ePresent }
         },
         .m_execute = [&](const CCommandBuffer& cmd) {
-        // Prepare attachments for swapchain read
-        cmd.AcquireOwnership(computeBuffer, device.ComputeQueue().FamilyIndex(), device.GraphicsQueue().FamilyIndex(), Usage::eComputeWrite, Usage::eSampledFragment);
-
-        // Render to fullscreen triangle
+        // Fullscreen triangle
         vk::RenderingAttachmentInfo swapchainAttachInfo {};
         swapchainAttachInfo.imageView = *m_swapchain.Images()[imageIndex].View();
         swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
@@ -754,8 +717,6 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
         cmd->draw(3, 1, 0, 0);
         cmd->endRendering();
-
-        cmd.ReleaseOwnership(computeBuffer, device.GraphicsQueue().FamilyIndex(), device.ComputeQueue().FamilyIndex(), Usage::eSampledFragment, Usage::eComputeWrite);
     }});
 
     m_graph.Execute();
@@ -823,14 +784,18 @@ void CRenderer::LoadModelTexture(CBuffer& stagingBuffer, const vk::raii::Command
         .m_usageFlags = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
     }};
 
-    vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
     {
-        CCommandBuffer cmd { commandBuffer };
-        cmd.PipelineBarrier({ { modelTexture, Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
-        cmd.Copy(modelTexture, stagingBuffer);
-        GenerateMipmaps(*m_context.PhysicalDevice(), commandBuffer, modelTexture);
+        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
+            CCommandBuffer cmd { commandBuffer };
+            cmd.PipelineBarrier({ ImageBarrier { modelTexture, modelTexture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
+            cmd.Copy(modelTexture, stagingBuffer);
+            const vk::FormatProperties formatProperties = m_context.PhysicalDevice()->getFormatProperties(modelTexture.Format());
+            if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
+                throw std::runtime_error("texture image format does not support linear blitting");
+            }
+            cmd.GenerateMipmaps(modelTexture);
+        EndSingleTimeCommands(m_context.Device(), commandBuffer);
     }
-    EndSingleTimeCommands(m_context.Device(), commandBuffer);
 
     m_modelTexture = m_textureManager.ImportTexture("ModelTexture", std::move(modelTexture));
 
@@ -902,13 +867,12 @@ void CRenderer::LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& c
         MemoryLocation::eDeviceOnly
     };
 
-    CopyBuffer(
-        m_context.Device(),
-        commandPool,
-        *stagingBuffer,
-        *vertexBuffer,
-        vertexBufferSize
-    );
+    {
+        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
+        CCommandBuffer cmd { commandBuffer };
+        cmd.Copy(vertexBuffer, stagingBuffer, vertexBufferSize);
+        EndSingleTimeCommands(m_context.Device(), commandBuffer);
+    }
 
     const vk::DeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
     if (stagingBuffer.Size() < indexBufferSize) {
@@ -931,14 +895,63 @@ void CRenderer::LoadModel(CBuffer& stagingBuffer, const vk::raii::CommandPool& c
         MemoryLocation::eDeviceOnly
     };
 
-    CopyBuffer(
-        m_context.Device(),
-        commandPool,
-        *stagingBuffer,
-        *indexBuffer,
-        indexBufferSize
-    );
+    {
+        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
+        CCommandBuffer cmd { commandBuffer };
+        cmd.Copy(indexBuffer, stagingBuffer, indexBufferSize);
+        EndSingleTimeCommands(m_context.Device(), commandBuffer);
+    }
 
     m_indexBuffer = m_bufferManager.ImportBuffer("indexBuffer", std::move(indexBuffer));
+}
+
+void CRenderer::GenerateRandomParticles(Vulkan::CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
+    static std::default_random_engine rndEngine((unsigned)time(nullptr));
+    static std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
+
+    constexpr auto PARTICLE_COUNT = 10240;
+    // Initial particle positions on a circle
+    std::vector<CParticle> particles(PARTICLE_COUNT);
+    for (auto& particle : particles) {
+        float r = 0.25f * sqrt(rndDist(rndEngine));
+        float theta = rndDist(rndEngine) * 2 * 3.14159265358979323846;
+        float x = r * cos(theta) * renderHeight / renderWidth;
+        float y = r * sin(theta);
+        particle.m_pos = glm::vec2(x, y);
+        particle.m_vel = glm::normalize(glm::vec2(x,y)) * 0.00025f;
+        particle.m_col = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
+    }
+
+    std::size_t particleSize = particles.size() * sizeof(CParticle);
+
+    if (stagingBuffer.Size() < particleSize) {
+        stagingBuffer = Vulkan::CBuffer {
+            m_context,
+            particleSize,
+            vk::BufferUsageFlagBits::eTransferSrc,
+            MemoryLocation::eHostVisible
+        };
+    }
+    std::memcpy(stagingBuffer.Data(), particles.data(), particleSize);
+
+    std::vector<CBuffer> computeBuffers;
+    {
+        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
+        computeBuffers.reserve(FRAMES_IN_FLIGHT_COUNT);
+        for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
+            CCommandBuffer cmd { commandBuffer };
+            CBuffer computeBuffer {
+                m_context,
+                particleSize,
+                vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst,
+                MemoryLocation::eDeviceOnly
+            };
+            cmd.Copy(computeBuffer, stagingBuffer, particleSize);
+            computeBuffers.emplace_back(std::move(computeBuffer));
+        }
+        EndSingleTimeCommands(m_context.Device(), commandBuffer);
+    }
+
+    m_computeBuffer = m_bufferManager.ImportBuffer("compute-buffer", std::move(computeBuffers));
 }
 }
