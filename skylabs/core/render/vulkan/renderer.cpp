@@ -108,8 +108,14 @@ void EndSingleTimeCommands(
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &*commandBuffer;
 
-    device.GraphicsQueue()->submit(submitInfo);
-    device.GraphicsQueue()->waitIdle(); // TODO: USE FENCES
+    vk::raii::Fence fence { *device, vk::FenceCreateInfo { } };
+
+    device.GraphicsQueue()->submit(submitInfo, fence );
+
+    vk::Result result = device->waitForFences({ fence }, vk::True, std::numeric_limits<std::uint64_t>::max());
+    if (result != vk::Result::eSuccess) {
+        throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
+    }
 
     commandBuffer.clear();
 }
@@ -594,11 +600,11 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         auto scissor = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
         cmd->setScissor(0, scissor);
         cmd->setDepthBiasEnable(vk::False);
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMain, {});
         std::array<vk::Buffer, 1> vertexBuffers { *vertexBuffer };
         std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
         cmd->bindVertexBuffers(0, vertexBuffers, offsets);
         cmd->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMain, {});
         cmd->drawIndexed(static_cast<std::uint32_t>(indices.size()), 1, 0, 0, 0);
         cmd->endRendering();
     }});
@@ -622,9 +628,9 @@ void CRenderer::Draw(glm::mat4 view, float deltaTime) {
         computeBuffer.SetSyncState(ss);
 
         cmd->bindPipeline(vk::PipelineBindPoint::eCompute, *m_computePipeline);
-        cmd->pushConstants<ComputePushConstants>(m_computePipeline.Layout(), vk::ShaderStageFlagBits::eCompute, 0, { ComputePushConstants {deltaTime} });
+        cmd->pushConstants<ComputePushConstants>(m_computePipeline.Layout(), vk::ShaderStageFlagBits::eCompute, 0, { ComputePushConstants { deltaTime * 1000 } });
         cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_computePipeline.Layout(), 0, descriptorSetCompute, {});
-        cmd->dispatch(10240 / 256, 1, 1);
+        cmd->dispatch(8192 / 256, 1, 1);
 
         cmd.PipelineBarrier({ BufferBarrier {
             computeBuffer, computeBuffer.SyncState().m_usage, Usage::eVertexRead,
@@ -909,7 +915,7 @@ void CRenderer::GenerateRandomParticles(Vulkan::CBuffer& stagingBuffer, const vk
     static std::default_random_engine rndEngine((unsigned)time(nullptr));
     static std::uniform_real_distribution<float> rndDist(0.0f, 1.0f);
 
-    constexpr auto PARTICLE_COUNT = 10240;
+    constexpr auto PARTICLE_COUNT = 8192;
     // Initial particle positions on a circle
     std::vector<CParticle> particles(PARTICLE_COUNT);
     for (auto& particle : particles) {

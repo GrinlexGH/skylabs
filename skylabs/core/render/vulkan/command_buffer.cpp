@@ -10,8 +10,8 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
 
     std::vector<vk::BufferMemoryBarrier2> bufBarriers;
     std::vector<vk::ImageMemoryBarrier2> imgBarriers;
-    imgBarriers.reserve(barriers.size());
     bufBarriers.reserve(barriers.size());
+    imgBarriers.reserve(barriers.size());
 
     for (const auto& b : barriers) {
         if (std::holds_alternative<ImageBarrier>(b)) {

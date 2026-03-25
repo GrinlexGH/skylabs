@@ -23,17 +23,15 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     uint index = dispatchThreadID.x;
 
-    Particle particle = particlesIn[index];
+    Particle particleIn = particlesIn[index];
 
-    particle.position += particle.velocity * pc.deltaTime * 100.0f;
+    particlesOut[index].position = particleIn.position + particleIn.velocity.xy * pc.deltaTime;
+    particlesOut[index].velocity = particleIn.velocity;
 
-    if (particle.position.x <= -1.0 || particle.position.x >= 1.0) {
-        particle.velocity.x = -particle.velocity.x;
+    if ((particlesOut[index].position.x <= -1.0) || (particlesOut[index].position.x >= 1.0)) {
+        particlesOut[index].velocity.x = -particlesOut[index].velocity.x;
     }
-    
-    if (particle.position.y <= -1.0 || particle.position.y >= 1.0) {
-        particle.velocity.y = -particle.velocity.y;
+    if ((particlesOut[index].position.y <= -1.0) || (particlesOut[index].position.y >= 1.0)) {
+        particlesOut[index].velocity.y = -particlesOut[index].velocity.y;
     }
-
-    particlesOut[index] = particle;
 }

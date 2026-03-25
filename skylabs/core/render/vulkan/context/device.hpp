@@ -27,7 +27,6 @@ public:
     [[nodiscard]] const CQueue& GraphicsQueue() const noexcept { return m_graphicsQueue; }
     [[nodiscard]] const CQueue& PresentQueue() const noexcept { return m_presentQueue; }
     [[nodiscard]] const CQueue& ComputeQueue() const noexcept { return m_computeQueue; }
-    [[nodiscard]] const CQueue& TransferQueue() const noexcept { return m_transferQueue; }
 
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return std::ranges::contains(m_enabledExtensions, name); }
     [[nodiscard]] DeviceCaps Caps() const noexcept { return m_caps; }
@@ -43,6 +42,5 @@ private:
     CQueue m_graphicsQueue { nullptr };
     CQueue m_presentQueue { nullptr };
     CQueue m_computeQueue { nullptr };
-    CQueue m_transferQueue { nullptr };
 };
 }

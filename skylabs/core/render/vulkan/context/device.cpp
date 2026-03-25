@@ -8,7 +8,6 @@ struct QueueFamilyIndices
     std::uint32_t m_graphicsFamily = 0;
     std::uint32_t m_presentFamily = 0;
     std::uint32_t m_computeFamily = 0;
-    std::uint32_t m_transferFamily = 0;
 };
 
 namespace {
@@ -43,7 +42,6 @@ QueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance in
     std::optional<std::uint32_t> graphicsFamily;
     std::optional<std::uint32_t> presentFamily;
     std::optional<std::uint32_t> computeFamily;
-    std::optional<std::uint32_t> transferFamily;
     const std::vector<vk::QueueFamilyProperties>& queueFamilies = gpu->getQueueFamilyProperties();
 
     for (std::uint32_t i = 0; i < queueFamilies.size(); ++i) {
@@ -54,15 +52,6 @@ QueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance in
         // Graphics queue guarantees compute
         if (!computeFamily.has_value() && queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) {
             computeFamily.emplace(i);
-        }
-
-        // Graphics queue guarantees compute
-        if (!transferFamily.has_value() &&
-            (queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer ||
-            queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics ||
-            queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute)
-        ) {
-            transferFamily.emplace(i);
         }
 
         if (!presentFamily.has_value() && window->IsQueueFamilySupportPresent(instance, *gpu, i)) {
@@ -84,21 +73,11 @@ QueueFamilyIndices GetQueueFamilies(const IWindow* window, const vk::Instance in
         }
     }
 
-    // Search for dedicated transfer queue family
-    for (std::uint32_t i = 0; i < queueFamilies.size(); ++i) {
-        if (!(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) &&
-            queueFamilies[i].queueFlags & vk::QueueFlagBits::eTransfer
-        ) {
-            transferFamily.emplace(i);
-            break;
-        }
-    }
-
-    return { *graphicsFamily, *presentFamily, *computeFamily, *transferFamily };
+    return { *graphicsFamily, *presentFamily, *computeFamily };
 };
 
 std::vector<vk::DeviceQueueCreateInfo> GetQueueCreateInfos(const QueueFamilyIndices& indices) {
-    std::array uniqueQueueFamilies { indices.m_graphicsFamily, indices.m_presentFamily, indices.m_computeFamily, indices.m_transferFamily };
+    std::array uniqueQueueFamilies { indices.m_graphicsFamily, indices.m_presentFamily, indices.m_computeFamily };
     std::ranges::sort(uniqueQueueFamilies);
     const std::size_t uniqueCount = std::distance(uniqueQueueFamilies.begin(), std::ranges::unique(uniqueQueueFamilies).begin());
 
