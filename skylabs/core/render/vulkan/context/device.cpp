@@ -163,7 +163,6 @@ CDevice::CDevice(
     m_graphicsQueue = CQueue { m_handle, queueFamilyIndices.m_graphicsFamily, 0 };
     m_presentQueue = CQueue { m_handle, queueFamilyIndices.m_presentFamily, 0 };
     m_computeQueue = CQueue { m_handle, queueFamilyIndices.m_computeFamily, 0 };
-    m_transferQueue = CQueue { m_handle, queueFamilyIndices.m_transferFamily, 0 };
 }
 
 std::vector<const char*> CDevice::SetupExtensions(const CPhysicalDevice& gpu) {
