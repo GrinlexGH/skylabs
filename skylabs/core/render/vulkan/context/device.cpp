@@ -131,26 +131,26 @@ CDevice::CDevice(
     vk::PhysicalDeviceVulkan14Features features14 {};
     vk::PhysicalDeviceMaintenance5Features maintenance5 {};
 
+    Utils::PNextChain pNext;
+
     #define VK_REQ_FEATURE(T, x) std::pair { &T::x, #x }
     #define VK_OPT_FEATURE(T, x, f) std::pair { &T::x, f }
 
     RequireFeatures(f2.features, features2.features,
         VK_REQ_FEATURE(vk::PhysicalDeviceFeatures, samplerAnisotropy)
     );
+    pNext.Add(features2);
 
     RequireFeatures(f11, features11,
         VK_REQ_FEATURE(vk::PhysicalDeviceVulkan11Features, shaderDrawParameters)
     );
+    pNext.Add(features11);
 
     RequireFeatures(f13, features13,
         VK_REQ_FEATURE(vk::PhysicalDeviceVulkan13Features, synchronization2),
         VK_REQ_FEATURE(vk::PhysicalDeviceVulkan13Features, dynamicRendering),
         VK_REQ_FEATURE(vk::PhysicalDeviceVulkan13Features, maintenance4)
     );
-
-    Utils::PNextChain pNext;
-    pNext.Add(features2);
-    pNext.Add(features11);
     pNext.Add(features13);
 
     if (instance.ApiVersion() == vk::ApiVersion14) {
