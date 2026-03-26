@@ -108,7 +108,7 @@ CInstance::CInstance(InstanceCreateInfo options) {
     const std::vector<const char*> enabledExtensions = SetupExtensions(context, options.m_requiredExtensions, enabledLayers);
 
     // Enable extensions
-    void* pNext = nullptr;
+    Utils::PNextChain pNext;
 
 #ifdef DEBUG
     bool isDebugUtilsEnabled = false;
@@ -125,7 +125,7 @@ CInstance::CInstance(InstanceCreateInfo options) {
             vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
         debugUtilsCreateInfo.pfnUserCallback = DebugCallback;
 
-        Utils::LinkPNextChain(pNext, &debugUtilsCreateInfo);
+        pNext.Add(debugUtilsCreateInfo);
 
         isDebugUtilsEnabled = true;
     }
@@ -139,7 +139,7 @@ CInstance::CInstance(InstanceCreateInfo options) {
     applicationInfo.apiVersion = m_apiVersion;
 
     vk::InstanceCreateInfo instanceCreateInfo {};
-    instanceCreateInfo.pNext = pNext;
+    instanceCreateInfo.pNext = pNext.m_head;
     instanceCreateInfo.pApplicationInfo = &applicationInfo;
     instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
     instanceCreateInfo.ppEnabledLayerNames = !enabledLayers.empty() ? enabledLayers.data() : nullptr;

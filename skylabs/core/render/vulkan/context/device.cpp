@@ -28,6 +28,16 @@ void OptionalFeature(const T& available, T& target, vk::Bool32 T::*member, bool&
     }
 }
 
+template<typename T, typename... Members>
+void RequireFeatures(const T& available, T& target, Members... members) {
+    (RequireFeature(available, target, members.first, members.second), ...);
+}
+
+template<typename T, typename... Members>
+void OptionalFeatures(const T& available, T& target, Members... members) {
+    (OptionalFeature(available, target, members.first, members.second), ...);
+}
+
 std::unordered_map<std::string, bool> RequestExtensions() {
     std::unordered_map<std::string, bool> requestedExtensions;
     auto requestExtension = [&](const char* name, bool required = false) { requestedExtensions.try_emplace(name, required); };
@@ -112,46 +122,61 @@ CDevice::CDevice(
         vk::PhysicalDeviceMaintenance5Features
     >();
 
-    void* pNext = nullptr;
-
-    const auto& availableFeatures = features.get<vk::PhysicalDeviceFeatures2>();
-    const auto& availableFeatures11 = features.get<vk::PhysicalDeviceVulkan11Features>();
-    const auto& availableFeatures13 = features.get<vk::PhysicalDeviceVulkan13Features>();
+    const auto& f2 = features.get<vk::PhysicalDeviceFeatures2>();
+    const auto& f11 = features.get<vk::PhysicalDeviceVulkan11Features>();
+    const auto& f13 = features.get<vk::PhysicalDeviceVulkan13Features>();
     vk::PhysicalDeviceFeatures2 features2 {};
     vk::PhysicalDeviceVulkan11Features features11 {};
     vk::PhysicalDeviceVulkan13Features features13 {};
     vk::PhysicalDeviceVulkan14Features features14 {};
-    vk::PhysicalDeviceMaintenance5Features maintenance5Features {};
+    vk::PhysicalDeviceMaintenance5Features maintenance5 {};
 
-    RequireFeature(availableFeatures.features, features2.features, &vk::PhysicalDeviceFeatures::samplerAnisotropy, "samplerAnisotropy");
-    RequireFeature(availableFeatures11, features11, &vk::PhysicalDeviceVulkan11Features::shaderDrawParameters, "shaderDrawParameters");
-    RequireFeature(availableFeatures13, features13, &vk::PhysicalDeviceVulkan13Features::synchronization2, "synchronization2");
-    RequireFeature(availableFeatures13, features13, &vk::PhysicalDeviceVulkan13Features::dynamicRendering, "dynamicRendering");
-    RequireFeature(availableFeatures13, features13, &vk::PhysicalDeviceVulkan13Features::maintenance4, "maintenance4");
+    #define VK_REQ_FEATURE(T, x) std::pair { &T::x, #x }
+    #define VK_OPT_FEATURE(T, x, f) std::pair { &T::x, f }
+
+    RequireFeatures(f2.features, features2.features,
+        VK_REQ_FEATURE(vk::PhysicalDeviceFeatures, samplerAnisotropy)
+    );
+
+    RequireFeatures(f11, features11,
+        VK_REQ_FEATURE(vk::PhysicalDeviceVulkan11Features, shaderDrawParameters)
+    );
+
+    RequireFeatures(f13, features13,
+        VK_REQ_FEATURE(vk::PhysicalDeviceVulkan13Features, synchronization2),
+        VK_REQ_FEATURE(vk::PhysicalDeviceVulkan13Features, dynamicRendering),
+        VK_REQ_FEATURE(vk::PhysicalDeviceVulkan13Features, maintenance4)
+    );
+
+    Utils::PNextChain pNext;
+    pNext.Add(features2);
+    pNext.Add(features11);
+    pNext.Add(features13);
 
     if (instance.ApiVersion() == vk::ApiVersion14) {
-        const auto& availableFeatures14 = features.get<vk::PhysicalDeviceVulkan14Features>();
-        OptionalFeature(availableFeatures14, features14, &vk::PhysicalDeviceVulkan14Features::maintenance5, m_caps.m_maintenance5);
-        Utils::LinkPNextChain(pNext, &features14);
-    } else {
-        if (m_enabledExtensions.contains(vk::KHRMaintenance5ExtensionName)) {
-            const auto& availableMaintenance5Features = features.get<vk::PhysicalDeviceMaintenance5Features>();
-            OptionalFeature(availableMaintenance5Features, maintenance5Features, &vk::PhysicalDeviceMaintenance5Features::maintenance5, m_caps.m_maintenance5);
-            Utils::LinkPNextChain(pNext, &maintenance5Features);
-        }
-    }
+        const auto& f14 = features.get<vk::PhysicalDeviceVulkan14Features>();
 
-    Utils::LinkPNextChain(pNext, &features2);
-    Utils::LinkPNextChain(pNext, &features11);
-    Utils::LinkPNextChain(pNext, &features13);
+        OptionalFeatures(f14, features14,
+            VK_OPT_FEATURE(vk::PhysicalDeviceVulkan14Features, maintenance5, m_caps.m_maintenance5)
+        );
+
+        pNext.Add(features14);
+    } else if (m_enabledExtensions.contains(vk::KHRMaintenance5ExtensionName)) {
+        const auto& fMaintenance5 = features.get<vk::PhysicalDeviceMaintenance5Features>();
+
+        OptionalFeatures(fMaintenance5, maintenance5,
+            VK_OPT_FEATURE(vk::PhysicalDeviceMaintenance5Features, maintenance5, m_caps.m_maintenance5)
+        );
+
+        pNext.Add(maintenance5);
+    }
 
     // Setup queue create infos
     const QueueFamilyIndices queueFamilyIndices = GetQueueFamilies(window, **instance, physicalDevice);
     const std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(queueFamilyIndices);
 
-
     vk::DeviceCreateInfo deviceCreateInfo;
-    deviceCreateInfo.pNext = pNext;
+    deviceCreateInfo.pNext = pNext.m_head;
     deviceCreateInfo.queueCreateInfoCount = static_cast<std::uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pQueueCreateInfos = !queueCreateInfos.empty() ? queueCreateInfos.data() : nullptr;
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
