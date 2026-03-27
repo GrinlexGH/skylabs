@@ -122,8 +122,6 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_frameData.emplace_back(m_context);
     }
 
-    m_graph = RG::CRenderGraph { m_context, FRAMES_IN_FLIGHT_COUNT };
-
     CBuffer stagingBuffer { nullptr };
     m_singleCommandPool = m_context.Device()->createCommandPool({
         vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
@@ -271,6 +269,17 @@ CRenderer::~CRenderer() {
     if (**m_context.Device()) {
         try {
             m_context.Device()->waitIdle();
+            for (auto& b : m_context.Allocator()->getHeapBudgets()) {
+                printf("My heap currently has %u allocations taking %llu B,\n",
+                    b.statistics.allocationCount,
+                    b.statistics.allocationBytes);
+                printf("allocated out of %u Vulkan device memory blocks taking %llu B,\n",
+                    b.statistics.blockCount,
+                    b.statistics.blockBytes);
+                printf("Vulkan reports total usage %llu B with budget %llu B.\n\n",
+                    b.usage,
+                    b.budget);
+            }
         } catch (const vk::SystemError& e) {
             Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
         }
@@ -378,9 +387,17 @@ void CRenderer::Draw(glm::mat4 view, float) {
     std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
     cmd->bindVertexBuffers(0, vertexBuffers, offsets);
     cmd->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
-    cmd->drawIndexed(m_matroskin.indexCount, 1, m_matroskin.firstIndex, m_matroskin.vertexOffset, 0);
+    cmd->drawIndexed(
+        m_matroskin.indexCount, 1,
+        m_matroskin.IdxOffset() / sizeof(std::uint16_t),
+        m_matroskin.VtxOffset() / sizeof(CVertex), 0
+    );
     cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMainRoom, {});
-    cmd->drawIndexed(m_viking.indexCount, 1, m_viking.firstIndex, m_viking.vertexOffset, 0);
+    cmd->drawIndexed(
+        m_viking.indexCount, 1,
+        m_viking.IdxOffset() / sizeof(std::uint16_t),
+        m_viking.VtxOffset() / sizeof(CVertex), 0
+    );
     cmd->endRendering();
 
     cmd.PipelineBarrier({
@@ -597,72 +614,54 @@ auto LoadModel(const char* filename) {
 }
 
 void CRenderer::LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
-    auto [mVertices, mIndices] = LoadModel("assets/matroskin.obj");
-    auto [vVertices, vIndices] = LoadModel("assets/viking_room.obj");
+    vma::VirtualBlockCreateInfo blockInfo { GEOMETRY_POOL_SIZE };
+    m_vtxBlock = vma::raii::VirtualBlock { blockInfo };
+    m_idxBlock = vma::raii::VirtualBlock { blockInfo };
 
-    m_matroskin.indexCount = static_cast<std::uint32_t>(mIndices.size());
-
-    m_viking.indexCount = static_cast<std::uint32_t>(vIndices.size());
-    m_viking.firstIndex = m_matroskin.indexCount;
-    m_viking.vertexOffset = static_cast<std::int32_t>(mVertices.size());
-
-    const vk::DeviceSize mVertexBufferSize = sizeof(mVertices[0]) * mVertices.size();
-    const vk::DeviceSize vVertexBufferSize = sizeof(vVertices[0]) * vVertices.size();
-    if (stagingBuffer.Size() < mVertexBufferSize + vVertexBufferSize) {
-        stagingBuffer = CBuffer {
-            m_context,
-            mVertexBufferSize + vVertexBufferSize,
-            vk::BufferUsageFlagBits::eTransferSrc,
-            MemoryLocation::eHostVisible
-        };
-    }
-
-    std::memcpy(stagingBuffer.Data(), mVertices.data(), static_cast<std::size_t>(mVertexBufferSize));
-    std::memcpy(static_cast<char*>(stagingBuffer.Data()) + mVertexBufferSize, vVertices.data(), static_cast<std::size_t>(vVertexBufferSize));
-
-    CBuffer vertexBuffer {
-        m_context,
-        mVertexBufferSize + vVertexBufferSize,
+    m_vertexBuffer = m_bufferManager.ImportBuffer("vertexBuffer", CBuffer {
+        m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
         MemoryLocation::eDeviceOnly
-    };
-
-    {
-        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
-        CCommandBuffer cmd { commandBuffer };
-        cmd.Copy(vertexBuffer, stagingBuffer, mVertexBufferSize + vVertexBufferSize);
-        EndSingleTimeCommands(m_context.Device(), commandBuffer);
-    }
-
-    const vk::DeviceSize mIndexBufferSize = sizeof(mIndices[0]) * mIndices.size();
-    const vk::DeviceSize vIndexBufferSize = sizeof(vIndices[0]) * vIndices.size();
-    if (stagingBuffer.Size() < mIndexBufferSize + vIndexBufferSize) {
-        stagingBuffer = CBuffer {
-            m_context,
-            mIndexBufferSize + vIndexBufferSize,
-            vk::BufferUsageFlagBits::eTransferSrc,
-            MemoryLocation::eHostVisible
-        };
-    }
-
-    std::memcpy(stagingBuffer.Data(), mIndices.data(), static_cast<std::size_t>(mIndexBufferSize));
-    std::memcpy(static_cast<char*>(stagingBuffer.Data()) + mIndexBufferSize, vIndices.data(), static_cast<std::size_t>(vIndexBufferSize));
-
-    CBuffer indexBuffer = {
-        m_context,
-        mIndexBufferSize + vIndexBufferSize,
+    });
+    m_indexBuffer = m_bufferManager.ImportBuffer("indexBuffer", CBuffer {
+        m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
         MemoryLocation::eDeviceOnly
+    });
+
+    auto UploadToPool = [&](const std::string& path, SubMesh& subMesh) {
+        auto [vertices, indices] = LoadModel(path.c_str());
+
+        vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
+        vk::DeviceSize iSize = indices.size() * sizeof(indices[0]);
+
+        vma::VirtualAllocationCreateInfo allocationInfo { };
+        allocationInfo.setSize(vSize);
+        subMesh.vtxAlloc = vma::raii::VirtualAllocation { m_vtxBlock, allocationInfo };
+        allocationInfo.setSize(iSize);
+        subMesh.idxAlloc = vma::raii::VirtualAllocation { m_idxBlock, allocationInfo };
+        subMesh.indexCount = static_cast<uint32_t>(indices.size());
+
+        vk::DeviceSize totalSize = vSize + iSize;
+        if (stagingBuffer.Size() < totalSize) {
+            stagingBuffer = CBuffer { m_context, totalSize,
+                vk::BufferUsageFlagBits::eTransferSrc, MemoryLocation::eHostVisible
+            };
+        }
+
+        std::memcpy(stagingBuffer.Data(), vertices.data(), vSize);
+        std::memcpy(static_cast<std::uint8_t*>(stagingBuffer.Data()) + vSize, indices.data(), iSize);
+
+        vk::raii::CommandBuffer cb = BeginSingleTimeCommands(*m_context.Device(), commandPool);
+        {
+            CCommandBuffer cmd { cb };
+            cmd.Copy(m_bufferManager.GetBuffer(m_vertexBuffer), stagingBuffer, vSize, { 0, subMesh.VtxOffset() });
+            cmd.Copy(m_bufferManager.GetBuffer(m_indexBuffer), stagingBuffer, iSize, { vSize, subMesh.IdxOffset() } );
+        }
+        EndSingleTimeCommands(m_context.Device(), cb);
     };
 
-    {
-        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
-        CCommandBuffer cmd { commandBuffer };
-        cmd.Copy(indexBuffer, stagingBuffer, mIndexBufferSize + vIndexBufferSize);
-        EndSingleTimeCommands(m_context.Device(), commandBuffer);
-    }
-
-    m_vertexBuffer = m_bufferManager.ImportBuffer("vertexBuffer", std::move(vertexBuffer));
-    m_indexBuffer = m_bufferManager.ImportBuffer("indexBuffer", std::move(indexBuffer));
+    UploadToPool("assets/matroskin.obj", m_matroskin);
+    UploadToPool("assets/viking_room.obj", m_viking);
 }
 }

@@ -16,8 +16,11 @@
 
 struct SubMesh {
     std::uint32_t indexCount = 0;
-    std::uint32_t firstIndex = 0;
-    std::int32_t vertexOffset = 0;
+    vma::raii::VirtualAllocation vtxAlloc = nullptr;
+    vma::raii::VirtualAllocation idxAlloc = nullptr;
+
+    vk::DeviceSize VtxOffset() const { return vtxAlloc.getInfo().offset; }
+    vk::DeviceSize IdxOffset() const { return idxAlloc.getInfo().offset; }
 };
 
 namespace Vulkan {
@@ -37,20 +40,16 @@ public:
 
 private:
     static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 4;
+    static constexpr vk::DeviceSize GEOMETRY_POOL_SIZE = 128 * 1024 * 1024;
 
     void Resize(CFrame& currentFrameData);
     void LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
     void LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
 
-    SubMesh m_matroskin;
-    SubMesh m_viking;
-
     CContext m_context { nullptr };
 
     CSurface m_surface { nullptr };
     CSwapchain m_swapchain { nullptr };
-
-    RG::CRenderGraph m_graph { nullptr };
 
     CCommandBufferSet m_graphicsCommands { nullptr };
     CCommandBufferSet m_computeCommands { nullptr };
@@ -63,6 +62,12 @@ private:
     CTexturePool m_textureManager { nullptr };
     CBufferPool m_bufferManager { nullptr };
     CDescriptorPool m_descriptorManager { nullptr };
+
+    vma::raii::VirtualBlock m_vtxBlock = nullptr;
+    vma::raii::VirtualBlock m_idxBlock = nullptr;
+
+    SubMesh m_matroskin;
+    SubMesh m_viking;
 
     // Main pipeline
     BufferHandle m_uniformBuffer;
