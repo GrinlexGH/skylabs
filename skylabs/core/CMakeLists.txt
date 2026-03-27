@@ -36,8 +36,8 @@ target_sources(
         render/vulkan/platform/surface.cpp
         render/vulkan/platform/swapchain.hpp
         render/vulkan/platform/swapchain.cpp
-        render/vulkan/frame_data.hpp
-        render/vulkan/frame_data.cpp
+        render/vulkan/frame.hpp
+        render/vulkan/frame.cpp
         render/vulkan/pipeline/shader.hpp
         render/vulkan/pipeline/shader.cpp
         render/vulkan/resources/image.hpp
@@ -46,8 +46,6 @@ target_sources(
         render/vulkan/resources/buffer.cpp
         render/vulkan/resources/sampler.hpp
         render/vulkan/resources/sampler.cpp
-        render/vulkan/resources/sync_state.hpp
-        render/vulkan/resources/sync_state.cpp
         render/vulkan/pipeline/graphics_pipeline.hpp
         render/vulkan/pipeline/graphics_pipeline.cpp
         render/vulkan/pipeline/compute_pipeline.hpp
@@ -64,6 +62,8 @@ target_sources(
         render/vulkan/render_graph/descriptor_pool.cpp
         render/vulkan/render_graph/graph.hpp
         render/vulkan/render_graph/graph.cpp
+        render/vulkan/sync_state.hpp
+        render/vulkan/sync_state.cpp
         render/vertex.hpp
         SDL/context.cpp
         SDL/context.hpp

@@ -53,7 +53,7 @@ void CSwapchain::CreateSwapchain(
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
     vk::SwapchainCreateInfoKHR createInfo;
-    createInfo.surface = m_associatedSurface = surface;
+    createInfo.surface = surface;
 
     //====================
     const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice->getSurfaceCapabilitiesKHR(surface);
@@ -63,8 +63,7 @@ void CSwapchain::CreateSwapchain(
     createInfo.imageFormat = m_surfaceFormat.format;
     createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
 
-    m_extent = ChooseSurfaceExtent(surfaceCapabilities);
-    createInfo.imageExtent = m_extent;
+    createInfo.imageExtent = m_extent = ChooseSurfaceExtent(surfaceCapabilities);
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
@@ -76,8 +75,7 @@ void CSwapchain::CreateSwapchain(
 
     if (device.GraphicsQueue().FamilyIndex() != device.PresentQueue().FamilyIndex()) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
-        createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
+        createInfo.setQueueFamilyIndices({ queueFamilyIndices });
     } else {
         createInfo.imageSharingMode = vk::SharingMode::eExclusive;
     }
@@ -143,5 +141,25 @@ vk::PresentModeKHR CSwapchain::ChoosePresentMode(const vk::PresentModeKHR reques
 
     Log::Warning("Using standard FIFO (V-Sync)");
     return vk::PresentModeKHR::eFifo;
+}
+
+std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore semaphore, vk::Fence fence) const {
+    auto [result, index] = m_handle.acquireNextImage(UINT64_MAX, semaphore, fence);
+
+    if (result == vk::Result::eSuccess) {
+        return index;
+    } else if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR) {
+        return std::unexpected(result);
+    }
+
+    throw std::runtime_error("Failed to acquire swapchain image: " + vk::to_string(result));
+}
+
+vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayProxyNoTemporaries<const vk::Semaphore>& semaphores) const {
+    vk::PresentInfoKHR presentInfo {};
+    presentInfo.setWaitSemaphores(semaphores);
+    presentInfo.setSwapchains({ *m_handle });
+    presentInfo.setImageIndices({ imageIndex });
+    return m_context->Device().GraphicsQueue()->presentKHR(presentInfo);
 }
 }

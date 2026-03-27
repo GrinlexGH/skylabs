@@ -27,6 +27,9 @@ public:
     [[nodiscard]] const vk::raii::SwapchainKHR& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::SwapchainKHR* operator->() const noexcept { return &m_handle; }
 
+    [[nodiscard]] std::expected<std::uint32_t, vk::Result> AcquireImage(vk::Semaphore semaphore = {}, vk::Fence fence = {}) const;
+    [[nodiscard]] vk::Result PresentImage(std::uint32_t imageIndex, const vk::ArrayProxyNoTemporaries<const vk::Semaphore>& semaphores = {}) const;
+
     [[nodiscard]] vk::SurfaceFormatKHR SurfaceFormat() const { return m_surfaceFormat; }
     [[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }

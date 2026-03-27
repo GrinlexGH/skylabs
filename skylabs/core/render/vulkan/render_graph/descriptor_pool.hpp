@@ -31,6 +31,7 @@ struct StorageBufferDescriptorInfo {
 
 struct DescriptorDescription
 {
+    std::uint8_t m_binding = 0;
     vk::DescriptorType m_type;
     vk::ShaderStageFlags m_shaderStages;
     std::variant<

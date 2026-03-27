@@ -9,25 +9,21 @@ void CRenderGraph::Execute() {
     int graphicsI = 0;
     int computeI = 0;
     for (auto& p : m_passes) {
-        auto cmd = p.m_type == PassType::eGraphics ? m_graphicsQueues.PrimaryBuffers()[m_inFlightIndex * 4 + graphicsI++] : m_computeQueues.PrimaryBuffers()[m_inFlightIndex + computeI++];
+        auto cmd = p.m_type == PassType::eGraphics ? m_graphicsQueues.PrimaryBuffers()[m_inFlightIndex * 2 + graphicsI++] : m_computeQueues.PrimaryBuffers()[m_inFlightIndex + computeI++];
         std::vector<std::variant<ImageBarrier, BufferBarrier>> imagePrepareBarriers;
         std::vector<std::variant<ImageBarrier, BufferBarrier>> imageAfterBarriers;
 
         for (auto& req : p.m_requirements) {
-            if (req.m_image.SyncState().m_usage != req.m_usage) {
-                imagePrepareBarriers.emplace_back(ImageBarrier { req.m_image, req.m_image.FullRange(), req.m_image.SyncState().m_usage, req.m_usage });
+            auto& ss = m_imageSyncStates[&req.m_image];
 
-                auto ss = req.m_image.SyncState();
+            if (ss.m_usage != req.m_usage) {
+                imagePrepareBarriers.emplace_back(ImageBarrier { req.m_image, req.m_image.FullRange(), ss.m_usage, req.m_usage });
                 ss.m_usage = req.m_usage;
-                req.m_image.SetSyncState(ss);
             }
 
-            if (req.m_usageAfter != Usage::eNone && (req.m_image.SyncState().m_usage != req.m_usageAfter)) {
-                imageAfterBarriers.emplace_back(ImageBarrier { req.m_image, req.m_image.FullRange(), req.m_image.SyncState().m_usage, req.m_usageAfter });
-
-                auto ss = req.m_image.SyncState();
+            if (req.m_usageAfter != Usage::eNone && (ss.m_usage != req.m_usageAfter)) {
+                imageAfterBarriers.emplace_back(ImageBarrier { req.m_image, req.m_image.FullRange(), ss.m_usage, req.m_usageAfter });
                 ss.m_usage = req.m_usageAfter;
-                req.m_image.SetSyncState(ss);
             }
         }
 

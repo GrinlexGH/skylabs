@@ -1,6 +1,5 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/resources/sync_state.hpp>
 
 namespace Vulkan {
 struct ImageCreateInfo
@@ -44,9 +43,6 @@ public:
     [[nodiscard]] vk::ImageAspectFlags AspectFlags() const noexcept { return m_aspectFlags; }
     [[nodiscard]] vk::ImageSubresourceRange FullRange() const noexcept { return { m_aspectFlags, 0, m_mipLevels, 0, m_arrayLevels }; }
 
-    [[nodiscard]] ResourceSyncState SyncState() const noexcept { return m_syncState; }
-    void SetSyncState(ResourceSyncState state) noexcept { m_syncState = state; }
-
 private:
     void CreateView(const vk::raii::Device& device, vk::ImageViewType viewType);
 
@@ -61,7 +57,5 @@ private:
     std::uint32_t m_arrayLevels = 1;
     vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
     vk::ImageAspectFlags m_aspectFlags = vk::ImageAspectFlagBits::eNone;
-
-    ResourceSyncState m_syncState {};
 };
 }

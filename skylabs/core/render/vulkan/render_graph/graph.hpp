@@ -1,5 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/command_buffer_set.hpp>
+#include <skylabs/core/render/vulkan/sync_state.hpp>
 
 namespace Vulkan::RG {
 struct PassRequirements
@@ -45,8 +46,8 @@ public:
     explicit CRenderGraph(const CContext& context, unsigned int inFlightCount) :
         m_context(&context),
         m_inFlightCount(inFlightCount),
-        m_graphicsQueues(context, context.Device().GraphicsQueue().FamilyIndex(), { 4 * inFlightCount }),
-        m_computeQueues(context, context.Device().ComputeQueue().FamilyIndex(), { 1 * inFlightCount })
+        m_graphicsQueues(context, context.Device().GraphicsQueue().FamilyIndex(), { 2 * inFlightCount }),
+        m_computeQueues(context, context.Device().ComputeQueue().FamilyIndex(), { 0 * inFlightCount })
     {}
     CRenderGraph(const CRenderGraph&) = delete;
     CRenderGraph(CRenderGraph&&) noexcept = default;
@@ -54,7 +55,7 @@ public:
     CRenderGraph& operator=(CRenderGraph&&) noexcept = default;
     ~CRenderGraph() = default;
 
-    void Clear() { m_passes.clear(); }
+    void Clear() { m_passes.clear(); m_imageSyncStates.clear(); }
     void AddPass(Pass pass);
     void Execute();
 
@@ -67,5 +68,6 @@ private:
     CCommandBufferSet m_graphicsQueues { nullptr };
     CCommandBufferSet m_computeQueues { nullptr };
     std::vector<Pass> m_passes;
+    std::unordered_map<CImage*, ResourceSyncState> m_imageSyncStates;
 };
 }

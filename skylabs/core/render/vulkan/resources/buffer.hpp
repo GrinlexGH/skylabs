@@ -1,6 +1,5 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/resources/sync_state.hpp>
 
 namespace Vulkan {
 enum class MemoryLocation {
@@ -37,16 +36,11 @@ public:
 
     [[nodiscard]] vk::BufferUsageFlags Usage() const noexcept { return m_usage; }
 
-    [[nodiscard]] ResourceSyncState SyncState() const noexcept { return m_syncState; }
-    void SetSyncState(ResourceSyncState state) noexcept { m_syncState = state; }
-
 private:
     vma::raii::Buffer m_handle { nullptr };
 
     void* m_data = nullptr;
     vk::DeviceSize m_size = 0;
     vk::BufferUsageFlags m_usage;
-
-    ResourceSyncState m_syncState;
 };
 }

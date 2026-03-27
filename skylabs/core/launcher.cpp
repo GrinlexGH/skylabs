@@ -76,12 +76,6 @@ void MainLoop(const std::unique_ptr<IRenderer>& renderer, const SDL::CWindow& wi
                             SDL_SetWindowFullscreen(*window, fullscreenSwitch);
                             fullscreenSwitch = !fullscreenSwitch;
                         } break;
-                        case SDLK_UP: {
-                            MoveForward();
-                        } break;
-                        case SDLK_DOWN: {
-                            MoveBackward();
-                        } break;
                         default:
                             break;
                     }

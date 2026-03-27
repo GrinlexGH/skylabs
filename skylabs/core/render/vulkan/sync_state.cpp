@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/resources/sync_state.hpp>
+#include <skylabs/core/render/vulkan/sync_state.hpp>
 
 #include <frozen/map.h>
 

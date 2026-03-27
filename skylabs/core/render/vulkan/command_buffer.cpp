@@ -74,7 +74,7 @@ void CCommandBuffer::GenerateMipmaps(const CImage& image, Usage srcUsage, Usage 
     std::int32_t mipWidth = static_cast<int32_t>(image.Extent().width);
     std::int32_t mipHeight = static_cast<int32_t>(image.Extent().height);
 
-    for (uint32_t i = 1; i < image.MipLevels(); i++) {
+    for (std::uint32_t i = 1; i < image.MipLevels(); i++) {
         PipelineBarrier({ ImageBarrier {
             .m_image = image,
             .m_range = vk::ImageSubresourceRange { image.AspectFlags(), i - 1, 1, 0, image.ArrayLevels() },
@@ -124,7 +124,7 @@ void CCommandBuffer::Copy(const CImage& dst, const CBuffer& src) const {
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+    region.imageSubresource.aspectMask = dst.AspectFlags();
     region.imageSubresource.mipLevel = 0;
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = dst.ArrayLevels();
@@ -134,10 +134,10 @@ void CCommandBuffer::Copy(const CImage& dst, const CBuffer& src) const {
     m_handle->copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
-void CCommandBuffer::Copy(const CBuffer& dst, const CBuffer& src, const vk::DeviceSize size) const {
+void CCommandBuffer::Copy(const CBuffer& dst, const CBuffer& src, const vk::DeviceSize size, const BufferCopyOffsets offsets) const {
     vk::BufferCopy copyRegion {};
-    copyRegion.srcOffset = 0;
-    copyRegion.dstOffset = 0;
+    copyRegion.srcOffset = offsets.m_srcOffset;
+    copyRegion.dstOffset = offsets.m_dstOffset;
     copyRegion.size = size;
 
     m_handle->copyBuffer(*src, *dst, copyRegion);

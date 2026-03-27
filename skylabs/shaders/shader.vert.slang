@@ -1,13 +1,25 @@
-import main;
+struct UniformBufferObject {
+    float4x4 model;
+    float4x4 view;
+    float4x4 proj;
+};
 
-struct VertexInput {
-    [[vk::location(0)]] float3 position : POSOTION;
-    [[vk::location(1)]] float2 texCoord : TEXCOORD;
+[[vk::binding(0)]]
+ConstantBuffer<UniformBufferObject> ubo;
+
+struct VOut {
+    float4 outPosition : SV_Position;
+    [[vk::location(0)]] float2 uv;
+};
+
+struct VIn {
+    [[vk::location(0)]] float3 position;
+    [[vk::location(1)]] float2 texCoord;
 };
 
 [shader("vertex")]
-VertexToFragment main(VertexInput input, uint vertexIndex : SV_VertexID) {
-    VertexToFragment output;
+VOut main(VIn input, uint vertexIndex : SV_VertexID) {
+    VOut output;
 
     float4 worldPos = float4(input.position, 1.0);
     if (vertexIndex >= 4) {
@@ -15,11 +27,7 @@ VertexToFragment main(VertexInput input, uint vertexIndex : SV_VertexID) {
     }
 
     output.outPosition = mul(ubo.proj, mul(ubo.view, worldPos));
-    output.fragTexCoord = input.texCoord;
-
-    float4 shadowPos = mul(ubo.lightproj, mul(ubo.lightview, worldPos));
-
-    output.shadowCoord = shadowPos;
+    output.uv = input.texCoord;
 
     return output;
 }

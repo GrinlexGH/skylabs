@@ -88,12 +88,10 @@ void CDescriptorPool::UpdateDescriptorSets(
 
     for (auto& set : m_descriptorSets) {
         for (std::uint32_t frameIdx = 0; frameIdx < m_inFlightCount; ++frameIdx) {
-            for (std::uint32_t bindingIdx = 0; bindingIdx < set.meta.m_descriptors.size(); ++bindingIdx) {
-                const auto& desc = set.meta.m_descriptors[bindingIdx];
-
+            for (const auto& desc : set.meta.m_descriptors) {
                 vk::WriteDescriptorSet write {};
                 write.dstSet = set.m_descriptorSets[frameIdx];
-                write.dstBinding = bindingIdx;
+                write.dstBinding = desc.m_binding;
                 write.dstArrayElement = 0;
                 write.descriptorType = desc.m_type;
                 write.descriptorCount = 1;
@@ -105,7 +103,7 @@ void CDescriptorPool::UpdateDescriptorSets(
                     vk::DescriptorBufferInfo bInfo {};
                     bInfo.buffer = *buffer;
                     bInfo.offset = 0;
-                    bInfo.range = VK_WHOLE_SIZE;
+                    bInfo.range = vk::WholeSize;
 
                     bufferInfos.push_back(bInfo);
                     write.pBufferInfo = &bufferInfos.back();
@@ -141,7 +139,7 @@ void CDescriptorPool::UpdateDescriptorSets(
                     vk::DescriptorBufferInfo bInfo {};
                     bInfo.buffer = *buffer;
                     bInfo.offset = 0;
-                    bInfo.range = VK_WHOLE_SIZE;
+                    bInfo.range = vk::WholeSize;
 
                     bufferInfos.push_back(bInfo);
                     write.pBufferInfo = &bufferInfos.back();

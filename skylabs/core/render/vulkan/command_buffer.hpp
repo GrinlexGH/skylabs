@@ -2,6 +2,7 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
+#include <skylabs/core/render/vulkan/sync_state.hpp>
 
 #include <variant>
 #include <optional>
@@ -35,6 +36,12 @@ struct BufferBarrier
     std::uint32_t dstQueue = vk::QueueFamilyIgnored;
 };
 
+struct BufferCopyOffsets
+{
+    vk::DeviceSize m_srcOffset = 0;
+    vk::DeviceSize m_dstOffset = 0;
+};
+
 class CCommandBuffer
 {
 public:
@@ -47,7 +54,7 @@ public:
     void PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const;
 
     void Copy(const CImage& dst, const CBuffer& src) const;
-    void Copy(const CBuffer& dst, const CBuffer& src, vk::DeviceSize size) const;
+    void Copy(const CBuffer& dst, const CBuffer& src, vk::DeviceSize size, BufferCopyOffsets offsets = {}) const;
 
     void GenerateMipmaps(const CImage& image, Usage srcUsage = Usage::eTransferWrite, Usage dstUsage = Usage::eSampledFragment) const;
 

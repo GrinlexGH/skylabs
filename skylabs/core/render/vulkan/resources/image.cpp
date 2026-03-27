@@ -12,7 +12,7 @@ vk::ImageViewType DetermineViewType(vk::Extent3D extent, std::uint32_t layers) {
     return vk::ImageViewType::e3D;
 }
 
-vk::ImageType DetermineType(vk::Extent3D extent, std::uint32_t layers) {
+vk::ImageType DetermineType(vk::Extent3D extent, [[maybe_unused]] std::uint32_t layers) {
     if (extent.height == 1 && extent.depth == 1) {
         return vk::ImageType::e1D;
     }
