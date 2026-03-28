@@ -1,6 +1,7 @@
 #pragma once
 #include <vulkan/vulkan_raii.hpp>
 #include <vk_mem_alloc_raii.hpp>
+#include <VkBootstrap.h>
 
 #include <fmt/format.h>
 

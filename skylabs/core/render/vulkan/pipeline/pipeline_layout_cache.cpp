@@ -9,7 +9,7 @@ std::size_t PipelineLayoutHash::operator()(const PipelineLayoutInfo& info) const
         boost::hash_combine(seed, static_cast<VkDescriptorSetLayout>(layout));
     }
     for (const auto& pc : info.m_pushConstants) {
-        boost::hash_combine(seed, static_cast<uint32_t>(pc.stageFlags));
+        boost::hash_combine(seed, static_cast<std::uint32_t>(pc.stageFlags));
         boost::hash_combine(seed, pc.offset);
         boost::hash_combine(seed, pc.size);
     }

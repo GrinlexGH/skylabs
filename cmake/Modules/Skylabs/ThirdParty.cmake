@@ -6,7 +6,8 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_image CONFIG REQUIRED)
 
 # Vulkan
-find_package(Vulkan REQUIRED)
+find_package(VulkanHeaders CONFIG REQUIRED)
+find_package(vk-bootstrap CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
 find_package(Slangc REQUIRED)
 find_package(spirv-reflect REQUIRED)

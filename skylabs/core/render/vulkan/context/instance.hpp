@@ -3,17 +3,11 @@
 #include <skylabs/public/string_utils.hpp>
 
 namespace Vulkan {
-struct InstanceCreateInfo
-{
-    std::span<const char* const> m_requiredExtensions {};
-    bool m_setupDebugMessenger = true;
-};
-
 class CInstance
 {
 public:
     explicit CInstance(std::nullptr_t) {}
-    explicit CInstance(InstanceCreateInfo options = {});
+    explicit CInstance(bool setupDebugMessenger = true);
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
     CInstance& operator=(CInstance&) = delete;
@@ -22,20 +16,17 @@ public:
 
     [[nodiscard]] const vk::raii::Instance& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Instance* operator->() const noexcept { return &m_handle; }
+    [[nodiscard]] const vkb::Instance& VkbInstance() const noexcept { return m_vkbInstance; }
 
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return m_enabledExtensions.contains(name); }
-    [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_apiVersion; }
+    [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_vkbInstance.api_version; }
 
 private:
-    [[nodiscard]] std::vector<const char*> SetupExtensions(
-        const vk::raii::Context& context,
-        std::span<const char* const> requiredExtensions,
-        const std::vector<const char*>& enabledLayers
-    );
+    [[nodiscard]] std::vector<const char*> SetupExtensions(const vk::raii::Context& context);
 
     vk::raii::Instance m_handle { nullptr };
+    vkb::Instance m_vkbInstance;
 
-    std::uint32_t m_apiVersion = vk::ApiVersion10;
     StringUnorderedSet m_enabledExtensions;
 
 #ifdef DEBUG

@@ -34,10 +34,13 @@ public:
             : std::span<std::byte> {};
     }
 
+    [[nodiscard]] const vma::raii::VirtualBlock& VirtualBlock() const noexcept { return m_memoryBlock; }
+
     [[nodiscard]] vk::BufferUsageFlags Usage() const noexcept { return m_usage; }
 
 private:
     vma::raii::Buffer m_handle { nullptr };
+    vma::raii::VirtualBlock m_memoryBlock { nullptr };
 
     void* m_data = nullptr;
     vk::DeviceSize m_size = 0;

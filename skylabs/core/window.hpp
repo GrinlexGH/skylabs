@@ -14,8 +14,6 @@ public:
     [[nodiscard]] virtual Utils::Extent2D DrawableSize() const = 0;
 
     // Vulkan
-    [[nodiscard]] virtual std::span<const char* const> GetRequiredInstanceExtensions() const = 0;
     [[nodiscard]] virtual bool IsQueueFamilySupportPresent(vk::Instance instance, vk::PhysicalDevice physicalDevice, std::uint32_t index) const = 0;
     [[nodiscard]] virtual vk::SurfaceKHR CreateSurface(vk::Instance instance) const = 0;
-    virtual void DestroySurface(vk::Instance instance, vk::SurfaceKHR& surface) const = 0;
 };

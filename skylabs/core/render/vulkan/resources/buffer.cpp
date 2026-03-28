@@ -32,5 +32,8 @@ CBuffer::CBuffer(
     } else {
         m_data = nullptr;
     }
+
+    vma::VirtualBlockCreateInfo virtualBlockInfo { size };
+    m_memoryBlock = vma::raii::VirtualBlock { virtualBlockInfo };
 }
 }

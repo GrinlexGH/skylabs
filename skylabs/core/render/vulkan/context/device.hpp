@@ -14,7 +14,7 @@ class CDevice
 {
 public:
     explicit CDevice(std::nullptr_t) {}
-    explicit CDevice(const IWindow* window, const CInstance& instance, const CPhysicalDevice& physicalDevice);
+    explicit CDevice(const CInstance& instance, CPhysicalDevice& physicalDevice);
     CDevice(CDevice&) = delete;
     CDevice(CDevice&&) = default;
     CDevice& operator=(CDevice&) = delete;
@@ -32,9 +32,8 @@ public:
     [[nodiscard]] DeviceCaps Caps() const noexcept { return m_caps; }
 
 private:
-    [[nodiscard]] std::vector<const char*> SetupExtensions(const CPhysicalDevice& gpu);
-
     vk::raii::Device m_handle { nullptr };
+    vkb::Device m_vkbDevice;
 
     StringUnorderedSet m_enabledExtensions;
     DeviceCaps m_caps;

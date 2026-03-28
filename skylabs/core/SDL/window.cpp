@@ -36,17 +36,8 @@ Utils::Extent2D CWindow::DrawableSize() const {
 }
 
 // Vulkan
-std::span<const char* const> CWindow::GetRequiredInstanceExtensions() const {
-    return Vulkan::GetInstanceExtensions();
-}
-
 vk::SurfaceKHR CWindow::CreateSurface(const vk::Instance instance) const {
     return Vulkan::CreateSurface(m_handle, instance);
-}
-
-void CWindow::DestroySurface(const vk::Instance instance, vk::SurfaceKHR& surface) const {
-    Vulkan::DestroySurface(instance, surface);
-    surface = nullptr;
 }
 
 bool CWindow::IsQueueFamilySupportPresent(

@@ -21,10 +21,8 @@ public:
     [[nodiscard]] Utils::Extent2D DrawableSize() const override;
 
     // Vulkan
-    [[nodiscard]] std::span<const char* const> GetRequiredInstanceExtensions() const override;
     [[nodiscard]] bool IsQueueFamilySupportPresent(vk::Instance instance, vk::PhysicalDevice physicalDevice, std::uint32_t index) const override;
     [[nodiscard]] vk::SurfaceKHR CreateSurface(vk::Instance instance) const override;
-    void DestroySurface(vk::Instance instance, vk::SurfaceKHR& surface) const override;
 
 private:
     SDL_Window* m_handle = nullptr;

@@ -97,6 +97,8 @@ function(skylabs_configure_target target_name)
         GLM_FORCE_RADIANS=1
         GLM_ENABLE_EXPERIMENTAL=1
 
+        VK_NO_PROTOTYPES=1
+
         VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
         VULKAN_HPP_TYPESAFE_CONVERSION=1
         VULKAN_HPP_USE_STD_EXPECTED=1

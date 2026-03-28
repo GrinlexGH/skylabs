@@ -24,7 +24,6 @@ target_sources(
         render/vulkan/context/allocator.cpp
         render/vulkan/context/instance.hpp
         render/vulkan/context/instance.cpp
-        render/vulkan/context/extensions.hpp
         render/vulkan/context/physical_device.hpp
         render/vulkan/context/physical_device.cpp
         render/vulkan/context/queue.hpp
@@ -81,13 +80,14 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     SDL3::SDL3
     SDL3_image::SDL3_image
     Vulkan::Headers
-    glm::glm
+    vk-bootstrap::vk-bootstrap
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
+    spirv-reflect::spirv-reflect
+    glm::glm
     tinyobjloader::tinyobjloader
     Catch2::Catch2
     frozen::frozen
     SteamworksSDK::SteamworksSDK
-    spirv-reflect::spirv-reflect
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})

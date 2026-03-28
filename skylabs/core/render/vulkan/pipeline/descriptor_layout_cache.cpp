@@ -10,7 +10,6 @@ std::size_t DescriptorLayoutHash::operator()(const DescriptorLayoutInfo& info) c
         boost::hash_combine(seed, static_cast<std::uint32_t>(b.descriptorType));
         boost::hash_combine(seed, b.descriptorCount);
         boost::hash_combine(seed, static_cast<std::uint32_t>(b.stageFlags));
-        boost::hash_combine(seed, b.pImmutableSamplers);
     }
     return seed;
 }

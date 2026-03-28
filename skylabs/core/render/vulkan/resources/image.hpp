@@ -14,8 +14,6 @@ struct ImageCreateInfo
 
 class CImage
 {
-    friend class CRenderGraph;
-
 public:
     explicit CImage(std::nullptr_t) {}
     explicit CImage(const CContext& context, ImageCreateInfo options = {});

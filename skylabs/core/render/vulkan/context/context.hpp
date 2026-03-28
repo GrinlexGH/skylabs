@@ -2,6 +2,7 @@
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/device.hpp>
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
+#include <skylabs/core/render/vulkan/platform/surface.hpp>
 
 #include <optional>
 
@@ -22,22 +23,17 @@ public:
 
     [[nodiscard]] const IWindow* Window() const noexcept { return m_window; }
     [[nodiscard]] const CInstance& Instance() const noexcept { return m_instance; }
+    [[nodiscard]] const CSurface& Surface() const noexcept { return m_surface; }
     [[nodiscard]] const CPhysicalDevice& PhysicalDevice() const noexcept { return m_physicalDevice; }
     [[nodiscard]] const CDevice& Device() const noexcept { return m_device; }
     [[nodiscard]] const CAllocator& Allocator() const noexcept { return m_allocator; }
 
-    [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_apiVersion; }
-
 private:
-    [[nodiscard]] std::optional<CPhysicalDevice> SelectPhysicalDevice();
-    [[nodiscard]] int RatePhysicalDevice(const CPhysicalDevice& physicalDevice) const;
-
     const IWindow* m_window = nullptr;
     CInstance m_instance { nullptr };
+    CSurface m_surface { nullptr };
     CPhysicalDevice m_physicalDevice { nullptr };
     CDevice m_device { nullptr };
     CAllocator m_allocator { nullptr };
-
-    std::uint32_t m_apiVersion = 0;
 };
 }

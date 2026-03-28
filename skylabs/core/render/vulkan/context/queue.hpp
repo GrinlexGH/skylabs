@@ -8,9 +8,9 @@ public:
     explicit CQueue(std::nullptr_t) {}
     explicit CQueue(
         const vk::raii::Device& device,
-        const std::uint32_t familyIndex,
-        const std::uint32_t queueIndex
-    ) : m_handle(device, familyIndex, queueIndex), m_familyIndex(familyIndex) {}
+        const VkQueue queue,
+        const std::uint32_t familyIndex
+    ) : m_handle(device, queue), m_familyIndex(familyIndex) {}
     CQueue(CQueue&) = delete;
     CQueue(CQueue&&) = default;
     CQueue& operator=(CQueue&) = delete;

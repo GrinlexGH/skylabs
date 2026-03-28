@@ -100,8 +100,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     assert(window);
 
     m_context = CContext { window };
-    m_surface = CSurface { m_context };
-    m_swapchain = CSwapchain { m_context, *m_surface, 2, vk::PresentModeKHR::eMailbox };
+    m_swapchain = CSwapchain { m_context, *m_context.Surface(), 2, vk::PresentModeKHR::eMailbox };
 
     renderWidth = m_swapchain.Extent().width;
     renderHeight = m_swapchain.Extent().height;
@@ -129,12 +128,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     });
 
     m_mainSampler = CSampler { m_context };
-    m_modelTextureSampler = CSampler {
-        m_context, {
-            .m_filtering = vk::Filter::eNearest,
-            .m_mipmapFiltering = vk::SamplerMipmapMode::eNearest,
-        }
-    };
+    m_modelTextureSampler = CSampler { m_context };
 
     m_textureManager = CTexturePool { m_context, m_swapchain.Extent(), FRAMES_IN_FLIGHT_COUNT };
     auto& txm = m_textureManager;
@@ -345,8 +339,6 @@ void CRenderer::Draw(glm::mat4 view, float) {
         });
     } else {
         cmd.PipelineBarrier({
-            ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eColorAttachment, Usage::eColorAttachment },
-            ImageBarrier { colorBufferMSAA, colorBufferMSAA.FullRange(), Usage::eColorAttachment, Usage::eColorAttachment },
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
         });
     }
@@ -477,89 +469,58 @@ void CRenderer::Resize(CFrame& currentFrameData) {
 }
 
 void CRenderer::LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
-    SDL_Surface* imageRaw = IMG_Load("assets/viking_room.png");
-    if (!imageRaw) {
-        throw std::runtime_error("Failed to load texture image");
-    }
-    SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
-    SDL_DestroySurface(imageRaw);
-    vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
+    auto UploadTexture = [&](const std::string& path, const std::string& debugName) -> TextureHandle {
+        SDL_Surface* imageRaw = IMG_Load(path.c_str());
+        if (!imageRaw) {
+            throw std::runtime_error("Failed to load texture: " + path);
+        }
 
-    if (stagingBuffer.Size() < imageSize) {
-        stagingBuffer = CBuffer {
-            m_context,
-            imageSize,
-            vk::BufferUsageFlagBits::eTransferSrc,
-            MemoryLocation::eHostVisible
-        };
-    }
-    std::memcpy(stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
+        SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
+        SDL_DestroySurface(imageRaw);
 
-    CImage modelTexture { m_context, {
-        .m_extent = vk::Extent3D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
-        .m_format = vk::Format::eR8G8B8A8Srgb,
-        .m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1,
-        .m_usageFlags = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-    }};
+        const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
+        if (stagingBuffer.Size() < imageSize) {
+            stagingBuffer = CBuffer {
+                m_context, imageSize,
+                vk::BufferUsageFlagBits::eTransferSrc,
+                MemoryLocation::eHostVisible
+            };
+        }
+        std::memcpy(stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
 
-    {
-        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
+        std::uint32_t mipLevels = static_cast<std::uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1;
+
+        CImage texture { m_context, {
+            .m_extent = vk::Extent3D { static_cast<std::uint32_t>(image->w), static_cast<std::uint32_t>(image->h), 1 },
+            .m_format = vk::Format::eR8G8B8A8Srgb,
+            .m_mipLevels = mipLevels,
+            .m_usageFlags = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+        }};
+
+        {
+            vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
             CCommandBuffer cmd { commandBuffer };
-            cmd.PipelineBarrier({ ImageBarrier { modelTexture, modelTexture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
-            cmd.Copy(modelTexture, stagingBuffer);
-            const vk::FormatProperties formatProperties = m_context.PhysicalDevice()->getFormatProperties(modelTexture.Format());
+
+            cmd.PipelineBarrier({ ImageBarrier { texture, texture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
+            cmd.Copy(texture, stagingBuffer);
+
+            const vk::FormatProperties formatProperties = m_context.PhysicalDevice()->getFormatProperties(texture.Format());
             if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
-                throw std::runtime_error("texture image format does not support linear blitting");
+                throw std::runtime_error("Texture format does not support linear blitting for: " + path);
             }
-            cmd.GenerateMipmaps(modelTexture);
-        EndSingleTimeCommands(m_context.Device(), commandBuffer);
-    }
 
-    m_roomModelTexture = m_textureManager.ImportTexture("VikingModelTexture", std::move(modelTexture));
+            cmd.GenerateMipmaps(texture);
 
-    SDL_DestroySurface(image);
+            EndSingleTimeCommands(m_context.Device(), commandBuffer);
+        }
 
-    imageRaw = IMG_Load("assets/matroskin.png");
-    if (!imageRaw) {
-        throw std::runtime_error("Failed to load texture image");
-    }
-    image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
-    SDL_DestroySurface(imageRaw);
-    imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
+        SDL_DestroySurface(image);
 
-    if (stagingBuffer.Size() < imageSize) {
-        stagingBuffer = CBuffer {
-            m_context,
-            imageSize,
-            vk::BufferUsageFlagBits::eTransferSrc,
-            MemoryLocation::eHostVisible
-        };
-    }
-    std::memcpy(stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
+        return m_textureManager.ImportTexture(debugName.c_str(), std::move(texture));
+    };
 
-    modelTexture = CImage { m_context, {
-        .m_extent = vk::Extent3D { static_cast<uint32_t>(image->w), static_cast<uint32_t>(image->h), 1 },
-        .m_format = vk::Format::eR8G8B8A8Srgb,
-        .m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1,
-        .m_usageFlags = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-    }};
-
-    {
-        vk::raii::CommandBuffer commandBuffer = BeginSingleTimeCommands(*m_context.Device(), commandPool);
-            CCommandBuffer cmd { commandBuffer };
-            cmd.PipelineBarrier({ ImageBarrier { modelTexture, modelTexture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
-            cmd.Copy(modelTexture, stagingBuffer);
-            const vk::FormatProperties formatProperties = m_context.PhysicalDevice()->getFormatProperties(modelTexture.Format());
-            if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
-                throw std::runtime_error("texture image format does not support linear blitting");
-            }
-            cmd.GenerateMipmaps(modelTexture);
-        EndSingleTimeCommands(m_context.Device(), commandBuffer);
-    }
-
-    m_matroskinModelTexture = m_textureManager.ImportTexture("matroskinModelTexture", std::move(modelTexture));
-
-    SDL_DestroySurface(image);
+    m_roomModelTexture = UploadTexture("assets/viking_room.png", "viking-room");
+    m_matroskinModelTexture = UploadTexture("assets/matroskin.png", "matroskin");
 }
 
 auto LoadModel(const char* filename) {
@@ -614,10 +575,6 @@ auto LoadModel(const char* filename) {
 }
 
 void CRenderer::LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
-    vma::VirtualBlockCreateInfo blockInfo { GEOMETRY_POOL_SIZE };
-    m_vtxBlock = vma::raii::VirtualBlock { blockInfo };
-    m_idxBlock = vma::raii::VirtualBlock { blockInfo };
-
     m_vertexBuffer = m_bufferManager.ImportBuffer("vertexBuffer", CBuffer {
         m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
@@ -637,10 +594,10 @@ void CRenderer::LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& 
 
         vma::VirtualAllocationCreateInfo allocationInfo { };
         allocationInfo.setSize(vSize);
-        subMesh.vtxAlloc = vma::raii::VirtualAllocation { m_vtxBlock, allocationInfo };
+        subMesh.vtxAlloc = vma::raii::VirtualAllocation { m_bufferManager.GetBuffer(m_vertexBuffer).VirtualBlock(), allocationInfo };
         allocationInfo.setSize(iSize);
-        subMesh.idxAlloc = vma::raii::VirtualAllocation { m_idxBlock, allocationInfo };
-        subMesh.indexCount = static_cast<uint32_t>(indices.size());
+        subMesh.idxAlloc = vma::raii::VirtualAllocation { m_bufferManager.GetBuffer(m_indexBuffer).VirtualBlock(), allocationInfo };
+        subMesh.indexCount = static_cast<std::uint32_t>(indices.size());
 
         vk::DeviceSize totalSize = vSize + iSize;
         if (stagingBuffer.Size() < totalSize) {

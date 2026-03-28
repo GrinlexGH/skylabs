@@ -48,7 +48,6 @@ private:
 
     CContext m_context { nullptr };
 
-    CSurface m_surface { nullptr };
     CSwapchain m_swapchain { nullptr };
 
     CCommandBufferSet m_graphicsCommands { nullptr };
@@ -62,9 +61,6 @@ private:
     CTexturePool m_textureManager { nullptr };
     CBufferPool m_bufferManager { nullptr };
     CDescriptorPool m_descriptorManager { nullptr };
-
-    vma::raii::VirtualBlock m_vtxBlock = nullptr;
-    vma::raii::VirtualBlock m_idxBlock = nullptr;
 
     SubMesh m_matroskin;
     SubMesh m_viking;
