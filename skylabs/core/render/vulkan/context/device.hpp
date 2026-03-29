@@ -23,6 +23,8 @@ public:
 
     [[nodiscard]] const vk::raii::Device& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Device* operator->() const noexcept { return &m_handle; }
+    [[nodiscard]] const vkb::Device& VkbDevice() const noexcept { return m_vkbDevice; }
+    [[nodiscard]] vkb::Device& VkbDevice() noexcept { return m_vkbDevice; }
 
     [[nodiscard]] const CQueue& GraphicsQueue() const noexcept { return m_graphicsQueue; }
     [[nodiscard]] const CQueue& PresentQueue() const noexcept { return m_presentQueue; }

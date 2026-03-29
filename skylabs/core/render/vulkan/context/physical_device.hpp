@@ -11,6 +11,7 @@ public:
 
     [[nodiscard]] const vk::raii::PhysicalDevice& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::PhysicalDevice* operator->() const noexcept { return &m_handle; }
+    [[nodiscard]] const vkb::PhysicalDevice& VkbPhysicalDevice() const noexcept { return m_vkbPhysicalDevice; }
     [[nodiscard]] vkb::PhysicalDevice& VkbPhysicalDevice() noexcept { return m_vkbPhysicalDevice; }
 
 private:

@@ -17,6 +17,7 @@ public:
     [[nodiscard]] const vk::raii::Instance& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Instance* operator->() const noexcept { return &m_handle; }
     [[nodiscard]] const vkb::Instance& VkbInstance() const noexcept { return m_vkbInstance; }
+    [[nodiscard]] vkb::Instance& VkbInstance() noexcept { return m_vkbInstance; }
 
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return m_enabledExtensions.contains(name); }
     [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_vkbInstance.api_version; }

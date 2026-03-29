@@ -1,27 +1,7 @@
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
-
 #include <skylabs/public/logging.hpp>
 
-namespace {
-vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
-    constexpr vk::SurfaceFormatKHR preferredSurfaceFormat { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear };
-
-    const auto formatIt = std::ranges::find(availableFormats, preferredSurfaceFormat);
-    if (formatIt == availableFormats.end()) {
-        Log::Warning(
-            "Preferred surface format ({}, {}) is not available. Choosing ({}, {})",
-            vk::to_string(preferredSurfaceFormat.format),
-            vk::to_string(preferredSurfaceFormat.colorSpace),
-            vk::to_string(availableFormats.begin()->format),
-            vk::to_string(availableFormats.begin()->colorSpace)
-        );
-
-        return *availableFormats.begin();
-    }
-
-    return *formatIt;
-}
-}
+#include <fmt/ranges.h>
 
 namespace Vulkan {
 CSwapchain::CSwapchain(
@@ -48,47 +28,35 @@ void CSwapchain::CreateSwapchain(
     const vk::raii::SwapchainKHR& oldSwapchain
 ) {
     const CDevice& device = m_context->Device();
-    const CPhysicalDevice& physicalDevice = m_context->PhysicalDevice();
-
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
-    vk::SwapchainCreateInfoKHR createInfo;
-    createInfo.surface = surface;
+    vkb::SwapchainBuilder builder { device.VkbDevice(), surface };
+    auto swapchainResult = builder
+        .set_old_swapchain(*oldSwapchain)
+        .use_default_format_selection()
+        .set_desired_present_mode(static_cast<VkPresentModeKHR>(presentMode))
+        .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
+        .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eFifo))
+        .use_default_image_usage_flags()
+        .set_desired_min_image_count(imageCount)
+        .build();
 
-    //====================
-    const vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice->getSurfaceCapabilitiesKHR(surface);
-    createInfo.minImageCount = ChooseImageCount(surfaceCapabilities, imageCount);
-
-    m_surfaceFormat = ChooseSurfaceFormat(physicalDevice->getSurfaceFormatsKHR(surface));
-    createInfo.imageFormat = m_surfaceFormat.format;
-    createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
-
-    createInfo.imageExtent = m_extent = ChooseSurfaceExtent(surfaceCapabilities);
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-
-    //====================
-    const std::array queueFamilyIndices {
-        device.GraphicsQueue().FamilyIndex(),
-        device.PresentQueue().FamilyIndex()
-    };
-
-    if (device.GraphicsQueue().FamilyIndex() != device.PresentQueue().FamilyIndex()) {
-        createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        createInfo.setQueueFamilyIndices({ queueFamilyIndices });
-    } else {
-        createInfo.imageSharingMode = vk::SharingMode::eExclusive;
+    if (!swapchainResult) {
+        throw std::runtime_error(
+            fmt::format("Failed to create vulkan device ({}): {}, {}",
+                vk::to_string(vk::Result { swapchainResult.vk_result() }),
+                swapchainResult.error().message(),
+                fmt::join(swapchainResult.detailed_failure_reasons(), "; ")
+            )
+        );
     }
 
-    //====================
-    createInfo.preTransform = surfaceCapabilities.currentTransform;
-    createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    createInfo.presentMode = m_presentMode = ChoosePresentMode(presentMode);
-    createInfo.clipped = vk::True;
-    createInfo.oldSwapchain = oldSwapchain;
-    createInfo.pNext = nullptr;
+    auto sw = swapchainResult.value();
+    m_handle = vk::raii::SwapchainKHR { *device, sw.swapchain };
+    m_extent = sw.extent;
+    m_presentMode = static_cast<vk::PresentModeKHR>(sw.present_mode);
+    m_surfaceFormat = { sw.image_format, sw.color_space };
 
-    m_handle = vk::raii::SwapchainKHR { *device, createInfo };
     CreateImages();
 }
 
@@ -97,50 +65,6 @@ void CSwapchain::CreateImages() {
     for (auto& image : m_handle.getImages()) {
         m_images.emplace_back(*m_context, image, vk::Extent3D { m_extent, 1 }, m_surfaceFormat.format, 1, 1, vk::SampleCountFlagBits::e1);
     }
-}
-
-vk::Extent2D CSwapchain::ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const {
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        return capabilities.currentExtent;
-    }
-
-    auto [width, height] = m_context->Window()->DrawableSize();
-
-    vk::Extent2D actualExtent = { width, height };
-    actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-    return actualExtent;
-}
-
-std::uint32_t CSwapchain::ChooseImageCount(const vk::SurfaceCapabilitiesKHR& capabilities, std::uint32_t requestedCount) const {
-    return std::clamp(
-        requestedCount,
-        capabilities.minImageCount,
-        capabilities.maxImageCount ? capabilities.maxImageCount : std::numeric_limits<std::uint32_t>::max()
-    );
-}
-
-vk::PresentModeKHR CSwapchain::ChoosePresentMode(const vk::PresentModeKHR requestedMode) const {
-    const std::vector<vk::PresentModeKHR> availableModes =
-        m_context->PhysicalDevice()->getSurfacePresentModesKHR(m_associatedSurface);
-
-    if (std::ranges::contains(availableModes, requestedMode)) {
-        return requestedMode;
-    }
-
-    if (std::ranges::contains(availableModes, vk::PresentModeKHR::eMailbox)) {
-        Log::Warning("Requested mode not available. Falling back to Mailbox");
-        return vk::PresentModeKHR::eMailbox;
-    }
-
-    if (std::ranges::contains(availableModes, vk::PresentModeKHR::eImmediate)) {
-        Log::Warning("Requested mode not available. Falling back to Immediate");
-        return vk::PresentModeKHR::eImmediate;
-    }
-
-    Log::Warning("Using standard FIFO (V-Sync)");
-    return vk::PresentModeKHR::eFifo;
 }
 
 std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore semaphore, vk::Fence fence) const {

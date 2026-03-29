@@ -46,10 +46,6 @@ private:
     );
     void CreateImages();
 
-    [[nodiscard]] vk::Extent2D ChooseSurfaceExtent(const vk::SurfaceCapabilitiesKHR& capabilities) const;
-    [[nodiscard]] std::uint32_t ChooseImageCount(const vk::SurfaceCapabilitiesKHR& capabilities, std::uint32_t requestedCount) const;
-    [[nodiscard]] vk::PresentModeKHR ChoosePresentMode(vk::PresentModeKHR requestedMode) const;
-
     const CContext* m_context = nullptr;
 
     vk::raii::SwapchainKHR m_handle = nullptr;
