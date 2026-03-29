@@ -8,6 +8,7 @@ namespace Vulkan {
 struct DeviceCaps
 {
     bool m_maintenance5 = false;
+    bool m_samplerAnisotropy = false;
 };
 
 class CDevice

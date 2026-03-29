@@ -20,39 +20,14 @@ CDevice::CDevice(
 ) {
     auto& phys = physicalDevice.VkbPhysicalDevice();
 
-    #define VK_REQ_EXT(x) \
-        do { \
-            if (!phys.enable_extension_if_present(x)) { \
-                throw std::runtime_error(#x " device extension is required but not available"); \
-            } \
-        } while(false)
-
-    #define VK_REQ_FEATURE(x, y) \
-        do { \
-            x.y = vk::True; \
-            if (!TryEnableFeatures(phys, x)) { \
-                throw std::runtime_error(#y " device feature is required but not available"); \
-            } \
-        } while(false)
-
     #define VK_OPT_FEATURE(x, y) \
         do { \
             x.y = vk::True; \
-            m_caps.m_ ##y = TryEnableFeatures(phys, x); \
+            m_caps.m_ ##y = TryEnableFeatures(phys, x); /* PHYSX REFERENCE */ \
         } while(false)
 
-    VK_REQ_EXT(vk::KHRSwapchainExtensionName);
-
-    vk::PhysicalDeviceFeatures features {};
-    VK_REQ_FEATURE(features, samplerAnisotropy);
-
-    vk::PhysicalDeviceVulkan11Features features11 {};
-    VK_REQ_FEATURE(features11, shaderDrawParameters);
-
-    vk::PhysicalDeviceVulkan13Features features13 {};
-    VK_REQ_FEATURE(features13, synchronization2);
-    VK_REQ_FEATURE(features13, dynamicRendering);
-    VK_REQ_FEATURE(features13, maintenance4);
+    vk::PhysicalDeviceFeatures features10 {};
+    VK_OPT_FEATURE(features10, samplerAnisotropy);
 
     vk::PhysicalDeviceVulkan14Features features14 {};
     vk::PhysicalDeviceMaintenance5Features maintenance5 {};
@@ -61,7 +36,6 @@ CDevice::CDevice(
         VK_OPT_FEATURE(features14, maintenance5);
     } else {
         if (phys.enable_extension_if_present(vk::KHRMaintenance5ExtensionName)) {
-            m_enabledExtensions.emplace(vk::KHRMaintenance5ExtensionName);
             VK_OPT_FEATURE(maintenance5, maintenance5);
         }
     }

@@ -5,6 +5,30 @@
 namespace Vulkan {
 CPhysicalDevice::CPhysicalDevice(const CInstance& instance, const CSurface& surface) {
     vkb::PhysicalDeviceSelector selector { instance.VkbInstance(), **surface };
+
+    // Minimum version
+    selector.set_minimum_version(1, 3);
+
+    // Required extensions
+    selector.add_required_extension(vk::KHRSwapchainExtensionName);
+
+    // Vulkan 1.0 features
+    vk::PhysicalDeviceFeatures features10 { };
+    features10.samplerAnisotropy = vk::True;
+    selector.set_required_features(features10);
+
+    // Vulkan 1.1 features
+    vk::PhysicalDeviceVulkan11Features features11 { };
+    features11.shaderDrawParameters = vk::True;
+    selector.set_required_features_11(features11);
+
+    // Vulkan 1.3 features
+    vk::PhysicalDeviceVulkan13Features features13 { };
+    features13.synchronization2 = vk::True;
+    features13.dynamicRendering = vk::True;
+    features13.maintenance4 = vk::True;
+    selector.set_required_features_13(features13);
+
     auto physicalDeviceResult = selector.select();
     if (!physicalDeviceResult) {
         throw std::runtime_error(
