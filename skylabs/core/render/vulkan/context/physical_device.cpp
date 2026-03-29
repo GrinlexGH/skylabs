@@ -12,11 +12,6 @@ CPhysicalDevice::CPhysicalDevice(const CInstance& instance, const CSurface& surf
     // Required extensions
     selector.add_required_extension(vk::KHRSwapchainExtensionName);
 
-    // Vulkan 1.0 features
-    vk::PhysicalDeviceFeatures features10 { };
-    features10.samplerAnisotropy = vk::True;
-    selector.set_required_features(features10);
-
     // Vulkan 1.1 features
     vk::PhysicalDeviceVulkan11Features features11 { };
     features11.shaderDrawParameters = vk::True;
