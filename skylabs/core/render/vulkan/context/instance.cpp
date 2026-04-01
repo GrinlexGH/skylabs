@@ -28,14 +28,32 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     return vk::False;
 }
 #endif
+
+auto GetAvailableExtensions(const vk::raii::Context& context) {
+    std::vector<vk::ExtensionProperties> globalExtensions = context.enumerateInstanceExtensionProperties();
+
+#if defined(DEBUG) && !defined(ARCH_32)
+    for (auto& layer : context.enumerateInstanceLayerProperties()) {
+        if (std::strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") != 0) {
+            continue;
+        }
+
+        for(auto& ext : context.enumerateInstanceExtensionProperties(std::string { layer.layerName })) {
+            globalExtensions.push_back(ext);
+        }
+    }
+#endif
+
+    return globalExtensions;
+}
 }
 
 namespace Vulkan {
-CInstance::CInstance([[maybe_unused]] bool setupDebugMessenger) {
+CInstance::CInstance(const bool setupDebugUtils) {
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
     const vk::raii::Context context;
 
-    const std::vector<const char*> enabledExtensions = SetupExtensions(context);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(context, setupDebugUtils);
     const std::uint32_t appVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     const auto debugSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
@@ -58,7 +76,7 @@ CInstance::CInstance([[maybe_unused]] bool setupDebugMessenger) {
         .enable_extensions(enabledExtensions);
 
 #ifdef DEBUG
-    if (setupDebugMessenger && m_enabledExtensions.contains(vk::EXTDebugUtilsExtensionName)) {
+    if (setupDebugUtils && m_enabledExtensions.contains(vk::EXTDebugUtilsExtensionName)) {
         instanceBuilder
 #if !defined(ARCH_32)
         .request_validation_layers()
@@ -90,15 +108,21 @@ CInstance::CInstance([[maybe_unused]] bool setupDebugMessenger) {
 #endif
 }
 
-std::vector<const char*> CInstance::SetupExtensions(const vk::raii::Context& context) {
-    const StringUnorderedSet requestedExtensions {
+std::vector<const char*> CInstance::SetupExtensions(const vk::raii::Context& context, [[maybe_unused]] const bool setupDebugUtils) {
+    Utils::StringUnorderedSet requestedExtensions {};
+
 #ifdef DEBUG
-        vk::EXTDebugUtilsExtensionName
+    if (setupDebugUtils) {
+        requestedExtensions.emplace(vk::EXTDebugUtilsExtensionName);
+    }
 #endif
-    };
+
+    if (requestedExtensions.empty()) {
+        return {};
+    }
 
     // Find these extensions
-    for (const auto& extension : context.enumerateInstanceExtensionProperties()) {
+    for (const auto& extension : GetAvailableExtensions(context)) {
         if (requestedExtensions.contains(std::string_view { extension.extensionName })) {
             m_enabledExtensions.insert(extension.extensionName);
         }

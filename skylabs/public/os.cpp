@@ -2,11 +2,12 @@
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
+#include <boost/nowide/convert.hpp>
 #endif
 
 namespace OS {
-std::filesystem::path GetExecutableDirectory() {
-    static const std::filesystem::path cachedPath = []() {
+PUBLIC_CLASS std::string GetExecutableDirectory() {
+    static const std::string cachedPath = []() {
         std::filesystem::path p;
 #ifdef PLATFORM_WINDOWS
         std::wstring buffer(100, L'\0');
@@ -19,11 +20,13 @@ std::filesystem::path GetExecutableDirectory() {
         }
         p = buffer;
         p = p.parent_path();
+        return boost::nowide::narrow(p.wstring());
 #else
         p = std::filesystem::canonical("/proc/self/exe").parent_path();
+        return p.string();
 #endif
-        return p;
     }();
+
     return cachedPath;
 }
 }

@@ -18,6 +18,7 @@ CSampler::CSampler(
     }
 
     if (options.m_anisotropy.has_value()) {
+        assert(context.Device().Caps().m_samplerAnisotropy);
         createInfo.anisotropyEnable = vk::True;
         createInfo.maxAnisotropy = static_cast<float>(*options.m_anisotropy);
     }

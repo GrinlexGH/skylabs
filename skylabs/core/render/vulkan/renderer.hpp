@@ -39,8 +39,8 @@ public:
     void Draw(glm::mat4 viewMat, float deltaTime) override;
 
 private:
-    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 4;
-    static constexpr vk::DeviceSize GEOMETRY_POOL_SIZE = 128 * 1024 * 1024;
+    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;
+    static constexpr vk::DeviceSize GEOMETRY_POOL_SIZE = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
     void Resize(CFrame& currentFrameData);
     void LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
@@ -91,5 +91,6 @@ private:
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
     std::uint32_t m_frameIndex = 0;
+    std::vector<bool> m_firstUse;
 };
 }

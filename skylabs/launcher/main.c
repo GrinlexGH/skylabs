@@ -189,6 +189,33 @@ cleanup:
     return ret;
 }
 
+#elifdef PLATFORM_ANDROID
+#include <SDL3/SDL_main.h>
+#include <SDL3/SDL_loadso.h>
+#include <SDL3/SDL_log.h>
+
+#define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { SDL_Log(msg, __VA_ARGS__); CLEANUP_AND_EXIT(); } } while(0)
+
+#define LOAD_PATH "core.so"
+
+int main(int argc, char* argv[]) {
+    int ret = 0;
+    SDL_SharedObject* hCore = NULL;
+
+    hCore = SDL_LoadObject(LOAD_PATH);
+    PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", SDL_GetError());
+
+    main_t coreMain = (main_t)(uintptr_t)SDL_LoadFunction(hCore, "CoreMain");
+    PRINTF_EXIT_CHECK(!coreMain, "Failed to load library function:\n%s\n", SDL_GetError());
+
+    ret = coreMain(argc, argv);
+
+cleanup:
+    if (hCore) SDL_UnloadObject(hCore);
+    return ret;
+}
+
 #else
 #error "Unsupported OS"
 #endif

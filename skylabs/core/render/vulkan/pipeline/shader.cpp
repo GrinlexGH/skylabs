@@ -1,33 +1,32 @@
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
-#include <skylabs/public/resource_system.hpp>
+#include <skylabs/public/filesystem.hpp>
 
 #include <spirv_reflect.h>
 
 namespace Vulkan {
-CShader::CShader(const CContext& context, const vk::ShaderStageFlagBits type, const char* name) : m_stage(type) {
-    const std::vector<char> code = ResourceSystem::LoadShader(name);
+CShader::CShader(const CContext& context, const vk::ShaderStageFlagBits type, const std::string_view name) : m_stage(type) {
+    const std::vector<std::uint32_t> code = Filesystem::LoadAsVector32(name);
 
-    auto createInfo = vk::ShaderModuleCreateInfo {}
-        .setPCode(reinterpret_cast<const uint32_t*>(code.data()))
-        .setCodeSize(code.size());
+    vk::ShaderModuleCreateInfo createInfo {};
+    createInfo.setCode(code);
 
     m_handle = vk::raii::ShaderModule { *context.Device(), createInfo };
 
     Reflect(code);
 }
 
-void CShader::Reflect(const std::vector<char>& code) {
+void CShader::Reflect(const std::vector<std::uint32_t>& code) {
     SpvReflectShaderModule module;
-    spvReflectCreateShaderModule(code.size(), code.data(), &module);
+    spvReflectCreateShaderModule(code.size() * 4, code.data(), &module);
 
-    uint32_t set_count = 0;
+    std::uint32_t set_count = 0;
     spvReflectEnumerateDescriptorSets(&module, &set_count, nullptr);
     std::vector<SpvReflectDescriptorSet*> sets(set_count);
     spvReflectEnumerateDescriptorSets(&module, &set_count, sets.data());
 
     for (auto* set : sets) {
         auto& bindings = m_reflection.sets[set->set];
-        for (uint32_t i = 0; i < set->binding_count; ++i) {
+        for (std::uint32_t i = 0; i < set->binding_count; ++i) {
             auto* b = set->bindings[i];
             vk::DescriptorSetLayoutBinding binding;
             binding.binding = b->binding;
@@ -38,7 +37,7 @@ void CShader::Reflect(const std::vector<char>& code) {
         }
     }
 
-    uint32_t pc_count = 0;
+    std::uint32_t pc_count = 0;
     spvReflectEnumeratePushConstantBlocks(&module, &pc_count, nullptr);
     std::vector<SpvReflectBlockVariable*> pcs(pc_count);
     spvReflectEnumeratePushConstantBlocks(&module, &pc_count, pcs.data());

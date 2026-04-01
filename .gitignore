@@ -14,3 +14,8 @@ out/
 
 # CMake user presets
 CMakeUserPresets.json
+
+# Gradle
+android/.gradle
+android/app/.cxx
+android/local.properties

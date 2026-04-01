@@ -1,5 +1,4 @@
 #pragma once
-
 #include "public_export.h"
 
 #if defined(PLATFORM_WINDOWS) && !defined(COMPILER_GCC)

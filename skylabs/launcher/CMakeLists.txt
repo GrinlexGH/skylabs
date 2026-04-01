@@ -1,7 +1,12 @@
 # launcher
 set(CURRENT_TARGET_NAME launcher)
 
-add_executable(${CURRENT_TARGET_NAME})
+if(ANDROID)
+    add_library(${CURRENT_TARGET_NAME} SHARED)
+    target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE SDL3::SDL3)
+else()
+    add_executable(${CURRENT_TARGET_NAME})
+endif()
 
 set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES

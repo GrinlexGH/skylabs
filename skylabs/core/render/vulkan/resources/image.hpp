@@ -35,6 +35,7 @@ public:
     [[nodiscard]] const vk::raii::ImageView& View() const noexcept { return m_view; }
     [[nodiscard]] vk::Format Format() const noexcept { return m_format; }
     [[nodiscard]] vk::Extent3D Extent() const noexcept { return m_extent; }
+    [[nodiscard]] vk::Extent2D Extent2D() const noexcept { return vk::Extent2D { m_extent.width, m_extent.height }; }
     [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
     [[nodiscard]] std::uint32_t ArrayLevels() const noexcept { return m_arrayLevels; }
     [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }

@@ -62,26 +62,33 @@ conan remote add skylabs ./conan/conan-recipes -t local-recipes-index -f
 conan config install ./conan/conan-config/config
 ```
 
-### 2\. Install Dependencies & Compile
-
-If you encounter any compilation issues, please open an [Issue](https://github.com/GrinlexGH/Skylabs/issues).
-
+### 2. 🖥️ Desktop Build
 ```bash
 # Install dependencies
 conan install . -r skylabs -r conancenter --build=missing
 
 # Build the project
 cmake --preset conan-default
+cmake --build build
 ```
 
-> [\!TIP]
-> 📂 **Output Location:**
-> All compiled binaries will be placed in the `.output` folder.
+### 3. 📱 Android Build
+The Android build process is automated. You don't need to run Conan manually. Gradle project is configured to handle dependency resolution.
+
+**To build the APK:**
+1. Navigate to the android directory:
+   ```bash
+   cd android
+   ```
+2. Run the assembly task:
+   ```bash
+   ./gradlew assembleDebug
+   ```
+
+> [!TIP]
+> **How it works:** Gradle is configured to trigger Conan automatically before the compilation starts (specifically hooked into the `preBuild` task). It will fetch all necessary dependencies using the `skylabs` remote and `android` profile (you can copy from my config repo).
 
 ## 📚 References & Resources
-
-Useful links regarding the tech stack and concepts used in this project:
-
-  * [UTF-8 Everywhere](https://utf8everywhere.org/)
-  * [Canonical Project Structure](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1204r0.html)
-  * [About console on Win32](https://www.devever.net/~hl/win32con)
+* [UTF-8 Everywhere](https://utf8everywhere.org/)
+* [Canonical Project Structure](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1204r0.html)
+* [About console on Win32](https://www.devever.net/~hl/win32con)

@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/window.hpp>
+#include <skylabs/public/window.hpp>
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 #include <skylabs/core/render/vulkan/context/queue.hpp>
@@ -38,7 +38,7 @@ private:
     vk::raii::Device m_handle { nullptr };
     vkb::Device m_vkbDevice;
 
-    StringUnorderedSet m_enabledExtensions;
+    Utils::StringUnorderedSet m_enabledExtensions;
     DeviceCaps m_caps;
 
     CQueue m_graphicsQueue { nullptr };

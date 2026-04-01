@@ -28,7 +28,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("sdl_image/3.4.0")
         self.requires("sdl/3.4.2")
         self.requires("boost/1.90.0")
-        self.requires("steamworks_sdk/1.63")
+        self.requires("steamworks_sdk/1.64")
         self.requires("spirv-reflect/system")
         self.requires("frozen/master-20250729")
 

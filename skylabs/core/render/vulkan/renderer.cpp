@@ -1,9 +1,11 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
+#include <skylabs/public/sdl/filesystem.hpp>
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/core/render/vulkan/render_graph/graph.hpp>
 #include <skylabs/core/camera.hpp>
 
+#include <boost/container_hash/hash.hpp>
 #include <glm/gtx/hash.hpp>
 #include <glm/ext/scalar_reciprocal.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -11,12 +13,19 @@
 #include <tiny_obj_loader.h>
 
 #include <chrono>
-#include <ranges>
 #include <random>
+#include <ranges>
 
 template<> struct std::hash<CVertex> {
     size_t operator()(const CVertex& vertex) const noexcept {
-        return (hash<glm::vec3>()(vertex.m_position)) ^ (hash<glm::vec2>()(vertex.m_texCoord) << 1);
+        std::size_t seed = 0;
+        boost::hash_combine(seed, vertex.m_position.x);
+        boost::hash_combine(seed, vertex.m_position.y);
+        boost::hash_combine(seed, vertex.m_position.z);
+
+        boost::hash_combine(seed, vertex.m_texCoord.x);
+        boost::hash_combine(seed, vertex.m_texCoord.y);
+        return seed;
     }
 };
 
@@ -67,14 +76,14 @@ void EndSingleTimeCommands(
     commandBuffer.clear();
 }
 
-glm::mat4 ReverseZPerspective(int width, int height, float fov = 90) {
+glm::mat4 ReverseZPerspective(unsigned int width, unsigned int height, float fov = 90, float nearZ = 0.01f) {
     glm::mat4 proj;
     float g = 1.0f / std::tan(0.5f * glm::radians(fov));
     proj = glm::mat4(0.0f);
     proj[0][0] = g / (static_cast<float>(width) / static_cast<float>(height));
     proj[1][1] = -g;
     proj[2][3] = -1.0f;
-    proj[3][2] = 0.01f;
+    proj[3][2] = nearZ;
 
     return proj;
 }
@@ -82,13 +91,23 @@ glm::mat4 ReverseZPerspective(int width, int height, float fov = 90) {
 void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
     Vulkan::CBuffer& uniformBuffer,
-    const glm::mat4& view
+    const glm::mat4& view,
+    const vk::SurfaceTransformFlagBitsKHR transform
 ) {
-    // UBO
+    glm::mat4 rot = glm::mat4(1.0f);
+
+    if (transform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
+        rot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
+    } else if (transform == vk::SurfaceTransformFlagBitsKHR::eRotate270) {
+        rot = glm::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0, 0, 1));
+    } else if (transform == vk::SurfaceTransformFlagBitsKHR::eRotate180) {
+        rot = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
+    }
+
     UniformBufferObject ubo {
         .model = glm::mat4(1.0f),
         .view = view,
-        .proj = ReverseZPerspective(cameraDimensions.width, cameraDimensions.height),
+        .proj = rot * ReverseZPerspective(cameraDimensions.width, cameraDimensions.height),
     };
 
     std::memcpy(uniformBuffer.Data(), &ubo, sizeof(ubo));
@@ -117,8 +136,10 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
+    m_firstUse.reserve(FRAMES_IN_FLIGHT_COUNT);
     for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
         m_frameData.emplace_back(m_context);
+        m_firstUse.emplace_back(true);
     }
 
     CBuffer stagingBuffer { nullptr };
@@ -141,14 +162,14 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_colorBufferMSAAx = txm.CreateTexture("colorBufferMSAAx", {
         .m_extent = RelativeTextureSize {},
         .m_usage = vk::ImageUsageFlagBits::eColorAttachment,
-        .m_sampleCount = vk::SampleCountFlagBits::e8,
+        .m_sampleCount = vk::SampleCountFlagBits::e4,
     });
 
     m_depthBufferMSAAx = txm.CreateTexture("depthBufferMSAAx", {
         .m_extent = RelativeTextureSize {},
         .m_format = vk::Format::eD32Sfloat,
         .m_usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        .m_sampleCount = vk::SampleCountFlagBits::e8
+        .m_sampleCount = vk::SampleCountFlagBits::e4
     });
 
     LoadModelTextures(stagingBuffer, m_singleCommandPool);
@@ -171,7 +192,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     bfm.GenerateBuffers();
 
 
-    m_descriptorManager = CDescriptorPool{ m_context, FRAMES_IN_FLIGHT_COUNT };
+    m_descriptorManager = CDescriptorPool { m_context, FRAMES_IN_FLIGHT_COUNT };
     auto& dsm = m_descriptorManager;
 
     m_mainDescriptorSetMatroskin = dsm.CreateDescriptorSet({
@@ -219,8 +240,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Main pipeline
     // Shaders
-    const CShader vertexShader(m_context, vk::ShaderStageFlagBits::eVertex, "shader.vert.spv");
-    const CShader fragmentShader(m_context, vk::ShaderStageFlagBits::eFragment, "shader.frag.spv");
+    const CShader vertexShader(m_context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shader.vert.spv");
+    const CShader fragmentShader(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shader.frag.spv");
 
     // Pipeline
     const vk::raii::PipelineLayout& mainPipelineLayout = m_pipelineLayoutCache.GetLayout({
@@ -237,14 +258,14 @@ CRenderer::CRenderer(const IWindow* const window) {
             .m_attributes = CVertex::GetAttributes() | std::ranges::to<std::vector>(),
         }},
         .m_renderingInfo = { {}, colorFormats, txm.GetTexture(m_depthBufferMSAAx).Format() },
-        .m_sampling =  vk::SampleCountFlagBits::e8
+        .m_sampling =  vk::SampleCountFlagBits::e4
     }
     };
 
     // Swapchain pipeline
     // Shaders
-    const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "shaderSwapchain.vert.spv");
-    const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "shaderSwapchain.frag.spv");
+    const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv");
+    const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderSwapchain.frag.spv");
 
     const vk::raii::PipelineLayout& swapchainPipelineLayout = m_pipelineLayoutCache.GetLayout({
         { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) }
@@ -264,15 +285,18 @@ CRenderer::~CRenderer() {
         try {
             m_context.Device()->waitIdle();
             for (auto& b : m_context.Allocator()->getHeapBudgets()) {
-                printf("My heap currently has %u allocations taking %llu B,\n",
+                Log::Debug("My heap currently has {} allocations taking {} B,",
                     b.statistics.allocationCount,
-                    b.statistics.allocationBytes);
-                printf("allocated out of %u Vulkan device memory blocks taking %llu B,\n",
+                    b.statistics.allocationBytes
+                );
+                Log::Debug("allocated out of {} Vulkan device memory blocks taking {} B,",
                     b.statistics.blockCount,
-                    b.statistics.blockBytes);
-                printf("Vulkan reports total usage %llu B with budget %llu B.\n\n",
+                    b.statistics.blockBytes
+                );
+                Log::Debug("Vulkan reports total usage {} B with budget {} B.\n",
                     b.usage,
-                    b.budget);
+                    b.budget
+                );
             }
         } catch (const vk::SystemError& e) {
             Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
@@ -306,7 +330,7 @@ void CRenderer::Draw(glm::mat4 view, float) {
     auto descriptorSetMainRoom = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSetVikingRoom);
     auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
 
-    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view);
+    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, m_swapchain.SurfaceTransform());
 
     // Wait for fence to ensure that the previous frame rendering is finished
     vk::Result result = device->waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -317,6 +341,15 @@ void CRenderer::Draw(glm::mat4 view, float) {
     // Acquire next image from the swapchain
     auto acquireResult = m_swapchain.AcquireImage(*frameData.GetImageAvailableSemaphore());
     if (!acquireResult) {
+        vk::Result error = acquireResult.error();
+        if (error == vk::Result::eErrorSurfaceLostKHR) {
+            m_swapchain.Clear();
+            m_context.RecreateSurface();
+            Resize(frameData);
+        } else if (error != vk::Result::eErrorOutOfDateKHR) {
+            throw std::runtime_error(fmt::format("Failed to acquire new image: {}", vk::to_string(error)));
+        }
+
         Resize(frameData);
         return;
     }
@@ -325,8 +358,6 @@ void CRenderer::Draw(glm::mat4 view, float) {
 
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
     device->resetFences({ frameData.GetFence() });
-
-    static std::vector<bool> m_firstUse(FRAMES_IN_FLIGHT_COUNT, true);
 
     cmd->reset();
     cmd->begin({});
@@ -337,12 +368,14 @@ void CRenderer::Draw(glm::mat4 view, float) {
             ImageBarrier { colorBufferMSAA, colorBufferMSAA.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { depthBufferMSAA, depthBufferMSAA.FullRange(), Usage::eNone, Usage::eDepthWrite },
         });
+        m_firstUse[m_frameIndex] = false;
     } else {
         cmd.PipelineBarrier({
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
         });
     }
 
+    // Main render
     vk::RenderingAttachmentInfo colorAttachInfo {};
     colorAttachInfo.imageView = colorBufferMSAA.View();
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
@@ -361,35 +394,27 @@ void CRenderer::Draw(glm::mat4 view, float) {
     depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue { 0.0f, 0 };
 
     vk::RenderingInfo mainRenderInfo {};
-    mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
+    mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, colorBuffer.Extent2D() };
     mainRenderInfo.layerCount = 1;
     mainRenderInfo.colorAttachmentCount = 1;
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
     mainRenderInfo.pDepthAttachment = &depthAttachInfo;
 
     cmd->beginRendering(mainRenderInfo);
-    cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
-    auto viewport = vk::Viewport { 0.0f, 0.0f, static_cast<float>(renderWidth), static_cast<float>(renderHeight), 0.0f, 1.0f };
-    cmd->setViewport(0, viewport);
-    auto scissor = vk::Rect2D { { 0, 0 }, { renderWidth, renderHeight } };
-    cmd->setScissor(0, scissor);
-    cmd->setDepthBiasEnable(vk::False);
-    cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMainMatroskin, {});
-    std::array<vk::Buffer, 1> vertexBuffers { *vertexBuffer };
-    std::array<vk::DeviceSize, vertexBuffers.size()> offsets = { 0 };
-    cmd->bindVertexBuffers(0, vertexBuffers, offsets);
-    cmd->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
-    cmd->drawIndexed(
-        m_matroskin.indexCount, 1,
-        m_matroskin.IdxOffset() / sizeof(std::uint16_t),
-        m_matroskin.VtxOffset() / sizeof(CVertex), 0
-    );
-    cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMainRoom, {});
-    cmd->drawIndexed(
-        m_viking.indexCount, 1,
-        m_viking.IdxOffset() / sizeof(std::uint16_t),
-        m_viking.VtxOffset() / sizeof(CVertex), 0
-    );
+        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
+
+        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(colorBuffer.Extent().width), static_cast<float>(colorBuffer.Extent().height), 0.0f, 1.0f } });
+        cmd->setScissor(0, { { { 0, 0 }, colorBuffer.Extent2D() } });
+        cmd->setDepthBiasEnable(vk::False);
+
+        cmd->bindVertexBuffers(0, { *vertexBuffer }, { 0 });
+        cmd->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMainMatroskin, {});
+        cmd->drawIndexed(m_matroskin.indexCount, 1, m_matroskin.IdxOffset() / 2, static_cast<int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
+
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMainRoom, {});
+        cmd->drawIndexed(m_viking.indexCount, 1, m_viking.IdxOffset() / 2, static_cast<int32_t>( m_viking.VtxOffset() / sizeof(CVertex)), 0);
     cmd->endRendering();
 
     cmd.PipelineBarrier({
@@ -412,14 +437,14 @@ void CRenderer::Draw(glm::mat4 view, float) {
     swapchainRenderInfo.pColorAttachments = &swapchainAttachInfo;
 
     cmd->beginRendering(swapchainRenderInfo);
-    viewport = vk::Viewport {0.0f, 0.0f, static_cast<float>(m_swapchain.Extent().width), static_cast<float>(m_swapchain.Extent().height), 0.0f, 1.0f};
-    cmd->setViewport(0, viewport);
-    scissor = vk::Rect2D {{0, 0}, m_swapchain.Extent()};
-    cmd->setScissor(0, scissor);
-    cmd->setDepthBiasEnable(vk::False);
-    cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
-    cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
-    cmd->draw(3, 1, 0, 0);
+        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
+
+        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(m_swapchain.Extent().width), static_cast<float>(m_swapchain.Extent().height), 0.0f, 1.0f } });
+        cmd->setScissor(0, { { { 0, 0 }, m_swapchain.Extent() } });
+        cmd->setDepthBiasEnable(vk::False);
+
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
+        cmd->draw(3, 1, 0, 0);
     cmd->endRendering();
 
     cmd.PipelineBarrier({
@@ -438,8 +463,15 @@ void CRenderer::Draw(glm::mat4 view, float) {
     m_context.Device().GraphicsQueue()->submit(finalSubmit, frameData.GetFence());
 
     // Present
-    result = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
-    if (result != vk::Result::eSuccess || IsResized()) {
+    auto presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
+    if (presentResult != vk::Result::eSuccess && presentResult != vk::Result::eSuboptimalKHR) {
+        if (presentResult == vk::Result::eErrorSurfaceLostKHR) {
+            m_swapchain.Clear();
+            m_context.RecreateSurface();
+        } else if (presentResult != vk::Result::eErrorOutOfDateKHR) {
+            throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(presentResult)));
+        }
+
         Resize(frameData);
         return;
     }
@@ -448,6 +480,8 @@ void CRenderer::Draw(glm::mat4 view, float) {
 }
 
 void CRenderer::Resize(CFrame& currentFrameData) {
+    for (auto&& i : m_firstUse) { i = true; }
+
     for (auto& frame : m_frameData) {
         vk::Result result = m_context.Device()->waitForFences({ frame.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
         if (result != vk::Result::eSuccess) {
@@ -459,7 +493,7 @@ void CRenderer::Resize(CFrame& currentFrameData) {
     renderWidth = width;
     renderHeight = height;
 
-    m_swapchain = CSwapchain { std::move(m_swapchain), static_cast<std::uint32_t>(m_swapchain.Images().size()), m_swapchain.PresentMode() };
+    m_swapchain.Recreate(*m_context.Surface());
 
     m_textureManager.Resize(m_swapchain.Extent());
     m_descriptorManager.UpdateDescriptorSets(m_bufferManager, m_textureManager);
@@ -470,12 +504,15 @@ void CRenderer::Resize(CFrame& currentFrameData) {
 
 void CRenderer::LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
     auto UploadTexture = [&](const std::string& path, const std::string& debugName) -> TextureHandle {
-        SDL_Surface* imageRaw = IMG_Load(path.c_str());
+        std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
+        SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
+
+        SDL_Surface* imageRaw = IMG_Load_IO(sdlStream, false);
         if (!imageRaw) {
             throw std::runtime_error("Failed to load texture: " + path);
         }
 
-        SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_ABGR8888);
+        SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_RGBA32);
         SDL_DestroySurface(imageRaw);
 
         const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
@@ -519,23 +556,22 @@ void CRenderer::LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::Comman
         return m_textureManager.ImportTexture(debugName.c_str(), std::move(texture));
     };
 
-    m_roomModelTexture = UploadTexture("assets/viking_room.png", "viking-room");
-    m_matroskinModelTexture = UploadTexture("assets/matroskin.png", "matroskin");
+    m_roomModelTexture = UploadTexture("assets://viking_room.png", "viking-room");
+    m_matroskinModelTexture = UploadTexture("assets://matroskin.png", "matroskin");
 }
 
 auto LoadModel(const char* filename) {
     std::vector<CVertex> vertices;
     std::vector<std::uint16_t> indices;
 
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn;
-    std::string err;
-
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename)) {
-        throw std::runtime_error(warn + " " + err);
+    tinyobj::ObjReader reader;
+    reader.ParseFromString(Filesystem::LoadAsString(filename), "");
+    if (!reader.Valid()) {
+        throw std::runtime_error(reader.Warning() + " " + reader.Error());
     }
+
+    tinyobj::attrib_t attrib = reader.GetAttrib();
+    std::vector<tinyobj::shape_t> shapes = reader.GetShapes();
 
     std::unordered_map<CVertex, uint32_t> uniqueVertices {};
     for (const auto& shape : shapes) {
@@ -618,7 +654,7 @@ void CRenderer::LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& 
         EndSingleTimeCommands(m_context.Device(), cb);
     };
 
-    UploadToPool("assets/matroskin.obj", m_matroskin);
-    UploadToPool("assets/viking_room.obj", m_viking);
+    UploadToPool("assets://matroskin.obj", m_matroskin);
+    UploadToPool("assets://viking_room.obj", m_viking);
 }
 }

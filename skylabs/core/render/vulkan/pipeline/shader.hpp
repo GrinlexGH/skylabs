@@ -11,7 +11,7 @@ class CShader
 {
 public:
     explicit CShader(std::nullptr_t) {}
-    explicit CShader(const CContext& context, vk::ShaderStageFlagBits stage, const char* name);
+    explicit CShader(const CContext& context, vk::ShaderStageFlagBits stage, std::string_view name);
     CShader(const CShader&) = delete;
     CShader(CShader&&) noexcept = default;
     CShader& operator=(const CShader&) = delete;
@@ -29,6 +29,6 @@ private:
     vk::ShaderStageFlagBits m_stage = vk::ShaderStageFlagBits::eAll;
     ShaderReflectionData m_reflection;
 
-    void Reflect(const std::vector<char>& code);
+    void Reflect(const std::vector<std::uint32_t>& code);
 };
 }

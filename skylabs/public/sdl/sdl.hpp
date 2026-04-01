@@ -1,0 +1,12 @@
+#pragma once
+#include <skylabs/public/pch.hpp>
+#include <skylabs/public/utils.hpp>
+
+namespace SDL {
+PUBLIC_CLASS std::span<const bool> GetKeyboardState();
+PUBLIC_CLASS Utils::Extent2D GetWindowSizeInPixels(SDL_Window* window);
+
+namespace Vulkan {
+    PUBLIC_CLASS vk::SurfaceKHR CreateSurface(SDL_Window* window, const vk::Instance& instance);
+}
+}

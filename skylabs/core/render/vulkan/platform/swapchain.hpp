@@ -13,11 +13,6 @@ public:
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode
     );
-    explicit CSwapchain(
-        CSwapchain&& oldSwapchain,
-        std::uint32_t imageCount,
-        vk::PresentModeKHR presentMode
-    );
     CSwapchain(const CSwapchain&) = delete;
     CSwapchain(CSwapchain&&) noexcept = default;
     CSwapchain& operator=(const CSwapchain&) = delete;
@@ -27,10 +22,18 @@ public:
     [[nodiscard]] const vk::raii::SwapchainKHR& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::SwapchainKHR* operator->() const noexcept { return &m_handle; }
 
+    void Recreate(
+        std::optional<vk::SurfaceKHR> surface = std::nullopt,
+        std::optional<std::uint32_t> imageCount = std::nullopt,
+        std::optional<vk::PresentModeKHR> presentMode = std::nullopt
+    );
+    void Clear();
+
     [[nodiscard]] std::expected<std::uint32_t, vk::Result> AcquireImage(vk::Semaphore semaphore = {}, vk::Fence fence = {}) const;
     [[nodiscard]] vk::Result PresentImage(std::uint32_t imageIndex, const vk::ArrayProxyNoTemporaries<const vk::Semaphore>& semaphores = {}) const;
 
     [[nodiscard]] vk::SurfaceFormatKHR SurfaceFormat() const { return m_surfaceFormat; }
+    [[nodiscard]] vk::SurfaceTransformFlagBitsKHR SurfaceTransform() const { return m_surfaceTransform; }
     [[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
     [[nodiscard]] vk::SurfaceKHR Surface() const { return m_associatedSurface; }
@@ -42,7 +45,7 @@ private:
         vk::SurfaceKHR surface,
         std::uint32_t imageCount,
         vk::PresentModeKHR presentMode,
-        const vk::raii::SwapchainKHR& oldSwapchain = nullptr
+        VkSwapchainKHR oldHandle = nullptr
     );
     void CreateImages();
 
@@ -50,8 +53,9 @@ private:
 
     vk::raii::SwapchainKHR m_handle = nullptr;
 
-    vk::SurfaceFormatKHR m_surfaceFormat;
     vk::SurfaceKHR m_associatedSurface;
+    vk::SurfaceFormatKHR m_surfaceFormat;
+    vk::SurfaceTransformFlagBitsKHR m_surfaceTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
     vk::Extent2D m_extent;
     vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eFifo;
 

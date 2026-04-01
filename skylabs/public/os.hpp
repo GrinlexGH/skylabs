@@ -1,8 +1,6 @@
 #pragma once
-#include <skylabs/public/dll_export.hpp>
-
-#include <filesystem>
+#include <skylabs/public/pch.hpp>
 
 namespace OS {
-PUBLIC_CLASS std::filesystem::path GetExecutableDirectory();
+PUBLIC_CLASS std::string GetExecutableDirectory();
 }

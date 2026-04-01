@@ -11,29 +11,11 @@ enum class Type : std::int8_t
     eCount
 };
 
-inline auto g_minLogLevel = Type::eDebug;
-inline std::mutex g_mutex;
+PUBLIC_CLASS void Log(Type type, const std::string& str);
 
 template <typename... Args>
 void Log(const Type type, const fmt::format_string<Args...>& fmt, Args&&... args) {
-    if (type < g_minLogLevel)
-        return;
-
-    constexpr std::array<std::tuple<std::string_view, int, int, int>, static_cast<std::size_t>(Type::eCount)> logInfo = { {
-        { "Debug", 168, 228, 160 },
-        { "Info", 114, 159, 207 },
-        { "Warning", 196, 160, 0 },
-        { "Error", 204, 0, 0 },
-    } };
-
-    auto [label, r, g, b] = logInfo[static_cast<std::size_t>(type)];
-
-    std::string text = fmt::format(fmt, std::forward<Args>(args)...);
-
-    const std::scoped_lock lock(g_mutex);
-    std::cout << stc::true_color
-              << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "
-              << text << std::endl;
+    Log(type, fmt::format(fmt, std::forward<Args>(args)...));
 }
 
 template <class... Args>

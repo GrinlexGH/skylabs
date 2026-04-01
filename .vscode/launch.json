@@ -45,7 +45,9 @@
             },
             "console": "integratedTerminal",
             "initCommands": [
-                "settings set target.x86-disassembly-flavor intel"
+                "settings set target.x86-disassembly-flavor intel",
+                "settings set symbols.enable-lldb-index-cache true",
+                "settings set symbols.load-on-demand true"
             ]
         },
         {
@@ -63,6 +65,23 @@
                 }
             ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "(adb) Launch",
+            "type": "android-debug",
+            "request": "launch",
+            "target": "select",
+            "mode": "dual",
+            "packageName": "ru.grinlexstudios.skylabs",
+            "launchActivity": "org.libsdl.app.SDLActivity",
+            "native": {
+                "symbolSearchPaths": [
+                    "${workspaceFolder}/android/app/build/symbols_latest/debug_libs",
+                ],
+            },
+            "java": {
+                "sourcePaths": ["${workspaceFolder}/android/app/src/main/java"]
+            }
         }
     ]
 }

@@ -13,32 +13,41 @@ CSwapchain::CSwapchain(
     CreateSwapchain(surface, imageCount, presentMode);
 }
 
-CSwapchain::CSwapchain(
-    CSwapchain&& oldSwapchain,
-    const std::uint32_t imageCount,
-    const vk::PresentModeKHR presentMode
-) : m_context(oldSwapchain.m_context), m_associatedSurface(oldSwapchain.m_associatedSurface) {
-    CreateSwapchain(m_associatedSurface, imageCount, presentMode, *oldSwapchain);
+void CSwapchain::Recreate(
+    const std::optional<vk::SurfaceKHR> surface,
+    const std::optional<std::uint32_t> imageCount,
+    const std::optional<vk::PresentModeKHR> presentMode
+) {
+    CreateSwapchain(
+        surface.value_or(m_associatedSurface),
+        imageCount.value_or(m_images.size()),
+        presentMode.value_or(m_presentMode),
+        *m_handle
+    );
 }
 
 void CSwapchain::CreateSwapchain(
     const vk::SurfaceKHR surface,
     const std::uint32_t imageCount,
-    vk::PresentModeKHR presentMode,
-    const vk::raii::SwapchainKHR& oldSwapchain
+    const vk::PresentModeKHR presentMode,
+    VkSwapchainKHR oldHandle
 ) {
     const CDevice& device = m_context->Device();
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
+    const vk::SurfaceCapabilitiesKHR caps = m_context->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
+    m_surfaceTransform = caps.currentTransform;
+
     vkb::SwapchainBuilder builder { device.VkbDevice(), surface };
     auto swapchainResult = builder
-        .set_old_swapchain(*oldSwapchain)
+        .set_old_swapchain(oldHandle)
         .use_default_format_selection()
         .set_desired_present_mode(static_cast<VkPresentModeKHR>(presentMode))
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eFifo))
         .use_default_image_usage_flags()
         .set_desired_min_image_count(imageCount)
+        .set_pre_transform_flags(static_cast<VkSurfaceTransformFlagBitsKHR>(m_surfaceTransform))
         .build();
 
     if (!swapchainResult) {
@@ -67,16 +76,27 @@ void CSwapchain::CreateImages() {
     }
 }
 
-std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore semaphore, vk::Fence fence) const {
-    auto [result, index] = m_handle.acquireNextImage(UINT64_MAX, semaphore, fence);
+void CSwapchain::Clear() {
+    m_handle.clear();
+    m_images.clear();
+}
 
-    if (result == vk::Result::eSuccess) {
-        return index;
-    } else if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR) {
-        return std::unexpected(result);
+std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore semaphore, vk::Fence fence) const {
+    std::uint32_t imageIndex;
+    vk::Result result = static_cast<vk::Result>(m_handle.getDispatcher()->vkAcquireNextImageKHR(
+        static_cast<VkDevice>(m_handle.getDevice()),
+        static_cast<VkSwapchainKHR>(*m_handle),
+        UINT64_MAX,
+        static_cast<VkSemaphore>(semaphore),
+        static_cast<VkFence>(fence),
+        &imageIndex
+    ));
+
+    if (result == vk::Result::eSuccess || result == vk::Result::eSuboptimalKHR) {
+        return imageIndex;
     }
 
-    throw std::runtime_error("Failed to acquire swapchain image: " + vk::to_string(result));
+    return std::unexpected(result);
 }
 
 vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayProxyNoTemporaries<const vk::Semaphore>& semaphores) const {
@@ -84,6 +104,13 @@ vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayPro
     presentInfo.setWaitSemaphores(semaphores);
     presentInfo.setSwapchains({ *m_handle });
     presentInfo.setImageIndices({ imageIndex });
-    return m_context->Device().GraphicsQueue()->presentKHR(presentInfo);
+
+    const vk::raii::Queue& queue = *m_context->Device().GraphicsQueue();
+    vk::Result result = static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
+        static_cast<VkQueue>( *queue ),
+        reinterpret_cast<VkPresentInfoKHR const*>(&presentInfo)
+    ));
+
+    return result;
 }
 }

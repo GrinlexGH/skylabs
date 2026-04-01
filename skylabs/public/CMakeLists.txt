@@ -16,19 +16,28 @@ configure_file(
 target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
+        sdl/context.cpp
+        sdl/filesystem.cpp
+        sdl/sdl.cpp
+        sdl/window.cpp
         application.cpp
+        filesystem.cpp
+        logging.cpp
         os.cpp
-        resource_system.cpp
     PUBLIC
     FILE_SET HEADERS
         FILES
+            sdl/context.hpp
+            sdl/filesystem.hpp
+            sdl/sdl.hpp
+            sdl/window.hpp
             application.hpp
-            logging.hpp
             dll_export.hpp
+            filesystem.hpp
+            logging.hpp
             os.hpp
-            resource_system.hpp
             utils.hpp
-            string_utils.hpp
+            window.hpp
     FILE_SET generated_headers
         TYPE HEADERS
         BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
@@ -37,12 +46,15 @@ target_sources(
             ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
 )
 
-target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
+target_precompile_headers(${CURRENT_TARGET_NAME} PUBLIC pch.hpp)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     Boost::nowide
-    stc::stc
+    SDL3::SDL3
+    Vulkan::Headers
+
     fmt::fmt
+    stc::stc
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})
