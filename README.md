@@ -62,7 +62,7 @@ conan remote add skylabs ./conan/conan-recipes -t local-recipes-index -f
 conan config install ./conan/conan-config/config
 ```
 
-### 2. 🖥️ Desktop Build
+### 2. Desktop Build
 ```bash
 # Install dependencies
 conan install . -r skylabs -r conancenter --build=missing
@@ -72,7 +72,7 @@ cmake --preset conan-default
 cmake --build build
 ```
 
-### 3. 📱 Android Build
+### 3. Android Build
 The Android build process is automated. You don't need to run Conan manually. Gradle project is configured to handle dependency resolution.
 
 **To build the APK:**
