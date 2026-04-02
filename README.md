@@ -23,7 +23,7 @@ git clone --recursive https://github.com/GrinlexGH/skylabs.git
 
 ### ⚠️ If you already cloned (without recursive)
 
-If the folder is already on your disk but the `dependencies` or `submodules` folders are empty, run this command in the project root:
+If the folder is already on your disk but submodule folders are empty, run this command in the project root:
 
 ```bash
 git submodule update --init --recursive
@@ -35,58 +35,69 @@ Ensure you have the following tools installed before compiling:
 
 | Tool             | Requirement               |
 |------------------|---------------------------|
-| **CMake**        | Recent version            |
+| **CMake**        | Latest version            |
 | **C++ Compiler** | Modern MSVC / GCC / Clang |
 | **Python**       | 3.x                       |
 | **Conan**        | 2.x                       |
 | **Vulkan SDK**   | Latest SDK                |
 
-## ⚙️ Configuration & Installation
+## ⚙️ Configuration & Building
 
-### 1\. Configure Conan Remotes
+### 🔧 1. Configure Conan
 
-This project relies on a custom Conan recipe repository.
+This project uses a custom Conan recipe index.
 
-**Add the local recipe index:**
+**Add the local remote:**
 
 ```bash
 conan remote add skylabs ./conan/conan-recipes -t local-recipes-index -f
 ```
 
-**Optional: Install Global Config**
+> [!TIP]
+> The `skylabs` remote is required to resolve internal packages used by the project.
 
-> [\!CAUTION]
-> **Read before running:** The command below will overwrite your global Conan configuration. Only use this if you want to sync with my specific environment settings.
+---
+
+### 🌍 Optional: Install Global Conan Config
+
+> [!CAUTION]
+> This will **overwrite your global Conan configuration**.
+> Use it only if you want a fully reproducible environment identical to this project.
 
 ```bash
 conan config install ./conan/conan-config/config
 ```
 
-### 2. Desktop Build
+---
+
+### 💻 2. Desktop Build
+
+#### 
+
 ```bash
 # Install dependencies
 conan install . -r skylabs -r conancenter --build=missing
 
-# Build the project
+# Configure project
 cmake --preset conan-default
+
+# Build
 cmake --build build
 ```
 
-### 3. Android Build
-The Android build process is automated. You don't need to run Conan manually. Gradle project is configured to handle dependency resolution.
+---
 
-**To build the APK:**
-1. Navigate to the android directory:
-   ```bash
-   cd android
-   ```
-2. Run the assembly task:
-   ```bash
-   ./gradlew assembleDebug
-   ```
+### 📱 3. Android Build
+
+The Android pipeline is **fully automated via Gradle** - no manual Conan step required.
+
+```bash
+cd android
+./gradlew assembleDebug
+```
 
 > [!TIP]
-> **How it works:** Gradle is configured to trigger Conan automatically before the compilation starts (specifically hooked into the `preBuild` task). It will fetch all necessary dependencies using the `skylabs` remote and `android` profile (you can copy from my config repo).
+> Gradle triggers Conan internally during the `preBuild` phase. It uses android-specific Conan profile (you can copy from my Conan config repo).
 
 ## 📚 References & Resources
 * [UTF-8 Everywhere](https://utf8everywhere.org/)
