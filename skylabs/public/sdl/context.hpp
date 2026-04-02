@@ -5,6 +5,7 @@ namespace SDL {
 class PUBLIC_CLASS CContext {
 public:
     CContext() = delete;
+    explicit CContext(std::nullptr_t) {}
     explicit CContext(SDL_InitFlags flags);
     CContext(const CContext&) = delete;
     CContext(CContext&& other) noexcept;

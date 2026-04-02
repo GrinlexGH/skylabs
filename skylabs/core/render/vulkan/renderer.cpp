@@ -76,7 +76,7 @@ void EndSingleTimeCommands(
     commandBuffer.clear();
 }
 
-glm::mat4 ReverseZPerspective(unsigned int width, unsigned int height, float fov = 90, float nearZ = 0.01f) {
+glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int height, const float fov = 90, const float nearZ = 0.01f) {
     glm::mat4 proj;
     float g = 1.0f / std::tan(0.5f * glm::radians(fov));
     proj = glm::mat4(0.0f);
@@ -92,6 +92,7 @@ void UpdateUniformBuffer(
     const vk::Extent2D& cameraDimensions,
     Vulkan::CBuffer& uniformBuffer,
     const glm::mat4& view,
+    const float fov,
     const vk::SurfaceTransformFlagBitsKHR transform
 ) {
     glm::mat4 rot = glm::mat4(1.0f);
@@ -107,7 +108,7 @@ void UpdateUniformBuffer(
     UniformBufferObject ubo {
         .model = glm::mat4(1.0f),
         .view = view,
-        .proj = rot * ReverseZPerspective(cameraDimensions.width, cameraDimensions.height),
+        .proj = rot * ReverseZPerspective(cameraDimensions.width, cameraDimensions.height, fov),
     };
 
     std::memcpy(uniformBuffer.Data(), &ubo, sizeof(ubo));
@@ -313,7 +314,7 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
     }
 }
 
-void CRenderer::Draw(glm::mat4 view, float) {
+void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     m_textureManager.SetFrameIndex(m_frameIndex);
     m_bufferManager.SetFrameIndex(m_frameIndex);
     m_descriptorManager.SetFrameIndex(m_frameIndex);
@@ -330,7 +331,7 @@ void CRenderer::Draw(glm::mat4 view, float) {
     auto descriptorSetMainRoom = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSetVikingRoom);
     auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
 
-    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, m_swapchain.SurfaceTransform());
+    UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, fov, m_swapchain.SurfaceTransform());
 
     // Wait for fence to ensure that the previous frame rendering is finished
     vk::Result result = device->waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());

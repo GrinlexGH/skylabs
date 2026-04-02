@@ -11,7 +11,7 @@ public:
     IRenderer& operator=(IRenderer&&) noexcept = default;
     virtual ~IRenderer() = default;
 
-    virtual void Draw(glm::mat4 view, float deltaTime) = 0;
+    virtual void Draw(glm::mat4 view, float fov, float deltaTime) = 0;
 
     bool m_isResized = false;
 };

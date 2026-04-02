@@ -36,7 +36,7 @@ public:
     ~CRenderer() override;
 
     static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window);
-    void Draw(glm::mat4 viewMat, float deltaTime) override;
+    void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
 
 private:
     static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;

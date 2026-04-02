@@ -17,7 +17,7 @@ constexpr float YAW = -90.0f;
 constexpr float PITCH = 0.0f;
 constexpr float SPEED = 1;
 constexpr float SENSITIVITY = 0.1f;
-constexpr float FOV = 45.0f;
+constexpr float FOV = 90.0f;
 
 class CCamera
 {
@@ -122,5 +122,3 @@ private:
         m_up = normalize(cross(m_right, m_front));
     }
 };
-
-extern CCamera g_camera;
