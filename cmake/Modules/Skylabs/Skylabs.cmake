@@ -117,22 +117,35 @@ function(skylabs_configure_target target_name)
         return()
     endif()
 
+    cmake_parse_arguments(ARG "" "" "RUNTIME_DEPS" ${ARGN})
+
+    set(EXTRA_DLLS "")
     if(WIN32)
-        add_custom_command(TARGET ${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${target_name}> $<TARGET_RUNTIME_DLLS:${target_name}>
-            COMMAND_EXPAND_LISTS
-            COMMENT "Copying runtime DLLs to ${target_name} output directory"
-        )
+        set(EXTRA_DLLS "$<TARGET_RUNTIME_DLLS:${target_name}>")
 
         # Get compilers path
         cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_DIR)
         cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_DIR)
     endif()
 
+    foreach(dep IN LISTS ARG_RUNTIME_DEPS)
+        if(TARGET ${dep})
+            list(APPEND EXTRA_DLLS "$<TARGET_FILE:${dep}>")
+        endif()
+    endforeach()
+
+    if(EXTRA_DLLS)
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${target_name}> ${EXTRA_DLLS}
+            COMMAND_EXPAND_LISTS
+            COMMENT "Copying runtime DLLs to ${target_name} output directory"
+        )
+    endif()
+
     add_custom_command(TARGET ${target_name} POST_BUILD
         COMMAND ${CMAKE_COMMAND}
         "\"-DOUTPUT_DIR=$<TARGET_FILE_DIR:${target_name}>\""
-        "\"-DDIRECTORIES=${CXX_COMPILER_DIR};${C_COMPILER_DIR}\""
+        "\"-DDIRECTORIES=${CXX_COMPILER_DIR};${C_COMPILER_DIR};${CONAN_RUNTIME_LIB_DIRS}\""
         "\"-D${target_type}=$<TARGET_FILE:${target_name}>\""
         -P ${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake
         COMMENT "Resolving and copying symlinked dependencies..."

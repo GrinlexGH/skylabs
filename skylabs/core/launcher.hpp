@@ -5,6 +5,8 @@
 #include <skylabs/core/render/renderer.hpp>
 #include <skylabs/core/camera.hpp>
 
+#include <SDL3_mixer/SDL_mixer.h>
+
 struct Joystick
 {
     bool active = false;
@@ -30,6 +32,7 @@ class CLauncher final : public CBaseApplication
 public:
     void Create() override;
     void Main() override;
+    void Destroy() override;
 
 private:
     void Initialize();
@@ -56,6 +59,10 @@ private:
     Joystick m_leftJoystick;
     UIButton m_chatButton = { 0.8f, 0.05f, 0.15f, 0.1f };
     CCamera m_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
+
+    MIX_Mixer* m_mixer = nullptr;
+    MIX_Track* m_track = nullptr;
+    MIX_Audio* m_music = nullptr;
 
     SDL::CContext m_sdlContext { nullptr };
     std::unique_ptr<IRenderer> m_renderer { nullptr };

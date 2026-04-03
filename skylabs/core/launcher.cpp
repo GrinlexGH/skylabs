@@ -1,29 +1,55 @@
 #include <skylabs/core/launcher.hpp>
-
+#include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
 #include <skylabs/public/sdl/sdl.hpp>
-#include <skylabs/core/render/vulkan/renderer.hpp>
+#include <skylabs/public/sdl/filesystem.hpp>
+
+#include <SDL3/SDL_system.h>
 
 #include <span>
+#include <thread>
 
 void CLauncher::Create() {
-    m_sdlContext = SDL::CContext { SDL_INIT_VIDEO };
+    m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
 
     m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
     SDL_SetWindowRelativeMouseMode(*m_window, true);
+
+    if (!MIX_Init()) {
+        throw std::runtime_error("Cannot initialize SDL_mixer");
+    }
+
+    m_mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
+    if (!m_mixer) {
+        throw std::runtime_error("Cannot create mixer");
+    }
+
+    m_track = MIX_CreateTrack(m_mixer);
+
+    std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO("assets://Interlude.mp3");
+    SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
+    m_music = MIX_LoadAudio_IO(m_mixer, sdlStream, false, false);
+    if (!m_music) {
+        throw std::runtime_error(fmt::format("Cannot load music: {}", SDL_GetError()));
+    }
+
+    MIX_SetTrackAudio(m_track, m_music);
 
 #ifdef PLATFORM_ANDROID
     SDL_SetWindowFullscreen(*m_window, true);
 #endif
 
     m_renderer = Vulkan::CRenderer::TryToCreate(&m_window);
-    if (!m_renderer) { throw std::runtime_error { "Cannot initialize vulkan!\n" }; }
+    if (!m_renderer) { throw std::runtime_error("Cannot initialize vulkan!\n"); }
 }
 
 void CLauncher::Main() {
     float lastFrame = SDL_GetTicks() / 1000.0f;
     int frameCount = 0;
     float elapsedTime = 0.0f;
+
+    MIX_SetTrackGain(m_track, 0.05f);
+    MIX_PlayTrack(m_track, NULL);
 
     while (!m_quit) {
         float currentFrame = SDL_GetTicks() / 1000.0f;
@@ -46,6 +72,15 @@ void CLauncher::Main() {
             elapsedTime -= 1.0f;
         }
     }
+}
+
+void CLauncher::Destroy() {
+    MIX_StopTrack(m_track, MIX_TrackMSToFrames(m_track, 100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    MIX_DestroyAudio(m_music);
+    MIX_DestroyTrack(m_track);
+    MIX_DestroyMixer(m_mixer);
+    MIX_Quit();
 }
 
 void CLauncher::Update(float deltaTime) {

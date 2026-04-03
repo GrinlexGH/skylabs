@@ -4,6 +4,7 @@ find_package(SteamworksSDK CONFIG REQUIRED)
 # Useful libraries
 find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_image CONFIG REQUIRED)
+find_package(SDL3_mixer CONFIG REQUIRED)
 
 # Vulkan
 find_package(VulkanHeaders CONFIG REQUIRED)

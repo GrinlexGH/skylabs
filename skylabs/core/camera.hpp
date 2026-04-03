@@ -103,7 +103,7 @@ public:
 
     void MoveFaster() {
         if (m_movementSpeed <= SPEED)
-            m_movementSpeed += 0.002f;
+            m_movementSpeed += 1.f;
     }
 
     void ResetSpeed() {

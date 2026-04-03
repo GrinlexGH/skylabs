@@ -69,7 +69,10 @@ target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     public
+
+    SDL3::SDL3
     SDL3_image::SDL3_image
+    SDL3_mixer::SDL3_mixer
     SteamworksSDK::SteamworksSDK
     Vulkan::Headers
 
@@ -86,4 +89,8 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     Catch2::Catch2
 )
 
-skylabs_configure_target(${CURRENT_TARGET_NAME})
+skylabs_configure_target(${CURRENT_TARGET_NAME}
+    RUNTIME_DEPS
+        SDL3_mixer::FLAC
+        SDL3_mixer::libmpg123
+)

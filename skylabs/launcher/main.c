@@ -39,7 +39,8 @@ static void ShowSystemError(const wchar_t* msg) {
 #define MESSAGE_EXIT_CHECK(expr, msg) do { if (expr) { PresentErrorMessage(msg); CLEANUP_AND_EXIT(); } } while(0)
 #define SYSTEM_EXIT_CHECK(expr, msg) do { if (expr) { ShowSystemError(msg); CLEANUP_AND_EXIT(); } } while(0)
 #define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { wchar_t msgBuf[128]; _snwprintf(msgBuf, _countof(msgBuf), msg, __VA_ARGS__); ShowSystemError(msgBuf); CLEANUP_AND_EXIT(); } } while(0)
-#define LOAD_PATH L"\\bin\\core.dll"
+#define LOAD_DIR L"\\bin\\"
+#define LOAD_FILE L"core.dll"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
     (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nShowCmd;
@@ -76,11 +77,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     wchar_t* lastSlash = wcsrchr(exePath, L'\\');
     *lastSlash = L'\0';
 
-    cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_PATH);
+    cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_DIR) + _countof(LOAD_FILE) - 1;
     libPath = malloc(cap * sizeof(wchar_t));
-    MESSAGE_EXIT_CHECK(!libPath, L"Failed to allocate memory for core path");
+    MESSAGE_EXIT_CHECK(!libPath, L"Failed to allocate memory for library path");
 
-    swprintf(libPath, cap, L"%ls" LOAD_PATH, exePath);
+    // Generate path to bin
+    swprintf(libPath, cap, L"%ls" LOAD_DIR, exePath);
+    SetDllDirectoryW(libPath);
+
+    // Generate full dll path
+    swprintf(libPath, cap, L"%ls" LOAD_DIR LOAD_FILE, exePath);
     free(exePath);
     exePath = NULL;
 
