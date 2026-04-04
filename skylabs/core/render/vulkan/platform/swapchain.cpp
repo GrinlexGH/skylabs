@@ -38,6 +38,8 @@ void CSwapchain::CreateSwapchain(
     const vk::SurfaceCapabilitiesKHR caps = m_context->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
     m_surfaceTransform = caps.currentTransform;
 
+    const auto [w, h] = m_context->Window()->DrawableSize();
+
     vkb::SwapchainBuilder builder { device.VkbDevice(), surface };
     auto swapchainResult = builder
         .set_old_swapchain(oldHandle)
@@ -46,6 +48,7 @@ void CSwapchain::CreateSwapchain(
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eFifo))
         .use_default_image_usage_flags()
+        .set_desired_extent(w, h)
         .set_desired_min_image_count(imageCount)
         .set_pre_transform_flags(static_cast<VkSurfaceTransformFlagBitsKHR>(m_surfaceTransform))
         .build();
@@ -92,7 +95,7 @@ std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore 
         &imageIndex
     ));
 
-    if (result == vk::Result::eSuccess || result == vk::Result::eSuboptimalKHR) {
+    if (result == vk::Result::eSuccess) {
         return imageIndex;
     }
 
@@ -107,7 +110,7 @@ vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayPro
 
     const vk::raii::Queue& queue = *m_context->Device().GraphicsQueue();
     vk::Result result = static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
-        static_cast<VkQueue>( *queue ),
+        static_cast<VkQueue>(*queue),
         reinterpret_cast<VkPresentInfoKHR const*>(&presentInfo)
     ));
 

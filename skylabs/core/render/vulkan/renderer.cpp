@@ -331,6 +331,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     auto descriptorSetMainRoom = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSetVikingRoom);
     auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
 
+    if (m_isResized) {
+        Resize(frameData);
+    }
+
     UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, fov, m_swapchain.SurfaceTransform());
 
     // Wait for fence to ensure that the previous frame rendering is finished
@@ -347,12 +351,21 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
             m_swapchain.Clear();
             m_context.RecreateSurface();
             Resize(frameData);
-        } else if (error != vk::Result::eErrorOutOfDateKHR) {
-            throw std::runtime_error(fmt::format("Failed to acquire new image: {}", vk::to_string(error)));
+            return;
         }
 
-        Resize(frameData);
-        return;
+#ifdef PLATFORM_ANDROID
+        if (error == vk::Result::eSuboptimalKHR) {
+            return;
+        }
+#endif
+
+        if (error == vk::Result::eErrorOutOfDateKHR || error == vk::Result::eSuboptimalKHR) {
+            Resize(frameData);
+            return;
+        }
+
+        throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(error)));
     }
 
     std::uint32_t imageIndex = *acquireResult;
@@ -465,16 +478,27 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 
     // Present
     auto presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
-    if (presentResult != vk::Result::eSuccess && presentResult != vk::Result::eSuboptimalKHR) {
+    if (presentResult != vk::Result::eSuccess) {
+        Log::Debug("!!");
         if (presentResult == vk::Result::eErrorSurfaceLostKHR) {
             m_swapchain.Clear();
             m_context.RecreateSurface();
-        } else if (presentResult != vk::Result::eErrorOutOfDateKHR) {
-            throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(presentResult)));
+            Resize(frameData);
+            return;
         }
 
-        Resize(frameData);
-        return;
+#ifdef PLATFORM_ANDROID
+        if (presentResult == vk::Result::eSuboptimalKHR) {
+            return;
+        }
+#endif
+
+        if (presentResult == vk::Result::eErrorOutOfDateKHR || presentResult == vk::Result::eSuboptimalKHR) {
+            Resize(frameData);
+            return;
+        }
+
+        throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(presentResult)));
     }
 
     m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
