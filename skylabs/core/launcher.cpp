@@ -49,7 +49,7 @@ void CLauncher::Main() {
     float elapsedTime = 0.0f;
 
     MIX_SetTrackGain(m_track, 0.05f);
-    MIX_PlayTrack(m_track, NULL);
+    MIX_PlayTrack(m_track, 0);
 
     while (!m_quit) {
         float currentFrame = SDL_GetTicks() / 1000.0f;
