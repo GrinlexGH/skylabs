@@ -113,7 +113,7 @@ function(skylabs_configure_target target_name)
 
     # DLL copying
     set(allowed_types "EXECUTABLE" "SHARED_LIBRARY" "MODULE_LIBRARY")
-    if(NOT(target_type IN_LIST allowed_types))
+    if(NOT(target_type IN_LIST allowed_types) OR ANDROID)
         return()
     endif()
 
@@ -147,6 +147,7 @@ function(skylabs_configure_target target_name)
         "\"-DOUTPUT_DIR=$<TARGET_FILE_DIR:${target_name}>\""
         "\"-DDIRECTORIES=${CXX_COMPILER_DIR};${C_COMPILER_DIR};${CONAN_RUNTIME_LIB_DIRS}\""
         "\"-D${target_type}=$<TARGET_FILE:${target_name}>\""
+        "\"-DUNIX=${UNIX}\""
         -P ${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake
         COMMENT "Resolving and copying symlinked dependencies..."
     )

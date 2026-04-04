@@ -21,4 +21,4 @@ find_package(simple_term_colors CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(frozen CONFIG REQUIRED)
 
-find_package(catch2 CONFIG REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)

@@ -28,7 +28,7 @@ file(GET_RUNTIME_DEPENDENCIES
 )
 
 if(_u_deps)
-    message(WARNING "Unresolved dependencies: ${_u_deps}")
+    message(STATUS "Unresolved dependencies: ${_u_deps}")
 endif()
 
 file(COPY ${_r_deps}
