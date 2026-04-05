@@ -19,25 +19,25 @@ class SkylabsRecipe(ConanFile):
     }
 
     def requirements(self):
-        self.requires("fmt/12.1.0")
-        self.requires("simple_term_colors/0.1")
-        self.requires("tinyobjloader/2.0.0rc13")
-        self.requires("glm/1.0.3")
-        self.requires("catch2/3.13.0")
-        self.requires("vulkan-headers/1.4.347")
-        self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
-        self.requires("vk-bootstrap/1.4.347")
         self.requires("sdl/3.4.4")
-        self.requires("sdl_image/3.4.0")
+        self.requires("sdl_image/3.4.2")
         self.requires("sdl_mixer/3.2.0")
         self.requires("boost/1.90.0")
         self.requires("steamworks_sdk/1.64")
+        self.requires("vulkan-headers/1.4.347")
+        self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
+        self.requires("vk-bootstrap/1.4.347")
         self.requires("spirv-reflect/system")
+        self.requires("tinyobjloader/2.0.0rc13")
+        self.requires("glm/1.0.3")
+        self.requires("fmt/12.1.0")
+        self.requires("simple_term_colors/0.1")
         self.requires("frozen/master-20250729")
+        self.requires("catch2/3.14.0")
 
     def generate(self):
-        sdl_pkg = self.dependencies["sdl"].recipe_folder
-        sdl_java_src = os.path.abspath(os.path.join(sdl_pkg, "..", "s", "src", "android-project", "app", "src", "main", "java", "org", "libsdl"))
+        sdl_pkg = self.dependencies["sdl"].package_folder
+        sdl_java_src = os.path.abspath(os.path.join(sdl_pkg, "android-project", "app", "src", "main", "java", "org", "libsdl"))
 
         project_java_dir = os.path.join(self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl")
         if os.path.exists(sdl_java_src):
