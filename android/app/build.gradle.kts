@@ -1,7 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
 import com.android.build.gradle.tasks.ExternalNativeBuildTask
-import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 
 plugins {
@@ -30,7 +29,6 @@ abstract class ConanInstallTask @Inject constructor(
 
     @TaskAction
     fun run() {
-        val outputStream = ByteArrayOutputStream()
         val outFolder = outputDir.get().asFile
 
         val args = listOf(
@@ -50,13 +48,9 @@ abstract class ConanInstallTask @Inject constructor(
             commandLine("conan")
             args(args)
             workingDir = projectRoot.get().asFile
-            standardOutput = outputStream
-            errorOutput = outputStream
+            standardOutput = System.out
+            errorOutput = System.out
             isIgnoreExitValue = true
-        }
-
-        outputStream.toString().lines().forEach { line ->
-            if (line.isNotBlank()) logger.lifecycle("CONAN: $line")
         }
     }
 }
