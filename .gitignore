@@ -1,9 +1,10 @@
 # Tools
 .cache/
 .PVS-Studio/
-.vscode/*
+.vscode/
 .vs/
 .idea/
+.gradle/
 
 # Build folders
 build/
@@ -16,7 +17,7 @@ out/
 CMakeUserPresets.json
 
 # Gradle
-android/.gradle
-android/app/.cxx
-android/local.properties
-android/app/src/main/java/org/libsdl
+/android/local.properties
+/android/**/.cxx
+/android/**/libsdl
+/android/**/jniLibs

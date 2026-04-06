@@ -14,8 +14,6 @@ class SkylabsRecipe(ConanFile):
         "sdl_image/*:with_libwebp": False,
         "sdl_image/*:with_avif": False,
 
-        "sdl_mixer/*:with_gme": False,
-
         "boost/*:with_nowide": True,
         "boost/*:with_container_hash": True,
     }
@@ -37,19 +35,50 @@ class SkylabsRecipe(ConanFile):
         self.requires("frozen/master-20250729")
         self.requires("catch2/3.14.0")
 
-    def generate(self):
-        sdl_pkg = self.dependencies["sdl"].package_folder
-        sdl_java_src = os.path.abspath(os.path.join(sdl_pkg, "android-project", "app", "src", "main", "java", "org", "libsdl"))
+        if self.settings.os == "Android":
+            self.requires("vulkan-validation-layers-android/1.4.341.0")
 
+    def _create_symlink(self, source, destonation):
+        if not os.path.exists(source):
+            self.output.info(f"Path '{source}' doesn't exist")
+            return
+
+        if os.path.exists(destonation):
+            os.remove(destonation)
+
+        os.makedirs(os.path.dirname(destonation), exist_ok=True)
+        try:
+            os.symlink(source, destonation, target_is_directory=True)
+            self.output.info(f"Symlink created: {destonation} -> {source}")
+        except Exception as e:
+            self.output.warning(f"Failed to create symlink: {e}")
+
+    def create_sdl_android_sources_symlink(self):
+        sdl_java_src = os.path.abspath(os.path.join(self.dependencies["sdl"].package_folder, "android-project", "app", "src", "main", "java", "org", "libsdl"))
         project_java_dir = os.path.join(self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl")
-        if os.path.exists(sdl_java_src):
-            if not os.path.exists(project_java_dir):
-                os.makedirs(os.path.dirname(project_java_dir), exist_ok=True)
-                try:
-                    os.symlink(sdl_java_src, project_java_dir, target_is_directory=True)
-                    self.output.info(f"Symlink created: {project_java_dir} -> {sdl_java_src}")
-                except Exception as e:
-                    self.output.error(f"Failed to create symlink: {e}")
+
+        self._create_symlink(sdl_java_src, project_java_dir)
+
+    def create_vulkan_validation_symlink(self):
+        arch_map = {
+            "armv8": "arm64-v8a",
+            "armv7": "armeabi-v7a",
+            "x86": "x86",
+            "x86_64": "x86_64",
+        }
+        android_abi = arch_map.get(str(self.settings.arch))
+        if not android_abi:
+            return
+
+        vvl_bin = os.path.abspath(os.path.join(self.dependencies["vulkan-validation-layers-android"].package_folder, android_abi))
+        project_jniLibs_dir = os.path.join(self.source_folder, "android", "app", "src", "main", "jniLibs", android_abi)
+
+        self._create_symlink(vvl_bin, project_jniLibs_dir)
+
+    def generate(self):
+        if self.settings.os == "Android":
+            self.create_sdl_android_sources_symlink()
+            self.create_vulkan_validation_symlink()
 
     def layout(self):
         cmake_layout(self)
