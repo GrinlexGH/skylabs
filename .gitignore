@@ -1,7 +1,7 @@
 # Tools
+.vscode/*
 .cache/
 .PVS-Studio/
-.vscode/
 .vs/
 .idea/
 .gradle/
