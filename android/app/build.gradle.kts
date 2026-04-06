@@ -117,7 +117,7 @@ fun mapAndroidAbiToConan(abi: String): String = when (abi) {
 
 androidComponents {
     onVariants { variant ->
-        val variantName = variant.buildType.toString()
+        val variantName = variant.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         val configName = if (variant.buildType?.equals("release", ignoreCase = true) == true) "RelWithDebInfo" else "Debug"
         val abis = variant.externalNativeBuild?.abiFilters?.get() ?: listOf("arm64-v8a")
 
@@ -168,14 +168,8 @@ androidComponents {
             if (name.startsWith("buildCMake$configName")) {
                 copySymbolsProvider?.let { finalizedBy(it) }
             }
-        }
-
-        // Generate assets before merge
-        tasks.configureEach {
-            if (name == "merge${variantName}Assets") {
+            if (name.contains("merge${variantName}Assets", ignoreCase = true)) {
                 dependsOn(tasks.matching { it.name.startsWith("buildCMake$configName") })
-
-                logger.lifecycle(">> Linked merge${variantName}Assets to CMake build")
             }
         }
     }
