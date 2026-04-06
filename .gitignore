@@ -19,5 +19,6 @@ CMakeUserPresets.json
 # Gradle
 /android/local.properties
 /android/**/.cxx
+/android/**/assets
 /android/**/libsdl
 /android/**/jniLibs

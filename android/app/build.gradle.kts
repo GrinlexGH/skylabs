@@ -90,6 +90,7 @@ android {
 
     sourceSets.getByName("main") {
         java.directories += "src/main/java"
+        assets.directories += "src/main/assets"
         assets.directories += "../../assets"
     }
 
@@ -170,9 +171,6 @@ androidComponents {
         }
 
         // Generate assets before merge
-        val generatedAssetsDir = layout.projectDirectory.dir("../../build/assets")
-        variant.sources.assets?.addStaticSourceDirectory(generatedAssetsDir.toString())
-
         tasks.configureEach {
             if (name == "merge${variantName}Assets") {
                 dependsOn(tasks.matching { it.name.startsWith("buildCMake$configName") })

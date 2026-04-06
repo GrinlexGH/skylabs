@@ -38,7 +38,7 @@ class SkylabsRecipe(ConanFile):
         if self.settings.os == "Android":
             self.requires("vulkan-validation-layers-android/1.4.341.0")
 
-    def _create_symlink(self, source, destonation):
+    def _create_symlink(self, source, destonation, target_is_directory=False):
         if not os.path.exists(source):
             self.output.info(f"Path '{source}' doesn't exist")
             return
@@ -48,7 +48,7 @@ class SkylabsRecipe(ConanFile):
 
         os.makedirs(os.path.dirname(destonation), exist_ok=True)
         try:
-            os.symlink(source, destonation, target_is_directory=True)
+            os.symlink(source, destonation, target_is_directory=target_is_directory)
             self.output.info(f"Symlink created: {destonation} -> {source}")
         except Exception as e:
             self.output.warning(f"Failed to create symlink: {e}")
@@ -57,7 +57,7 @@ class SkylabsRecipe(ConanFile):
         sdl_java_src = os.path.abspath(os.path.join(self.dependencies["sdl"].package_folder, "android-project", "app", "src", "main", "java", "org", "libsdl"))
         project_java_dir = os.path.join(self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl")
 
-        self._create_symlink(sdl_java_src, project_java_dir)
+        self._create_symlink(sdl_java_src, project_java_dir, target_is_directory=True)
 
     def create_vulkan_validation_symlink(self):
         arch_map = {
@@ -70,8 +70,8 @@ class SkylabsRecipe(ConanFile):
         if not android_abi:
             return
 
-        vvl_bin = os.path.abspath(os.path.join(self.dependencies["vulkan-validation-layers-android"].package_folder, android_abi))
-        project_jniLibs_dir = os.path.join(self.source_folder, "android", "app", "src", "main", "jniLibs", android_abi)
+        vvl_bin = os.path.abspath(os.path.join(self.dependencies["vulkan-validation-layers-android"].package_folder, android_abi, "libVkLayer_khronos_validation.so"))
+        project_jniLibs_dir = os.path.join(self.source_folder, "android", "app", "src", "main", "jniLibs", android_abi, "libVkLayer_khronos_validation.so")
 
         self._create_symlink(vvl_bin, project_jniLibs_dir)
 

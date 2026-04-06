@@ -113,7 +113,7 @@ function(skylabs_configure_target target_name)
 
     # DLL copying
     set(allowed_types "EXECUTABLE" "SHARED_LIBRARY" "MODULE_LIBRARY")
-    if(NOT(target_type IN_LIST allowed_types) OR ANDROID)
+    if(NOT(target_type IN_LIST allowed_types))
         return()
     endif()
 
@@ -135,11 +135,22 @@ function(skylabs_configure_target target_name)
     endforeach()
 
     if(EXTRA_DLLS)
+        if(ANDROID)
+            set(DLLS_DESTONATION "${SKYLABS_ANDROID_ROOT}/app/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}")
+        else()
+            set(DLLS_DESTONATION "$<TARGET_FILE_DIR:${target_name}>")
+        endif()
+
         add_custom_command(TARGET ${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${target_name}> ${EXTRA_DLLS}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${DLLS_DESTONATION}
+            COMMAND ${CMAKE_COMMAND} -E copy -t ${DLLS_DESTONATION} ${EXTRA_DLLS}
             COMMAND_EXPAND_LISTS
             COMMENT "Copying runtime DLLs to ${target_name} output directory"
         )
+    endif()
+
+    if (ANDROID)
+        return()
     endif()
 
     add_custom_command(TARGET ${target_name} POST_BUILD
