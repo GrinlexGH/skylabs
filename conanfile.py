@@ -14,6 +14,8 @@ class SkylabsRecipe(ConanFile):
         "sdl_image/*:with_libwebp": False,
         "sdl_image/*:with_avif": False,
 
+        "sdl_mixer/*:with_gme": False,
+
         "boost/*:with_nowide": True,
         "boost/*:with_container_hash": True,
     }

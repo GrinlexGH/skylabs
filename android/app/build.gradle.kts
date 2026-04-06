@@ -48,9 +48,6 @@ abstract class ConanInstallTask @Inject constructor(
             commandLine("conan")
             args(args)
             workingDir = projectRoot.get().asFile
-            standardOutput = System.out
-            errorOutput = System.out
-            isIgnoreExitValue = true
         }
     }
 }
