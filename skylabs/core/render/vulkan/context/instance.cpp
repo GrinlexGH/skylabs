@@ -38,7 +38,7 @@ auto GetAvailableExtensions(const vk::raii::Context& context) {
             continue;
         }
 
-        for(auto& ext : context.enumerateInstanceExtensionProperties(std::string { layer.layerName })) {
+        for (auto& ext : context.enumerateInstanceExtensionProperties(std::string { std::string_view { layer.layerName } })) {
             globalExtensions.push_back(ext);
         }
     }
