@@ -68,6 +68,7 @@ void CLauncher::Main() {
         if (elapsedTime >= 1.0f) {
             std::string title = "Skylabs | FPS: " + std::to_string(frameCount);
             SDL_SetWindowTitle(*m_window, title.c_str());
+            Log::Debug("{}", title);
             frameCount = 0;
             elapsedTime -= 1.0f;
         }

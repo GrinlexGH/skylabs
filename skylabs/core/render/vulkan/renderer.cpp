@@ -35,6 +35,10 @@ struct UniformBufferObject {
     glm::mat4 proj;
 };
 
+struct PushConstants {
+    std::uint32_t textureIndex = 0;
+};
+
 namespace {
 std::uint32_t renderWidth = 0;
 std::uint32_t renderHeight = 0;
@@ -192,37 +196,35 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     bfm.GenerateBuffers();
 
+    m_descriptorLayoutCache = CDescriptorLayoutCache { m_context };
+
+        const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({{
+            { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
+            { 1, vk::DescriptorType::eCombinedImageSampler, 1024, vk::ShaderStageFlagBits::eFragment }
+        }});
+
+        const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({{
+            { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }
+        }});
+
+    m_descriptorAllocator = CDescriptorAllocator { m_context };
+    m_mainSets = m_descriptorAllocator.Allocate({ *mainSetLayout });
 
     m_descriptorManager = CDescriptorPool { m_context, FRAMES_IN_FLIGHT_COUNT };
     auto& dsm = m_descriptorManager;
 
-    m_mainDescriptorSetMatroskin = dsm.CreateDescriptorSet({
+    m_mainDescriptorSet = dsm.CreateDescriptorSet({
         {
             .m_binding = 0,
             .m_type = vk::DescriptorType::eUniformBuffer,
-            .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+            .m_shaderStages = vk::ShaderStageFlagBits::eVertex,
             .m_info = BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
         },
         {
             .m_binding = 1,
             .m_type = vk::DescriptorType::eCombinedImageSampler,
             .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = SampledImageDescriptorInfo { .m_image = m_matroskinModelTexture, .m_sampler = *m_modelTextureSampler }
-        }
-    });
-
-    m_mainDescriptorSetVikingRoom = dsm.CreateDescriptorSet({
-        {
-            .m_binding = 0,
-            .m_type = vk::DescriptorType::eUniformBuffer,
-            .m_shaderStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
-            .m_info = BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
-        },
-        {
-            .m_binding = 1,
-            .m_type = vk::DescriptorType::eCombinedImageSampler,
-            .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = SampledImageDescriptorInfo { .m_image = m_roomModelTexture, .m_sampler = *m_modelTextureSampler }
+            .m_count = 1024,
         }
     });
 
@@ -238,6 +240,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     dsm.CreateDescriptorPool();
     dsm.CreateDescriptorSets();
     dsm.UpdateDescriptorSets(m_bufferManager, m_textureManager);
+    dsm.BindTextureToIndex(m_mainDescriptorSet, 1, 0, m_textureManager.GetTexture(m_matroskinModelTexture), *m_modelTextureSampler);
+    dsm.BindTextureToIndex(m_mainDescriptorSet, 1, 1, m_textureManager.GetTexture(m_roomModelTexture), *m_modelTextureSampler);
 
     // Main pipeline
     // Shaders
@@ -246,7 +250,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Pipeline
     const vk::raii::PipelineLayout& mainPipelineLayout = m_pipelineLayoutCache.GetLayout({
-        { *dsm.GetDescriptorSetLayout(m_mainDescriptorSetMatroskin), *dsm.GetDescriptorSetLayout(m_mainDescriptorSetVikingRoom) }
+        { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) }, { { vk::ShaderStageFlagBits::eFragment, 0, sizeof(std::uint32_t) } }
     });
 
     std::array<vk::Format, 1> colorFormats = { txm.GetTexture(m_colorBuffer).Format() };
@@ -327,8 +331,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     auto& colorBuffer = m_textureManager.GetTexture(m_colorBuffer);
     auto& colorBufferMSAA = m_textureManager.GetTexture(m_colorBufferMSAAx);
     auto& depthBufferMSAA = m_textureManager.GetTexture(m_depthBufferMSAAx);
-    auto descriptorSetMainMatroskin = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSetMatroskin);
-    auto descriptorSetMainRoom = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSetVikingRoom);
+    auto descriptorSetMain = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSet);
     auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
 
     if (m_isResized) {
@@ -414,6 +417,8 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
     mainRenderInfo.pDepthAttachment = &depthAttachInfo;
 
+    PushConstants constants { 0 };
+
     cmd->beginRendering(mainRenderInfo);
         cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
 
@@ -424,10 +429,14 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
         cmd->bindVertexBuffers(0, { *vertexBuffer }, { 0 });
         cmd->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
 
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMainMatroskin, {});
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMain, {});
+
+        constants = { 0 };
+        cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
         cmd->drawIndexed(m_matroskin.indexCount, 1, m_matroskin.IdxOffset() / 2, static_cast<int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
 
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMainRoom, {});
+        constants = { 1 };
+        cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
         cmd->drawIndexed(m_viking.indexCount, 1, m_viking.IdxOffset() / 2, static_cast<int32_t>( m_viking.VtxOffset() / sizeof(CVertex)), 0);
     cmd->endRendering();
 
@@ -479,7 +488,6 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     // Present
     auto presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
     if (presentResult != vk::Result::eSuccess) {
-        Log::Debug("!!");
         if (presentResult == vk::Result::eErrorSurfaceLostKHR) {
             m_swapchain.Clear();
             m_context.RecreateSurface();

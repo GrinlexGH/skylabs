@@ -13,6 +13,7 @@
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/pipeline/compute_pipeline.hpp>
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
+#include <skylabs/core/render/vulkan/render_graph/descriptor_allocator.hpp>
 
 struct SubMesh {
     std::uint32_t indexCount = 0;
@@ -39,7 +40,7 @@ public:
     void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
 
 private:
-    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 3;
+    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 1;
     static constexpr vk::DeviceSize GEOMETRY_POOL_SIZE = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
     void Resize(CFrame& currentFrameData);
@@ -57,6 +58,11 @@ private:
 
     std::vector<CFrame> m_frameData;
     vk::raii::CommandPool m_singleCommandPool { nullptr };
+
+    CDescriptorLayoutCache m_descriptorLayoutCache { nullptr };
+
+    CDescriptorAllocator m_descriptorAllocator { nullptr };
+    std::vector<vk::raii::DescriptorSet> m_mainSets { };
 
     CTexturePool m_textureManager { nullptr };
     CBufferPool m_bufferManager { nullptr };
@@ -78,8 +84,7 @@ private:
     TextureHandle m_colorBufferMSAAx;
     TextureHandle m_depthBufferMSAAx;
 
-    DescriptorSetHandle m_mainDescriptorSetMatroskin;
-    DescriptorSetHandle m_mainDescriptorSetVikingRoom;
+    DescriptorSetHandle m_mainDescriptorSet;
     CGraphicsPipeline m_pipelineMain { nullptr };
 
     // Final swapchain pipeline

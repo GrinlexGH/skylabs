@@ -110,10 +110,10 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
 
     std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo {};
     shaderCreateInfo.reserve(options.m_shaders.size());
-    for (std::size_t i = 0; i < options.m_shaders.size(); ++i) {
+    for (auto & m_shader : options.m_shaders) {
         vk::PipelineShaderStageCreateInfo ci {};
-        ci.stage = options.m_shaders[i]->Stage();
-        ci.module = **options.m_shaders[i];
+        ci.stage = m_shader->Stage();
+        ci.module = **m_shader;
         ci.pName = "main";
         shaderCreateInfo.push_back(ci);
     }

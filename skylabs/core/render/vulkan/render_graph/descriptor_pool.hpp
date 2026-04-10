@@ -17,7 +17,7 @@ struct BufferDescriptorInfo {
 
 struct SampledImageDescriptorInfo {
     TextureHandle m_image;
-    const vk::Sampler m_sampler = nullptr;
+    vk::Sampler m_sampler = nullptr;
 };
 
 struct StorageImageDescriptorInfo {
@@ -34,12 +34,15 @@ struct DescriptorDescription
     std::uint8_t m_binding = 0;
     vk::DescriptorType m_type;
     vk::ShaderStageFlags m_shaderStages;
+    std::uint32_t m_count = 1;
+    vk::DescriptorBindingFlags m_flags = {};
     std::variant<
+        std::monostate,
         BufferDescriptorInfo,
         SampledImageDescriptorInfo,
         StorageImageDescriptorInfo,
         StorageBufferDescriptorInfo
-    > m_info;
+    > m_info = std::monostate {};
 };
 
 struct DescriptorSetHandle
@@ -62,6 +65,15 @@ public:
 
     void CreateDescriptorPool();
     void CreateDescriptorSets();
+
+    void BindTextureToIndex(
+        DescriptorSetHandle setHandle,
+        std::uint32_t binding,
+        std::uint32_t arrayIndex,
+        const CImage& image,
+        vk::Sampler sampler
+    );
+
     void UpdateDescriptorSets(CBufferPool& bufferManager, CTexturePool& textureManager);
 
     [[nodiscard]] vk::DescriptorSet GetDescriptorSet(DescriptorSetHandle handle, int index = -1);

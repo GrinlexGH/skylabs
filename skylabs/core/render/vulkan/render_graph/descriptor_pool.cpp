@@ -23,8 +23,8 @@ void CDescriptorPool::CreateDescriptorPool() {
     for (const auto& set : m_descriptorSets) {
         totalSets += m_inFlightCount;
         for (const auto& desc : set.meta.m_descriptors) {
-            typeCount[desc.m_type] += m_inFlightCount;
-            totalTypes += m_inFlightCount;
+            typeCount[desc.m_type] += m_inFlightCount * desc.m_count;
+            totalTypes += typeCount[desc.m_type];
         }
     }
 
@@ -50,13 +50,11 @@ void CDescriptorPool::CreateDescriptorSets() {
 
     for (auto& set : m_descriptorSets) {
         std::vector<vk::DescriptorSetLayoutBinding> bindings;
-        for (std::uint32_t i = 0; i < set.meta.m_descriptors.size(); ++i) {
-            const auto& desc = set.meta.m_descriptors[i];
-
+        for (const auto & desc : set.meta.m_descriptors) {
             vk::DescriptorSetLayoutBinding binding {};
-            binding.binding = i;
+            binding.binding = desc.m_binding;
             binding.descriptorType = desc.m_type;
-            binding.descriptorCount = 1;
+            binding.descriptorCount = desc.m_count;
             binding.stageFlags = desc.m_shaderStages;
 
             bindings.push_back(binding);
@@ -68,10 +66,36 @@ void CDescriptorPool::CreateDescriptorSets() {
 
         vk::DescriptorSetAllocateInfo allocInfo {};
         allocInfo.descriptorPool = *m_pool;
-        allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-        allocInfo.pSetLayouts = layouts.data();
+        allocInfo.setSetLayouts(layouts);
 
         set.m_descriptorSets = (*device).allocateDescriptorSets(allocInfo);
+    }
+}
+
+void CDescriptorPool::BindTextureToIndex(
+    DescriptorSetHandle setHandle,
+    std::uint32_t binding,
+    std::uint32_t arrayIndex,
+    const CImage& image,
+    vk::Sampler sampler
+) {
+    auto& set = m_descriptorSets.at(setHandle.m_id);
+
+    for (std::uint32_t i = 0; i < m_inFlightCount; ++i) {
+        vk::DescriptorImageInfo iInfo {};
+        iInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        iInfo.imageView = image.View();
+        iInfo.sampler = sampler;
+
+        vk::WriteDescriptorSet write {};
+        write.dstSet = set.m_descriptorSets[i];
+        write.dstBinding = binding;
+        write.dstArrayElement = arrayIndex;
+        write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+        write.descriptorCount = 1;
+        write.pImageInfo = &iInfo;
+
+        m_context->Device()->updateDescriptorSets(write, nullptr);
     }
 }
 
@@ -89,12 +113,15 @@ void CDescriptorPool::UpdateDescriptorSets(
     for (auto& set : m_descriptorSets) {
         for (std::uint32_t frameIdx = 0; frameIdx < m_inFlightCount; ++frameIdx) {
             for (const auto& desc : set.meta.m_descriptors) {
+                if (std::holds_alternative<std::monostate>(desc.m_info))
+                    continue;
+
                 vk::WriteDescriptorSet write {};
                 write.dstSet = set.m_descriptorSets[frameIdx];
                 write.dstBinding = desc.m_binding;
                 write.dstArrayElement = 0;
                 write.descriptorType = desc.m_type;
-                write.descriptorCount = 1;
+                write.descriptorCount = desc.m_count;
 
                 if (std::holds_alternative<BufferDescriptorInfo>(desc.m_info)) {
                     auto info = std::get<BufferDescriptorInfo>(desc.m_info);

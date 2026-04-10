@@ -12,6 +12,14 @@ CPhysicalDevice::CPhysicalDevice(const CInstance& instance, const CSurface& surf
     // Required extensions
     selector.add_required_extension(vk::KHRSwapchainExtensionName);
 
+    // Required extension features
+    vk::PhysicalDeviceDescriptorIndexingFeatures descIndexing {};
+    descIndexing.setDescriptorBindingPartiallyBound(vk::True);
+    descIndexing.setRuntimeDescriptorArray(vk::True);
+    descIndexing.setDescriptorBindingSampledImageUpdateAfterBind(vk::True);
+
+    selector.add_required_extension_features(descIndexing);
+
     // Vulkan 1.1 features
     vk::PhysicalDeviceVulkan11Features features11 { };
     features11.shaderDrawParameters = vk::True;
