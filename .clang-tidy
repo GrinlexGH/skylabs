@@ -42,3 +42,4 @@ FormatStyle: file
 
 CheckOptions:
   bugprone-multi-level-implicit-pointer-conversion.EnableInC: false
+  cppcoreguidelines-avoid-do-while.IgnoreMacros: true

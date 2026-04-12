@@ -5,7 +5,7 @@ struct PushConstants {
 [[vk::push_constant]]
 PushConstants pc;
 
-[[vk::binding(1, 0)]]
+[[vk::binding(1)]]
 Sampler2D allTextures[];
 
 struct VOut {

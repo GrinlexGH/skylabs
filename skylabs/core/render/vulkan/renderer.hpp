@@ -4,7 +4,7 @@
 #include <skylabs/core/render/vulkan/render_graph/graph.hpp>
 #include <skylabs/core/render/vulkan/render_graph/descriptor_pool.hpp>
 
-#include <skylabs/core/render/vulkan/frame.hpp>
+#include <skylabs/core/render/vulkan/in_flight.hpp>
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
 #include <skylabs/core/render/vulkan/resources/sampler.hpp>
@@ -28,7 +28,6 @@ namespace Vulkan {
 class CRenderer final : public IRenderer
 {
 public:
-    // Window must be valid for the entire lifetime of the renderer
     explicit CRenderer(const IWindow* window);
     CRenderer(const CRenderer&) = delete;
     CRenderer(CRenderer&&) noexcept = default;
@@ -40,10 +39,10 @@ public:
     void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
 
 private:
-    static constexpr unsigned int FRAMES_IN_FLIGHT_COUNT = 1;
-    static constexpr vk::DeviceSize GEOMETRY_POOL_SIZE = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
+    static constexpr auto FRAMES_IN_FLIGHT_COUNT = 1;
+    static constexpr auto GEOMETRY_POOL_SIZE = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
-    void Resize(CFrame& currentFrameData);
+    void Resize(InFlightContext& currentFrameData);
     void LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
     void LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
 
@@ -55,14 +54,22 @@ private:
     CCommandBufferSet m_computeCommands { nullptr };
 
     CPipelineLayoutCache m_pipelineLayoutCache { nullptr };
-
-    std::vector<CFrame> m_frameData;
-    vk::raii::CommandPool m_singleCommandPool { nullptr };
-
     CDescriptorLayoutCache m_descriptorLayoutCache { nullptr };
 
     CDescriptorAllocator m_descriptorAllocator { nullptr };
-    std::vector<vk::raii::DescriptorSet> m_mainSets { };
+
+    InFlightContext m_inFlightContext { nullptr };
+
+    InFlight<bool> m_firstUse { nullptr };
+    InFlight<vk::raii::Fence> m_fence { nullptr };
+    InFlight<vk::raii::Semaphore> m_isRenderFinishedSemaphore { nullptr };
+    InFlight<CImage> m_mainColor { nullptr };
+    InFlight<CImage> m_mainColorMSAA { nullptr };
+    InFlight<CImage> m_mainDepthMSAA { nullptr };
+
+    InFlight<CBuffer> m_uniform { nullptr };
+
+    vk::raii::CommandPool m_singleCommandPool { nullptr };
 
     CTexturePool m_textureManager { nullptr };
     CBufferPool m_bufferManager { nullptr };
@@ -94,8 +101,5 @@ private:
     CGraphicsPipeline m_pipelineSwapchain { nullptr };
 
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
-
-    std::uint32_t m_frameIndex = 0;
-    std::vector<bool> m_firstUse;
 };
 }

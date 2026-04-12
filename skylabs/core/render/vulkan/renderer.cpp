@@ -3,6 +3,7 @@
 #include <skylabs/public/sdl/filesystem.hpp>
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/core/render/vulkan/render_graph/graph.hpp>
+#include <skylabs/core/render/vulkan/render_graph/descriptor_writer.hpp>
 #include <skylabs/core/camera.hpp>
 
 #include <boost/container_hash/hash.hpp>
@@ -124,27 +125,61 @@ CRenderer::CRenderer(const IWindow* const window) {
     assert(window);
 
     m_context = CContext { window };
-    m_swapchain = CSwapchain { m_context, *m_context.Surface(), 2, vk::PresentModeKHR::eMailbox };
 
+    m_swapchain = CSwapchain { m_context, *m_context.Surface(), 2, vk::PresentModeKHR::eMailbox };
     renderWidth = m_swapchain.Extent().width;
     renderHeight = m_swapchain.Extent().height;
 
-    m_pipelineLayoutCache = CPipelineLayoutCache { m_context };
-
     m_graphicsCommands = CCommandBufferSet { m_context, m_context.Device().GraphicsQueue().FamilyIndex(), { FRAMES_IN_FLIGHT_COUNT, 0 } };
     m_computeCommands = CCommandBufferSet { m_context, m_context.Device().ComputeQueue().FamilyIndex(), { 0, 0 } };
+
+    m_pipelineLayoutCache = CPipelineLayoutCache { m_context };
+    m_descriptorLayoutCache = CDescriptorLayoutCache { m_context };
+
+    m_descriptorAllocator = CDescriptorAllocator { m_context };
+
+    m_inFlightContext = InFlightContext { FRAMES_IN_FLIGHT_COUNT };
+    m_firstUse = InFlight<bool> { m_inFlightContext, true };
+
+    m_fence = InFlight<vk::raii::Fence> { m_inFlightContext, *m_context.Device(), vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled } };
+    m_isRenderFinishedSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.Device(), vk::SemaphoreCreateInfo {} };
+
+    m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
+    }};
+
+    m_mainColorMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eColorAttachment
+    }};
+
+    m_mainDepthMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { renderWidth, renderHeight, 1 }, vk::Format::eD32Sfloat, 1, 1,
+        vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
+    }};
+
+    m_uniform = InFlight<CBuffer> { m_inFlightContext, m_context,
+        sizeof(UniformBufferObject),
+        vk::BufferUsageFlagBits::eUniformBuffer,
+        MemoryLocation::eHostVisible
+    };
+
+    const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
+        { 1, vk::DescriptorType::eCombinedImageSampler, 1024, vk::ShaderStageFlagBits::eFragment }
+    });
+
+    const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }
+    });
+
+    m_descriptorAllocator.Allocate(std::vector());
 
     const std::uint32_t imageCount = m_swapchain.Images().size();
     m_renderFinishedSemaphores.reserve(imageCount);
     for (std::size_t i = 0; i < imageCount; ++i) {
         m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
-    }
-
-    m_frameData.reserve(FRAMES_IN_FLIGHT_COUNT);
-    m_firstUse.reserve(FRAMES_IN_FLIGHT_COUNT);
-    for (std::size_t i = 0; i < FRAMES_IN_FLIGHT_COUNT; ++i) {
-        m_frameData.emplace_back(m_context);
-        m_firstUse.emplace_back(true);
     }
 
     CBuffer stagingBuffer { nullptr };
@@ -195,20 +230,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     LoadModels(stagingBuffer, m_singleCommandPool);
 
     bfm.GenerateBuffers();
-
-    m_descriptorLayoutCache = CDescriptorLayoutCache { m_context };
-
-        const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({{
-            { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
-            { 1, vk::DescriptorType::eCombinedImageSampler, 1024, vk::ShaderStageFlagBits::eFragment }
-        }});
-
-        const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({{
-            { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }
-        }});
-
-    m_descriptorAllocator = CDescriptorAllocator { m_context };
-    m_mainSets = m_descriptorAllocator.Allocate({ *mainSetLayout });
 
     m_descriptorManager = CDescriptorPool { m_context, FRAMES_IN_FLIGHT_COUNT };
     auto& dsm = m_descriptorManager;
@@ -319,11 +340,11 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 }
 
 void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
-    m_textureManager.SetFrameIndex(m_frameIndex);
-    m_bufferManager.SetFrameIndex(m_frameIndex);
-    m_descriptorManager.SetFrameIndex(m_frameIndex);
-    auto& cmd = m_graphicsCommands.PrimaryBuffers()[m_frameIndex];
-    CFrame& frameData = m_frameData[m_frameIndex];
+    m_textureManager.SetFrameIndex(m_frameContext.m_frameIndex);
+    m_bufferManager.SetFrameIndex(m_frameContext.m_frameIndex);
+    m_descriptorManager.SetFrameIndex(m_frameContext.m_frameIndex);
+    auto& cmd = m_graphicsCommands.PrimaryBuffers()[m_frameContext.m_frameIndex];
+    CFrame& frameData = m_frameData[m_frameContext.m_frameIndex];
     const CDevice& device = m_context.Device();
     auto& uniformBuffer = m_bufferManager.GetBuffer(m_uniformBuffer);
     auto& vertexBuffer = m_bufferManager.GetBuffer(m_vertexBuffer);
@@ -379,13 +400,13 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     cmd->reset();
     cmd->begin({});
 
-    if (m_firstUse[m_frameIndex]) {
+    if (m_firstUse[m_frameContext.m_frameIndex]) {
         cmd.PipelineBarrier({
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { colorBufferMSAA, colorBufferMSAA.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { depthBufferMSAA, depthBufferMSAA.FullRange(), Usage::eNone, Usage::eDepthWrite },
         });
-        m_firstUse[m_frameIndex] = false;
+        m_firstUse[m_frameContext.m_frameIndex] = false;
     } else {
         cmd.PipelineBarrier({
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
@@ -509,7 +530,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
         throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(presentResult)));
     }
 
-    m_frameIndex = (m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
+    m_frameContext.m_frameIndex = (m_frameContext.m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
 }
 
 void CRenderer::Resize(CFrame& currentFrameData) {

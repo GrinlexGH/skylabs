@@ -102,7 +102,7 @@ std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore 
     return std::unexpected(result);
 }
 
-vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayProxyNoTemporaries<const vk::Semaphore>& semaphores) const {
+vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayProxy<const vk::Semaphore>& semaphores) const {
     vk::PresentInfoKHR presentInfo {};
     presentInfo.setWaitSemaphores(semaphores);
     presentInfo.setSwapchains({ *m_handle });

@@ -29,8 +29,6 @@ target_sources(
         render/vulkan/context/physical_device.cpp
         render/vulkan/context/physical_device.hpp
         render/vulkan/context/queue.hpp
-        render/vulkan/frame.cpp
-        render/vulkan/frame.hpp
         render/vulkan/pipeline/compute_pipeline.cpp
         render/vulkan/pipeline/compute_pipeline.hpp
         render/vulkan/pipeline/descriptor_layout_cache.cpp
@@ -51,6 +49,8 @@ target_sources(
         render/vulkan/render_graph/descriptor_allocator.hpp
         render/vulkan/render_graph/descriptor_pool.cpp
         render/vulkan/render_graph/descriptor_pool.hpp
+        render/vulkan/render_graph/descriptor_writer.cpp
+        render/vulkan/render_graph/descriptor_writer.hpp
         render/vulkan/render_graph/graph.cpp
         render/vulkan/render_graph/graph.hpp
         render/vulkan/render_graph/texture_pool.cpp
