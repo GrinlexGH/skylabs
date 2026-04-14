@@ -50,7 +50,6 @@ auto GetAvailableExtensions(const vk::raii::Context& context) {
 
 namespace Vulkan {
 CInstance::CInstance(const bool setupDebugUtils) {
-    VULKAN_HPP_DEFAULT_DISPATCHER.init();
     const vk::raii::Context context;
 
     const std::vector<const char*> enabledExtensions = SetupExtensions(context, setupDebugUtils);
@@ -101,7 +100,6 @@ CInstance::CInstance(const bool setupDebugUtils) {
     m_vkbInstance = instanceResult.value();
 
     m_handle = vk::raii::Instance { context, m_vkbInstance.instance };
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
 #ifdef DEBUG
     m_debugUtilsMessenger = vk::raii::DebugUtilsMessengerEXT { m_handle, m_vkbInstance.debug_messenger };

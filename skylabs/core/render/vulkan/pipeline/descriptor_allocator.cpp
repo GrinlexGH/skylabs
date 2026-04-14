@@ -43,6 +43,29 @@ vk::raii::DescriptorPool CDescriptorAllocator::GrabPool() {
     return CreatePool(1024);
 }
 
+std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> CDescriptorAllocator::Allocate(const vk::DescriptorSetAllocateInfo& allocInfo) {
+    std::vector<vk::DescriptorSet> descriptorSets(allocInfo.descriptorSetCount);
+    vk::Result result = static_cast<vk::Result>(m_device->getDispatcher()->vkAllocateDescriptorSets(
+        static_cast<VkDevice>(**m_device),
+        reinterpret_cast<VkDescriptorSetAllocateInfo const*>(&allocInfo),
+        reinterpret_cast<VkDescriptorSet*>(descriptorSets.data()))
+    );
+
+    if (result != vk::Result::eSuccess) {
+        return std::unexpected(result);
+    }
+
+    std::vector<vk::raii::DescriptorSet> descriptorSetsRAII;
+    descriptorSetsRAII.reserve(descriptorSets.size());
+    for (auto& descriptorSet : descriptorSets) {
+        descriptorSetsRAII.emplace_back(
+            *m_device, *reinterpret_cast<VkDescriptorSet*>(&descriptorSet), static_cast<VkDescriptorPool>(allocInfo.descriptorPool)
+        );
+    }
+
+    return descriptorSetsRAII;
+}
+
 std::vector<vk::raii::DescriptorSet> CDescriptorAllocator::Allocate(const vk::ArrayProxy<const vk::DescriptorSetLayout>& layouts) {
     if (m_currentPool == nullptr) {
         m_currentPool = GrabPool();
@@ -52,19 +75,24 @@ std::vector<vk::raii::DescriptorSet> CDescriptorAllocator::Allocate(const vk::Ar
     allocInfo.setDescriptorPool(m_currentPool);
     allocInfo.setSetLayouts(layouts);
 
-    try { return m_device->allocateDescriptorSets(allocInfo); }
-    catch (const vk::SystemError& e) {
-        if (static_cast<vk::Result>(e.code().value()) != vk::Result::eErrorOutOfPoolMemory &&
-            static_cast<vk::Result>(e.code().value()) != vk::Result::eErrorFragmentedPool
-        ) { throw; }
+    auto result = Allocate(allocInfo);
+    if (!result) {
+        if (result.error() != vk::Result::eErrorOutOfPoolMemory && result.error() != vk::Result::eErrorFragmentedPool) {
+            throw std::runtime_error("Failed to allocate descriptor set");
+        }
 
         m_usedPools.emplace_back(std::move(m_currentPool));
 
         m_currentPool = GrabPool();
         allocInfo.setDescriptorPool(m_currentPool);
 
-        return m_device->allocateDescriptorSets(allocInfo);
+        result = Allocate(allocInfo);
+        if (!result) {
+            throw std::runtime_error("Failed to allocate descriptor set");
+        }
     }
+
+    return std::move(result.value());
 }
 
 void CDescriptorAllocator::ResetPools() {

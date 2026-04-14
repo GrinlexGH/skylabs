@@ -55,7 +55,6 @@ CDevice::CDevice(
     m_vkbDevice = deviceResult.value();
 
     m_handle = vk::raii::Device { *physicalDevice, m_vkbDevice.device };
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_handle);
 
     auto getQueue = [this](CQueue& queue, vkb::QueueType type) {
         auto result = m_vkbDevice.get_queue_and_index(type);
