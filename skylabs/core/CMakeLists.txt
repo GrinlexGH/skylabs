@@ -43,16 +43,10 @@ target_sources(
         render/vulkan/platform/surface.hpp
         render/vulkan/platform/swapchain.cpp
         render/vulkan/platform/swapchain.hpp
-        render/vulkan/render_graph/buffer_pool.cpp
-        render/vulkan/render_graph/buffer_pool.hpp
-        render/vulkan/render_graph/descriptor_allocator.cpp
-        render/vulkan/render_graph/descriptor_allocator.hpp
-        render/vulkan/render_graph/descriptor_writer.cpp
-        render/vulkan/render_graph/descriptor_writer.hpp
-        render/vulkan/render_graph/graph.cpp
-        render/vulkan/render_graph/graph.hpp
-        render/vulkan/render_graph/texture_pool.cpp
-        render/vulkan/render_graph/texture_pool.hpp
+        render/vulkan/pipeline/descriptor_allocator.cpp
+        render/vulkan/pipeline/descriptor_allocator.hpp
+        render/vulkan/pipeline/descriptor_writer.cpp
+        render/vulkan/pipeline/descriptor_writer.hpp
         render/vulkan/renderer.cpp
         render/vulkan/renderer.hpp
         render/vulkan/resources/buffer.cpp

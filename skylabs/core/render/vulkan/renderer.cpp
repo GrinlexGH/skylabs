@@ -2,8 +2,7 @@
 #include <skylabs/public/logging.hpp>
 #include <skylabs/public/sdl/filesystem.hpp>
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
-#include <skylabs/core/render/vulkan/render_graph/graph.hpp>
-#include <skylabs/core/render/vulkan/render_graph/descriptor_writer.hpp>
+#include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
 #include <skylabs/core/camera.hpp>
 
 #include <boost/container_hash/hash.hpp>

@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/render_graph/descriptor_writer.hpp>
+#include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
 
 namespace Vulkan {
 CDescriptorWriter::CDescriptorWriter(const CContext& context) : m_device(&*context.Device()) {}

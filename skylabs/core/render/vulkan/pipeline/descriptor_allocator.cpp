@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/render_graph/descriptor_allocator.hpp>
+#include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
 
 namespace {
 constexpr std::array g_types {

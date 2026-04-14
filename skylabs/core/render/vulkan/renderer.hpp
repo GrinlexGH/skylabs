@@ -1,8 +1,6 @@
 #pragma once
 #include <skylabs/core/render/renderer.hpp>
 
-#include <skylabs/core/render/vulkan/render_graph/graph.hpp>
-
 #include <skylabs/core/render/vulkan/in_flight.hpp>
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
@@ -13,7 +11,8 @@
 #include <skylabs/core/render/vulkan/pipeline/compute_pipeline.hpp>
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
-#include <skylabs/core/render/vulkan/render_graph/descriptor_allocator.hpp>
+#include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
+#include <skylabs/core/render/vulkan/command_buffer_set.hpp>
 
 struct SubMesh {
     std::uint32_t indexCount = 0;
