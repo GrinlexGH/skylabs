@@ -406,6 +406,8 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     auto presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
     if (presentResult != vk::Result::eSuccess) {
         if (presentResult == vk::Result::eErrorSurfaceLostKHR) {
+            // https://share.google/aimode/QZHwXX6oQc0njWMCz
+            // We must destroy swapchain because it still uses surface
             m_swapchain.Clear();
             m_context.RecreateSurface();
             Resize();
@@ -439,11 +441,9 @@ void CRenderer::Resize() {
         }
     }
 
-    auto [width, height] = m_context.Window()->DrawableSize();
-    renderWidth = width;
-    renderHeight = height;
-
     m_swapchain.Recreate(*m_context.Surface());
+    renderWidth = m_swapchain.Extent().width;
+    renderHeight = m_swapchain.Extent().height;
 
     m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
         { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
@@ -468,6 +468,7 @@ void CRenderer::Resize() {
             .UpdateSet(*m_swapchainDescriptorSet[i]);
     }
 
+    // https://stackoverflow.com/questions/70762372/how-to-recreate-swapchain-after-vkacquirenextimagekhr-is-vk-suboptimal-khr
     m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *m_context.Device(), vk::SemaphoreCreateInfo {} };
 
     m_isResized = false;

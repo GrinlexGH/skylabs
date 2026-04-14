@@ -89,7 +89,7 @@ std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore 
     vk::Result result = static_cast<vk::Result>(m_handle.getDispatcher()->vkAcquireNextImageKHR(
         static_cast<VkDevice>(m_handle.getDevice()),
         static_cast<VkSwapchainKHR>(*m_handle),
-        UINT64_MAX,
+        std::numeric_limits<std::uint64_t>::max(),
         static_cast<VkSemaphore>(semaphore),
         static_cast<VkFence>(fence),
         &imageIndex
