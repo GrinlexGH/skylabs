@@ -24,4 +24,24 @@ struct StringHash {
 };
 
 using StringUnorderedSet = std::unordered_set<std::string, StringHash, std::equal_to<>>;
+
+template <typename T>
+class Range {
+public:
+    Range(T end) : m_start(0), m_end(end) {}
+    Range(T start, T end) : m_start(start), m_end(end) {}
+
+    struct iterator {
+        T val;
+        T operator*() const { return val; }
+        iterator& operator++() { ++val; return *this; }
+        bool operator!=(const iterator& other) const { return val != other.val; }
+    };
+
+    iterator begin() const { return { m_start }; }
+    iterator end() const { return { m_end }; }
+
+private:
+    T m_start, m_end;
+};
 }

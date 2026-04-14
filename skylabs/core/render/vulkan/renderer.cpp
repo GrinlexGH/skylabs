@@ -142,7 +142,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_firstUse = InFlight<bool> { m_inFlightContext, true };
 
     m_fence = InFlight<vk::raii::Fence> { m_inFlightContext, *m_context.Device(), vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled } };
-    m_isRenderFinishedSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.Device(), vk::SemaphoreCreateInfo {} };
+    m_imageAvailableSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.Device(), vk::SemaphoreCreateInfo {} };
 
     m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
         { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
@@ -167,18 +167,20 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({
         { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
-        { 1, vk::DescriptorType::eCombinedImageSampler, 1024, vk::ShaderStageFlagBits::eFragment }
+        { 1, vk::DescriptorType::eCombinedImageSampler, 10, vk::ShaderStageFlagBits::eFragment }
     });
+
+    m_mainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *mainSetLayout)) };
 
     const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({
         { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }
     });
 
-    m_descriptorAllocator.Allocate(std::vector());
+    m_swapchainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *swapchainSetLayout)) };
 
     const std::uint32_t imageCount = m_swapchain.Images().size();
     m_renderFinishedSemaphores.reserve(imageCount);
-    for (std::size_t i = 0; i < imageCount; ++i) {
+    for (auto _ : Utils::Range(imageCount)) {
         m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
     }
 
@@ -191,78 +193,23 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_mainSampler = CSampler { m_context };
     m_modelTextureSampler = CSampler { m_context };
 
-    m_textureManager = CTexturePool { m_context, m_swapchain.Extent(), FRAMES_IN_FLIGHT_COUNT };
-    auto& txm = m_textureManager;
-
-    m_colorBuffer = txm.CreateTexture("colorBuffer", {
-        .m_extent = RelativeTextureSize {},
-        .m_usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
-    });
-
-    m_colorBufferMSAAx = txm.CreateTexture("colorBufferMSAAx", {
-        .m_extent = RelativeTextureSize {},
-        .m_usage = vk::ImageUsageFlagBits::eColorAttachment,
-        .m_sampleCount = vk::SampleCountFlagBits::e4,
-    });
-
-    m_depthBufferMSAAx = txm.CreateTexture("depthBufferMSAAx", {
-        .m_extent = RelativeTextureSize {},
-        .m_format = vk::Format::eD32Sfloat,
-        .m_usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        .m_sampleCount = vk::SampleCountFlagBits::e4
-    });
-
     LoadModelTextures(stagingBuffer, m_singleCommandPool);
-
-    txm.GenerateTextures();
-
-
-    m_bufferManager = CBufferPool { m_context, FRAMES_IN_FLIGHT_COUNT };
-    auto& bfm = m_bufferManager;
-
-    m_uniformBuffer = bfm.CreateBuffer("global-uniform", {
-        .m_size = sizeof(UniformBufferObject),
-        .m_location = MemoryLocation::eHostVisible,
-        .m_usage = vk::BufferUsageFlagBits::eUniformBuffer,
-        .m_isInFlight = true,
-    });
-
     LoadModels(stagingBuffer, m_singleCommandPool);
 
-    bfm.GenerateBuffers();
+    CDescriptorWriter descriptorWriter { m_context };
+    for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteBuffer(0, *m_uniform[i], m_uniform[i].Size(), 0, vk::DescriptorType::eUniformBuffer)
+            .WriteImage(1, m_matroskinTexture.View(), *m_modelTextureSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 0)
+            .WriteImage(1, m_vikingRoomTexture.View(), *m_modelTextureSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 1)
+            .UpdateSet(*m_mainDescriptorSet[i]);
 
-    m_descriptorManager = CDescriptorPool { m_context, FRAMES_IN_FLIGHT_COUNT };
-    auto& dsm = m_descriptorManager;
-
-    m_mainDescriptorSet = dsm.CreateDescriptorSet({
-        {
-            .m_binding = 0,
-            .m_type = vk::DescriptorType::eUniformBuffer,
-            .m_shaderStages = vk::ShaderStageFlagBits::eVertex,
-            .m_info = BufferDescriptorInfo { .m_buffer = m_uniformBuffer }
-        },
-        {
-            .m_binding = 1,
-            .m_type = vk::DescriptorType::eCombinedImageSampler,
-            .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_count = 1024,
-        }
-    });
-
-    m_swapchainDescriptorSet = dsm.CreateDescriptorSet({
-        {
-            .m_binding = 0,
-            .m_type = vk::DescriptorType::eCombinedImageSampler,
-            .m_shaderStages = vk::ShaderStageFlagBits::eFragment,
-            .m_info = SampledImageDescriptorInfo { .m_image = m_colorBuffer, .m_sampler = *m_mainSampler }
-        }
-    });
-
-    dsm.CreateDescriptorPool();
-    dsm.CreateDescriptorSets();
-    dsm.UpdateDescriptorSets(m_bufferManager, m_textureManager);
-    dsm.BindTextureToIndex(m_mainDescriptorSet, 1, 0, m_textureManager.GetTexture(m_matroskinModelTexture), *m_modelTextureSampler);
-    dsm.BindTextureToIndex(m_mainDescriptorSet, 1, 1, m_textureManager.GetTexture(m_roomModelTexture), *m_modelTextureSampler);
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteImage(0, m_mainColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .UpdateSet(*m_swapchainDescriptorSet[i]);
+    }
 
     // Main pipeline
     // Shaders
@@ -271,10 +218,10 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     // Pipeline
     const vk::raii::PipelineLayout& mainPipelineLayout = m_pipelineLayoutCache.GetLayout({
-        { *dsm.GetDescriptorSetLayout(m_mainDescriptorSet) }, { { vk::ShaderStageFlagBits::eFragment, 0, sizeof(std::uint32_t) } }
+        { *mainSetLayout }, { { vk::ShaderStageFlagBits::eFragment, 0, sizeof(std::uint32_t) } }
     });
 
-    std::array<vk::Format, 1> colorFormats = { txm.GetTexture(m_colorBuffer).Format() };
+    std::array<vk::Format, 1> colorFormats = { m_mainColor.Get().Format() };
 
     m_pipelineMain = CGraphicsPipeline { m_context, {
         .m_layout = *mainPipelineLayout,
@@ -283,7 +230,7 @@ CRenderer::CRenderer(const IWindow* const window) {
             .m_description = { 0, sizeof(CVertex) },
             .m_attributes = CVertex::GetAttributes() | std::ranges::to<std::vector>(),
         }},
-        .m_renderingInfo = { {}, colorFormats, txm.GetTexture(m_depthBufferMSAAx).Format() },
+        .m_renderingInfo = { {}, colorFormats, m_mainDepthMSAA.Get().Format() },
         .m_sampling =  vk::SampleCountFlagBits::e4
     }
     };
@@ -294,7 +241,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderSwapchain.frag.spv");
 
     const vk::raii::PipelineLayout& swapchainPipelineLayout = m_pipelineLayoutCache.GetLayout({
-        { *dsm.GetDescriptorSetLayout(m_swapchainDescriptorSet) }
+        { *swapchainSetLayout }
     });
 
     // Pipeline
@@ -340,41 +287,35 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 }
 
 void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
-    m_textureManager.SetFrameIndex(m_frameContext.m_frameIndex);
-    m_bufferManager.SetFrameIndex(m_frameContext.m_frameIndex);
-    m_descriptorManager.SetFrameIndex(m_frameContext.m_frameIndex);
-    auto& cmd = m_graphicsCommands.PrimaryBuffers()[m_frameContext.m_frameIndex];
-    CFrame& frameData = m_frameData[m_frameContext.m_frameIndex];
-    const CDevice& device = m_context.Device();
-    auto& uniformBuffer = m_bufferManager.GetBuffer(m_uniformBuffer);
-    auto& vertexBuffer = m_bufferManager.GetBuffer(m_vertexBuffer);
-    auto& indexBuffer = m_bufferManager.GetBuffer(m_indexBuffer);
-    auto& colorBuffer = m_textureManager.GetTexture(m_colorBuffer);
-    auto& colorBufferMSAA = m_textureManager.GetTexture(m_colorBufferMSAAx);
-    auto& depthBufferMSAA = m_textureManager.GetTexture(m_depthBufferMSAAx);
-    auto descriptorSetMain = m_descriptorManager.GetDescriptorSet(m_mainDescriptorSet);
-    auto descriptorSetSwapchain = m_descriptorManager.GetDescriptorSet(m_swapchainDescriptorSet);
-
     if (m_isResized) {
-        Resize(frameData);
+        Resize();
     }
+
+    auto& cmd = m_graphicsCommands.PrimaryBuffers()[m_inFlightContext.InFlightIndex()];
+    const CDevice& device = m_context.Device();
+    auto& uniformBuffer = m_uniform.Get();
+    auto& colorBuffer = m_mainColor.Get();
+    auto& colorBufferMSAA = m_mainColorMSAA.Get();
+    auto& depthBufferMSAA = m_mainDepthMSAA.Get();
+    auto& descriptorSetMain = m_mainDescriptorSet.Get();
+    auto& descriptorSetSwapchain = m_swapchainDescriptorSet.Get();
 
     UpdateUniformBuffer(m_swapchain.Extent(), uniformBuffer, view, fov, m_swapchain.SurfaceTransform());
 
     // Wait for fence to ensure that the previous frame rendering is finished
-    vk::Result result = device->waitForFences({ frameData.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+    vk::Result result = device->waitForFences({ m_fence.Get() }, vk::True, std::numeric_limits<std::uint64_t>::max());
     if (result != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
     }
 
     // Acquire next image from the swapchain
-    auto acquireResult = m_swapchain.AcquireImage(*frameData.GetImageAvailableSemaphore());
+    auto acquireResult = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (!acquireResult) {
         vk::Result error = acquireResult.error();
         if (error == vk::Result::eErrorSurfaceLostKHR) {
             m_swapchain.Clear();
             m_context.RecreateSurface();
-            Resize(frameData);
+            Resize();
             return;
         }
 
@@ -385,7 +326,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 #endif
 
         if (error == vk::Result::eErrorOutOfDateKHR || error == vk::Result::eSuboptimalKHR) {
-            Resize(frameData);
+            Resize();
             return;
         }
 
@@ -395,18 +336,18 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     std::uint32_t imageIndex = *acquireResult;
 
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
-    device->resetFences({ frameData.GetFence() });
+    device->resetFences({ m_fence.Get() });
 
     cmd->reset();
     cmd->begin({});
 
-    if (m_firstUse[m_frameContext.m_frameIndex]) {
+    if (m_firstUse.Get()) {
         cmd.PipelineBarrier({
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { colorBufferMSAA, colorBufferMSAA.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { depthBufferMSAA, depthBufferMSAA.FullRange(), Usage::eNone, Usage::eDepthWrite },
         });
-        m_firstUse[m_frameContext.m_frameIndex] = false;
+        m_firstUse.Get() = false;
     } else {
         cmd.PipelineBarrier({
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
@@ -447,10 +388,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
         cmd->setScissor(0, { { { 0, 0 }, colorBuffer.Extent2D() } });
         cmd->setDepthBiasEnable(vk::False);
 
-        cmd->bindVertexBuffers(0, { *vertexBuffer }, { 0 });
-        cmd->bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+        cmd->bindVertexBuffers(0, { *m_vertexBuffer }, { 0 });
+        cmd->bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
 
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, descriptorSetMain, {});
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, *descriptorSetMain, {});
 
         constants = { 0 };
         cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
@@ -487,7 +428,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
         cmd->setScissor(0, { { { 0, 0 }, m_swapchain.Extent() } });
         cmd->setDepthBiasEnable(vk::False);
 
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, descriptorSetSwapchain, {});
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, *descriptorSetSwapchain, {});
         cmd->draw(3, 1, 0, 0);
     cmd->endRendering();
 
@@ -500,11 +441,11 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 
     vk::SubmitInfo finalSubmit {};
-    finalSubmit.setWaitSemaphores({ *frameData.GetImageAvailableSemaphore() });
+    finalSubmit.setWaitSemaphores({ *m_imageAvailableSemaphore.Get() });
     finalSubmit.setWaitDstStageMask({ waitStage });
     finalSubmit.setCommandBuffers({ **cmd });
     finalSubmit.setSignalSemaphores({ *m_renderFinishedSemaphores[imageIndex] });
-    m_context.Device().GraphicsQueue()->submit(finalSubmit, frameData.GetFence());
+    m_context.Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
     // Present
     auto presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
@@ -512,7 +453,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
         if (presentResult == vk::Result::eErrorSurfaceLostKHR) {
             m_swapchain.Clear();
             m_context.RecreateSurface();
-            Resize(frameData);
+            Resize();
             return;
         }
 
@@ -523,21 +464,21 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 #endif
 
         if (presentResult == vk::Result::eErrorOutOfDateKHR || presentResult == vk::Result::eSuboptimalKHR) {
-            Resize(frameData);
+            Resize();
             return;
         }
 
         throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(presentResult)));
     }
 
-    m_frameContext.m_frameIndex = (m_frameContext.m_frameIndex + 1) % FRAMES_IN_FLIGHT_COUNT;
+    m_inFlightContext.NextFrame();
 }
 
-void CRenderer::Resize(CFrame& currentFrameData) {
+void CRenderer::Resize() {
     for (auto&& i : m_firstUse) { i = true; }
 
-    for (auto& frame : m_frameData) {
-        vk::Result result = m_context.Device()->waitForFences({ frame.GetFence() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+    for (auto& fence : m_fence) {
+        vk::Result result = m_context.Device()->waitForFences({ fence }, vk::True, std::numeric_limits<std::uint64_t>::max());
         if (result != vk::Result::eSuccess) {
             throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
         }
@@ -549,15 +490,35 @@ void CRenderer::Resize(CFrame& currentFrameData) {
 
     m_swapchain.Recreate(*m_context.Surface());
 
-    m_textureManager.Resize(m_swapchain.Extent());
-    m_descriptorManager.UpdateDescriptorSets(m_bufferManager, m_textureManager);
+    m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
+    }};
 
-    currentFrameData.RecreateImageAvailableSemaphore();
+    m_mainColorMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eColorAttachment
+    }};
+
+    m_mainDepthMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { renderWidth, renderHeight, 1 }, vk::Format::eD32Sfloat, 1, 1,
+        vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
+    }};
+
+    CDescriptorWriter descriptorWriter { m_context };
+    for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteImage(0, m_mainColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .UpdateSet(*m_swapchainDescriptorSet[i]);
+    }
+
+    m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *m_context.Device(), vk::SemaphoreCreateInfo {} };
     m_isResized = false;
 }
 
 void CRenderer::LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
-    auto UploadTexture = [&](const std::string& path, const std::string& debugName) -> TextureHandle {
+    auto UploadTexture = [&](const std::string& path, const std::string& debugName) {
         std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
         SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
 
@@ -607,11 +568,15 @@ void CRenderer::LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::Comman
 
         SDL_DestroySurface(image);
 
-        return m_textureManager.ImportTexture(debugName.c_str(), std::move(texture));
+        if (this->m_context.Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
+            m_context.Device()->setDebugUtilsObjectNameEXT(*texture, debugName);
+        }
+
+        return texture;
     };
 
-    m_roomModelTexture = UploadTexture("assets://viking_room.png", "viking-room");
-    m_matroskinModelTexture = UploadTexture("assets://matroskin.png", "matroskin");
+    m_vikingRoomTexture = UploadTexture("assets://viking_room.png", "viking-room");
+    m_matroskinTexture = UploadTexture("assets://matroskin.png", "matroskin");
 }
 
 auto LoadModel(const char* filename) {
@@ -665,16 +630,16 @@ auto LoadModel(const char* filename) {
 }
 
 void CRenderer::LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool) {
-    m_vertexBuffer = m_bufferManager.ImportBuffer("vertexBuffer", CBuffer {
+    m_vertexBuffer = CBuffer {
         m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
         MemoryLocation::eDeviceOnly
-    });
-    m_indexBuffer = m_bufferManager.ImportBuffer("indexBuffer", CBuffer {
+    };
+    m_indexBuffer = CBuffer {
         m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
         MemoryLocation::eDeviceOnly
-    });
+    };
 
     auto UploadToPool = [&](const std::string& path, SubMesh& subMesh) {
         auto [vertices, indices] = LoadModel(path.c_str());
@@ -684,9 +649,9 @@ void CRenderer::LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& 
 
         vma::VirtualAllocationCreateInfo allocationInfo { };
         allocationInfo.setSize(vSize);
-        subMesh.vtxAlloc = vma::raii::VirtualAllocation { m_bufferManager.GetBuffer(m_vertexBuffer).VirtualBlock(), allocationInfo };
+        subMesh.vtxAlloc = vma::raii::VirtualAllocation { m_vertexBuffer.VirtualBlock(), allocationInfo };
         allocationInfo.setSize(iSize);
-        subMesh.idxAlloc = vma::raii::VirtualAllocation { m_bufferManager.GetBuffer(m_indexBuffer).VirtualBlock(), allocationInfo };
+        subMesh.idxAlloc = vma::raii::VirtualAllocation { m_indexBuffer.VirtualBlock(), allocationInfo };
         subMesh.indexCount = static_cast<std::uint32_t>(indices.size());
 
         vk::DeviceSize totalSize = vSize + iSize;
@@ -702,8 +667,8 @@ void CRenderer::LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& 
         vk::raii::CommandBuffer cb = BeginSingleTimeCommands(*m_context.Device(), commandPool);
         {
             CCommandBuffer cmd { cb };
-            cmd.Copy(m_bufferManager.GetBuffer(m_vertexBuffer), stagingBuffer, vSize, { 0, subMesh.VtxOffset() });
-            cmd.Copy(m_bufferManager.GetBuffer(m_indexBuffer), stagingBuffer, iSize, { vSize, subMesh.IdxOffset() } );
+            cmd.Copy(m_vertexBuffer, stagingBuffer, vSize, { 0, subMesh.VtxOffset() });
+            cmd.Copy(m_indexBuffer, stagingBuffer, iSize, { vSize, subMesh.IdxOffset() } );
         }
         EndSingleTimeCommands(m_context.Device(), cb);
     };

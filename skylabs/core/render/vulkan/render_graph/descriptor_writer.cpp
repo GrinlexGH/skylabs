@@ -1,6 +1,8 @@
 #include <skylabs/core/render/vulkan/render_graph/descriptor_writer.hpp>
 
 namespace Vulkan {
+CDescriptorWriter::CDescriptorWriter(const CContext& context) : m_device(&*context.Device()) {}
+
 CDescriptorWriter& CDescriptorWriter::WriteBuffer(
     uint32_t binding,
     vk::Buffer buffer,
@@ -43,9 +45,9 @@ CDescriptorWriter& CDescriptorWriter::WriteImage(
     return *this;
 }
 
-void CDescriptorWriter::UpdateSet(vk::Device device, vk::DescriptorSet set) {
+void CDescriptorWriter::UpdateSet(vk::DescriptorSet set) {
     for (auto& write : m_writes) { write.dstSet = set; }
-    device.updateDescriptorSets(m_writes, nullptr);
+    m_device->updateDescriptorSets(m_writes, nullptr);
 }
 
 void CDescriptorWriter::Clear() {

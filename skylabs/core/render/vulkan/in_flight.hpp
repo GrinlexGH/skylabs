@@ -29,6 +29,10 @@ class InFlight {
 public:
     explicit InFlight(std::nullptr_t) : m_context(nullptr) {}
 
+    InFlight(const InFlightContext& context, std::vector<T>&& data) : m_context(&context), m_data(std::move(data)) {
+        assert(m_data.size() == context.FrameCount() && "Container size must match frame count");
+    }
+
     template <typename... Args>
     InFlight(const InFlightContext& context, Args&&... args) : m_context(&context) {
         m_data.reserve(context.FrameCount());
@@ -52,10 +56,15 @@ public:
         for (auto& item : m_data) { func(item); }
     }
 
-    constexpr T& Get() { return m_data[m_context->InFlightIndex()]; }
-    constexpr const T& Get() const { return m_data[m_context->InFlightIndex()]; }
-    constexpr T& operator[](std::size_t index) { return m_data[index]; }
-    constexpr const T& operator[](std::size_t index) const { return m_data[index]; }
+    auto begin() { return m_data.begin(); }
+    auto end() { return m_data.end(); }
+    auto begin() const { return m_data.begin(); }
+    auto end() const { return m_data.end(); }
+
+    constexpr decltype(auto) Get() { return m_data[m_context->InFlightIndex()]; }
+    constexpr decltype(auto) Get() const { return m_data[m_context->InFlightIndex()]; }
+    constexpr decltype(auto) operator[](std::size_t index) { return m_data[index]; }
+    constexpr decltype(auto) operator[](std::size_t index) const { return m_data[index]; }
 
     constexpr std::size_t Size() const { return m_data.size(); }
 

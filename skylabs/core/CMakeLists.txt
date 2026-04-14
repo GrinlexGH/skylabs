@@ -47,8 +47,6 @@ target_sources(
         render/vulkan/render_graph/buffer_pool.hpp
         render/vulkan/render_graph/descriptor_allocator.cpp
         render/vulkan/render_graph/descriptor_allocator.hpp
-        render/vulkan/render_graph/descriptor_pool.cpp
-        render/vulkan/render_graph/descriptor_pool.hpp
         render/vulkan/render_graph/descriptor_writer.cpp
         render/vulkan/render_graph/descriptor_writer.hpp
         render/vulkan/render_graph/graph.cpp
