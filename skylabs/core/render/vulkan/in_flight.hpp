@@ -2,8 +2,6 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
 namespace Vulkan {
-constexpr const auto MAX_FRAMES_IN_FLIGHT = 3;
-
 class InFlightContext {
 public:
     explicit InFlightContext(std::nullptr_t) {}
@@ -49,11 +47,6 @@ public:
         for (std::size_t i = 0; i < context.FrameCount(); ++i) {
             m_data.emplace_back(std::forward<Args>(args)...);
         }
-    }
-
-    template<ActionOn<T> Func>
-    void Apply(Func& func) {
-        for (auto& item : m_data) { func(item); }
     }
 
     auto begin() { return m_data.begin(); }
