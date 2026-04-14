@@ -16,8 +16,8 @@ target_sources(
         render/vertex.hpp
         render/vulkan/command_buffer.cpp
         render/vulkan/command_buffer.hpp
-        render/vulkan/command_buffer_set.cpp
-        render/vulkan/command_buffer_set.hpp
+        render/vulkan/command_buffer_allocator.cpp
+        render/vulkan/command_buffer_allocator.hpp
         render/vulkan/context/allocator.cpp
         render/vulkan/context/allocator.hpp
         render/vulkan/context/context.cpp

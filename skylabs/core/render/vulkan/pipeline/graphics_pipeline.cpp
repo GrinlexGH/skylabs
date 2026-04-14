@@ -98,7 +98,7 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
         vk::DynamicState::eDepthBiasEnable
     };
     vk::PipelineDynamicStateCreateInfo dynamicState {};
-    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
     vk::PipelineDepthStencilStateCreateInfo depthStencil {};

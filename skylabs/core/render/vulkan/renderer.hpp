@@ -12,7 +12,7 @@
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
-#include <skylabs/core/render/vulkan/command_buffer_set.hpp>
+#include <skylabs/core/render/vulkan/command_buffer_allocator.hpp>
 
 struct SubMesh {
     std::uint32_t indexCount = 0;
@@ -42,25 +42,22 @@ private:
     static constexpr auto GEOMETRY_POOL_SIZE = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
     void Resize();
-    void LoadModelTextures(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
-    void LoadModels(CBuffer& stagingBuffer, const vk::raii::CommandPool& commandPool);
+    void LoadModelTextures(CBuffer& stagingBuffer);
+    void LoadModels(CBuffer& stagingBuffer);
 
     CContext m_context { nullptr };
-
     CSwapchain m_swapchain { nullptr };
 
-    CCommandBufferSet m_graphicsCommands { nullptr };
-    CCommandBufferSet m_computeCommands { nullptr };
-
     CPipelineLayoutCache m_pipelineLayoutCache { nullptr };
-
     CDescriptorLayoutCache m_descriptorLayoutCache { nullptr };
     CDescriptorAllocator m_descriptorAllocator { nullptr };
+    CCommandBufferAllocator m_commandBufferAllocator { nullptr };
 
     InFlightContext m_inFlightContext { nullptr };
 
-    InFlight<bool> m_firstUse { nullptr };
+    InFlight<CCommandBuffer> m_graphicsCmd { nullptr };
 
+    InFlight<bool> m_firstUse { nullptr };
     InFlight<vk::raii::Fence> m_fence { nullptr };
     InFlight<vk::raii::Semaphore> m_imageAvailableSemaphore { nullptr };
 
@@ -83,8 +80,6 @@ private:
     CSampler m_mainSampler { nullptr };
     InFlight<vk::raii::DescriptorSet> m_swapchainDescriptorSet { nullptr };
     CGraphicsPipeline m_pipelineSwapchain { nullptr };
-
-    vk::raii::CommandPool m_singleCommandPool { nullptr };
 
     SubMesh m_matroskin;
     SubMesh m_viking;

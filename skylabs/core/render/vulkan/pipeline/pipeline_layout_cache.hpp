@@ -25,7 +25,7 @@ public:
     void Clear() { m_cache.clear(); }
 
 private:
-    const CContext* m_context = nullptr;
+    const vk::raii::Device* m_device { nullptr };
 
     std::unordered_map<PipelineLayoutInfo, vk::raii::PipelineLayout, PipelineLayoutHash> m_cache;
 };

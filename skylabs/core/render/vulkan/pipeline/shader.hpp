@@ -2,11 +2,6 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
 namespace Vulkan {
-struct ShaderReflectionData {
-    std::unordered_map<uint32_t, std::vector<vk::DescriptorSetLayoutBinding>> sets;
-    std::vector<vk::PushConstantRange> pushConstants;
-};
-
 class CShader
 {
 public:
@@ -21,14 +16,10 @@ public:
     [[nodiscard]] const vk::raii::ShaderModule& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::ShaderModule* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] const ShaderReflectionData& GetReflection() const { return m_reflection; }
     [[nodiscard]] vk::ShaderStageFlagBits Stage() const { return m_stage; }
 
 private:
     vk::raii::ShaderModule m_handle = nullptr;
     vk::ShaderStageFlagBits m_stage = vk::ShaderStageFlagBits::eAll;
-    ShaderReflectionData m_reflection;
-
-    void Reflect(const std::vector<std::uint32_t>& code);
 };
 }

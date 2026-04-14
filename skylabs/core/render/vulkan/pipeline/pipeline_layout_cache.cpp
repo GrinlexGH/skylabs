@@ -16,7 +16,7 @@ std::size_t PipelineLayoutHash::operator()(const PipelineLayoutInfo& info) const
     return seed;
 }
 
-CPipelineLayoutCache::CPipelineLayoutCache(const CContext& context) : m_context(&context) {}
+CPipelineLayoutCache::CPipelineLayoutCache(const CContext& context) : m_device(&*context.Device()) {}
 
 const vk::raii::PipelineLayout& CPipelineLayoutCache::GetLayout(PipelineLayoutInfo info) {
     std::ranges::sort(info.m_pushConstants, [](const auto& a, const auto& b) {
@@ -31,7 +31,7 @@ const vk::raii::PipelineLayout& CPipelineLayoutCache::GetLayout(PipelineLayoutIn
 
     vk::PipelineLayoutCreateInfo createInfo { {}, info.m_descriptorSetLayouts, info.m_pushConstants };
 
-    vk::raii::PipelineLayout layout { *m_context->Device(), createInfo };
+    vk::raii::PipelineLayout layout { *m_device, createInfo };
     auto [insertedIt, success] = m_cache.try_emplace(std::move(info), std::move(layout));
 
     return insertedIt->second;

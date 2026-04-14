@@ -4,12 +4,12 @@ namespace Vulkan {
 CDescriptorWriter::CDescriptorWriter(const CContext& context) : m_device(&*context.Device()) {}
 
 CDescriptorWriter& CDescriptorWriter::WriteBuffer(
-    uint32_t binding,
+    std::uint32_t binding,
     vk::Buffer buffer,
-    size_t size,
-    size_t offset,
+    std::size_t size,
+    std::size_t offset,
     vk::DescriptorType type,
-    uint32_t arrayElement)
+    std::uint32_t arrayElement)
 {
     vk::DescriptorBufferInfo& info = m_bufferInfos.emplace_back(buffer, offset, size);
 
@@ -25,12 +25,12 @@ CDescriptorWriter& CDescriptorWriter::WriteBuffer(
 }
 
 CDescriptorWriter& CDescriptorWriter::WriteImage(
-    uint32_t binding,
+    std::uint32_t binding,
     vk::ImageView view,
     vk::Sampler sampler,
     vk::ImageLayout layout,
     vk::DescriptorType type,
-    uint32_t arrayElement)
+    std::uint32_t arrayElement)
 {
     vk::DescriptorImageInfo& info = m_imageInfos.emplace_back(sampler, view, layout);
 

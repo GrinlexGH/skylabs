@@ -46,10 +46,28 @@ class CCommandBuffer
 {
 public:
     explicit CCommandBuffer(std::nullptr_t) {}
-    explicit CCommandBuffer(const vk::raii::CommandBuffer& commandBuffer);
+    explicit CCommandBuffer(const CContext& context, vk::raii::CommandBuffer&& commandBuffer);
 
-    [[nodiscard]] const vk::raii::CommandBuffer& operator*() const noexcept { return *m_handle; }
-    [[nodiscard]] const vk::raii::CommandBuffer* operator->() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::CommandBuffer& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::CommandBuffer* operator->() const noexcept { return &m_handle; }
+
+    template <typename F>
+    requires requires(const F& f, const CCommandBuffer& cmd) { { f(cmd) } -> std::same_as<void>; }
+    void ImmediateSubmit(const vk::raii::Queue& queue, const F& func) const {
+        m_handle.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+        func(*this);
+        m_handle.end();
+
+        vk::SubmitInfo submitInfo {};
+        submitInfo.setCommandBuffers(*m_handle);
+
+        vk::raii::Fence fence { *m_device, vk::FenceCreateInfo {} };
+        queue.submit(submitInfo, *fence);
+
+        if (m_device->waitForFences({ *fence }, true, std::numeric_limits<std::uint64_t>::max()) != vk::Result::eSuccess) {
+            throw std::runtime_error("Failed to wait for single-time command fence");
+        }
+    }
 
     void PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const;
 
@@ -59,6 +77,7 @@ public:
     void GenerateMipmaps(const CImage& image, Usage srcUsage = Usage::eTransferWrite, Usage dstUsage = Usage::eSampledFragment) const;
 
 private:
-    const vk::raii::CommandBuffer* m_handle = nullptr;
+    const vk::raii::Device* m_device = nullptr;
+    vk::raii::CommandBuffer m_handle { nullptr };
 };
 }

@@ -1,8 +1,8 @@
 #include <skylabs/core/render/vulkan/command_buffer.hpp>
 
 namespace Vulkan {
-CCommandBuffer::CCommandBuffer(const vk::raii::CommandBuffer& commandBuffer) :
-    m_handle(&commandBuffer)
+CCommandBuffer::CCommandBuffer(const CContext& context, vk::raii::CommandBuffer&& commandBuffer) :
+    m_device(&*context.Device()), m_handle(std::move(commandBuffer))
 {}
 
 void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const {
@@ -67,7 +67,7 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
     dependencyInfo.bufferMemoryBarrierCount = static_cast<std::uint32_t>(bufBarriers.size());
     dependencyInfo.pBufferMemoryBarriers = bufBarriers.data();
 
-    m_handle->pipelineBarrier2(dependencyInfo);
+    m_handle.pipelineBarrier2(dependencyInfo);
 }
 
 void CCommandBuffer::GenerateMipmaps(const CImage& image, Usage srcUsage, Usage dstUsage) const {
@@ -93,7 +93,7 @@ void CCommandBuffer::GenerateMipmaps(const CImage& image, Usage srcUsage, Usage 
             1
         };
 
-        m_handle->blitImage(
+        m_handle.blitImage(
             *image, vk::ImageLayout::eTransferSrcOptimal,
             *image, vk::ImageLayout::eTransferDstOptimal,
             { blit },
@@ -131,7 +131,7 @@ void CCommandBuffer::Copy(const CImage& dst, const CBuffer& src) const {
     region.imageOffset = vk::Offset3D { 0, 0, 0 };
     region.imageExtent = dst.Extent();
 
-    m_handle->copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
+    m_handle.copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
 void CCommandBuffer::Copy(const CBuffer& dst, const CBuffer& src, const vk::DeviceSize size, const BufferCopyOffsets offsets) const {
@@ -140,6 +140,6 @@ void CCommandBuffer::Copy(const CBuffer& dst, const CBuffer& src, const vk::Devi
     copyRegion.dstOffset = offsets.m_dstOffset;
     copyRegion.size = size;
 
-    m_handle->copyBuffer(*src, *dst, copyRegion);
+    m_handle.copyBuffer(*src, *dst, copyRegion);
 }
 }
