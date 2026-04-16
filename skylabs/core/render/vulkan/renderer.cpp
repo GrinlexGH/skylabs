@@ -299,7 +299,6 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 
         cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(colorBuffer.Extent().width), static_cast<float>(colorBuffer.Extent().height), 0.0f, 1.0f } });
         cmd->setScissor(0, { { { 0, 0 }, colorBuffer.Extent2D() } });
-        cmd->setDepthBiasEnable(vk::False);
 
         cmd->bindVertexBuffers(0, { *m_vertexBuffer }, { 0 });
         cmd->bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
@@ -339,7 +338,6 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 
         cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(m_swapchain.Extent().width), static_cast<float>(m_swapchain.Extent().height), 0.0f, 1.0f } });
         cmd->setScissor(0, { { { 0, 0 }, m_swapchain.Extent() } });
-        cmd->setDepthBiasEnable(vk::False);
 
         cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, *m_swapchainDescriptorSet.Get(), {});
         cmd->draw(3, 1, 0, 0);

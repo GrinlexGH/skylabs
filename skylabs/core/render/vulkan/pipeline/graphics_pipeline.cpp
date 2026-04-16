@@ -66,20 +66,20 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     multisampling.sampleShadingEnable = vk::False;
     multisampling.rasterizationSamples = options.m_sampling;
 
+    // TODO: bleding settings
     vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
+    colorBlendAttachment.blendEnable = vk::True;
+    colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+    colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
+    colorBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
     colorBlendAttachment.colorWriteMask =
         vk::ColorComponentFlagBits::eR
         | vk::ColorComponentFlagBits::eG
         | vk::ColorComponentFlagBits::eB
         | vk::ColorComponentFlagBits::eA;
-    colorBlendAttachment.blendEnable = vk::True;
-    colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
-    colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
-    colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
-
-    colorBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
-    colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
-    colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
 
     vk::PipelineColorBlendStateCreateInfo colorBlending {};
     colorBlending.logicOpEnable = vk::False;
@@ -94,8 +94,6 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     constexpr std::array dynamicStates = {
         vk::DynamicState::eViewport,
         vk::DynamicState::eScissor,
-        vk::DynamicState::eDepthBias,
-        vk::DynamicState::eDepthBiasEnable
     };
     vk::PipelineDynamicStateCreateInfo dynamicState {};
     dynamicState.dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size());

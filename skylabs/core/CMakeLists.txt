@@ -8,7 +8,6 @@ target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
         camera.hpp
-        header_factory.cpp
         launcher.cpp
         launcher.hpp
         main.cpp
@@ -72,6 +71,7 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     SteamworksSDK::SteamworksSDK
     Vulkan::Headers
 
+    GPUOpen::VulkanMemoryAllocator
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
     spirv-reflect::spirv-reflect
     vk-bootstrap::vk-bootstrap

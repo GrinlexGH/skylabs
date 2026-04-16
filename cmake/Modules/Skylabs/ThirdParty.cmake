@@ -9,6 +9,7 @@ find_package(SDL3_mixer CONFIG REQUIRED)
 # Vulkan
 find_package(VulkanHeaders CONFIG REQUIRED)
 find_package(vk-bootstrap CONFIG REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
 find_package(Slangc REQUIRED)
 find_package(spirv-reflect REQUIRED)
