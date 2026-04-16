@@ -244,10 +244,6 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 }
 
 void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
-    if (m_isResized) {
-        Resize();
-    }
-
     const CDevice& device = m_context.Device();
 
     auto& cmd = m_graphicsCmd.Get();
@@ -258,34 +254,13 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     UpdateUniformBuffer(m_swapchain.Extent(), m_uniform.Get(), view, fov, m_swapchain.SurfaceTransform());
 
     // Wait for fence to ensure that the previous frame rendering is finished
-    vk::Result result = device->waitForFences({ m_fence.Get() }, vk::True, std::numeric_limits<std::uint64_t>::max());
-    if (result != vk::Result::eSuccess) {
-        throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
-    }
+    std::ignore = device->waitForFences({ m_fence.Get() }, vk::True, std::numeric_limits<std::uint64_t>::max());
 
     // Acquire next image from the swapchain
     auto acquireResult = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (!acquireResult) {
-        vk::Result error = acquireResult.error();
-        if (error == vk::Result::eErrorSurfaceLostKHR) {
-            m_swapchain.Clear();
-            m_context.RecreateSurface();
-            Resize();
-            return;
-        }
-
-#ifdef PLATFORM_ANDROID
-        if (error == vk::Result::eSuboptimalKHR) {
-            return;
-        }
-#endif
-
-        if (error == vk::Result::eErrorOutOfDateKHR || error == vk::Result::eSuboptimalKHR) {
-            Resize();
-            return;
-        }
-
-        throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(error)));
+        HandleSwapchainResult(acquireResult.error(), "acquire");
+        return;
     }
 
     std::uint32_t imageIndex = *acquireResult;
@@ -403,60 +378,73 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     m_context.Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
     // Present
-    auto presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
-    if (presentResult != vk::Result::eSuccess) {
-        if (presentResult == vk::Result::eErrorSurfaceLostKHR) {
-            // https://share.google/aimode/QZHwXX6oQc0njWMCz
-            // We must destroy swapchain because it still uses surface
-            m_swapchain.Clear();
-            m_context.RecreateSurface();
-            Resize();
-            return;
-        }
-
-#ifdef PLATFORM_ANDROID
-        if (presentResult == vk::Result::eSuboptimalKHR) {
-            return;
-        }
-#endif
-
-        if (presentResult == vk::Result::eErrorOutOfDateKHR || presentResult == vk::Result::eSuboptimalKHR) {
-            Resize();
-            return;
-        }
-
-        throw std::runtime_error(fmt::format("Failed to present image: {}", vk::to_string(presentResult)));
-    }
+    HandleSwapchainResult(m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] }), "present");
 
     m_inFlightContext.NextFrame();
 }
 
-void CRenderer::Resize() {
-    for (auto&& i : m_firstUse) { i = true; }
+void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string_view context) {
+    if (result == vk::Result::eSuccess)
+        return;
 
-    for (auto& fence : m_fence) {
-        vk::Result result = m_context.Device()->waitForFences({ fence }, vk::True, std::numeric_limits<std::uint64_t>::max());
-        if (result != vk::Result::eSuccess) {
-            throw std::runtime_error("Failed to wait for fence: " + vk::to_string(result));
-        }
+    Log::Debug("Image {} result: {}", context, vk::to_string(result));
+
+    std::ignore = m_context.Device()->waitForFences(
+        m_fence
+            | std::views::transform([](const auto& f) { return *f; })
+            | std::ranges::to<std::vector>(),
+        vk::True, std::numeric_limits<std::uint64_t>::max()
+    );
+
+    if (result != vk::Result::eSuboptimalKHR &&
+        result != vk::Result::eErrorSurfaceLostKHR &&
+        result != vk::Result::eErrorOutOfDateKHR
+    ) {
+        throw std::runtime_error(fmt::format("Failed to {} image: {}", context, vk::to_string(result)));
     }
 
+    if (m_needSurfaceRecreation) {
+        m_swapchain.Clear();
+        m_context.RecreateSurface();
+        RecreateSwapchain();
+        m_needSurfaceRecreation = false;
+        m_needSwapchainRecreation = false;
+    }
+
+    // You cant recreate swapchain if surface is lost
+    if (result != vk::Result::eErrorSurfaceLostKHR && m_needSwapchainRecreation) {
+        RecreateSwapchain();
+        m_needSwapchainRecreation = false;
+    }
+}
+
+void CRenderer::RecreateSwapchain() {
+    const auto [oldWidth, oldHeight] = m_swapchain.Extent();
     m_swapchain.Recreate(*m_context.Surface());
-    renderWidth = m_swapchain.Extent().width;
-    renderHeight = m_swapchain.Extent().height;
+    const auto [newWidth, newHeight] = m_swapchain.Extent();
+
+    if (oldWidth != newWidth || oldHeight != newHeight)
+        ResizeTextures();
+}
+
+void CRenderer::ResizeTextures() {
+    // Reset sync state
+    for (auto&& i : m_firstUse) { i = true; }
+
+    const auto [width, height] = m_swapchain.Extent();
 
     m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
-        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
     }};
 
     m_mainColorMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
-        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eColorAttachment
     }};
 
     m_mainDepthMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
-        { renderWidth, renderHeight, 1 }, vk::Format::eD32Sfloat, 1, 1,
+        { width, height, 1 }, vk::Format::eD32Sfloat, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};
 
@@ -467,11 +455,6 @@ void CRenderer::Resize() {
             .WriteImage(0, m_mainColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_swapchainDescriptorSet[i]);
     }
-
-    // https://stackoverflow.com/questions/70762372/how-to-recreate-swapchain-after-vkacquirenextimagekhr-is-vk-suboptimal-khr
-    m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *m_context.Device(), vk::SemaphoreCreateInfo {} };
-
-    m_isResized = false;
 }
 
 void CRenderer::LoadModelTextures(CBuffer& stagingBuffer) {

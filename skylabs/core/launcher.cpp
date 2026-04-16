@@ -9,10 +9,32 @@
 #include <span>
 #include <thread>
 
+namespace {
+bool SDLCALL HandleAppEvents(void*, SDL_Event* event) {
+    switch (event->type) {
+        // Save data
+        case SDL_EVENT_WILL_ENTER_BACKGROUND:
+        // Clear much memory
+        case SDL_EVENT_LOW_MEMORY:
+        // Restore
+        case SDL_EVENT_DID_ENTER_FOREGROUND:
+            return 0;
+    }
+
+    return 1;
+}
+}
+
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
+    SDL_SetEventFilter(HandleAppEvents, nullptr);
 
     m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
+
+#ifdef PLATFORM_ANDROID
+    SDL_SetWindowFullscreen(*m_window, true);
+#endif
+
     SDL_SetWindowRelativeMouseMode(*m_window, true);
 
     if (!MIX_Init()) {
@@ -35,10 +57,6 @@ void CLauncher::Create() {
 
     MIX_SetTrackAudio(m_track, m_music);
 
-#ifdef PLATFORM_ANDROID
-    SDL_SetWindowFullscreen(*m_window, true);
-#endif
-
     m_renderer = Vulkan::CRenderer::TryToCreate(&m_window);
     if (!m_renderer) { throw std::runtime_error("Cannot initialize vulkan!\n"); }
 }
@@ -52,16 +70,14 @@ void CLauncher::Main() {
     MIX_PlayTrack(m_track, 0);
 
     while (!m_quit) {
+        ProcessEvents();
+
         float currentFrame = SDL_GetTicks() / 1000.0f;
         float deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        ProcessEvents();
-
-        if (!m_paused) {
-            Update(deltaTime);
-            Render(deltaTime);
-        }
+        Update(deltaTime);
+        Render(deltaTime);
 
         frameCount++;
         elapsedTime += deltaTime;
@@ -89,24 +105,24 @@ void CLauncher::Update(float deltaTime) {
 
     if (m_leftJoystick.active) {
         if (std::abs(m_leftJoystick.dirY) > 0.1f) {
-            auto direction = (m_leftJoystick.dirY < 0) ? FORWARD : BACKWARD;
+            auto direction = (m_leftJoystick.dirY < 0) ? CCamera::MoveDirection::eForward : CCamera::MoveDirection::eBackward;
             m_camera.ProcessKeyboard(direction, deltaTime * std::abs(m_leftJoystick.dirY));
         }
 
         if (std::abs(m_leftJoystick.dirX) > 0.1f) {
-            auto direction = (m_leftJoystick.dirX < 0) ? LEFT : RIGHT;
+            auto direction = (m_leftJoystick.dirX < 0) ? CCamera::MoveDirection::eLeft : CCamera::MoveDirection::eRight;
             m_camera.ProcessKeyboard(direction, deltaTime * std::abs(m_leftJoystick.dirX));
         }
     } else {
-        if (keyboardState[SDL_SCANCODE_W]) m_camera.ProcessKeyboard(FORWARD, deltaTime);
-        if (keyboardState[SDL_SCANCODE_S]) m_camera.ProcessKeyboard(BACKWARD, deltaTime);
-        if (keyboardState[SDL_SCANCODE_A]) m_camera.ProcessKeyboard(LEFT, deltaTime);
-        if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(RIGHT, deltaTime);
+        if (keyboardState[SDL_SCANCODE_W]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eForward, deltaTime);
+        if (keyboardState[SDL_SCANCODE_S]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eBackward, deltaTime);
+        if (keyboardState[SDL_SCANCODE_A]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
+        if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
     }
 }
 
 void CLauncher::Render(float deltaTime) {
-    m_renderer->Draw(m_camera.GetViewMatrix(), m_camera.m_fov, deltaTime);
+    m_renderer->Draw(m_camera.ViewMatrix(), m_camera.Fov(), deltaTime);
 }
 
 void CLauncher::ProcessEvents() {
@@ -117,12 +133,12 @@ void CLauncher::ProcessEvents() {
                 m_quit = true;
                 break;
 
-            case SDL_EVENT_WINDOW_MINIMIZED:
-            case SDL_EVENT_WINDOW_RESTORED:
+            case SDL_EVENT_RENDER_DEVICE_RESET:
+                m_renderer->m_needSurfaceRecreation = true;
+                break;
+
             case SDL_EVENT_WINDOW_RESIZED:
-            case SDL_EVENT_WINDOW_FOCUS_LOST:
-            case SDL_EVENT_WINDOW_FOCUS_GAINED:
-                HandleWindowEvent(e);
+                m_renderer->m_needSwapchainRecreation = true;
                 break;
 
             case SDL_EVENT_FINGER_DOWN:
@@ -132,44 +148,25 @@ void CLauncher::ProcessEvents() {
                 break;
 
             case SDL_EVENT_KEY_DOWN:
-                HandleKeyboardEvent(e.key, true);
+                HandleKeyDownEvent(e.key);
                 break;
+
             case SDL_EVENT_KEY_UP:
-                HandleKeyboardEvent(e.key, false);
+                HandleKeyUpEvent(e.key);
                 break;
 
             case SDL_EVENT_MOUSE_MOTION:
+                m_camera.ProcessMouseMovement(e.motion.xrel, -e.motion.yrel);
+                break;
+
             case SDL_EVENT_MOUSE_WHEEL:
-                HandleMouseEvent(e);
+                m_camera.ProcessMouseScroll(e.wheel.y);
                 break;
 
             case SDL_EVENT_TEXT_INPUT:
                 HandleTextInput(e.text);
                 break;
         }
-    }
-}
-
-void CLauncher::HandleWindowEvent(const SDL_Event& e) {
-    switch (e.type) {
-        case SDL_EVENT_WINDOW_MINIMIZED:
-            Pause();
-            break;
-        case SDL_EVENT_WINDOW_RESTORED:
-            Resume();
-            break;
-        case SDL_EVENT_WINDOW_RESIZED:
-            m_renderer->m_isResized = true;
-            break;
-
-#ifdef PLATFORM_ANDROID
-        case SDL_EVENT_WINDOW_FOCUS_LOST:
-            Pause();
-            break;
-        case SDL_EVENT_WINDOW_FOCUS_GAINED:
-            Resume();
-            break;
-#endif
     }
 }
 
@@ -223,54 +220,43 @@ void CLauncher::HandleTouchEvent(const SDL_Event& e) {
     }
 }
 
-void CLauncher::HandleKeyboardEvent(const SDL_KeyboardEvent& keyEvent, bool isDown) {
-    if (isDown) {
-        switch (keyEvent.key) {
-            case SDLK_ESCAPE: {
-                m_quit = true;
-            } break;
+void CLauncher::HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent) {
+    switch (keyEvent.key) {
+        case SDLK_ESCAPE: {
+            m_quit = true;
+        } break;
 
-            case SDLK_RETURN: {
-                if (!m_textInputActive)
-                    break;
-                m_textInputActive = false;
-                SDL_StopTextInput(*m_window);
-                Log::Debug("Keyboard Closed. Final text: {}", m_inputBuffer);
-                m_inputBuffer.clear();
-            } break;
+        case SDLK_RETURN: {
+            if (!m_textInputActive)
+                break;
+            m_textInputActive = false;
+            SDL_StopTextInput(*m_window);
+            Log::Debug("Keyboard Closed. Final text: {}", m_inputBuffer);
+            m_inputBuffer.clear();
+        } break;
 
-            case SDLK_P: {
-                static bool mouseModeSwitch = false;
-                SDL_SetWindowRelativeMouseMode(*m_window, mouseModeSwitch);
-                mouseModeSwitch = !mouseModeSwitch;
-            } break;
+        case SDLK_P: {
+            static bool mouseModeSwitch = false;
+            SDL_SetWindowRelativeMouseMode(*m_window, mouseModeSwitch);
+            mouseModeSwitch = !mouseModeSwitch;
+        } break;
 
-            case SDLK_F11: {
-                static bool fullscreenSwitch = true;
-                SDL_SetWindowFullscreen(*m_window, fullscreenSwitch);
-                fullscreenSwitch = !fullscreenSwitch;
-            } break;
+        case SDLK_F11: {
+            static bool fullscreenSwitch = true;
+            SDL_SetWindowFullscreen(*m_window, fullscreenSwitch);
+            fullscreenSwitch = !fullscreenSwitch;
+        } break;
 
-            case SDLK_LSHIFT: {
-                m_camera.MoveFaster();
-            } break;
-        }
-    } else {
-        switch (keyEvent.key) {
-            case SDLK_LSHIFT: {
-                m_camera.ResetSpeed();
-            } break;
-        }
+        case SDLK_LSHIFT: {
+            m_camera.MoveFaster();
+        } break;
     }
 }
 
-void CLauncher::HandleMouseEvent(const SDL_Event& e) {
-    switch (e.type) {
-        case SDL_EVENT_MOUSE_MOTION: {
-            m_camera.ProcessMouseMovement(e.motion.xrel, -e.motion.yrel);
-        } break;
-        case SDL_EVENT_MOUSE_WHEEL: {
-            m_camera.ProcessMouseScroll(e.wheel.y);
+void CLauncher::HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent) {
+    switch (keyEvent.key) {
+        case SDLK_LSHIFT: {
+            m_camera.ResetSpeed();
         } break;
     }
 }

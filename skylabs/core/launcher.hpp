@@ -41,17 +41,12 @@ private:
     void Update(float deltaTime);
     void Render(float deltaTime);
 
-    void HandleWindowEvent(const SDL_Event& e);
     void HandleTouchEvent(const SDL_Event& e);
-    void HandleMouseEvent(const SDL_Event& e);
-    void HandleKeyboardEvent(const SDL_KeyboardEvent& keyEvent, bool isDown);
+    void HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent);
+    void HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent);
     void HandleTextInput(const SDL_TextInputEvent& textEvent);
 
-    void Pause() { m_paused = true; }
-    void Resume() { m_paused = false; }
-
     bool m_quit = false;
-    bool m_paused = false;
 
     bool m_textInputActive = false;
     std::string m_inputBuffer;
