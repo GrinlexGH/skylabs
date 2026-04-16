@@ -59,6 +59,7 @@ public:
     constexpr decltype(auto) operator[](std::size_t index) { return m_data[index]; }
     constexpr decltype(auto) operator[](std::size_t index) const { return m_data[index]; }
 
+    constexpr const T* Data() const { return m_data.data(); }
     constexpr std::size_t Size() const { return m_data.size(); }
 
 private:
