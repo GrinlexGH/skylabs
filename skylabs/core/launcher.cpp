@@ -121,6 +121,9 @@ void CLauncher::Update(float deltaTime) {
         if (keyboardState[SDL_SCANCODE_A]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
         if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
     }
+
+    Uint32 flags = SDL_GetWindowFlags(*m_window);
+    m_minimized = flags & SDL_WINDOW_MINIMIZED;
 }
 
 void CLauncher::Render(float deltaTime) {
@@ -141,14 +144,6 @@ void CLauncher::ProcessEvents() {
 
             case SDL_EVENT_WINDOW_RESIZED:
                 m_renderer->m_needSwapchainRecreation = true;
-                break;
-
-            case SDL_EVENT_WINDOW_MINIMIZED:
-                m_minimized = true;
-                break;
-
-            case SDL_EVENT_WINDOW_MAXIMIZED:
-                m_minimized = false;
                 break;
 
             case SDL_EVENT_FINGER_DOWN:
