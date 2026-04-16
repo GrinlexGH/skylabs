@@ -71,8 +71,8 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
 }
 
 void CCommandBuffer::GenerateMipmaps(const CImage& image, Usage srcUsage, Usage dstUsage) const {
-    std::int32_t mipWidth = static_cast<int32_t>(image.Extent().width);
-    std::int32_t mipHeight = static_cast<int32_t>(image.Extent().height);
+    std::int32_t mipWidth = static_cast<std::int32_t>(image.Extent().width);
+    std::int32_t mipHeight = static_cast<std::int32_t>(image.Extent().height);
 
     for (std::uint32_t i = 1; i < image.MipLevels(); i++) {
         PipelineBarrier({ ImageBarrier {

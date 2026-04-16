@@ -150,7 +150,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_mainSampler = CSampler { m_context };
     m_modelTextureSampler = CSampler { m_context };
 
-    LoadModelTextures(stagingBuffer);
+    LoadTextures(stagingBuffer);
     LoadModels(stagingBuffer);
 
     CDescriptorWriter descriptorWriter { m_context };
@@ -212,25 +212,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 
 CRenderer::~CRenderer() {
     if (**m_context.Device()) {
-        try {
-            m_context.Device()->waitIdle();
-            for (auto& b : m_context.Allocator()->getHeapBudgets()) {
-                Log::Debug("My heap currently has {} allocations taking {} B,",
-                    b.statistics.allocationCount,
-                    b.statistics.allocationBytes
-                );
-                Log::Debug("allocated out of {} Vulkan device memory blocks taking {} B,",
-                    b.statistics.blockCount,
-                    b.statistics.blockBytes
-                );
-                Log::Debug("Vulkan reports total usage {} B with budget {} B.\n",
-                    b.usage,
-                    b.budget
-                );
-            }
-        } catch (const vk::SystemError& e) {
-            Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
-        }
+        try { m_context.Device()->waitIdle();}
+        catch (const vk::SystemError& e) { Log::Error("Failed to wait device idle in renderer destructor: {}", e.what()); }
     }
 }
 
@@ -325,11 +308,11 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 
         constants = { 0 };
         cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
-        cmd->drawIndexed(m_matroskin.indexCount, 1, m_matroskin.IdxOffset() / 2, static_cast<int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
+        cmd->drawIndexed(m_matroskin.indexCount, 1, m_matroskin.IdxOffset() / 2, static_cast<std::int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
 
         constants = { 1 };
         cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
-        cmd->drawIndexed(m_viking.indexCount, 1, m_viking.IdxOffset() / 2, static_cast<int32_t>( m_viking.VtxOffset() / sizeof(CVertex)), 0);
+        cmd->drawIndexed(m_viking.indexCount, 1, m_viking.IdxOffset() / 2, static_cast<std::int32_t>( m_viking.VtxOffset() / sizeof(CVertex)), 0);
     cmd->endRendering();
 
     cmd.PipelineBarrier({
@@ -389,6 +372,7 @@ void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string
 
     Log::Debug("Image {} result: {}", context, vk::to_string(result));
 
+    // Wait all frame fences
     std::ignore = m_context.Device()->waitForFences(
         m_fence
             | std::views::transform([](const auto& f) { return *f; })
@@ -457,8 +441,8 @@ void CRenderer::ResizeTextures() {
     }
 }
 
-void CRenderer::LoadModelTextures(CBuffer& stagingBuffer) {
-    auto UploadTexture = [&](const std::string& path, const std::string& debugName) {
+void CRenderer::LoadTextures(CBuffer& stagingBuffer) {
+    auto LoadTexture = [&](const std::string& path, const std::string& debugName) {
         std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
         SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
 
@@ -506,84 +490,86 @@ void CRenderer::LoadModelTextures(CBuffer& stagingBuffer) {
         return texture;
     };
 
-    m_vikingRoomTexture = UploadTexture("assets://viking_room.png", "viking-room");
-    m_matroskinTexture = UploadTexture("assets://matroskin.png", "matroskin");
-}
-
-auto LoadModel(const char* filename) {
-    std::vector<CVertex> vertices;
-    std::vector<std::uint16_t> indices;
-
-    tinyobj::ObjReader reader;
-    reader.ParseFromString(Filesystem::LoadAsString(filename), "");
-    if (!reader.Valid()) {
-        throw std::runtime_error(reader.Warning() + " " + reader.Error());
-    }
-
-    tinyobj::attrib_t attrib = reader.GetAttrib();
-    std::vector<tinyobj::shape_t> shapes = reader.GetShapes();
-
-    std::unordered_map<CVertex, std::uint32_t> uniqueVertices {};
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            CVertex vertex {};
-
-            if (index.vertex_index >= 0) {
-                vertex.m_position = {
-                    attrib.vertices[(3 * index.vertex_index) + 0],
-                    attrib.vertices[(3 * index.vertex_index) + 1],
-                    attrib.vertices[(3 * index.vertex_index) + 2]
-                };
-            }
-
-            if (index.texcoord_index >= 0) {
-                vertex.m_texCoord = {
-                    attrib.texcoords[(2 * index.texcoord_index) + 0],
-                    1.0f - attrib.texcoords[(2 * index.texcoord_index) + 1]
-                };
-            } else {
-                vertex.m_texCoord = {
-                    (vertex.m_position.x * 0.5f) + 0.5f,
-                    (vertex.m_position.z * 0.5f) + 0.5f
-                };
-            }
-
-            if (!uniqueVertices.contains(vertex)) {
-                uniqueVertices[vertex] = static_cast<std::uint32_t>(vertices.size());
-                vertices.push_back(vertex);
-            }
-
-            indices.push_back(static_cast<std::uint16_t> (uniqueVertices[vertex]));
-        }
-    }
-
-    return std::tuple { vertices, indices };
+    m_vikingRoomTexture = LoadTexture("assets://viking_room.png", "viking-room");
+    m_matroskinTexture = LoadTexture("assets://matroskin.png", "matroskin");
 }
 
 void CRenderer::LoadModels(CBuffer& stagingBuffer) {
+    auto LoadModel = [&](const std::string_view filename) {
+        std::vector<CVertex> vertices;
+        std::vector<std::uint16_t> indices;
+
+        tinyobj::ObjReader reader;
+        reader.ParseFromString(Filesystem::LoadAsString(filename), "");
+        if (!reader.Valid()) {
+            throw std::runtime_error(reader.Warning() + " " + reader.Error());
+        }
+
+        tinyobj::attrib_t attrib = reader.GetAttrib();
+        std::vector<tinyobj::shape_t> shapes = reader.GetShapes();
+
+        std::unordered_map<CVertex, std::uint32_t> uniqueVertices {};
+        for (const auto& shape : shapes) {
+            for (const auto& index : shape.mesh.indices) {
+                CVertex vertex {};
+
+                if (index.vertex_index >= 0) {
+                    vertex.m_position = {
+                        attrib.vertices[(3 * index.vertex_index) + 0],
+                        attrib.vertices[(3 * index.vertex_index) + 1],
+                        attrib.vertices[(3 * index.vertex_index) + 2]
+                    };
+                }
+
+                if (index.texcoord_index >= 0) {
+                    vertex.m_texCoord = {
+                        attrib.texcoords[(2 * index.texcoord_index) + 0],
+                        1.0f - attrib.texcoords[(2 * index.texcoord_index) + 1]
+                    };
+                } else {
+                    vertex.m_texCoord = {
+                        (vertex.m_position.x * 0.5f) + 0.5f,
+                        (vertex.m_position.z * 0.5f) + 0.5f
+                    };
+                }
+
+                if (!uniqueVertices.contains(vertex)) {
+                    uniqueVertices[vertex] = static_cast<std::uint32_t>(vertices.size());
+                    vertices.push_back(vertex);
+                }
+
+                indices.push_back(static_cast<std::uint16_t>(uniqueVertices[vertex]));
+            }
+        }
+
+        return std::tuple { vertices, indices };
+    };
+
     m_vertexBuffer = CBuffer {
         m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
         MemoryLocation::eDeviceOnly
     };
+
     m_indexBuffer = CBuffer {
         m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
         MemoryLocation::eDeviceOnly
     };
 
-    auto UploadToPool = [&](const std::string& path, SubMesh& subMesh) {
-        auto [vertices, indices] = LoadModel(path.c_str());
+    auto UploadToPool = [&](const std::string& path) {
+        SubMesh mesh;
+        auto [vertices, indices] = LoadModel(path);
 
         vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
         vk::DeviceSize iSize = indices.size() * sizeof(indices[0]);
 
         vma::VirtualAllocationCreateInfo allocationInfo { };
         allocationInfo.setSize(vSize);
-        subMesh.vtxAlloc = vma::raii::VirtualAllocation { m_vertexBuffer.VirtualBlock(), allocationInfo };
+        mesh.vtxAlloc = vma::raii::VirtualAllocation { m_vertexBuffer.VirtualBlock(), allocationInfo };
         allocationInfo.setSize(iSize);
-        subMesh.idxAlloc = vma::raii::VirtualAllocation { m_indexBuffer.VirtualBlock(), allocationInfo };
-        subMesh.indexCount = static_cast<std::uint32_t>(indices.size());
+        mesh.idxAlloc = vma::raii::VirtualAllocation { m_indexBuffer.VirtualBlock(), allocationInfo };
+        mesh.indexCount = static_cast<std::uint32_t>(indices.size());
 
         vk::DeviceSize totalSize = vSize + iSize;
         if (stagingBuffer.Size() < totalSize) {
@@ -597,13 +583,15 @@ void CRenderer::LoadModels(CBuffer& stagingBuffer) {
 
         m_graphicsCmd.Get().ImmediateSubmit(*m_context.Device().GraphicsQueue(),
             [&](const CCommandBuffer& cmd) {
-                cmd.Copy(m_vertexBuffer, stagingBuffer, vSize, { 0, subMesh.VtxOffset() });
-                cmd.Copy(m_indexBuffer, stagingBuffer, iSize, { vSize, subMesh.IdxOffset() } );
+                cmd.Copy(m_vertexBuffer, stagingBuffer, vSize, { 0, mesh.VtxOffset() });
+                cmd.Copy(m_indexBuffer, stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
             }
         );
+
+        return mesh;
     };
 
-    UploadToPool("assets://matroskin.obj", m_matroskin);
-    UploadToPool("assets://viking_room.obj", m_viking);
+    m_matroskin = UploadToPool("assets://matroskin.obj");
+    m_viking = UploadToPool("assets://viking_room.obj");
 }
 }
