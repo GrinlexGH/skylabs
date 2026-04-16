@@ -46,6 +46,7 @@ private:
     void HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent);
     void HandleTextInput(const SDL_TextInputEvent& textEvent);
 
+    bool m_minimized = false;
     bool m_quit = false;
 
     bool m_textInputActive = false;

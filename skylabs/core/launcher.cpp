@@ -76,8 +76,10 @@ void CLauncher::Main() {
         float deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        Update(deltaTime);
-        Render(deltaTime);
+        if (!m_minimized) {
+            Update(deltaTime);
+            Render(deltaTime);
+        }
 
         frameCount++;
         elapsedTime += deltaTime;
@@ -139,6 +141,14 @@ void CLauncher::ProcessEvents() {
 
             case SDL_EVENT_WINDOW_RESIZED:
                 m_renderer->m_needSwapchainRecreation = true;
+                break;
+
+            case SDL_EVENT_WINDOW_MINIMIZED:
+                m_minimized = true;
+                break;
+
+            case SDL_EVENT_WINDOW_MAXIMIZED:
+                m_minimized = false;
                 break;
 
             case SDL_EVENT_FINGER_DOWN:
