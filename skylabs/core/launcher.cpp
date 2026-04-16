@@ -121,9 +121,6 @@ void CLauncher::Update(float deltaTime) {
         if (keyboardState[SDL_SCANCODE_A]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
         if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
     }
-
-    Uint32 flags = SDL_GetWindowFlags(*m_window);
-    m_minimized = flags & SDL_WINDOW_MINIMIZED;
 }
 
 void CLauncher::Render(float deltaTime) {
@@ -131,6 +128,9 @@ void CLauncher::Render(float deltaTime) {
 }
 
 void CLauncher::ProcessEvents() {
+    Uint32 flags = SDL_GetWindowFlags(*m_window);
+    m_minimized = flags & SDL_WINDOW_MINIMIZED;
+
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
