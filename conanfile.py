@@ -31,7 +31,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("glm/1.0.3")
         self.requires("fmt/12.1.0")
         self.requires("simple_term_colors/1.0")
-        self.requires("frozen/cci.20250729")
+        self.requires("frozen/cci.20260418")
         self.requires("stb/cci.20260313")
         self.requires("catch2/3.14.0")
 
