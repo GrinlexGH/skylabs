@@ -6,6 +6,7 @@
 
 > [!NOTE]
 > **About this project**
+> 
 > This is my personal sandbox for testing modern C++ features, exploring project architectures, and experimenting with graphics programming.
 >
 > 🎯 **Abstract Goal:** To build a functional 3D game engine from scratch using C++.
