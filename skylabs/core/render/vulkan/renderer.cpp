@@ -40,9 +40,6 @@ struct PushConstants {
 };
 
 namespace {
-std::uint32_t renderWidth = 0;
-std::uint32_t renderHeight = 0;
-
 glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int height, const float fov = 90, const float nearZ = 0.01f) {
     glm::mat4 proj;
     float g = 1.0f / std::tan(0.5f * glm::radians(fov));
@@ -89,8 +86,7 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_context = CContext { window };
 
     m_swapchain = CSwapchain { m_context, *m_context.Surface(), 2, vk::PresentModeKHR::eMailbox };
-    renderWidth = m_swapchain.Extent().width;
-    renderHeight = m_swapchain.Extent().height;
+    auto [width, height] = m_swapchain.Extent();
 
     m_pipelineLayoutCache = CPipelineLayoutCache { m_context };
     m_descriptorLayoutCache = CDescriptorLayoutCache { m_context };
@@ -106,17 +102,17 @@ CRenderer::CRenderer(const IWindow* const window) {
     m_imageAvailableSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.Device(), vk::SemaphoreCreateInfo {} };
 
     m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
-        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
     }};
 
     m_mainColorMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
-        { renderWidth, renderHeight, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eColorAttachment
     }};
 
     m_mainDepthMSAA = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
-        { renderWidth, renderHeight, 1 }, vk::Format::eD32Sfloat, 1, 1,
+        { width, height, 1 }, vk::Format::eD32Sfloat, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};
 
@@ -128,7 +124,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({
         { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
-        { 1, vk::DescriptorType::eCombinedImageSampler, 10, vk::ShaderStageFlagBits::eFragment }
+        { 1, vk::DescriptorType::eCombinedImageSampler, 2, vk::ShaderStageFlagBits::eFragment }
     });
 
     m_mainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *mainSetLayout)) };
