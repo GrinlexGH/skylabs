@@ -5,7 +5,6 @@
 #include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
 #include <skylabs/core/camera.hpp>
 
-#include <boost/container_hash/hash.hpp>
 #include <glm/gtx/hash.hpp>
 #include <glm/ext/scalar_reciprocal.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -17,7 +16,7 @@
 #include <ranges>
 
 template<> struct std::hash<CVertex> {
-    size_t operator()(const CVertex& vertex) const noexcept {
+    std::size_t operator()(const CVertex& vertex) const noexcept {
         std::size_t seed = 0;
         boost::hash_combine(seed, vertex.m_position.x);
         boost::hash_combine(seed, vertex.m_position.y);
@@ -95,7 +94,9 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_inFlightContext = InFlightContext { FRAMES_IN_FLIGHT_COUNT };
 
-    m_graphicsCmd = InFlight<CCommandBuffer> { m_inFlightContext, m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary, m_inFlightContext.FrameCount()) };
+    m_graphicsCmd = InFlight<CCommandBuffer> { m_inFlightContext,
+        m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(m_inFlightContext.FrameCount()))
+    };
 
     m_firstUse = InFlight<bool> { m_inFlightContext, true };
     m_fence = InFlight<vk::raii::Fence> { m_inFlightContext, *m_context.Device(), vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled } };
@@ -135,9 +136,9 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_swapchainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *swapchainSetLayout)) };
 
-    const std::uint32_t imageCount = m_swapchain.Images().size();
+    const std::size_t imageCount = m_swapchain.Images().size();
     m_renderFinishedSemaphores.reserve(imageCount);
-    for (auto _ : Utils::Range(imageCount)) {
+    for ([[maybe_unused]] auto _ : Utils::Range(imageCount)) {
         m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
     }
 
@@ -303,11 +304,11 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 
         constants = { 0 };
         cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
-        cmd->drawIndexed(m_matroskin.indexCount, 1, m_matroskin.IdxOffset() / 2, static_cast<std::int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
+        cmd->drawIndexed(m_matroskin.indexCount, 1, static_cast<std::uint32_t>(m_matroskin.IdxOffset() / 2), static_cast<std::int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
 
         constants = { 1 };
         cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
-        cmd->drawIndexed(m_viking.indexCount, 1, m_viking.IdxOffset() / 2, static_cast<std::int32_t>( m_viking.VtxOffset() / sizeof(CVertex)), 0);
+        cmd->drawIndexed(m_viking.indexCount, 1, static_cast<std::uint32_t>(m_viking.IdxOffset() / 2), static_cast<std::int32_t>(m_viking.VtxOffset() / sizeof(CVertex)), 0);
     cmd->endRendering();
 
     cmd.PipelineBarrier({

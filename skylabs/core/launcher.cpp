@@ -65,7 +65,7 @@ void CLauncher::Main() {
     constexpr int TARGET_FPS = 60;
     constexpr int FRAME_DELAY = 1000 / TARGET_FPS;
 
-    Uint32 lastTick = SDL_GetTicks();
+    Uint64 lastTick = SDL_GetTicks();
     int frameCount = 0;
     float elapsedTime = 0.0f;
 
@@ -73,7 +73,7 @@ void CLauncher::Main() {
     MIX_PlayTrack(m_track, 0);
 
     while (!m_quit) {
-        Uint32 frameStart = SDL_GetTicks();
+        Uint64 frameStart = SDL_GetTicks();
         float deltaTime = (frameStart - lastTick) / 1000.0f;
         lastTick = frameStart;
 
@@ -83,9 +83,9 @@ void CLauncher::Main() {
             Update(deltaTime);
             Render(deltaTime);
         } else {
-            Uint32 frameTime = SDL_GetTicks() - frameStart;
+            Uint64 frameTime = SDL_GetTicks() - frameStart;
             if (frameTime < FRAME_DELAY) {
-                SDL_Delay(FRAME_DELAY - frameTime);
+                SDL_Delay(static_cast<Uint32>(FRAME_DELAY - frameTime));
             }
         }
 
@@ -136,10 +136,11 @@ void CLauncher::Render(float deltaTime) {
 }
 
 void CLauncher::ProcessEvents() {
-    Uint32 flags = SDL_GetWindowFlags(*m_window);
+    Uint64 flags = SDL_GetWindowFlags(*m_window);
+    bool isMinimized = (flags & SDL_WINDOW_MINIMIZED) != 0;
 
-    if (m_minimized != (flags & SDL_WINDOW_MINIMIZED)) {
-        m_minimized = flags & SDL_WINDOW_MINIMIZED;
+    if (m_minimized != isMinimized) {
+        m_minimized = isMinimized;
         m_renderer->m_needSwapchainRecreation = true;
     }
 
