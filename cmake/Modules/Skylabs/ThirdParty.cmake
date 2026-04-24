@@ -13,7 +13,12 @@ find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
 find_package(Slangc REQUIRED)
 
 # Misc libraries
-find_package(Boost COMPONENTS nowide CONFIG REQUIRED)
+find_package(Boost COMPONENTS
+    nowide
+    container
+    CONFIG REQUIRED
+)
+
 find_package(glm CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(simple_term_colors CONFIG REQUIRED)

@@ -49,10 +49,11 @@ target_sources(
 target_precompile_headers(${CURRENT_TARGET_NAME} PUBLIC pch.hpp)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
-    Boost::nowide
     SDL3::SDL3
     Vulkan::Headers
-
+    Boost::headers
+    Boost::nowide
+    Boost::container
     fmt::fmt
     stc::stc
 )

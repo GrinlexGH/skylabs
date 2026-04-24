@@ -15,7 +15,10 @@ class SkylabsRecipe(ConanFile):
         "sdl_image/*:with_avif": False,
 
         "boost/*:with_nowide": True,
+        "boost/*:with_container": True,
         "boost/*:with_container_hash": True,
+        "boost/*:with_range": True,
+        "boost/*:with_unordered": True,
     }
 
     def requirements(self):

@@ -66,10 +66,8 @@ add_dependencies(${CURRENT_TARGET_NAME} shaders)
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     public
 
-    SDL3::SDL3
     SDL3_image::SDL3_image
     SDL3_mixer::SDL3_mixer
-    SDL3_ttf::SDL3_ttf
     SteamworksSDK::SteamworksSDK
     Vulkan::Headers
 
@@ -77,7 +75,6 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     vk-bootstrap::vk-bootstrap
     glm::glm
 
-    fmt::fmt
     frozen::frozen
     stb::stb
     tinyobjloader::tinyobjloader
