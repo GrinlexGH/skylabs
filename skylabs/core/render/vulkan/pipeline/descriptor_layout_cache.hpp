@@ -1,5 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
+#include <boost/unordered_map.hpp>
 
 namespace Vulkan {
 struct DescriptorLayoutHash {
@@ -17,6 +18,6 @@ public:
 private:
     const vk::raii::Device* m_device = nullptr;
 
-    std::unordered_map<std::vector<vk::DescriptorSetLayoutBinding>, vk::raii::DescriptorSetLayout, DescriptorLayoutHash> m_cache;
+    boost::unordered_map<std::vector<vk::DescriptorSetLayoutBinding>, vk::raii::DescriptorSetLayout, DescriptorLayoutHash> m_cache;
 };
 }

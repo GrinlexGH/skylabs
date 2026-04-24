@@ -31,14 +31,14 @@ public:
     [[nodiscard]] const CQueue& PresentQueue() const noexcept { return m_presentQueue; }
     [[nodiscard]] const CQueue& ComputeQueue() const noexcept { return m_computeQueue; }
 
-    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return std::ranges::contains(m_enabledExtensions, name); }
+    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return m_enabledExtensions.contains(name); }
     [[nodiscard]] DeviceCaps Caps() const noexcept { return m_caps; }
 
 private:
     vk::raii::Device m_handle { nullptr };
     vkb::Device m_vkbDevice;
 
-    Utils::StringUnorderedSet m_enabledExtensions;
+    boost::container::flat_set<std::string, std::less<>> m_enabledExtensions;
     DeviceCaps m_caps;
 
     CQueue m_graphicsQueue { nullptr };

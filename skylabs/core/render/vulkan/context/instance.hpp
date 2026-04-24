@@ -28,7 +28,7 @@ private:
     vk::raii::Instance m_handle { nullptr };
     vkb::Instance m_vkbInstance;
 
-    Utils::StringUnorderedSet m_enabledExtensions;
+    boost::container::flat_set<std::string, std::less<>> m_enabledExtensions;
 
 #ifdef DEBUG
     vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger { nullptr };

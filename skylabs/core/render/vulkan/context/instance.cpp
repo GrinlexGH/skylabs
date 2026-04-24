@@ -107,7 +107,7 @@ CInstance::CInstance(const bool setupDebugUtils) {
 }
 
 std::vector<const char*> CInstance::SetupExtensions(const vk::raii::Context& context, [[maybe_unused]] const bool setupDebugUtils) {
-    Utils::StringUnorderedSet requestedExtensions {};
+    boost::container::flat_set<std::string_view> requestedExtensions {};
 
 #ifdef DEBUG
     if (setupDebugUtils) {
@@ -120,9 +120,10 @@ std::vector<const char*> CInstance::SetupExtensions(const vk::raii::Context& con
     }
 
     // Find these extensions
+    m_enabledExtensions.reserve(requestedExtensions.size());
     for (const auto& extension : GetAvailableExtensions(context)) {
         if (requestedExtensions.contains(std::string_view { extension.extensionName })) {
-            m_enabledExtensions.insert(extension.extensionName);
+            m_enabledExtensions.emplace(extension.extensionName.data());
         }
     }
 

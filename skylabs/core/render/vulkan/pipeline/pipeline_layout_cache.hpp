@@ -6,9 +6,7 @@ struct PipelineLayoutInfo {
     std::vector<vk::DescriptorSetLayout> m_descriptorSetLayouts {};
     std::vector<vk::PushConstantRange> m_pushConstants {};
 
-    bool operator==(const PipelineLayoutInfo& other) const {
-        return m_descriptorSetLayouts == other.m_descriptorSetLayouts && m_pushConstants == other.m_pushConstants;
-    }
+    bool operator==(const PipelineLayoutInfo& rhs) const;
 };
 
 struct PipelineLayoutHash {
@@ -27,6 +25,6 @@ public:
 private:
     const vk::raii::Device* m_device { nullptr };
 
-    std::unordered_map<PipelineLayoutInfo, vk::raii::PipelineLayout, PipelineLayoutHash> m_cache;
+    boost::unordered::unordered_map<PipelineLayoutInfo, vk::raii::PipelineLayout, PipelineLayoutHash> m_cache;
 };
 }

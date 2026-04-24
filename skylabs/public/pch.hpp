@@ -3,6 +3,7 @@
 #include <stc.hpp>
 #include <fmt/format.h>
 #include <SDL3/SDL.h>
+#include <boost/range/irange.hpp>
 
 #include <iostream>
 #include <mutex>

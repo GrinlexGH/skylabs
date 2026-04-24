@@ -3,6 +3,10 @@
 #include <boost/container_hash/hash.hpp>
 
 namespace Vulkan {
+bool PipelineLayoutInfo::operator==(const PipelineLayoutInfo& rhs) const {
+    return m_descriptorSetLayouts == rhs.m_descriptorSetLayouts && m_pushConstants == rhs.m_pushConstants;
+}
+
 std::size_t PipelineLayoutHash::operator()(const PipelineLayoutInfo& info) const {
     std::size_t seed = 0;
     for (const auto& layout : info.m_descriptorSetLayouts) {
