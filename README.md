@@ -6,7 +6,7 @@
 
 > [!NOTE]
 > **About this project**
-> 
+>
 > This is my personal sandbox for testing modern C++ features, exploring project architectures, and experimenting with graphics programming.
 >
 > 🎯 **Abstract Goal:** To build a functional 3D game engine from scratch using C++.
@@ -37,7 +37,7 @@ Ensure you have the following tools installed before compiling:
 | Tool             | Requirement               |
 |------------------|---------------------------|
 | **CMake**        | Latest version            |
-| **C++ Compiler** | Modern MSVC / GCC / Clang |
+| **C++ Compiler** | Latest MSVC / GCC / Clang |
 | **Python**       | 3.x                       |
 | **Conan**        | 2.x                       |
 | **Vulkan SDK**   | Latest SDK                |
@@ -73,7 +73,7 @@ conan config install ./conan/conan-config/config
 
 ### 💻 2. Desktop Build
 
-#### 
+####
 
 ```bash
 # Install dependencies
