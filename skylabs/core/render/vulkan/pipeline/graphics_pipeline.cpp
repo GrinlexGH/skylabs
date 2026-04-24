@@ -1,15 +1,22 @@
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 
+#include <frozen/map.h>
 #include <ranges>
 
 namespace {
+constexpr frozen::map<VertexFormat, vk::Format, 3> g_vertexFormat = {
+    { VertexFormat::Float32x2, vk::Format::eR32G32Sfloat },
+    { VertexFormat::Float32x3, vk::Format::eR32G32B32Sfloat },
+    { VertexFormat::Float32x4, vk::Format::eR32G32B32A32Sfloat },
+};
+
 constexpr vk::Format ToVkFormat(const VertexFormat format) {
-    switch (format) {
-        case VertexFormat::Float32x2: return vk::Format::eR32G32Sfloat;
-        case VertexFormat::Float32x3: return vk::Format::eR32G32B32Sfloat;
-        case VertexFormat::Float32x4: return vk::Format::eR32G32B32A32Sfloat;
+    if (!g_vertexFormat.contains(format)) {
+        assert(false && "Unsupported vertex format");
+        return vk::Format::eR8G8B8A8Snorm;
     }
-    std::unreachable();
+
+    return g_vertexFormat.at(format);
 }
 
 std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(std::span<const Vulkan::VertexBufferBinding> bindings) {
@@ -40,10 +47,8 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
         | std::ranges::to<std::vector>();
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
-    vertexInputInfo.vertexBindingDescriptionCount = static_cast<std::uint32_t>(vertexBindingDescriptions.size());
-    vertexInputInfo.pVertexBindingDescriptions = vertexBindingDescriptions.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<std::uint32_t>(vertexAttributeDescriptions.size());
-    vertexInputInfo.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
+    vertexInputInfo.setVertexBindingDescriptions(vertexBindingDescriptions);
+    vertexInputInfo.setVertexAttributeDescriptions(vertexAttributeDescriptions);
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly {};
     inputAssembly.topology = options.m_primitiveTopology;
@@ -51,20 +56,29 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
 
     vk::PipelineViewportStateCreateInfo viewportState {};
     viewportState.viewportCount = 1;
+    viewportState.pViewports = nullptr;
     viewportState.scissorCount = 1;
+    viewportState.pScissors = nullptr;
 
     vk::PipelineRasterizationStateCreateInfo rasterizer {};
     rasterizer.depthClampEnable = vk::False;
     rasterizer.rasterizerDiscardEnable = vk::False;
     rasterizer.polygonMode = vk::PolygonMode::eFill;
-    rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = vk::CullModeFlagBits::eNone;
     rasterizer.frontFace = vk::FrontFace::eClockwise;
     rasterizer.depthBiasEnable = vk::False;
+    rasterizer.depthBiasConstantFactor = 0.0f;
+    rasterizer.depthBiasClamp = 0.0f;
+    rasterizer.depthBiasSlopeFactor = 0.0f;
+    rasterizer.lineWidth = 1.0f;
 
     vk::PipelineMultisampleStateCreateInfo multisampling {};
-    multisampling.sampleShadingEnable = vk::False;
     multisampling.rasterizationSamples = options.m_sampling;
+    multisampling.sampleShadingEnable = vk::False;
+    multisampling.minSampleShading = 0.0f;
+    multisampling.pSampleMask = nullptr;
+    multisampling.alphaToCoverageEnable = vk::False;
+    multisampling.alphaToOneEnable = vk::False;
 
     // TODO: bleding settings
     vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
@@ -96,8 +110,7 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
         vk::DynamicState::eScissor,
     };
     vk::PipelineDynamicStateCreateInfo dynamicState {};
-    dynamicState.dynamicStateCount = static_cast<std::uint32_t>(dynamicStates.size());
-    dynamicState.pDynamicStates = dynamicStates.data();
+    dynamicState.setDynamicStates(dynamicStates);
 
     vk::PipelineDepthStencilStateCreateInfo depthStencil {};
     depthStencil.depthTestEnable = vk::True;
@@ -105,6 +118,10 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     depthStencil.depthCompareOp = vk::CompareOp::eGreater;
     depthStencil.depthBoundsTestEnable = vk::False;
     depthStencil.stencilTestEnable = vk::False;
+    depthStencil.front = vk::StencilOpState { };
+    depthStencil.back = vk::StencilOpState { };
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 0.0f;
 
     std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo {};
     shaderCreateInfo.reserve(options.m_shaders.size());
