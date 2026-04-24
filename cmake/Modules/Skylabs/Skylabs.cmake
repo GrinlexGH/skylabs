@@ -55,7 +55,7 @@ function(skylabs_configure_target target_name)
 
     set(IS_GNU_LIKE $<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
     set(IS_MSVC_LIKE $<OR:$<CXX_COMPILER_ID:MSVC>,$<STREQUAL:${CMAKE_CXX_COMPILER_FRONTEND_VARIANT},MSVC>>)
-    set(SHOULD_USE_LTO $<AND:$<BOOL:${LTO_AVAILABLE}>,$<NOT:$<CONFIG:Debug>>>)
+    set(SHOULD_USE_LTO $<BOOL:${LTO_AVAILABLE}>)
 
     # Compile options
     target_compile_options(${target_name} PRIVATE
@@ -71,6 +71,13 @@ function(skylabs_configure_target target_name)
                     $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:${CMAKE_CXX_COMPILER_VERSION},19.35>>:/Zc:checkGwOdr>
                 >
             >
+        >
+    )
+
+    # Link options
+    target_link_options(${target_name} PRIVATE
+        $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:
+            $<$<CXX_COMPILER_ID:MSVC>:/ignore:4099>
         >
     )
 
