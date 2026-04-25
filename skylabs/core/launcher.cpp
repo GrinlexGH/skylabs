@@ -5,6 +5,7 @@
 #include <skylabs/public/sdl/filesystem.hpp>
 
 #include <SDL3/SDL_system.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include <span>
 #include <thread>
@@ -37,6 +38,10 @@ void CLauncher::Create() {
 
     SDL_SetWindowRelativeMouseMode(*m_window, true);
 
+    if (!TTF_Init()) {
+        throw std::runtime_error("Cannot initialize SDL_ttf");
+    }
+
     if (!MIX_Init()) {
         throw std::runtime_error("Cannot initialize SDL_mixer");
     }
@@ -65,7 +70,7 @@ void CLauncher::Main() {
     constexpr int TARGET_FPS = 60;
     constexpr int FRAME_DELAY = 1000 / TARGET_FPS;
 
-    Uint64 lastTick = SDL_GetTicks();
+    auto lastTick = std::chrono::high_resolution_clock::now();
     int frameCount = 0;
     float elapsedTime = 0.0f;
 
@@ -73,30 +78,32 @@ void CLauncher::Main() {
     MIX_PlayTrack(m_track, 0);
 
     while (!m_quit) {
-        Uint64 frameStart = SDL_GetTicks();
-        float deltaTime = (frameStart - lastTick) / 1000.0f;
+        auto frameStart = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float, std::milli> diff = frameStart - lastTick;
         lastTick = frameStart;
+        float deltaTimeMs = diff.count();
 
         ProcessEvents();
 
         if (!m_minimized) {
-            Update(deltaTime);
-            Render(deltaTime);
+            Update(deltaTimeMs);
+            Render(deltaTimeMs);
         } else {
-            Uint64 frameTime = SDL_GetTicks() - frameStart;
-            if (frameTime < FRAME_DELAY) {
-                SDL_Delay(static_cast<Uint32>(FRAME_DELAY - frameTime));
+            auto frameEnd = std::chrono::high_resolution_clock::now();
+            float busyTime = std::chrono::duration<float, std::milli>(frameEnd - frameStart).count();
+            if (busyTime < FRAME_DELAY) {
+                SDL_Delay(static_cast<Uint32>(FRAME_DELAY - busyTime));
             }
         }
 
         frameCount++;
-        elapsedTime += deltaTime;
-        if (elapsedTime >= 1.0f) {
-            std::string title = "Skylabs | FPS: " + std::to_string(frameCount);
+        elapsedTime += deltaTimeMs;
+        if (elapsedTime >= 1000.0f) {
+            std::string title = "Skylabs | FPS: " + std::to_string(frameCount) + " | DT: " + std::to_string(deltaTimeMs).substr(0, 4) + "ms";
             SDL_SetWindowTitle(*m_window, title.c_str());
             Log::Debug("{}", title);
+            elapsedTime -= 1000.0f;
             frameCount = 0;
-            elapsedTime -= 1.0f;
         }
     }
 }

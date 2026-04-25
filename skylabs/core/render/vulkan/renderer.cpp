@@ -34,8 +34,13 @@ struct UniformBufferObject {
     glm::mat4 proj;
 };
 
-struct PushConstants {
+struct MainConstants {
     std::uint32_t textureIndex = 0;
+};
+
+struct UIConstants {
+    glm::vec2 screenRes;
+    glm::vec2 textRes;
 };
 
 namespace {
@@ -50,32 +55,6 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 
     return proj;
 }
-
-void UpdateUniformBuffer(
-    const vk::Extent2D& cameraDimensions,
-    Vulkan::CBuffer& uniformBuffer,
-    const glm::mat4& view,
-    const float fov,
-    const vk::SurfaceTransformFlagBitsKHR transform
-) {
-    glm::mat4 rot = glm::mat4(1.0f);
-
-    if (transform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
-        rot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
-    } else if (transform == vk::SurfaceTransformFlagBitsKHR::eRotate270) {
-        rot = glm::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0, 0, 1));
-    } else if (transform == vk::SurfaceTransformFlagBitsKHR::eRotate180) {
-        rot = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
-    }
-
-    UniformBufferObject ubo {
-        .model = glm::mat4(1.0f),
-        .view = view,
-        .proj = rot * ReverseZPerspective(cameraDimensions.width, cameraDimensions.height, fov),
-    };
-
-    std::memcpy(uniformBuffer.Data(), &ubo, sizeof(ubo));
-}
 }
 
 namespace Vulkan {
@@ -83,7 +62,6 @@ CRenderer::CRenderer(const IWindow* const window) {
     assert(window);
 
     m_context = CContext { window };
-
     m_swapchain = CSwapchain { m_context, *m_context.Surface(), 2, vk::PresentModeKHR::eMailbox };
     auto [width, height] = m_swapchain.Extent();
 
@@ -98,10 +76,18 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(m_inFlightContext.FrameCount()))
     };
 
+    // Synchronization resources
     m_firstUse = InFlight<bool> { m_inFlightContext, true };
     m_fence = InFlight<vk::raii::Fence> { m_inFlightContext, *m_context.Device(), vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled } };
     m_imageAvailableSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.Device(), vk::SemaphoreCreateInfo {} };
 
+    const std::size_t imageCount = m_swapchain.Images().size();
+    m_renderFinishedSemaphores.reserve(imageCount);
+    for ([[maybe_unused]] auto _ : Utils::Range(imageCount)) {
+        m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
+    }
+
+    // Attachments
     m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
@@ -117,51 +103,67 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};
 
+    m_uiColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
+    }};
+
+    // Descriptor sets
+    // Main descriptor set
+    const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },         // MVP
+        { 1, vk::DescriptorType::eCombinedImageSampler, 2, vk::ShaderStageFlagBits::eFragment } // Model texture
+    });
+
+    m_mainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *mainSetLayout)) };
+
+    // UI descriptor set
+    const vk::raii::DescriptorSetLayout& uiSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }, // Main renderer result
+        { 1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }  // Text texture
+    });
+
+    m_uiDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *uiSetLayout)) };
+
+    // Swapchain descriptor set
+    const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment } // Final image
+    });
+
+    m_swapchainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *swapchainSetLayout)) };
+
+    // Resources
+    m_mainSampler = CSampler { m_context };
+    m_nearestSampler = CSampler { m_context, { .m_filtering = vk::Filter::eNearest } };
+    m_linearSampler = CSampler { m_context, { .m_filtering = vk::Filter::eLinear } };
+    m_textTexture = InFlight<CImage> { m_inFlightContext, nullptr };
     m_uniform = InFlight<CBuffer> { m_inFlightContext, m_context,
         sizeof(UniformBufferObject),
         vk::BufferUsageFlagBits::eUniformBuffer,
         MemoryLocation::eHostVisible
     };
 
-    const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({
-        { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
-        { 1, vk::DescriptorType::eCombinedImageSampler, 2, vk::ShaderStageFlagBits::eFragment }
-    });
-
-    m_mainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *mainSetLayout)) };
-
-    const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({
-        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }
-    });
-
-    m_swapchainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *swapchainSetLayout)) };
-
-    const std::size_t imageCount = m_swapchain.Images().size();
-    m_renderFinishedSemaphores.reserve(imageCount);
-    for ([[maybe_unused]] auto _ : Utils::Range(imageCount)) {
-        m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
-    }
-
-    CBuffer stagingBuffer { nullptr };
-
-    m_mainSampler = CSampler { m_context };
-    m_modelTextureSampler = CSampler { m_context };
-
-    LoadTextures(stagingBuffer);
-    LoadModels(stagingBuffer);
+    LoadFonts();
+    LoadTextures();
+    LoadModels();
 
     CDescriptorWriter descriptorWriter { m_context };
     for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
         descriptorWriter.Clear();
         descriptorWriter
             .WriteBuffer(0, *m_uniform[i], m_uniform[i].Size(), 0, vk::DescriptorType::eUniformBuffer)
-            .WriteImage(1, m_matroskinTexture.View(), *m_modelTextureSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 0)
-            .WriteImage(1, m_vikingRoomTexture.View(), *m_modelTextureSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 1)
+            .WriteImage(1, m_matroskinTexture.View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 0)
+            .WriteImage(1, m_vikingRoomTexture.View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 1)
             .UpdateSet(*m_mainDescriptorSet[i]);
 
         descriptorWriter.Clear();
         descriptorWriter
             .WriteImage(0, m_mainColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .UpdateSet(*m_uiDescriptorSet[i]);
+
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteImage(0, m_uiColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_swapchainDescriptorSet[i]);
     }
 
@@ -189,9 +191,25 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
     };
 
-    // Swapchain pipeline
+    // UI pipeline
     // Shaders
     const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv");
+    const CShader fragmentShaderUI(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderUI.frag.spv");
+
+    const vk::raii::PipelineLayout& uiPipelineLayout = m_pipelineLayoutCache.GetLayout({
+        { *uiSetLayout }, { { vk::ShaderStageFlagBits::eFragment, 0, sizeof(UIConstants) } }
+    });
+
+    // Pipeline
+    std::array<vk::Format, 1> uiColorFormats { m_uiColor.Get().Format() };
+    m_pipelineUI = CGraphicsPipeline { m_context, {
+        .m_layout = uiPipelineLayout,
+        .m_shaders = { &vertexShaderSwapchain, &fragmentShaderUI },
+        .m_renderingInfo = { {}, uiColorFormats }
+    }};
+
+    // Swapchain pipeline
+    // Shaders
     const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderSwapchain.frag.spv");
 
     const vk::raii::PipelineLayout& swapchainPipelineLayout = m_pipelineLayoutCache.GetLayout({
@@ -208,6 +226,10 @@ CRenderer::CRenderer(const IWindow* const window) {
 }
 
 CRenderer::~CRenderer() {
+    TTF_CloseFont(m_fontEmoji);
+    TTF_CloseFont(m_fontUnifont);
+    TTF_CloseFont(m_font);
+
     if (**m_context.Device()) {
         try { m_context.Device()->waitIdle();}
         catch (const vk::SystemError& e) { Log::Error("Failed to wait device idle in renderer destructor: {}", e.what()); }
@@ -223,15 +245,16 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
     }
 }
 
-void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
+void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     const CDevice& device = m_context.Device();
 
     auto& cmd = m_graphicsCmd.Get();
     auto& colorBuffer = m_mainColor.Get();
     auto& colorBufferMSAA = m_mainColorMSAA.Get();
     auto& depthBufferMSAA = m_mainDepthMSAA.Get();
+    auto& uiBuffer = m_uiColor.Get();
 
-    UpdateUniformBuffer(m_swapchain.Extent(), m_uniform.Get(), view, fov, m_swapchain.SurfaceTransform());
+    UpdateMVP(view, fov);
 
     // Wait for fence to ensure that the previous frame rendering is finished
     std::ignore = device->waitForFences({ m_fence.Get() }, vk::True, std::numeric_limits<std::uint64_t>::max());
@@ -251,8 +274,23 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     cmd->reset();
     cmd->begin({});
 
+    static float acc = 0;
+    static int frameCount = 0;
+
+    acc += deltatime;
+    frameCount++;
+
+    if (m_firstUse.Get()) {
+        UpdateTextTexture(cmd, fmt::format("FPS: {:>5} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
+    } else if (acc >= 1000.0f) {
+        UpdateTextTexture(cmd, fmt::format("FPS: {:>5} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
+        acc -= 1000.0f;
+        frameCount = 0;
+    }
+
     if (m_firstUse.Get()) {
         cmd.PipelineBarrier({
+            ImageBarrier { uiBuffer, uiBuffer.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { colorBufferMSAA, colorBufferMSAA.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { depthBufferMSAA, depthBufferMSAA.FullRange(), Usage::eNone, Usage::eDepthWrite },
@@ -260,6 +298,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
         m_firstUse.Get() = false;
     } else {
         cmd.PipelineBarrier({
+            ImageBarrier { uiBuffer, uiBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
         });
     }
@@ -289,8 +328,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
     mainRenderInfo.pDepthAttachment = &depthAttachInfo;
 
-    PushConstants constants { 0 };
-
+    MainConstants mainConstants { 0 };
     cmd->beginRendering(mainRenderInfo);
         cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
 
@@ -302,17 +340,51 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float) {
 
         cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, *m_mainDescriptorSet.Get(), {});
 
-        constants = { 0 };
-        cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
+        mainConstants = { 0 };
+        cmd->pushConstants<MainConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, mainConstants);
         cmd->drawIndexed(m_matroskin.indexCount, 1, static_cast<std::uint32_t>(m_matroskin.IdxOffset() / 2), static_cast<std::int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
 
-        constants = { 1 };
-        cmd->pushConstants<PushConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, constants);
+        mainConstants = { 1 };
+        cmd->pushConstants<MainConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, mainConstants);
         cmd->drawIndexed(m_viking.indexCount, 1, static_cast<std::uint32_t>(m_viking.IdxOffset() / 2), static_cast<std::int32_t>(m_viking.VtxOffset() / sizeof(CVertex)), 0);
     cmd->endRendering();
 
+    cmd.PipelineBarrier({ ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eColorAttachment, Usage::eSampledFragment }});
+
+    // UI
+    vk::RenderingAttachmentInfo uiAttachInfo {};
+    uiAttachInfo.imageView = uiBuffer.View();
+    uiAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    uiAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    uiAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
+    uiAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    vk::RenderingInfo uiRenderInfo {};
+    uiRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, uiBuffer.Extent2D() };
+    uiRenderInfo.layerCount = 1;
+    uiRenderInfo.colorAttachmentCount = 1;
+    uiRenderInfo.pColorAttachments = &uiAttachInfo;
+
+    UIConstants postProcessConstants { };
+    cmd->beginRendering(uiRenderInfo);
+        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineUI);
+
+        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(uiBuffer.Extent().width), static_cast<float>(uiBuffer.Extent().height), 0.0f, 1.0f } });
+        cmd->setScissor(0, { { { 0, 0 }, uiBuffer.Extent2D() } });
+
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineUI.Layout(), 0, *m_uiDescriptorSet.Get(), {});
+
+        postProcessConstants = {
+            glm::vec2(m_swapchain.Extent().width, m_swapchain.Extent().height),
+            glm::vec2(m_textTexture.Get().Extent().width, m_textTexture.Get().Extent().height)
+        };
+        cmd->pushConstants<UIConstants>(m_pipelineUI.Layout(), vk::ShaderStageFlagBits::eFragment, 0, postProcessConstants);
+        cmd->draw(3, 1, 0, 0);
+    cmd->endRendering();
+
     cmd.PipelineBarrier({
-        ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eColorAttachment, Usage::eSampledFragment },
+        ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eSampledFragment },
+        ImageBarrier { uiBuffer, uiBuffer.FullRange(), Usage::eColorAttachment, Usage::eSampledFragment },
         ImageBarrier { m_swapchain.Images()[imageIndex], m_swapchain.Images()[imageIndex].FullRange(), Usage::eNone, Usage::eColorAttachment }
     });
 
@@ -427,16 +499,113 @@ void CRenderer::ResizeTextures() {
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};
 
+    m_uiColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
+    }};
+
     CDescriptorWriter descriptorWriter { m_context };
     for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
         descriptorWriter.Clear();
         descriptorWriter
             .WriteImage(0, m_mainColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .UpdateSet(*m_uiDescriptorSet[i]);
+
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteImage(0, m_uiColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_swapchainDescriptorSet[i]);
     }
 }
 
-void CRenderer::LoadTextures(CBuffer& stagingBuffer) {
+void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
+    // Rotate render if we need
+    vk::SurfaceTransformFlagBitsKHR surfaceTransform = m_swapchain.SurfaceTransform();
+    glm::mat4 rot = glm::mat4(1.0f);
+
+    if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
+        rot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
+    } else if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate270) {
+        rot = glm::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0, 0, 1));
+    } else if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate180) {
+        rot = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
+    }
+
+    UniformBufferObject ubo {
+        .model = glm::mat4(1.0f),
+        .view = view,
+        .proj = rot * ReverseZPerspective(m_swapchain.Extent().width, m_swapchain.Extent().height, fov),
+    };
+
+    std::memcpy(m_uniform.Get().Data(), &ubo, sizeof(ubo));
+}
+
+void CRenderer::UpdateTextTexture(const CCommandBuffer& cmd, const std::string& text) {
+    SDL_Surface* textSurf = TTF_RenderText_Blended_Wrapped(m_font, text.c_str(), 0, { 255, 255, 255, 255 }, 10240);
+    if (!textSurf) return;
+
+    // Resize
+    if (m_textTexture.Get().Extent().width != static_cast<std::uint32_t>(textSurf->w)
+        || m_textTexture.Get().Extent().height != static_cast<std::uint32_t>(textSurf->h)
+    ) {
+        m_textTexture.Get() = CImage { m_context, ImageCreateInfo {
+            { static_cast<uint32_t>(textSurf->w), static_cast<uint32_t>(textSurf->h), 1 },
+            vk::Format::eR8G8B8A8Srgb, 1, 1,
+            vk::SampleCountFlagBits::e1,
+            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled
+        }};
+
+        CDescriptorWriter descriptorWriter { m_context };
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteImage(1, m_textTexture.Get().View(), *m_linearSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .UpdateSet(*m_uiDescriptorSet.Get());
+    }
+
+    const vk::DeviceSize surfSize = static_cast<vk::DeviceSize>(textSurf->w) * textSurf->h * 4;
+    if (m_stagingBuffer.Size() < surfSize) {
+        m_stagingBuffer = CBuffer {
+            m_context, surfSize,
+            vk::BufferUsageFlagBits::eTransferSrc,
+            MemoryLocation::eHostVisible
+        };
+    }
+
+    // Considering the alignment
+    std::uint8_t* src = static_cast<std::uint8_t*>(textSurf->pixels);
+    std::uint8_t* dst = static_cast<std::uint8_t*>(m_stagingBuffer.Data());
+    for (int y = 0; y < textSurf->h; ++y) {
+        memcpy(dst + (y * textSurf->w * 4), src + (y * textSurf->pitch), textSurf->w * 4);
+    }
+
+    cmd.PipelineBarrier({ ImageBarrier { m_textTexture.Get(), m_textTexture.Get().FullRange(), Usage::eNone, Usage::eTransferWrite } });
+    cmd.Copy(m_textTexture.Get(), m_stagingBuffer);
+    cmd.PipelineBarrier({ ImageBarrier { m_textTexture.Get(), m_textTexture.Get().FullRange(), Usage::eTransferWrite, Usage::eSampledFragment } });
+
+    SDL_DestroySurface(textSurf);
+}
+
+void CRenderer::LoadFonts() {
+    auto LoadFont = [&](const std::string& path) {
+        IFileStream* stream = Filesystem::LoadAsIO(path).release(); // Now font owns this stream
+        SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream);
+
+        TTF_Font* font = TTF_OpenFontIO(sdlStream, true, 32);
+        if (!font) {
+            throw std::runtime_error("Failed to load font: " + path);
+        }
+
+        return font;
+    };
+
+    m_font = LoadFont("assets://NotoSansMono.ttf");
+    m_fontEmoji = LoadFont("assets://NotoColorEmoji.ttf");
+    m_fontUnifont = LoadFont("assets://unifont.otf");
+    TTF_AddFallbackFont(m_font, m_fontEmoji);
+    TTF_AddFallbackFont(m_font, m_fontUnifont);
+}
+
+void CRenderer::LoadTextures() {
     auto LoadTexture = [&](const std::string& path, const std::string& debugName) {
         std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
         SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
@@ -450,14 +619,14 @@ void CRenderer::LoadTextures(CBuffer& stagingBuffer) {
         SDL_DestroySurface(imageRaw);
 
         const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
-        if (stagingBuffer.Size() < imageSize) {
-            stagingBuffer = CBuffer {
+        if (m_stagingBuffer.Size() < imageSize) {
+            m_stagingBuffer = CBuffer {
                 m_context, imageSize,
                 vk::BufferUsageFlagBits::eTransferSrc,
                 MemoryLocation::eHostVisible
             };
         }
-        std::memcpy(stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
+        std::memcpy(m_stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
 
         std::uint32_t mipLevels = static_cast<std::uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1;
 
@@ -471,7 +640,7 @@ void CRenderer::LoadTextures(CBuffer& stagingBuffer) {
         m_graphicsCmd.Get().ImmediateSubmit(*m_context.Device().GraphicsQueue(),
             [&](const CCommandBuffer& cmd) {
                 cmd.PipelineBarrier({ ImageBarrier { texture, texture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
-                cmd.Copy(texture, stagingBuffer);
+                cmd.Copy(texture, m_stagingBuffer);
                 cmd.GenerateMipmaps(texture);
             }
         );
@@ -489,7 +658,7 @@ void CRenderer::LoadTextures(CBuffer& stagingBuffer) {
     m_matroskinTexture = LoadTexture("assets://matroskin.png", "matroskin");
 }
 
-void CRenderer::LoadModels(CBuffer& stagingBuffer) {
+void CRenderer::LoadModels() {
     auto LoadModel = [&](const std::string_view filename) {
         std::vector<CVertex> vertices;
         std::vector<std::uint16_t> indices;
@@ -540,18 +709,6 @@ void CRenderer::LoadModels(CBuffer& stagingBuffer) {
         return std::tuple { vertices, indices };
     };
 
-    m_vertexBuffer = CBuffer {
-        m_context, GEOMETRY_POOL_SIZE,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-        MemoryLocation::eDeviceOnly
-    };
-
-    m_indexBuffer = CBuffer {
-        m_context, GEOMETRY_POOL_SIZE,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-        MemoryLocation::eDeviceOnly
-    };
-
     auto UploadToPool = [&](const std::string& path) {
         SubMesh mesh;
         auto [vertices, indices] = LoadModel(path);
@@ -567,23 +724,35 @@ void CRenderer::LoadModels(CBuffer& stagingBuffer) {
         mesh.indexCount = static_cast<std::uint32_t>(indices.size());
 
         vk::DeviceSize totalSize = vSize + iSize;
-        if (stagingBuffer.Size() < totalSize) {
-            stagingBuffer = CBuffer { m_context, totalSize,
+        if (m_stagingBuffer.Size() < totalSize) {
+            m_stagingBuffer = CBuffer { m_context, totalSize,
                 vk::BufferUsageFlagBits::eTransferSrc, MemoryLocation::eHostVisible
             };
         }
 
-        std::memcpy(stagingBuffer.Data(), vertices.data(), vSize);
-        std::memcpy(static_cast<std::uint8_t*>(stagingBuffer.Data()) + vSize, indices.data(), iSize);
+        std::memcpy(m_stagingBuffer.Data(), vertices.data(), vSize);
+        std::memcpy(static_cast<std::uint8_t*>(m_stagingBuffer.Data()) + vSize, indices.data(), iSize);
 
         m_graphicsCmd.Get().ImmediateSubmit(*m_context.Device().GraphicsQueue(),
             [&](const CCommandBuffer& cmd) {
-                cmd.Copy(m_vertexBuffer, stagingBuffer, vSize, { 0, mesh.VtxOffset() });
-                cmd.Copy(m_indexBuffer, stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
+                cmd.Copy(m_vertexBuffer, m_stagingBuffer, vSize, { 0, mesh.VtxOffset() });
+                cmd.Copy(m_indexBuffer, m_stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
             }
         );
 
         return mesh;
+    };
+
+    m_vertexBuffer = CBuffer {
+        m_context, GEOMETRY_POOL_SIZE,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+        MemoryLocation::eDeviceOnly
+    };
+
+    m_indexBuffer = CBuffer {
+        m_context, GEOMETRY_POOL_SIZE,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+        MemoryLocation::eDeviceOnly
     };
 
     m_matroskin = UploadToPool("assets://matroskin.obj");

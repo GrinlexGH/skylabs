@@ -14,6 +14,8 @@
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
 #include <skylabs/core/render/vulkan/command_buffer_allocator.hpp>
 
+#include <SDL3_ttf/SDL_ttf.h>
+
 struct SubMesh {
     std::uint32_t indexCount = 0;
     vma::raii::VirtualAllocation vtxAlloc = nullptr;
@@ -44,8 +46,12 @@ private:
     void HandleSwapchainResult(vk::Result result, std::string_view context);
     void RecreateSwapchain();
     void ResizeTextures();
-    void LoadTextures(CBuffer& stagingBuffer);
-    void LoadModels(CBuffer& stagingBuffer);
+    void LoadFonts();
+    void LoadTextures();
+    void LoadModels();
+
+    void UpdateMVP(const glm::mat4& view, float fov);
+    void UpdateTextTexture(const CCommandBuffer& cmd, const std::string& text);
 
     CContext m_context { nullptr };
     CSwapchain m_swapchain { nullptr };
@@ -65,12 +71,14 @@ private:
 
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 
+    CBuffer m_stagingBuffer { nullptr };
+
     CBuffer m_vertexBuffer { nullptr };
     CBuffer m_indexBuffer { nullptr };
 
     CImage m_matroskinTexture { nullptr };
     CImage m_vikingRoomTexture { nullptr };
-    CSampler m_modelTextureSampler { nullptr };
+    CSampler m_nearestSampler { nullptr };
 
     InFlight<CImage> m_mainColor { nullptr };
     InFlight<CImage> m_mainColorMSAA { nullptr };
@@ -83,7 +91,17 @@ private:
     InFlight<vk::raii::DescriptorSet> m_swapchainDescriptorSet { nullptr };
     CGraphicsPipeline m_pipelineSwapchain { nullptr };
 
+    CSampler m_linearSampler { nullptr };
+    InFlight<CImage> m_textTexture { nullptr };
+    InFlight<CImage> m_uiColor { nullptr };
+    InFlight<vk::raii::DescriptorSet> m_uiDescriptorSet { nullptr };
+    CGraphicsPipeline m_pipelineUI { nullptr };
+
     SubMesh m_matroskin;
     SubMesh m_viking;
+
+    TTF_Font* m_font = nullptr;
+    TTF_Font* m_fontUnifont = nullptr;
+    TTF_Font* m_fontEmoji = nullptr;
 };
 }

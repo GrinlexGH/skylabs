@@ -6,6 +6,7 @@ set(SOURCES
     shader.vert.slang
     shaderSwapchain.frag.slang
     shaderSwapchain.vert.slang
+    shaderUI.frag.slang
 )
 
 set(IMPORTS )

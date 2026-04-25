@@ -32,7 +32,7 @@ public:
     float Fov() const { return m_fov; }
 
     void ProcessKeyboard(const MoveDirection direction, const float deltaTime) {
-        const float velocity = m_movementSpeed * deltaTime;
+        const float velocity = m_movementSpeed * deltaTime / 1000.0f;
         if (direction == MoveDirection::eForward)
             m_position += m_front * velocity;
         if (direction == MoveDirection::eBackward)

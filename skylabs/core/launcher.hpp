@@ -35,8 +35,6 @@ public:
     void Destroy() override;
 
 private:
-    void Initialize();
-
     void ProcessEvents();
     void Update(float deltaTime);
     void Render(float deltaTime);

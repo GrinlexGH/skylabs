@@ -23,3 +23,6 @@ CMakeUserPresets.json
 /android/**/assets
 /android/**/libsdl
 /android/**/jniLibs
+
+# Renderdoc
+skylabs.cap
