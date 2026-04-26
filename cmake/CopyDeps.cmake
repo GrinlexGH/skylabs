@@ -1,14 +1,15 @@
-cmake_minimum_required(VERSION 3.19)
+# OUTPUT_DIR - Directory where dependencies will be placed
+# EXECUTABLE - `EXECUTABLES` file(GET_RUNTIME_DEPENDENCIES) parameter
+# SHARED_LIBRARY - `LIBRARIES` file(GET_RUNTIME_DEPENDENCIES) parameter
+# MODULE_LIBRARY - `MODULES` file(GET_RUNTIME_DEPENDENCIES) parameter
+# DIRECTORIES - `DIRECTORIES` file(GET_RUNTIME_DEPENDENCIES) parameter
+cmake_minimum_required(VERSION 3.20)
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.3")
     cmake_policy(SET CMP0207 NEW)
 endif()
 
 message(STATUS "Resolving dependencies")
-
-if(NOT OUTPUT_DIR)
-    message(FATAL_ERROR "OUTPUT_DIR is not defined")
-endif()
 
 file(GET_RUNTIME_DEPENDENCIES
     RESOLVED_DEPENDENCIES_VAR _r_deps
@@ -36,29 +37,9 @@ file(COPY ${_r_deps}
     FOLLOW_SYMLINK_CHAIN
 )
 
+message(STATUS "All dependencies successfully copied")
+
+set(FILES_TO_PATCH ${EXECUTABLE} ${SHARED_LIBRARY} ${MODULE_LIBRARY} ${_r_deps})
+
 # Restore RUNPATH
-# Sorry for using undocumented api
-if(NOT UNIX)
-    return()
-endif()
-
-set(_all_files ${EXECUTABLE} ${SHARED_LIBRARY} ${MODULE_LIBRARY})
-
-foreach(_file IN LISTS _all_files)
-    if(NOT EXISTS "${_file}")
-        continue()
-    endif()
-
-    file(READ_ELF "${_file}" RUNPATH _old_rpath)
-    if(NOT _old_rpath)
-        file(READ_ELF "${_file}" RPATH _old_rpath)
-    endif()
-
-    string(REPLACE ";" ":" _old_rpath "${_old_rpath}")
-
-    file(RPATH_CHANGE
-        FILE "${_file}"
-        OLD_RPATH "${_old_rpath}"
-        NEW_RPATH "\$ORIGIN"
-    )
-endforeach()
+include(${CMAKE_CURRENT_LIST_DIR}/PatchRunpath.cmake)

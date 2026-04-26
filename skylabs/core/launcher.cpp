@@ -36,8 +36,6 @@ void CLauncher::Create() {
     SDL_SetWindowFullscreen(*m_window, true);
 #endif
 
-    SDL_SetWindowRelativeMouseMode(*m_window, true);
-
     if (!TTF_Init()) {
         throw std::runtime_error("Cannot initialize SDL_ttf");
     }
@@ -261,7 +259,7 @@ void CLauncher::HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent) {
         } break;
 
         case SDLK_P: {
-            static bool mouseModeSwitch = false;
+            static bool mouseModeSwitch = true;
             SDL_SetWindowRelativeMouseMode(*m_window, mouseModeSwitch);
             mouseModeSwitch = !mouseModeSwitch;
         } break;

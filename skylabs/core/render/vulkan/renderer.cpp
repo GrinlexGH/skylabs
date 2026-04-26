@@ -262,6 +262,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     // Acquire next image from the swapchain
     auto acquireResult = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (!acquireResult) {
+        if (acquireResult.error() == vk::Result::eSuboptimalKHR) {
+            m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *device, vk::SemaphoreCreateInfo {} };
+        }
+
         HandleSwapchainResult(acquireResult.error(), "acquire");
         return;
     }
