@@ -40,7 +40,7 @@ Ensure you have the following tools installed before compiling:
 | **C++ Compiler** | Latest MSVC / GCC / Clang |
 | **Python**       | 3.x                       |
 | **Conan**        | 2.x                       |
-| **Vulkan SDK**   | Latest SDK                |
+| **Vulkan SDK**   | Latest SDK (only slang)   |
 
 ## ⚙️ Configuration & Building
 
