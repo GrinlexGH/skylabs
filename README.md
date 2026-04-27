@@ -41,6 +41,7 @@ Ensure you have the following tools installed before compiling:
 | **Python**       | 3.x                       |
 | **Conan**        | 2.x                       |
 | **Vulkan SDK**   | Latest SDK (only slang)   |
+| **patchelf**     | Latest (only on linux)    |
 
 ## ⚙️ Configuration & Building
 

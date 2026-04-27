@@ -39,7 +39,14 @@ file(COPY ${_r_deps}
 
 message(STATUS "All dependencies successfully copied")
 
-set(FILES_TO_PATCH ${EXECUTABLE} ${SHARED_LIBRARY} ${MODULE_LIBRARY} ${_r_deps})
+set(COPIED_DEPS "")
+
+foreach(_dep ${_r_deps})
+    cmake_path(GET _dep FILENAME _name)
+    list(APPEND COPIED_DEPS "${OUTPUT_DIR}/${_name}")
+endforeach()
+
+set(FILES_TO_PATCH ${EXECUTABLE} ${SHARED_LIBRARY} ${MODULE_LIBRARY} ${COPIED_DEPS})
 
 # Restore RUNPATH
 include(${CMAKE_CURRENT_LIST_DIR}/PatchRunpath.cmake)

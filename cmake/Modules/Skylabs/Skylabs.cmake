@@ -129,9 +129,11 @@ function(skylabs_configure_target target_name)
     foreach(dep IN LISTS ARG_RUNTIME_DEPS)
         if(TARGET ${dep})
             list(APPEND EXTRA_DLLS "$<TARGET_FILE:${dep}>")
+            list(APPEND EXTRA_DLL_NAMES "$<TARGET_FILE_NAME:${dep}>")
         endif()
     endforeach()
 
+    set(COPIED_EXTRA_DLLS "")
     if(EXTRA_DLLS)
         if(ANDROID)
             set(DLLS_DESTANATION "${SKYLABS_ANDROID_ROOT}/app/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}")
@@ -145,6 +147,10 @@ function(skylabs_configure_target target_name)
             COMMAND_EXPAND_LISTS
             COMMENT "Copying runtime DLLs to ${target_name} output directory"
         )
+
+        foreach(_NAME ${EXTRA_DLL_NAMES})
+            list(APPEND COPIED_EXTRA_DLLS "${DLLS_DESTANATION}/${_NAME}")
+        endforeach()
     endif()
 
     if(ANDROID)
@@ -158,7 +164,7 @@ function(skylabs_configure_target target_name)
         "\"-D${target_type}=$<TARGET_FILE:${target_name}>\""
         "\"-DUNIX=${UNIX}\""
         -P ${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake
-        COMMAND ${CMAKE_COMMAND} "\"-DFILES_TO_PATCH=${EXTRA_DLLS}\""
+        COMMAND ${CMAKE_COMMAND} "\"-DFILES_TO_PATCH=${COPIED_EXTRA_DLLS}\""
         -P ${CMAKE_SOURCE_DIR}/cmake/PatchRunpath.cmake
         COMMENT "Resolving and copying symlinked dependencies..."
     )
