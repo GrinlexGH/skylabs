@@ -76,7 +76,7 @@
             "launchActivity": "org.libsdl.app.SDLActivity",
             "native": {
                 "symbolSearchPaths": [
-                    "${workspaceFolder}/android/app/build/symbols_latest/debug_libs",
+                    "${workspaceFolder}/android/app/build/symbols_latest",
                 ],
             },
             "java": {

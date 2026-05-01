@@ -7,11 +7,10 @@ plugins {
     id("com.android.application")
 }
 
-val projectRootFile = file("../../")
-
 abstract class ConanInstallTask @Inject constructor(
     private val execOperations: ExecOperations
 ) : DefaultTask() {
+
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val conanFile: RegularFileProperty
@@ -19,20 +18,16 @@ abstract class ConanInstallTask @Inject constructor(
     @get:Input abstract val arch: Property<String>
     @get:Input abstract val buildType: Property<String>
     @get:Input abstract val ndkPath: Property<String>
-    @get:Internal abstract val projectRoot: DirectoryProperty
 
     @get:OutputDirectory
-    val outputDir: Provider<Directory> = projectRoot.flatMap { root ->
-        val path = "build/${arch.get()}/${buildType.get()}"
-        project.objects.directoryProperty().fileValue(root.asFile.resolve(path))
-    }
+    abstract val outputDir: DirectoryProperty
 
     @TaskAction
     fun run() {
-        val outFolder = outputDir.get().asFile
+        val conanfileDir = conanFile.get().asFile.parentFile
 
         val args = listOf(
-            "install", projectRoot.get().asFile.absolutePath,
+            "install", conanfileDir.absolutePath,
             "-r", "skylabs", "-r", "conancenter",
             "-pr", "android",
             "-c", "tools.android:ndk_path=${ndkPath.get()}",
@@ -47,11 +42,12 @@ abstract class ConanInstallTask @Inject constructor(
         execOperations.exec {
             commandLine("conan")
             args(args)
-            workingDir = projectRoot.get().asFile
+            workingDir = conanfileDir
         }
     }
 }
 
+val projectRootFile = file("../../")
 var toolchainFile = projectRootFile.resolve("cmake/ConanAndroidToolchain.cmake")
 
 android {
@@ -109,68 +105,66 @@ android {
     }
 }
 
-fun mapAndroidAbiToConan(abi: String): String = when (abi) {
-    "arm64-v8a" -> "armv8"
-    "armeabi-v7a" -> "armv7"
-    else -> abi
-}
-
 androidComponents {
     onVariants { variant ->
-        val variantName = variant.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        val configName = if (variant.buildType?.equals("release", ignoreCase = true) == true) "RelWithDebInfo" else "Debug"
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        val configName = if (variant.buildType == "release") "RelWithDebInfo" else "Debug"
         val abis = variant.externalNativeBuild?.abiFilters?.get() ?: listOf("arm64-v8a")
 
         // Setup conan tasks
         val conanTaskProviders = abis.map { abi ->
-            val conanArch = mapAndroidAbiToConan(abi)
-            tasks.register<ConanInstallTask>("conanInstall${configName}_$abi") {
-                val conanTxt = projectRootFile.resolve("conanfile.txt")
-                val conanPy = projectRootFile.resolve("conanfile.py")
-                conanFile.set(if (conanPy.exists()) conanPy else conanTxt)
+            tasks.register<ConanInstallTask>("conanInstall${configName}[${abi}]") {
+                val conanfileTxt = projectRootFile.resolve("conanfile.txt")
+                val conanfilePy = projectRootFile.resolve("conanfile.py")
+                val conanArch = when (abi) {
+                    "arm64-v8a" -> "armv8"
+                    "armeabi-v7a" -> "armv7"
+                    else -> abi
+                }
+
                 buildType.set(configName)
+                conanFile.set(if (conanfilePy.exists()) conanfilePy else conanfileTxt)
                 arch.set(conanArch)
-                ndkPath.set(androidComponents.sdkComponents.ndkDirectory.get().asFile.absolutePath)
-                projectRoot.set(projectRootFile)
+                ndkPath.set(androidComponents.sdkComponents.ndkDirectory.map { it.asFile.absolutePath })
+                outputDir.set(layout.projectDirectory.dir("build/$conanArch/$configName"))
             }
         }
 
         // Copy debug symbols for vscode
-        val copySymbolsProvider = if (variant.name.contains("debug", ignoreCase = true)) {
-            tasks.register("copySymbols$variantName") {
-                group = "developer"
-                doLast {
-                    val nativeTask = tasks.withType<ExternalNativeBuildTask>()
-                        .firstOrNull { it.name.contains(variantName, ignoreCase = true) }
+        val copySymbolsProvider = tasks.register("copySymbols$variantName") {
+            group = "developer"
+            doLast {
+                val nativeTask = tasks.withType<ExternalNativeBuildTask>()
+                    .firstOrNull { it.name.contains(configName) }
 
-                    val soDir = nativeTask?.soFolder?.get()?.asFile ?: return@doLast
-                    val linkPath = projectDir.resolve("build/symbols_latest/debug_libs").toPath()
+                val soDir = nativeTask?.soFolder?.get()?.asFile ?: return@doLast
+                val linkPath = projectDir.resolve("build/symbols_latest").toPath()
 
-                    Files.createDirectories(linkPath.parent)
-                    if (Files.exists(linkPath)) Files.delete(linkPath)
+                Files.deleteIfExists(linkPath)
 
-                    try {
-                        Files.createSymbolicLink(linkPath, soDir.toPath())
-                        logger.lifecycle(">> Symlink updated: $linkPath -> $soDir")
-                    } catch (e: Exception) {
-                        logger.warn(">> Fallback to copy: ${e.message}")
-                        soDir.copyRecursively(linkPath.toFile(), overwrite = true)
-                    }
+                try {
+                    Files.createSymbolicLink(linkPath, soDir.toPath())
+                    logger.lifecycle(">> Symlink updated: $linkPath -> $soDir")
+                } catch (e: Exception) {
+                    logger.warn(">> Fallback to copy: ${e.message}")
+                    soDir.copyRecursively(linkPath.toFile(), overwrite = true)
                 }
             }
-        } else null
+        }
 
-        // Setup dependencies
-        tasks.configureEach {
-            if (name.startsWith("configureCMake$configName")) {
-                conanTaskProviders.forEach { dependsOn(it) }
-            }
-            if (name.startsWith("buildCMake$configName")) {
-                copySymbolsProvider?.let { finalizedBy(it) }
-            }
-            if (name.contains("merge${variantName}Assets", ignoreCase = true)) {
-                dependsOn(tasks.matching { it.name.startsWith("buildCMake$configName") })
-            }
+        // Run conan before cmake configure
+        tasks.matching { it.name.startsWith("configureCMake$configName") }.configureEach {
+            dependsOn(conanTaskProviders)
+        }
+
+        // Copy debug symbols after build
+        tasks.matching { it.name.startsWith("buildCMake$configName") }.configureEach {
+            finalizedBy(copySymbolsProvider)
+        }
+
+        // Merge assets after build
+        tasks.matching { it.name == "merge${variantName}Assets" }.configureEach {
+            dependsOn(tasks.matching { it.name.startsWith("buildCMake$configName") })
         }
     }
 }
