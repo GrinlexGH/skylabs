@@ -22,7 +22,7 @@ class SkylabsRecipe(ConanFile):
     }
 
     def requirements(self):
-        self.requires("sdl/3.4.4")
+        self.requires("sdl/3.4.6")
         self.requires("sdl_image/3.4.2")
         self.requires("sdl_mixer/3.2.0")
         self.requires("sdl_ttf/3.2.2")
