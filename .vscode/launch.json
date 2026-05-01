@@ -65,23 +65,6 @@
                 }
             ],
             "console": "integratedTerminal"
-        },
-        {
-            "name": "(adb) Launch",
-            "type": "android-debug",
-            "request": "launch",
-            "target": "select",
-            "mode": "dual",
-            "packageName": "ru.grinlexstudios.skylabs",
-            "launchActivity": "org.libsdl.app.SDLActivity",
-            "native": {
-                "symbolSearchPaths": [
-                    "${workspaceFolder}/android/app/build/symbols_latest",
-                ],
-            },
-            "java": {
-                "sourcePaths": ["${workspaceFolder}/android/app/src/main/java"]
-            }
         }
     ]
 }

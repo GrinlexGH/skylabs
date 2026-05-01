@@ -126,40 +126,13 @@ androidComponents {
                 conanFile.set(if (conanfilePy.exists()) conanfilePy else conanfileTxt)
                 arch.set(conanArch)
                 ndkPath.set(androidComponents.sdkComponents.ndkDirectory.map { it.asFile.absolutePath })
-                outputDir.set(layout.projectDirectory.dir("build/$conanArch/$configName"))
-            }
-        }
-
-        // Copy debug symbols for vscode
-        val copySymbolsProvider = tasks.register("copySymbols$variantName") {
-            group = "developer"
-            doLast {
-                val nativeTask = tasks.withType<ExternalNativeBuildTask>()
-                    .firstOrNull { it.name.contains(configName) }
-
-                val soDir = nativeTask?.soFolder?.get()?.asFile ?: return@doLast
-                val linkPath = projectDir.resolve("build/symbols_latest").toPath()
-
-                Files.deleteIfExists(linkPath)
-
-                try {
-                    Files.createSymbolicLink(linkPath, soDir.toPath())
-                    logger.lifecycle(">> Symlink updated: $linkPath -> $soDir")
-                } catch (e: Exception) {
-                    logger.warn(">> Fallback to copy: ${e.message}")
-                    soDir.copyRecursively(linkPath.toFile(), overwrite = true)
-                }
+                outputDir.set(projectRootFile.resolve("build/$conanArch/$configName"))
             }
         }
 
         // Run conan before cmake configure
         tasks.matching { it.name.startsWith("configureCMake$configName") }.configureEach {
             dependsOn(conanTaskProviders)
-        }
-
-        // Copy debug symbols after build
-        tasks.matching { it.name.startsWith("buildCMake$configName") }.configureEach {
-            finalizedBy(copySymbolsProvider)
         }
 
         // Merge assets after build
