@@ -285,14 +285,8 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     frameCount++;
 
     if (m_firstUse.Get()) {
-        UpdateTextTexture(cmd, fmt::format("FPS: {:>5} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
-    } else if (acc >= 1000.0f) {
-        UpdateTextTexture(cmd, fmt::format("FPS: {:>5} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
-        acc -= 1000.0f;
-        frameCount = 0;
-    }
+        UpdateTextTexture(cmd, fmt::format("FPS: {:>4} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
 
-    if (m_firstUse.Get()) {
         cmd.PipelineBarrier({
             ImageBarrier { uiBuffer, uiBuffer.FullRange(), Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eNone, Usage::eColorAttachment },
@@ -301,6 +295,12 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
         });
         m_firstUse.Get() = false;
     } else {
+        if (acc >= 1000.0f) {
+            UpdateTextTexture(cmd, fmt::format("FPS: {:>4} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
+            acc -= 1000.0f;
+            frameCount = 0;
+        }
+
         cmd.PipelineBarrier({
             ImageBarrier { uiBuffer, uiBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
             ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eColorAttachment },
@@ -594,7 +594,7 @@ void CRenderer::LoadFonts() {
         IFileStream* stream = Filesystem::LoadAsIO(path).release(); // Now font owns this stream
         SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream);
 
-        TTF_Font* font = TTF_OpenFontIO(sdlStream, true, 32);
+        TTF_Font* font = TTF_OpenFontIO(sdlStream, true, 10);
         if (!font) {
             throw std::runtime_error("Failed to load font: " + path);
         }
