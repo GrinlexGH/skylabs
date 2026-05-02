@@ -76,6 +76,7 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     vk-bootstrap::vk-bootstrap
     glm::glm
 
+    EnTT::EnTT
     frozen::frozen
     stb::stb
     tinyobjloader::tinyobjloader

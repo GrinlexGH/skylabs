@@ -8,6 +8,7 @@
 
 #include <fmt/format.h>
 #include <glm/glm.hpp>
+#include <entt/entt.hpp>
 
 #include <boost/container/flat_set.hpp>
 #include <boost/unordered/unordered_map.hpp>

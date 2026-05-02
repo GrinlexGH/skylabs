@@ -20,6 +20,7 @@ find_package(Boost COMPONENTS
     CONFIG REQUIRED
 )
 
+find_package(EnTT CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(simple_term_colors CONFIG REQUIRED)
