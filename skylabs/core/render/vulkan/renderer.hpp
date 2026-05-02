@@ -50,6 +50,14 @@ private:
     void LoadTextures();
     void LoadModels();
 
+    void SetupMainPass();
+    void SetupUIPass();
+    void SetupSwapchainPass();
+
+    void DrawMainPass(CCommandBuffer& cmd);
+    void DrawUIPass(CCommandBuffer& cmd);
+    void DrawSwapchainPass(std::uint32_t imageIndex, CCommandBuffer& cmd);
+
     void UpdateMVP(const glm::mat4& view, float fov);
     void UpdateTextTexture(const CCommandBuffer& cmd, const std::string& text);
 
@@ -76,9 +84,11 @@ private:
     CBuffer m_vertexBuffer { nullptr };
     CBuffer m_indexBuffer { nullptr };
 
+    CSampler m_nearestSampler { nullptr };
+    CSampler m_linearSampler { nullptr };
+
     CImage m_matroskinTexture { nullptr };
     CImage m_vikingRoomTexture { nullptr };
-    CSampler m_nearestSampler { nullptr };
 
     InFlight<CImage> m_mainColor { nullptr };
     InFlight<CImage> m_mainColorMSAA { nullptr };
@@ -87,11 +97,9 @@ private:
     InFlight<vk::raii::DescriptorSet> m_mainDescriptorSet { nullptr };
     CGraphicsPipeline m_pipelineMain { nullptr };
 
-    CSampler m_mainSampler { nullptr };
     InFlight<vk::raii::DescriptorSet> m_swapchainDescriptorSet { nullptr };
     CGraphicsPipeline m_pipelineSwapchain { nullptr };
 
-    CSampler m_linearSampler { nullptr };
     InFlight<CImage> m_textTexture { nullptr };
     InFlight<CImage> m_uiColor { nullptr };
     InFlight<vk::raii::DescriptorSet> m_uiDescriptorSet { nullptr };

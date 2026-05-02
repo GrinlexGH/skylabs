@@ -63,7 +63,6 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_context = CContext { window };
     m_swapchain = CSwapchain { m_context, *m_context.Surface(), 2, vk::PresentModeKHR::eMailbox };
-    auto [width, height] = m_swapchain.Extent();
 
     m_pipelineLayoutCache = CPipelineLayoutCache { m_context };
     m_descriptorLayoutCache = CDescriptorLayoutCache { m_context };
@@ -87,7 +86,22 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
     }
 
+    LoadFonts();
+    LoadTextures();
+    LoadModels();
+
+    m_nearestSampler = CSampler { m_context, { .m_filtering = vk::Filter::eNearest } };
+    m_linearSampler = CSampler { m_context, { .m_filtering = vk::Filter::eLinear } };
+
+    SetupMainPass();
+    SetupUIPass();
+    SetupSwapchainPass();
+}
+
+void CRenderer::SetupMainPass() {
     // Attachments
+    auto [width, height] = m_swapchain.Extent();
+
     m_mainColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
@@ -103,13 +117,14 @@ CRenderer::CRenderer(const IWindow* const window) {
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};
 
-    m_uiColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
-        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
-        vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
-    }};
+    // Descriptors
+    m_uniform = InFlight<CBuffer> { m_inFlightContext, m_context,
+        sizeof(UniformBufferObject),
+        vk::BufferUsageFlagBits::eUniformBuffer,
+        MemoryLocation::eHostVisible
+    };
 
-    // Descriptor sets
-    // Main descriptor set
+    // Descriptor set
     const vk::raii::DescriptorSetLayout& mainSetLayout = m_descriptorLayoutCache.GetLayout({
         { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },         // MVP
         { 1, vk::DescriptorType::eCombinedImageSampler, 2, vk::ShaderStageFlagBits::eFragment } // Model texture
@@ -117,36 +132,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_mainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *mainSetLayout)) };
 
-    // UI descriptor set
-    const vk::raii::DescriptorSetLayout& uiSetLayout = m_descriptorLayoutCache.GetLayout({
-        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }, // Main renderer result
-        { 1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }  // Text texture
-    });
-
-    m_uiDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *uiSetLayout)) };
-
-    // Swapchain descriptor set
-    const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({
-        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment } // Final image
-    });
-
-    m_swapchainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *swapchainSetLayout)) };
-
-    // Resources
-    m_mainSampler = CSampler { m_context };
-    m_nearestSampler = CSampler { m_context, { .m_filtering = vk::Filter::eNearest } };
-    m_linearSampler = CSampler { m_context, { .m_filtering = vk::Filter::eLinear } };
-    m_textTexture = InFlight<CImage> { m_inFlightContext, nullptr };
-    m_uniform = InFlight<CBuffer> { m_inFlightContext, m_context,
-        sizeof(UniformBufferObject),
-        vk::BufferUsageFlagBits::eUniformBuffer,
-        MemoryLocation::eHostVisible
-    };
-
-    LoadFonts();
-    LoadTextures();
-    LoadModels();
-
+    // Write descriptors
     CDescriptorWriter descriptorWriter { m_context };
     for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
         descriptorWriter.Clear();
@@ -155,19 +141,8 @@ CRenderer::CRenderer(const IWindow* const window) {
             .WriteImage(1, m_matroskinTexture.View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 0)
             .WriteImage(1, m_vikingRoomTexture.View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler, 1)
             .UpdateSet(*m_mainDescriptorSet[i]);
-
-        descriptorWriter.Clear();
-        descriptorWriter
-            .WriteImage(0, m_mainColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
-            .UpdateSet(*m_uiDescriptorSet[i]);
-
-        descriptorWriter.Clear();
-        descriptorWriter
-            .WriteImage(0, m_uiColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
-            .UpdateSet(*m_swapchainDescriptorSet[i]);
     }
 
-    // Main pipeline
     // Shaders
     const CShader vertexShader(m_context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shader.vert.spv");
     const CShader fragmentShader(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shader.frag.spv");
@@ -188,12 +163,89 @@ CRenderer::CRenderer(const IWindow* const window) {
         }},
         .m_renderingInfo = { {}, colorFormats, m_mainDepthMSAA.Get().Format() },
         .m_sampling =  vk::SampleCountFlagBits::e4
-    }
-    };
+    }};
+}
 
-    // UI pipeline
+void CRenderer::DrawMainPass(CCommandBuffer& cmd) {
+    vk::RenderingAttachmentInfo colorAttachInfo {};
+    colorAttachInfo.imageView = m_mainColorMSAA.Get().View();
+    colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
+    colorAttachInfo.clearValue.color = vk::ClearColorValue(11.0f / 255.0f, 16.0f / 255.0f, 38.0f / 255.0f, 1.0f);
+    colorAttachInfo.resolveImageView = m_mainColor.Get().View();
+    colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eAverage;
+
+    vk::RenderingAttachmentInfo depthAttachInfo {};
+    depthAttachInfo.imageView = m_mainDepthMSAA.Get().View();
+    depthAttachInfo.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    depthAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    depthAttachInfo.storeOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue { 0.0f, 0 };
+
+    vk::RenderingInfo mainRenderInfo {};
+    mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, m_mainColor.Get().Extent2D() };
+    mainRenderInfo.layerCount = 1;
+    mainRenderInfo.colorAttachmentCount = 1;
+    mainRenderInfo.pColorAttachments = &colorAttachInfo;
+    mainRenderInfo.pDepthAttachment = &depthAttachInfo;
+
+    auto [width, height] = m_mainColor.Get().Extent2D();
+
+    MainConstants mainConstants { 0 };
+    cmd->beginRendering(mainRenderInfo);
+        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
+
+        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f } });
+        cmd->setScissor(0, { { { 0, 0 }, { width, height } } });
+
+        cmd->bindVertexBuffers(0, { *m_vertexBuffer }, { 0 });
+        cmd->bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
+
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, *m_mainDescriptorSet.Get(), {});
+
+        mainConstants = { 0 };
+        cmd->pushConstants<MainConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, mainConstants);
+        cmd->drawIndexed(m_matroskin.indexCount, 1, static_cast<std::uint32_t>(m_matroskin.IdxOffset() / 2), static_cast<std::int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
+
+        mainConstants = { 1 };
+        cmd->pushConstants<MainConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, mainConstants);
+        cmd->drawIndexed(m_viking.indexCount, 1, static_cast<std::uint32_t>(m_viking.IdxOffset() / 2), static_cast<std::int32_t>(m_viking.VtxOffset() / sizeof(CVertex)), 0);
+    cmd->endRendering();
+}
+
+void CRenderer::SetupUIPass() {
+    // Attachments
+    auto [width, height] = m_swapchain.Extent();
+
+    m_uiColor = InFlight<CImage> { m_inFlightContext, m_context, ImageCreateInfo {
+        { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
+        vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
+    }};
+
+    // Descriptors
+    m_textTexture = InFlight<CImage> { m_inFlightContext, nullptr };
+
+    // Descriptor sets
+    const vk::raii::DescriptorSetLayout& uiSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }, // Main renderer result
+        { 1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }  // Text texture
+    });
+
+    m_uiDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *uiSetLayout)) };
+
+    // Write descriptors
+    CDescriptorWriter descriptorWriter { m_context };
+    for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteImage(0, m_mainColor[i].View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .UpdateSet(*m_uiDescriptorSet[i]);
+    }
+
     // Shaders
-    const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv");
+    const CShader vertexShaderUI(m_context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv");
     const CShader fragmentShaderUI(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderUI.frag.spv");
 
     const vk::raii::PipelineLayout& uiPipelineLayout = m_pipelineLayoutCache.GetLayout({
@@ -204,12 +256,65 @@ CRenderer::CRenderer(const IWindow* const window) {
     std::array<vk::Format, 1> uiColorFormats { m_uiColor.Get().Format() };
     m_pipelineUI = CGraphicsPipeline { m_context, {
         .m_layout = uiPipelineLayout,
-        .m_shaders = { &vertexShaderSwapchain, &fragmentShaderUI },
+        .m_shaders = { &vertexShaderUI, &fragmentShaderUI },
         .m_renderingInfo = { {}, uiColorFormats }
     }};
+}
 
-    // Swapchain pipeline
+void CRenderer::DrawUIPass(CCommandBuffer& cmd) {
+    vk::RenderingAttachmentInfo uiAttachInfo {};
+    uiAttachInfo.imageView = m_uiColor.Get().View();
+    uiAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    uiAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    uiAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
+    uiAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    vk::RenderingInfo uiRenderInfo {};
+    uiRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, m_uiColor.Get().Extent2D() };
+    uiRenderInfo.layerCount = 1;
+    uiRenderInfo.colorAttachmentCount = 1;
+    uiRenderInfo.pColorAttachments = &uiAttachInfo;
+
+    auto [width, height] = m_uiColor.Get().Extent2D();
+    auto [textureWidth, textureHeight] = m_textTexture.Get().Extent2D();
+
+    UIConstants postProcessConstants { };
+    cmd->beginRendering(uiRenderInfo);
+        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineUI);
+
+        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f } });
+        cmd->setScissor(0, { { { 0, 0 }, { width, height } } });
+
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineUI.Layout(), 0, *m_uiDescriptorSet.Get(), {});
+
+        postProcessConstants = {
+            glm::vec2(width, height),
+            glm::vec2(textureWidth, textureHeight)
+        };
+        cmd->pushConstants<UIConstants>(m_pipelineUI.Layout(), vk::ShaderStageFlagBits::eFragment, 0, postProcessConstants);
+        cmd->draw(3, 1, 0, 0);
+    cmd->endRendering();
+}
+
+void CRenderer::SetupSwapchainPass() {
+    // Descriptor sets
+    const vk::raii::DescriptorSetLayout& swapchainSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment } // Final image
+    });
+
+    m_swapchainDescriptorSet = InFlight<vk::raii::DescriptorSet> { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(m_inFlightContext.FrameCount(), *swapchainSetLayout)) };
+
+    // Write descriptors
+    CDescriptorWriter descriptorWriter { m_context };
+    for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteImage(0, m_uiColor[i].View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .UpdateSet(*m_swapchainDescriptorSet[i]);
+    }
+
     // Shaders
+    const CShader vertexShaderSwapchain(m_context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv");
     const CShader fragmentShaderSwapchain(m_context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderSwapchain.frag.spv");
 
     const vk::raii::PipelineLayout& swapchainPipelineLayout = m_pipelineLayoutCache.GetLayout({
@@ -223,6 +328,31 @@ CRenderer::CRenderer(const IWindow* const window) {
         .m_shaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain },
         .m_renderingInfo = { {}, swapchainColorFormats }
     }};
+}
+
+void CRenderer::DrawSwapchainPass(const std::uint32_t imageIndex, CCommandBuffer& cmd) {
+    vk::RenderingAttachmentInfo swapchainAttachInfo {};
+    swapchainAttachInfo.imageView = *m_swapchain.Images()[imageIndex].View();
+    swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    swapchainAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
+    swapchainAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
+    swapchainAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
+
+    vk::RenderingInfo swapchainRenderInfo {};
+    swapchainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, m_swapchain.Extent() };
+    swapchainRenderInfo.layerCount = 1;
+    swapchainRenderInfo.colorAttachmentCount = 1;
+    swapchainRenderInfo.pColorAttachments = &swapchainAttachInfo;
+
+    cmd->beginRendering(swapchainRenderInfo);
+        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
+
+        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(m_swapchain.Extent().width), static_cast<float>(m_swapchain.Extent().height), 0.0f, 1.0f } });
+        cmd->setScissor(0, { { { 0, 0 }, m_swapchain.Extent() } });
+
+        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, *m_swapchainDescriptorSet.Get(), {});
+        cmd->draw(3, 1, 0, 0);
+    cmd->endRendering();
 }
 
 CRenderer::~CRenderer() {
@@ -307,84 +437,11 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
         });
     }
 
-    // Main render
-    vk::RenderingAttachmentInfo colorAttachInfo {};
-    colorAttachInfo.imageView = colorBufferMSAA.View();
-    colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
-    colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachInfo.clearValue.color = vk::ClearColorValue(11.0f / 255.0f, 16.0f / 255.0f, 38.0f / 255.0f, 1.0f);
-    colorAttachInfo.resolveImageView = colorBuffer.View();
-    colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eAverage;
-
-    vk::RenderingAttachmentInfo depthAttachInfo {};
-    depthAttachInfo.imageView = depthBufferMSAA.View();
-    depthAttachInfo.imageLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-    depthAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
-    depthAttachInfo.storeOp = vk::AttachmentStoreOp::eDontCare;
-    depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue { 0.0f, 0 };
-
-    vk::RenderingInfo mainRenderInfo {};
-    mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, colorBuffer.Extent2D() };
-    mainRenderInfo.layerCount = 1;
-    mainRenderInfo.colorAttachmentCount = 1;
-    mainRenderInfo.pColorAttachments = &colorAttachInfo;
-    mainRenderInfo.pDepthAttachment = &depthAttachInfo;
-
-    MainConstants mainConstants { 0 };
-    cmd->beginRendering(mainRenderInfo);
-        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineMain);
-
-        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(colorBuffer.Extent().width), static_cast<float>(colorBuffer.Extent().height), 0.0f, 1.0f } });
-        cmd->setScissor(0, { { { 0, 0 }, colorBuffer.Extent2D() } });
-
-        cmd->bindVertexBuffers(0, { *m_vertexBuffer }, { 0 });
-        cmd->bindIndexBuffer(*m_indexBuffer, 0, vk::IndexType::eUint16);
-
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineMain.Layout(), 0, *m_mainDescriptorSet.Get(), {});
-
-        mainConstants = { 0 };
-        cmd->pushConstants<MainConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, mainConstants);
-        cmd->drawIndexed(m_matroskin.indexCount, 1, static_cast<std::uint32_t>(m_matroskin.IdxOffset() / 2), static_cast<std::int32_t>(m_matroskin.VtxOffset() / sizeof(CVertex)), 0);
-
-        mainConstants = { 1 };
-        cmd->pushConstants<MainConstants>(m_pipelineMain.Layout(), vk::ShaderStageFlagBits::eFragment, 0, mainConstants);
-        cmd->drawIndexed(m_viking.indexCount, 1, static_cast<std::uint32_t>(m_viking.IdxOffset() / 2), static_cast<std::int32_t>(m_viking.VtxOffset() / sizeof(CVertex)), 0);
-    cmd->endRendering();
+    DrawMainPass(cmd);
 
     cmd.PipelineBarrier({ ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eColorAttachment, Usage::eSampledFragment }});
 
-    // UI
-    vk::RenderingAttachmentInfo uiAttachInfo {};
-    uiAttachInfo.imageView = uiBuffer.View();
-    uiAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    uiAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
-    uiAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    uiAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
-
-    vk::RenderingInfo uiRenderInfo {};
-    uiRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, uiBuffer.Extent2D() };
-    uiRenderInfo.layerCount = 1;
-    uiRenderInfo.colorAttachmentCount = 1;
-    uiRenderInfo.pColorAttachments = &uiAttachInfo;
-
-    UIConstants postProcessConstants { };
-    cmd->beginRendering(uiRenderInfo);
-        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineUI);
-
-        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(uiBuffer.Extent().width), static_cast<float>(uiBuffer.Extent().height), 0.0f, 1.0f } });
-        cmd->setScissor(0, { { { 0, 0 }, uiBuffer.Extent2D() } });
-
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineUI.Layout(), 0, *m_uiDescriptorSet.Get(), {});
-
-        postProcessConstants = {
-            glm::vec2(m_swapchain.Extent().width, m_swapchain.Extent().height),
-            glm::vec2(m_textTexture.Get().Extent().width, m_textTexture.Get().Extent().height)
-        };
-        cmd->pushConstants<UIConstants>(m_pipelineUI.Layout(), vk::ShaderStageFlagBits::eFragment, 0, postProcessConstants);
-        cmd->draw(3, 1, 0, 0);
-    cmd->endRendering();
+    DrawUIPass(cmd);
 
     cmd.PipelineBarrier({
         ImageBarrier { colorBuffer, colorBuffer.FullRange(), Usage::eSampledFragment, Usage::eSampledFragment },
@@ -392,29 +449,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
         ImageBarrier { m_swapchain.Images()[imageIndex], m_swapchain.Images()[imageIndex].FullRange(), Usage::eNone, Usage::eColorAttachment }
     });
 
-    // Fullscreen triangle
-    vk::RenderingAttachmentInfo swapchainAttachInfo {};
-    swapchainAttachInfo.imageView = *m_swapchain.Images()[imageIndex].View();
-    swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    swapchainAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
-    swapchainAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    swapchainAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
-
-    vk::RenderingInfo swapchainRenderInfo {};
-    swapchainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, m_swapchain.Extent() };
-    swapchainRenderInfo.layerCount = 1;
-    swapchainRenderInfo.colorAttachmentCount = 1;
-    swapchainRenderInfo.pColorAttachments = &swapchainAttachInfo;
-
-    cmd->beginRendering(swapchainRenderInfo);
-        cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipelineSwapchain);
-
-        cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(m_swapchain.Extent().width), static_cast<float>(m_swapchain.Extent().height), 0.0f, 1.0f } });
-        cmd->setScissor(0, { { { 0, 0 }, m_swapchain.Extent() } });
-
-        cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0, *m_swapchainDescriptorSet.Get(), {});
-        cmd->draw(3, 1, 0, 0);
-    cmd->endRendering();
+    DrawSwapchainPass(imageIndex, cmd);
 
     cmd.PipelineBarrier({
         ImageBarrier { m_swapchain.Images()[imageIndex], m_swapchain.Images()[imageIndex].FullRange(), Usage::eColorAttachment, Usage::ePresent }
@@ -512,12 +547,12 @@ void CRenderer::ResizeTextures() {
     for (auto i : Utils::Range(m_inFlightContext.FrameCount())) {
         descriptorWriter.Clear();
         descriptorWriter
-            .WriteImage(0, m_mainColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .WriteImage(0, m_mainColor[i].View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_uiDescriptorSet[i]);
 
         descriptorWriter.Clear();
         descriptorWriter
-            .WriteImage(0, m_uiColor[i].View(), *m_mainSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
+            .WriteImage(0, m_uiColor[i].View(), *m_nearestSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_swapchainDescriptorSet[i]);
     }
 }

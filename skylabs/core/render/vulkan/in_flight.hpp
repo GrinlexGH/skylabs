@@ -17,11 +17,6 @@ private:
     std::size_t m_frameCount = 0;
 };
 
-template<typename F, typename T>
-concept ActionOn = requires(F f, T& t) {
-    { f(t) } -> std::same_as<void>;
-};
-
 template <typename T>
 class InFlight {
 public:
