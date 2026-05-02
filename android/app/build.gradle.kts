@@ -1,7 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-import com.android.build.gradle.tasks.ExternalNativeBuildTask
-import java.nio.file.Files
 
 plugins {
     id("com.android.application")
@@ -53,14 +51,14 @@ var toolchainFile = projectRootFile.resolve("cmake/ConanAndroidToolchain.cmake")
 android {
     namespace = "org.libsdl.app"
 
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = "30.0.14904198"
 
     defaultConfig {
         applicationId = "ru.grinlexstudios.skylabs"
 
-        minSdk = 23
-        targetSdk = 36
+        minSdk = 30
+        targetSdk = 37
 
         versionCode = 1
         versionName = "1.0"
@@ -97,6 +95,7 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -106,6 +105,8 @@ android {
 }
 
 androidComponents {
+    tasks.register("prepareKotlinBuildScriptModel")
+
     onVariants { variant ->
         val variantName = variant.name.replaceFirstChar { it.uppercase() }
         val configName = if (variant.buildType == "release") "RelWithDebInfo" else "Debug"
@@ -134,6 +135,9 @@ androidComponents {
         tasks.matching { it.name.startsWith("configureCMake$configName") }.configureEach {
             dependsOn(conanTaskProviders)
         }
+
+        // Android studio hack
+        tasks.findByName("prepareKotlinBuildScriptModel")?.dependsOn(conanTaskProviders)
 
         // Merge assets after build
         tasks.matching { it.name == "merge${variantName}Assets" }.configureEach {
