@@ -1,34 +1,32 @@
 {
-    "vulkan-header": {
+    "header": {
         "scope": "cpp",
-        "prefix": "vulkan-header",
+        "prefix": "header",
         "body": [
             "#pragma once",
-            "#include <skylabs/core/render/vulkan/context/context.hpp>",
+            "#include <${RELATIVE_FILEPATH/([\\\\\\/])|([^\\\\\\/]+)$/${1:+/}/g}$1",
             "",
-            "namespace Vulkan {",
+            "namespace $2 {",
             "$0",
             "}",
-            "",
-        ],
-        "description": "Vulkan header",
+            ""
+        ]
     },
-    "vulkan-source": {
+    "source": {
         "scope": "cpp",
-        "prefix": "vulkan-source",
+        "prefix": "source",
         "body": [
-            "#include <skylabs/core/render/vulkan/$1",
+            "#include <skylabs/${RELATIVE_FILEPATH/([\\\\\\/])|([^\\\\\\/]+)$/${1:+/}/g}$1",
             "",
-            "namespace Vulkan {",
+            "namespace $2 {",
             "$0",
             "}",
-            "",
-        ],
-        "description": "Vulkan source",
+            ""
+        ]
     },
     "no-copyable-movable": {
         "scope": "cpp",
-        "prefix": "no copyable movable",
+        "prefix": "no-copyable-movable",
         "body": [
             "class ${1:CClassName}",
             "{",
@@ -45,7 +43,6 @@
             "\t$0",
             "};",
         ],
-        "description": "No copyable movable",
     },
     "nodiscard-function": {
         "scope": "cpp",
@@ -53,6 +50,5 @@
         "body": [
             "[[nodiscard]] ${2:int} ${1:Name}();$0",
         ],
-        "description": "Nodiscard function",
     },
 }

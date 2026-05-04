@@ -1,7 +1,4 @@
 {
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    // Hover to view descriptions of existing attributes.
-    // Use IntelliSense to learn about possible attributes.
     "version": "0.2.0",
     "configurations": [
         {
@@ -10,15 +7,9 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [
-                {
-                    "name": "PATH",
-                    "value": "${env:PATH}:${command:cmake.getLaunchTargetDirectory}"
-                }
-            ],
             "externalConsole": true,
+            "stopAtEntry": false,
             "MIMode": "gdb",
             "setupCommands": [
                 {
@@ -31,7 +22,7 @@
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
                 }
-            ]
+            ],
         },
         {
             "name": "(lldb) Launch",
@@ -40,10 +31,8 @@
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "env": {
-                "PATH": "${env:PATH}:${command:cmake.getLaunchTargetDirectory}"
-            },
             "console": "integratedTerminal",
+            "stopOnEntry": false,
             "initCommands": [
                 "settings set target.x86-disassembly-flavor intel",
                 "settings set symbols.enable-lldb-index-cache true",
@@ -56,15 +45,9 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [
-                {
-                    "name": "PATH",
-                    "value": "${env:PATH}:${command:cmake.getLaunchTargetDirectory}"
-                }
-            ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "stopAtEntry": false
         }
     ]
 }
