@@ -415,7 +415,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     frameCount++;
 
     if (m_firstUse.Get()) {
-        UpdateTextTexture(cmd, fmt::format("FPS: {:>4} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
+        UpdateTextTexture(cmd,
+            fmt::format("FPS: {:>4} | DT: {:>3.2f} {}x{} 🫪🥀 اربك تكس ",
+                frameCount, deltatime, m_swapchain.Extent().width, m_swapchain.Extent().width
+        ));
 
         cmd.PipelineBarrier({
             ImageBarrier { uiBuffer, uiBuffer.FullRange(), Usage::eNone, Usage::eColorAttachment },
@@ -426,7 +429,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
         m_firstUse.Get() = false;
     } else {
         if (acc >= 1000.0f) {
-            UpdateTextTexture(cmd, fmt::format("FPS: {:>4} | DT: {:>3.2f} 🫪🥀 اربك تكس", frameCount, deltatime));
+            UpdateTextTexture(cmd,
+                fmt::format("FPS: {:>4} | DT: {:>3.2f} {}x{} 🫪🥀 اربك تكس ",
+                    frameCount, deltatime, m_swapchain.Extent().width, m_swapchain.Extent().width
+            ));
             acc -= 1000.0f;
             frameCount = 0;
         }
@@ -473,11 +479,6 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
 }
 
 void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string_view context) {
-    if (result == vk::Result::eSuccess)
-        return;
-
-    Log::Debug("Image {} result: {}", context, vk::to_string(result));
-
     // Wait all frame fences
     std::ignore = m_context.Device()->waitForFences(
         m_fence
@@ -486,7 +487,8 @@ void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string
         vk::True, std::numeric_limits<std::uint64_t>::max()
     );
 
-    if (result != vk::Result::eSuboptimalKHR &&
+    if (result != vk::Result::eSuccess &&
+        result != vk::Result::eSuboptimalKHR &&
         result != vk::Result::eErrorSurfaceLostKHR &&
         result != vk::Result::eErrorOutOfDateKHR
     ) {

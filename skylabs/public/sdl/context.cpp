@@ -40,7 +40,7 @@ CContext::~CContext() {
 }
 
 void CContext::Cleanup() {
-    if (m_flags != 0) {
+    if (m_flags) {
         SDL_QuitSubSystem(m_flags);
         m_flags = 0;
     }

@@ -20,24 +20,31 @@ target_sources(
         sdl/filesystem.cpp
         sdl/sdl.cpp
         sdl/window.cpp
+        sdl/ttf/context.cpp
+        sdl/mixer/context.cpp
+        sdl/mixer/mixer.cpp
+        sdl/mixer/track.cpp
         application.cpp
         filesystem.cpp
         logging.cpp
         os.cpp
     PUBLIC
-    FILE_SET HEADERS
-        FILES
-            sdl/context.hpp
-            sdl/filesystem.hpp
-            sdl/sdl.hpp
-            sdl/window.hpp
-            application.hpp
-            dll_export.hpp
-            filesystem.hpp
-            logging.hpp
-            os.hpp
-            utils.hpp
-            window.hpp
+    FILE_SET HEADERS FILES
+        sdl/context.hpp
+        sdl/filesystem.hpp
+        sdl/sdl.hpp
+        sdl/window.hpp
+        sdl/ttf/context.hpp
+        sdl/mixer/context.hpp
+        sdl/mixer/mixer.hpp
+        sdl/mixer/track.hpp
+        application.hpp
+        dll_export.hpp
+        filesystem.hpp
+        logging.hpp
+        os.hpp
+        utils.hpp
+        window.hpp
     FILE_SET generated_headers
         TYPE HEADERS
         BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
@@ -50,6 +57,8 @@ target_precompile_headers(${CURRENT_TARGET_NAME} PUBLIC pch.hpp)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     SDL3::SDL3
+    SDL3_mixer::SDL3_mixer
+    SDL3_ttf::SDL3_ttf
     Vulkan::Headers
     Boost::headers
     Boost::nowide

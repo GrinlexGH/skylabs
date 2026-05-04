@@ -1,11 +1,13 @@
 #pragma once
 #include <skylabs/public/application.hpp>
 #include <skylabs/public/sdl/context.hpp>
+#include <skylabs/public/sdl/ttf/context.hpp>
+#include <skylabs/public/sdl/mixer/context.hpp>
+#include <skylabs/public/sdl/mixer/mixer.hpp>
+#include <skylabs/public/sdl/mixer/track.hpp>
 #include <skylabs/public/sdl/window.hpp>
 #include <skylabs/core/render/renderer.hpp>
 #include <skylabs/core/camera.hpp>
-
-#include <SDL3_mixer/SDL_mixer.h>
 
 struct Joystick
 {
@@ -54,11 +56,14 @@ private:
     UIButton m_chatButton = { 0.8f, 0.05f, 0.15f, 0.1f };
     CCamera m_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
 
-    MIX_Mixer* m_mixer = nullptr;
-    MIX_Track* m_track = nullptr;
-    MIX_Audio* m_music = nullptr;
-
     SDL::CContext m_sdlContext { nullptr };
-    std::unique_ptr<IRenderer> m_renderer { nullptr };
+    SDL::TTF::CContext m_sdlttfContext { nullptr };
+    SDL::Mixer::CContext m_sdlmixerContext { nullptr };
+
     SDL::CWindow m_window { nullptr };
+    std::unique_ptr<IRenderer> m_renderer { nullptr };
+
+    SDL::Mixer::CMixer m_mixer { nullptr };
+    SDL::Mixer::CTrack m_track { nullptr };
+    MIX_Audio* m_music = nullptr;
 };
