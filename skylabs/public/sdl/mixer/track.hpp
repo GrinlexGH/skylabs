@@ -1,6 +1,5 @@
 #pragma once
-#include <skylabs/public/pch.hpp>
-#include <skylabs/public/sdl/mixer/mixer.hpp>
+#include <skylabs/public/sdl/mixer/audio.hpp>
 
 namespace SDL::Mixer {
 class CTrack
@@ -15,6 +14,8 @@ public:
     ~CTrack();
 
     [[nodiscard]] MIX_Track* operator*() { return m_track; }
+
+    bool SetAudio(CAudio& audio);
 
 private:
     void Cleanup();

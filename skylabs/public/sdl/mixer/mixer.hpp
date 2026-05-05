@@ -1,8 +1,6 @@
 #pragma once
 #include <skylabs/public/pch.hpp>
 
-#include <SDL3_mixer/SDL_mixer.h>
-
 namespace SDL::Mixer {
 class CMixer
 {

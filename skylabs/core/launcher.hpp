@@ -5,6 +5,7 @@
 #include <skylabs/public/sdl/mixer/context.hpp>
 #include <skylabs/public/sdl/mixer/mixer.hpp>
 #include <skylabs/public/sdl/mixer/track.hpp>
+#include <skylabs/public/sdl/mixer/audio.hpp>
 #include <skylabs/public/sdl/window.hpp>
 #include <skylabs/core/render/renderer.hpp>
 #include <skylabs/core/camera.hpp>
@@ -65,5 +66,5 @@ private:
 
     SDL::Mixer::CMixer m_mixer { nullptr };
     SDL::Mixer::CTrack m_track { nullptr };
-    MIX_Audio* m_music = nullptr;
+    SDL::Mixer::CAudio m_music { nullptr };
 };

@@ -16,7 +16,7 @@
         "scope": "cpp",
         "prefix": "source",
         "body": [
-            "#include <skylabs/${RELATIVE_FILEPATH/([\\\\\\/])|([^\\\\\\/]+)$/${1:+/}/g}$1",
+            "#include <${RELATIVE_FILEPATH/([\\\\\\/])|([^\\\\\\/]+)$/${1:+/}/g}$1",
             "",
             "namespace $2 {",
             "$0",

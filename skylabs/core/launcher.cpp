@@ -37,15 +37,9 @@ void CLauncher::Create() {
 
     m_mixer = SDL::Mixer::CMixer {};
     m_track = SDL::Mixer::CTrack { m_mixer };
+    m_music = SDL::Mixer::CAudio { m_mixer, "assets://Interlude.mp3" };
 
-    std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO("assets://Interlude.mp3");
-    SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
-    m_music = MIX_LoadAudio_IO(*m_mixer, sdlStream, false, false);
-    if (!m_music) {
-        throw std::runtime_error(fmt::format("Cannot load music: {}", SDL_GetError()));
-    }
-
-    MIX_SetTrackAudio(*m_track, m_music);
+    m_track.SetAudio(m_music);
 
     m_renderer = Vulkan::CRenderer::TryToCreate(&m_window);
     if (!m_renderer) { throw std::runtime_error("Cannot initialize vulkan!\n"); }
@@ -96,7 +90,6 @@ void CLauncher::Main() {
 void CLauncher::Destroy() {
     MIX_StopTrack(*m_track, MIX_TrackMSToFrames(*m_track, 100));
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    MIX_DestroyAudio(m_music);
 }
 
 void CLauncher::Update(float deltaTime) {

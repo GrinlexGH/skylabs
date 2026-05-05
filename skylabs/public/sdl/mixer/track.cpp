@@ -29,4 +29,8 @@ void CTrack::Cleanup() {
         m_track = nullptr;
     }
 }
+
+bool CTrack::SetAudio(CAudio& audio) {
+    return MIX_SetTrackAudio(m_track, *audio);
+}
 }

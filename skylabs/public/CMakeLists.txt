@@ -24,6 +24,7 @@ target_sources(
         sdl/mixer/context.cpp
         sdl/mixer/mixer.cpp
         sdl/mixer/track.cpp
+        sdl/mixer/audio.cpp
         application.cpp
         filesystem.cpp
         logging.cpp
@@ -38,6 +39,7 @@ target_sources(
         sdl/mixer/context.hpp
         sdl/mixer/mixer.hpp
         sdl/mixer/track.hpp
+        sdl/mixer/audio.hpp
         application.hpp
         dll_export.hpp
         filesystem.hpp
