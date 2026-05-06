@@ -43,7 +43,7 @@ vk::raii::DescriptorPool CDescriptorAllocator::GrabPool() {
     return CreatePool(1024);
 }
 
-std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> CDescriptorAllocator::Allocate(const vk::DescriptorSetAllocateInfo& allocInfo) {
+std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> CDescriptorAllocator::Allocate(const vk::DescriptorSetAllocateInfo& allocInfo) const {
     std::vector<vk::DescriptorSet> descriptorSets(allocInfo.descriptorSetCount);
     vk::Result result = static_cast<vk::Result>(m_device->getDispatcher()->vkAllocateDescriptorSets(
         static_cast<VkDevice>(**m_device),

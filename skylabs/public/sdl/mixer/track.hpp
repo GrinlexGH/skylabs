@@ -15,7 +15,7 @@ public:
 
     [[nodiscard]] MIX_Track* operator*() { return m_track; }
 
-    bool SetAudio(CAudio& audio);
+    bool SetAudio(CAudio& audio) const;
 
 private:
     void Cleanup();

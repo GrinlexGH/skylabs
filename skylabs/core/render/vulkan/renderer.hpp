@@ -8,7 +8,6 @@
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
-#include <skylabs/core/render/vulkan/pipeline/compute_pipeline.hpp>
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>

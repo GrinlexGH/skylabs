@@ -53,13 +53,13 @@ CInstance::CInstance(const bool setupDebugUtils) {
     const vk::raii::Context context;
 
     const std::vector<const char*> enabledExtensions = SetupExtensions(context, setupDebugUtils);
-    const std::uint32_t appVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
-    const auto debugSeverity =
+    constexpr std::uint32_t appVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
+    constexpr auto debugSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    const auto debugTypes =
+    constexpr auto debugTypes =
         vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
         vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
         vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;

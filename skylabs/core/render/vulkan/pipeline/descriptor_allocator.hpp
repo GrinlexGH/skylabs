@@ -1,7 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <vector>
-#include <utility>
 
 namespace Vulkan {
 class CDescriptorAllocator {
@@ -27,6 +26,6 @@ private:
 
     vk::raii::DescriptorPool GrabPool();
     vk::raii::DescriptorPool CreatePool(std::uint32_t count);
-    std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> Allocate(const vk::DescriptorSetAllocateInfo& allocInfo);
+    std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> Allocate(const vk::DescriptorSetAllocateInfo& allocInfo) const;
 };
 }

@@ -1,7 +1,5 @@
 #include <skylabs/core/render/vulkan/pipeline/compute_pipeline.hpp>
 
-#include <ranges>
-
 namespace Vulkan {
 CComputePipeline::CComputePipeline(const CContext& context, ComputePipelineCreateInfo options) {
     vk::PipelineShaderStageCreateInfo shader {};

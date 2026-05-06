@@ -1,7 +1,5 @@
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 
-#include <boost/container_hash/hash.hpp>
-
 namespace Vulkan {
 bool PipelineLayoutInfo::operator==(const PipelineLayoutInfo& rhs) const {
     return m_descriptorSetLayouts == rhs.m_descriptorSetLayouts && m_pushConstants == rhs.m_pushConstants;

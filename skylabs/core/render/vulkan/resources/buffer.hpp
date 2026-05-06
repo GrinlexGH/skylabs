@@ -2,7 +2,7 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
 namespace Vulkan {
-enum class MemoryLocation {
+enum class MemoryLocation : std::uint8_t {
     eDeviceOnly = 0,
     eHostVisible,
 };

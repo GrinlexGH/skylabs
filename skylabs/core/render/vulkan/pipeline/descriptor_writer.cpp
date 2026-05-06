@@ -9,8 +9,8 @@ CDescriptorWriter& CDescriptorWriter::WriteBuffer(
     std::size_t size,
     std::size_t offset,
     vk::DescriptorType type,
-    std::uint32_t arrayElement)
-{
+    std::uint32_t arrayElement
+) {
     vk::DescriptorBufferInfo& info = m_bufferInfos.emplace_back(buffer, offset, size);
 
     vk::WriteDescriptorSet write {};
@@ -30,8 +30,8 @@ CDescriptorWriter& CDescriptorWriter::WriteImage(
     vk::Sampler sampler,
     vk::ImageLayout layout,
     vk::DescriptorType type,
-    std::uint32_t arrayElement)
-{
+    std::uint32_t arrayElement
+) {
     vk::DescriptorImageInfo& info = m_imageInfos.emplace_back(sampler, view, layout);
 
     vk::WriteDescriptorSet write{};

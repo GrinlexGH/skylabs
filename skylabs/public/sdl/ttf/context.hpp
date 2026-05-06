@@ -15,6 +15,6 @@ public:
 private:
     void Cleanup();
 
-    bool m_initialized = 0;
+    bool m_initialized = false;
 };
 }

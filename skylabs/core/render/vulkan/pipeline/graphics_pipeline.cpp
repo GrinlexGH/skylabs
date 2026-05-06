@@ -43,7 +43,7 @@ namespace Vulkan {
 CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCreateInfo options) {
     const std::vector vertexAttributeDescriptions = GenerateAttributeDescriptions(options.m_vertexBindings);
     const std::vector vertexBindingDescriptions =
-        std::views::transform(options.m_vertexBindings, [](Vulkan::VertexBufferBinding& binding) { return binding.m_description; })
+        std::views::transform(options.m_vertexBindings, [](const VertexBufferBinding& binding) { return binding.m_description; })
         | std::ranges::to<std::vector>();
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
@@ -80,7 +80,7 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     multisampling.alphaToCoverageEnable = vk::False;
     multisampling.alphaToOneEnable = vk::False;
 
-    // TODO: bleding settings
+    // TODO: blending settings
     vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
     colorBlendAttachment.blendEnable = vk::True;
     colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;

@@ -1,8 +1,4 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/public/logging.hpp>
-
-#include <ranges>
-#include <fmt/ranges.h>
 
 namespace Vulkan {
 CContext::CContext(const IWindow* const window) :

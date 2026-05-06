@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/public/window.hpp>
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 #include <skylabs/core/render/vulkan/context/queue.hpp>

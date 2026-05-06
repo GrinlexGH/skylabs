@@ -4,8 +4,6 @@
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
 
-#include <optional>
-
 namespace Vulkan {
 //====================
 // Context stores vulkan globals needed to create vulkan objects

@@ -1,7 +1,5 @@
 #include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
 
-#include <boost/container_hash/hash.hpp>
-
 namespace Vulkan {
 std::size_t DescriptorLayoutHash::operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const {
     std::size_t seed = 0;

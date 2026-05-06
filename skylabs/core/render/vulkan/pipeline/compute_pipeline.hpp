@@ -1,9 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
-#include <skylabs/core/render/vertex.hpp>
-
-#include <vector>
 
 namespace Vulkan {
 struct ComputePipelineCreateInfo
@@ -26,7 +23,7 @@ public:
     [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] vk::PipelineLayout Layout() { return m_layout; }
+    [[nodiscard]] vk::PipelineLayout Layout() const { return m_layout; }
 
 private:
     vk::raii::Pipeline m_handle { nullptr };

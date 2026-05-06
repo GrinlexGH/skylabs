@@ -45,9 +45,8 @@ struct UIConstants {
 
 namespace {
 glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int height, const float fov = 90, const float nearZ = 0.01f) {
-    glm::mat4 proj;
+    glm::mat4 proj = glm::mat4(0.0f);
     float g = 1.0f / std::tan(0.5f * glm::radians(fov));
-    proj = glm::mat4(0.0f);
     proj[0][0] = g / (static_cast<float>(width) / static_cast<float>(height));
     proj[1][1] = -g;
     proj[2][3] = -1.0f;

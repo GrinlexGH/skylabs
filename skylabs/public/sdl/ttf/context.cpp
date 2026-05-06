@@ -1,9 +1,5 @@
 #include <skylabs/public/sdl/ttf/context.hpp>
 
-#include <SDL3_ttf/SDL_ttf.h>
-
-#include "project_info.hpp"
-
 namespace SDL::TTF {
 CContext::CContext() {
     if (!TTF_Init()) {

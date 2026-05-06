@@ -86,7 +86,7 @@ function(skylabs_configure_target target_name)
         $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DEBUG>
 
         $<$<PLATFORM_ID:Windows>:PLATFORM_WINDOWS VK_USE_PLATFORM_WIN32_KHR UNICODE _UNICODE>
-        $<$<PLATFORM_ID:Linux>:PLATFORM_LINUX>
+        $<$<PLATFORM_ID:Linux>:PLATFORM_LINUX _XOPEN_SOURCE=700>
         $<$<PLATFORM_ID:Darwin>:PLATFORM_APPLE>
         $<$<PLATFORM_ID:Android>:PLATFORM_ANDROID>
 

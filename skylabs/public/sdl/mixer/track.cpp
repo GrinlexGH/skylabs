@@ -30,7 +30,7 @@ void CTrack::Cleanup() {
     }
 }
 
-bool CTrack::SetAudio(CAudio& audio) {
+bool CTrack::SetAudio(CAudio& audio) const {
     return MIX_SetTrackAudio(m_track, *audio);
 }
 }

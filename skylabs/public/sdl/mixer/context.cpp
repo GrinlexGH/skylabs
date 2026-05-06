@@ -2,8 +2,6 @@
 
 #include <SDL3_mixer/SDL_mixer.h>
 
-#include "project_info.hpp"
-
 namespace SDL::Mixer {
 CContext::CContext() {
     if (!MIX_Init()) {

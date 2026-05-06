@@ -36,7 +36,7 @@ public:
     [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] vk::PipelineLayout Layout() { return m_layout; }
+    [[nodiscard]] vk::PipelineLayout Layout() const { return m_layout; }
 
 private:
     vk::raii::Pipeline m_handle { nullptr };

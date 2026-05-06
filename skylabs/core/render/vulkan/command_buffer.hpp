@@ -5,7 +5,6 @@
 #include <skylabs/core/render/vulkan/sync_state.hpp>
 
 #include <variant>
-#include <optional>
 
 namespace Vulkan {
 enum class BarrierType : std::uint8_t

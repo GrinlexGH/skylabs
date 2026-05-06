@@ -16,7 +16,7 @@ class CImage
 {
 public:
     explicit CImage(std::nullptr_t) {}
-    explicit CImage(const CContext& context, ImageCreateInfo options = {});
+    explicit CImage(const CContext& context, const ImageCreateInfo& options = {});
     explicit CImage(const CContext& context,
         vk::Image imported,
         vk::Extent3D extent, vk::Format format,

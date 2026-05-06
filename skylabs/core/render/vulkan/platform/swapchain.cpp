@@ -1,5 +1,4 @@
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
-#include <skylabs/public/logging.hpp>
 
 #include <fmt/ranges.h>
 
@@ -38,7 +37,7 @@ void CSwapchain::CreateSwapchain(
     const vk::SurfaceCapabilitiesKHR caps = m_context->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
     m_surfaceTransform = caps.currentTransform;
 
-    const auto [w, h] = m_context->Window()->DrawableSize();
+    const auto [width, height] = m_context->Window()->DrawableSize();
 
     vkb::SwapchainBuilder builder { device.VkbDevice(), surface };
     auto swapchainResult = builder
@@ -48,7 +47,7 @@ void CSwapchain::CreateSwapchain(
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eFifo))
         .use_default_image_usage_flags()
-        .set_desired_extent(w, h)
+        .set_desired_extent(width, height)
         .set_desired_min_image_count(imageCount)
         .set_pre_transform_flags(static_cast<VkSurfaceTransformFlagBitsKHR>(m_surfaceTransform))
         .build();

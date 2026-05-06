@@ -37,6 +37,7 @@ Checks: >
   -cppcoreguidelines-init-variables,
   -cppcoreguidelines-narrowing-conversions,
   -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
 
 WarningsAsErrors: ''
 HeaderFilterRegex: 'skylabs/**/*.*'

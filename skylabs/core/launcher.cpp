@@ -2,7 +2,6 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
 #include <skylabs/public/sdl/sdl.hpp>
-#include <skylabs/public/sdl/filesystem.hpp>
 
 #include <span>
 #include <thread>
@@ -16,10 +15,10 @@ bool SDLCALL HandleAppEvents(void*, SDL_Event* event) {
         case SDL_EVENT_LOW_MEMORY:
         // Restore
         case SDL_EVENT_DID_ENTER_FOREGROUND:
-            return 0;
+            return false;
     }
 
-    return 1;
+    return true;
 }
 }
 

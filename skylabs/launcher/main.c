@@ -141,8 +141,6 @@ int main() {
 }
 
 #elifdef PLATFORM_LINUX
-#define _XOPEN_SOURCE 700
-
 #include <dlfcn.h>
 #include <stdio.h>
 #include <string.h>
