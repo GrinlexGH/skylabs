@@ -18,7 +18,7 @@ std::size_t PipelineLayoutHash::operator()(const PipelineLayoutInfo& info) const
     return seed;
 }
 
-CPipelineLayoutCache::CPipelineLayoutCache(const CContext& context) : m_device(&*context.Device()) {}
+CPipelineLayoutCache::CPipelineLayoutCache(const CDeviceContext& context) : m_device(&*context.Device()) {}
 
 const vk::raii::PipelineLayout& CPipelineLayoutCache::GetLayout(PipelineLayoutInfo info) {
     std::ranges::sort(info.m_pushConstants, [](const auto& a, const auto& b) {

@@ -2,7 +2,7 @@
 #include <skylabs/public/filesystem.hpp>
 
 namespace Vulkan {
-CShader::CShader(const CContext& context, const vk::ShaderStageFlagBits type, const std::string_view name) : m_stage(type) {
+CShader::CShader(const CDeviceContext& context, const vk::ShaderStageFlagBits type, const std::string_view name) : m_stage(type) {
     const std::vector<std::uint32_t> code = Filesystem::LoadAsVector32(name);
 
     vk::ShaderModuleCreateInfo createInfo {};

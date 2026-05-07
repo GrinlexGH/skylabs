@@ -2,7 +2,7 @@
 
 namespace Vulkan {
 CSampler::CSampler(
-    const CContext& context,
+    const CDeviceContext& context,
     SamplerCreateInfo options
 ) {
     vk::SamplerCreateInfo createInfo {};

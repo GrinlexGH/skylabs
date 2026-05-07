@@ -2,10 +2,10 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
 namespace Vulkan {
-class InFlightContext {
+class CInFlightContext {
 public:
-    explicit InFlightContext(std::nullptr_t) {}
-    explicit InFlightContext(std::size_t count) : m_frameCount(count) {}
+    explicit CInFlightContext(std::nullptr_t) {}
+    explicit CInFlightContext(std::size_t count) : m_frameCount(count) {}
 
     [[nodiscard]] unsigned int InFlightIndex() const { return m_inFlightIndex; }
     [[nodiscard]] std::size_t FrameCount() const { return m_frameCount; }
@@ -22,12 +22,18 @@ class InFlight {
 public:
     explicit InFlight(std::nullptr_t) : m_context(nullptr) {}
 
-    InFlight(const InFlightContext& context, std::vector<T>&& data) : m_context(&context), m_data(std::move(data)) {
+    InFlight(InFlight&) = delete;
+    InFlight(InFlight&&) noexcept = default;
+    InFlight& operator=(InFlight&) = delete;
+    InFlight& operator=(InFlight&&) noexcept = default;
+    ~InFlight() = default;
+
+    InFlight(const CInFlightContext& context, std::vector<T>&& data) : m_context(&context), m_data(std::move(data)) {
         assert(m_data.size() == context.FrameCount() && "Container size must match frame count");
     }
 
     template <typename... Args>
-    InFlight(const InFlightContext& context, Args&&... args) : m_context(&context) {
+    InFlight(const CInFlightContext& context, Args&&... args) : m_context(&context) {
         m_data.reserve(context.FrameCount());
         for (std::size_t i = 0; i < context.FrameCount(); ++i) {
             m_data.emplace_back(std::forward<Args>(args)...);
@@ -35,7 +41,7 @@ public:
     }
 
     template <typename... Args>
-    void Emplace(const InFlightContext& context, Args&&... args) {
+    void Emplace(const CInFlightContext& context, Args&&... args) {
         m_context = &context;
         m_data.clear();
         m_data.reserve(context.FrameCount());
@@ -58,7 +64,7 @@ public:
     constexpr std::size_t Size() const { return m_data.size(); }
 
 private:
-    const InFlightContext* m_context;
+    const CInFlightContext* m_context;
     std::vector<T> m_data;
 };
 }

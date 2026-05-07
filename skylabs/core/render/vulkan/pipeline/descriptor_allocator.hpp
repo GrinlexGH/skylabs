@@ -6,7 +6,7 @@ namespace Vulkan {
 class CDescriptorAllocator {
 public:
     explicit CDescriptorAllocator(std::nullptr_t) {}
-    explicit CDescriptorAllocator(const CContext& context);
+    explicit CDescriptorAllocator(const CDeviceContext& context);
     CDescriptorAllocator(const CDescriptorAllocator&) = delete;
     CDescriptorAllocator(CDescriptorAllocator&&) noexcept = default;
     CDescriptorAllocator& operator=(const CDescriptorAllocator&) = delete;
@@ -18,7 +18,7 @@ public:
     std::vector<vk::raii::DescriptorSet> Allocate(const vk::ArrayProxy<const vk::DescriptorSetLayout>& layouts);
 
 private:
-    const vk::raii::Device* m_device;
+    const vk::raii::Device* m_device = nullptr;
     vk::raii::DescriptorPool m_currentPool { nullptr };
 
     std::vector<vk::raii::DescriptorPool> m_usedPools;

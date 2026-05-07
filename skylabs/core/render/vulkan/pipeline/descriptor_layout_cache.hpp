@@ -10,7 +10,7 @@ struct DescriptorLayoutHash {
 class CDescriptorLayoutCache {
 public:
     explicit CDescriptorLayoutCache(std::nullptr_t) {}
-    explicit CDescriptorLayoutCache(const CContext& context);
+    explicit CDescriptorLayoutCache(const CDeviceContext& context);
 
     [[nodiscard]] const vk::raii::DescriptorSetLayout& GetLayout(std::vector<vk::DescriptorSetLayoutBinding> bindings);
     void Clear() { m_cache.clear(); }

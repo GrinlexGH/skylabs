@@ -4,7 +4,7 @@
 
 namespace Vulkan {
 CSwapchain::CSwapchain(
-    const CContext& context,
+    const CDeviceContext& context,
     const vk::SurfaceKHR surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode

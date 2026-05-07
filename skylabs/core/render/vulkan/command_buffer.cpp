@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/command_buffer.hpp>
 
 namespace Vulkan {
-CCommandBuffer::CCommandBuffer(const CContext& context, vk::raii::CommandBuffer&& commandBuffer) :
+CCommandBuffer::CCommandBuffer(const CDeviceContext& context, vk::raii::CommandBuffer&& commandBuffer) :
     m_device(&*context.Device()), m_handle(std::move(commandBuffer))
 {}
 

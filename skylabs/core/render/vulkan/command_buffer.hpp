@@ -45,7 +45,7 @@ class CCommandBuffer
 {
 public:
     explicit CCommandBuffer(std::nullptr_t) {}
-    explicit CCommandBuffer(const CContext& context, vk::raii::CommandBuffer&& commandBuffer);
+    explicit CCommandBuffer(const CDeviceContext& context, vk::raii::CommandBuffer&& commandBuffer);
 
     [[nodiscard]] const vk::raii::CommandBuffer& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::CommandBuffer* operator->() const noexcept { return &m_handle; }

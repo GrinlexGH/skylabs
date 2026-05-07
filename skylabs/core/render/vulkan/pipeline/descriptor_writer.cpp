@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
 
 namespace Vulkan {
-CDescriptorWriter::CDescriptorWriter(const CContext& context) : m_device(&*context.Device()) {}
+CDescriptorWriter::CDescriptorWriter(const CDeviceContext& context) : m_device(&*context.Device()) {}
 
 CDescriptorWriter& CDescriptorWriter::WriteBuffer(
     std::uint32_t binding,

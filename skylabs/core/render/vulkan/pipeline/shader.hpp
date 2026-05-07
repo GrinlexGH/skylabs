@@ -6,7 +6,7 @@ class CShader
 {
 public:
     explicit CShader(std::nullptr_t) {}
-    explicit CShader(const CContext& context, vk::ShaderStageFlagBits stage, std::string_view name);
+    explicit CShader(const CDeviceContext& context, vk::ShaderStageFlagBits stage, std::string_view name);
     CShader(const CShader&) = delete;
     CShader(CShader&&) noexcept = default;
     CShader& operator=(const CShader&) = delete;

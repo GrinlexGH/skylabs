@@ -57,6 +57,15 @@ target_sources(
         render/vulkan/resources/sampler.hpp
         render/vulkan/sync_state.cpp
         render/vulkan/sync_state.hpp
+        render/vulkan/main_pass.cpp
+        render/vulkan/main_pass.hpp
+        render/vulkan/renderer_context.cpp
+        render/vulkan/renderer_context.hpp
+        render/vulkan/submesh.hpp
+        render/vulkan/ui_pass.cpp
+        render/vulkan/ui_pass.hpp
+        render/vulkan/post_process_pass.cpp
+        render/vulkan/post_process_pass.hpp
 )
 
 target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)

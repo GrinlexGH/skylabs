@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
 namespace Vulkan {
-CContext::CContext(const IWindow* const window) :
+CDeviceContext::CDeviceContext(const IWindow* const window) :
     m_window(window),
     m_instance(),
     m_surface(m_instance, window),
@@ -10,7 +10,7 @@ CContext::CContext(const IWindow* const window) :
     m_allocator(m_instance, *m_physicalDevice, m_device)
 {}
 
-void CContext::RecreateSurface() {
+void CDeviceContext::RecreateSurface() {
     m_surface = CSurface { m_instance, m_window };
 }
 }
