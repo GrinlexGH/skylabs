@@ -25,7 +25,7 @@ public:
     CDescriptorAllocator& DescriptorAllocator() { return m_descriptorAllocator; }
 
 private:
-    static constexpr auto FRAMES_IN_FLIGHT_COUNT = 3;
+    static constexpr auto FRAMES_IN_FLIGHT_COUNT = 1;
 
     std::unique_ptr<CDeviceContext> m_context { nullptr }; // Do not lose the pointer on move
     CInFlightContext m_inFlightContext { nullptr };

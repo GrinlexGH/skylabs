@@ -16,5 +16,6 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <filesystem>
+#include <chrono>
 
 #include <skylabs/public/dll_export.hpp>

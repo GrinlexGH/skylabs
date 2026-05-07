@@ -73,12 +73,8 @@ CRenderer::CRenderer(const IWindow* const window) {
     }
 
     m_mainPass = CMainPass { m_rendererContext };
-    m_uiPass = CUIPass { m_rendererContext, m_mainPass.MainAttachment() };
-    m_postProcessPass = CPostProcessPass { m_rendererContext, m_uiPass.MainAttachment() };
+    m_postProcessPass = CPostProcessPass { m_rendererContext, m_mainPass.MainAttachment() };
 
-    m_textTexture = InFlight<CImage> { inFlightContext, nullptr };
-
-    LoadFonts();
     LoadTextures();
     LoadModels();
 
@@ -86,10 +82,6 @@ CRenderer::CRenderer(const IWindow* const window) {
 }
 
 CRenderer::~CRenderer() {
-    TTF_CloseFont(m_fontEmoji);
-    TTF_CloseFont(m_fontUnifont);
-    TTF_CloseFont(m_font);
-
     if (**m_rendererContext.DeviceContext().Device()) {
         try { m_rendererContext.DeviceContext().Device()->waitIdle();}
         catch (const vk::SystemError& e) {
@@ -111,12 +103,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     const auto& device = m_rendererContext.DeviceContext().Device();
     const auto& swapchain = m_rendererContext.Swapchain();
     const auto& cmd = m_graphicsCmd.Get();
-    auto [width, height] = m_rendererContext.Swapchain().Extent();
 
     const auto& mainColor = m_mainPass.MainAttachment().Get();
     const auto& mainColorMSAA = m_mainPass.MainMSAAAttachment().Get();
     const auto& mainDepthMSAA = m_mainPass.DepthMSAAAttachment().Get();
-    const auto& uiColor = m_uiPass.MainAttachment().Get();
 
     const auto& swapchainImages = m_rendererContext.Swapchain().Images();
 
@@ -139,7 +129,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
         return;
     }
 
-    std::uint32_t imageIndex = *acquireResult;
+    const std::uint32_t imageIndex = *acquireResult;
 
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
     device->resetFences({ m_fence.Get() });
@@ -147,18 +137,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     cmd->reset();
     cmd->begin({});
 
-    static float acc = 0;
-    static int frameCount = 0;
-
-    acc += deltatime;
-    frameCount++;
-
     if (m_firstUse.Get()) {
-        UpdateTextTexture(cmd,
-            fmt::format("FPS: {:>4} | DT: {:>3.2f} {}x{} 🫪🥀 اربك تكس ",
-                frameCount, deltatime, width, width
-        ));
-
         cmd.PipelineBarrier({
             ImageBarrier { mainColor, mainColor.FullRange(),
                 Usage::eNone, Usage::eColorAttachment },
@@ -166,23 +145,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
                 Usage::eNone, Usage::eColorAttachment },
             ImageBarrier { mainDepthMSAA, mainDepthMSAA.FullRange(),
                 Usage::eNone, Usage::eDepthWrite },
-            ImageBarrier { uiColor, uiColor.FullRange(),
-                Usage::eNone, Usage::eColorAttachment },
         });
         m_firstUse.Get() = false;
     } else {
-        if (acc >= 1000.0f) {
-            UpdateTextTexture(cmd,
-                fmt::format("FPS: {:>4} | DT: {:>3.2f} {}x{} 🫪🥀 اربك تكس ",
-                    frameCount, deltatime, width, width
-            ));
-            acc -= 1000.0f;
-            frameCount = 0;
-        }
-
         cmd.PipelineBarrier({
-            ImageBarrier { uiColor, uiColor.FullRange(),
-                Usage::eSampledFragment, Usage::eColorAttachment },
             ImageBarrier { mainColor, mainColor.FullRange(),
                 Usage::eSampledFragment, Usage::eColorAttachment },
         });
@@ -192,15 +158,6 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
 
     cmd.PipelineBarrier({
         ImageBarrier { mainColor, mainColor.FullRange(),
-            Usage::eColorAttachment, Usage::eSampledFragment }
-    });
-
-    m_uiPass.Draw(cmd, m_textTexture.Get());
-
-    cmd.PipelineBarrier({
-        ImageBarrier { mainColor, mainColor.FullRange(),
-            Usage::eSampledFragment, Usage::eSampledFragment },
-        ImageBarrier { uiColor, uiColor.FullRange(),
             Usage::eColorAttachment, Usage::eSampledFragment },
         ImageBarrier { swapchainImages[imageIndex], swapchainImages[imageIndex].FullRange(),
             Usage::eNone, Usage::eColorAttachment }
@@ -281,8 +238,7 @@ void CRenderer::ResizeTextures() {
     for (auto&& i : m_firstUse) { i = true; }
 
     m_mainPass.Resize();
-    m_uiPass.Resize(m_mainPass.MainAttachment());
-    m_postProcessPass.Resize(m_uiPass.MainAttachment());
+    m_postProcessPass.Resize(m_mainPass.MainAttachment());
 }
 
 void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
@@ -307,75 +263,6 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
     };
 
     std::memcpy(m_mainPass.MVP().Get().Data(), &ubo, sizeof(ubo));
-}
-
-void CRenderer::UpdateTextTexture(const CCommandBuffer& cmd, const std::string& text) {
-    SDL_Surface* textSurf = TTF_RenderText_Blended_Wrapped(m_font, text.c_str(), 0, { 255, 255, 255, 255 }, 10240);
-    if (!textSurf) return;
-
-    auto& context = m_rendererContext.DeviceContext();
-
-    // Resize
-    if (m_textTexture.Get().Extent().width != static_cast<std::uint32_t>(textSurf->w)
-        || m_textTexture.Get().Extent().height != static_cast<std::uint32_t>(textSurf->h)
-    ) {
-        m_textTexture.Get() = CImage { context, ImageCreateInfo {
-            { static_cast<uint32_t>(textSurf->w), static_cast<uint32_t>(textSurf->h), 1 },
-            vk::Format::eR8G8B8A8Srgb, 1, 1,
-            vk::SampleCountFlagBits::e1,
-            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled
-        }};
-
-        m_uiPass.WriteDescriptors(m_textTexture.Get());
-    }
-
-    const vk::DeviceSize surfSize = static_cast<vk::DeviceSize>(textSurf->w) * textSurf->h * 4;
-    if (m_stagingBuffer.Size() < surfSize) {
-        m_stagingBuffer = CBuffer {
-            context, surfSize,
-            vk::BufferUsageFlagBits::eTransferSrc,
-            MemoryLocation::eHostVisible
-        };
-    }
-
-    // Considering the alignment
-    std::uint8_t* src = static_cast<std::uint8_t*>(textSurf->pixels);
-    std::uint8_t* dst = static_cast<std::uint8_t*>(m_stagingBuffer.Data());
-    for (int y = 0; y < textSurf->h; ++y) {
-        memcpy(dst + (y * textSurf->w * 4), src + (y * textSurf->pitch), textSurf->w * 4);
-    }
-
-    cmd.PipelineBarrier({
-        ImageBarrier { m_textTexture.Get(), m_textTexture.Get().FullRange(),
-            Usage::eNone, Usage::eTransferWrite }
-    });
-    cmd.Copy(m_textTexture.Get(), m_stagingBuffer);
-    cmd.PipelineBarrier({
-        ImageBarrier { m_textTexture.Get(), m_textTexture.Get().FullRange(),
-            Usage::eTransferWrite, Usage::eSampledFragment }
-    });
-
-    SDL_DestroySurface(textSurf);
-}
-
-void CRenderer::LoadFonts() {
-    auto LoadFont = [&](const std::string& path) {
-        IFileStream* stream = Filesystem::LoadAsIO(path).release(); // Now font owns this stream
-        SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream);
-
-        TTF_Font* font = TTF_OpenFontIO(sdlStream, true, 10);
-        if (!font) {
-            throw std::runtime_error("Failed to load font: " + path);
-        }
-
-        return font;
-    };
-
-    m_font = LoadFont("assets://NotoSansMono.ttf");
-    m_fontEmoji = LoadFont("assets://NotoColorEmoji.ttf");
-    m_fontUnifont = LoadFont("assets://unifont.otf");
-    TTF_AddFallbackFont(m_font, m_fontEmoji);
-    TTF_AddFallbackFont(m_font, m_fontUnifont);
 }
 
 void CRenderer::LoadTextures() {

@@ -2,7 +2,6 @@
 #include <skylabs/core/render/renderer.hpp>
 #include <skylabs/core/render/vulkan/renderer_context.hpp>
 #include <skylabs/core/render/vulkan/main_pass.hpp>
-#include <skylabs/core/render/vulkan/ui_pass.hpp>
 #include <skylabs/core/render/vulkan/post_process_pass.hpp>
 
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
@@ -33,12 +32,10 @@ private:
     void HandleSwapchainResult(vk::Result result, std::string_view context);
     void RecreateSwapchain();
     void ResizeTextures();
-    void LoadFonts();
     void LoadTextures();
     void LoadModels();
 
     void UpdateMVP(const glm::mat4& view, float fov);
-    void UpdateTextTexture(const CCommandBuffer& cmd, const std::string& text);
 
     CRendererContext m_rendererContext { nullptr };
 
@@ -60,13 +57,6 @@ private:
     std::vector<SubMesh> m_meshes;
 
     CMainPass m_mainPass { nullptr };
-    CUIPass m_uiPass { nullptr };
     CPostProcessPass m_postProcessPass { nullptr };
-
-    InFlight<CImage> m_textTexture { nullptr };
-
-    TTF_Font* m_font = nullptr;
-    TTF_Font* m_fontUnifont = nullptr;
-    TTF_Font* m_fontEmoji = nullptr;
 };
 }

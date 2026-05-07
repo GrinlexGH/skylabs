@@ -62,8 +62,6 @@ target_sources(
         render/vulkan/renderer_context.cpp
         render/vulkan/renderer_context.hpp
         render/vulkan/submesh.hpp
-        render/vulkan/ui_pass.cpp
-        render/vulkan/ui_pass.hpp
         render/vulkan/post_process_pass.cpp
         render/vulkan/post_process_pass.hpp
 )
