@@ -3,16 +3,17 @@
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 
 namespace Vulkan {
+struct SwapchainRecreateInfo
+{
+    std::optional<std::uint32_t> m_imageCount = std::nullopt;
+    std::optional<vk::PresentModeKHR> m_presentMode = std::nullopt;
+};
+
 class CSwapchain
 {
 public:
     explicit CSwapchain(std::nullptr_t) {}
-    explicit CSwapchain(
-        const CDeviceContext& context,
-        vk::SurfaceKHR surface,
-        std::uint32_t imageCount,
-        vk::PresentModeKHR presentMode
-    );
+    explicit CSwapchain(const CDeviceContext& context, std::uint32_t imageCount, vk::PresentModeKHR presentMode);
     CSwapchain(const CSwapchain&) = delete;
     CSwapchain(CSwapchain&&) noexcept = default;
     CSwapchain& operator=(const CSwapchain&) = delete;
@@ -22,11 +23,7 @@ public:
     [[nodiscard]] const vk::raii::SwapchainKHR& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::SwapchainKHR* operator->() const noexcept { return &m_handle; }
 
-    void Recreate(
-        std::optional<vk::SurfaceKHR> surface = std::nullopt,
-        std::optional<std::uint32_t> imageCount = std::nullopt,
-        std::optional<vk::PresentModeKHR> presentMode = std::nullopt
-    );
+    void Recreate(const SwapchainRecreateInfo& recreateInfo);
     void Clear();
 
     [[nodiscard]] std::expected<std::uint32_t, vk::Result> AcquireImage(vk::Semaphore semaphore = {}, vk::Fence fence = {}) const;
@@ -36,7 +33,6 @@ public:
     [[nodiscard]] vk::SurfaceTransformFlagBitsKHR SurfaceTransform() const { return m_surfaceTransform; }
     [[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
-    [[nodiscard]] vk::SurfaceKHR Surface() const { return m_associatedSurface; }
 
     [[nodiscard]] std::span<CImage> Images() { return m_images; }
 
@@ -49,11 +45,10 @@ private:
     );
     void CreateImages();
 
-    const CDeviceContext* m_context = nullptr;
+    const CDeviceContext* m_deviceContext = nullptr;
 
     vk::raii::SwapchainKHR m_handle = nullptr;
 
-    vk::SurfaceKHR m_associatedSurface;
     vk::SurfaceFormatKHR m_surfaceFormat;
     vk::SurfaceTransformFlagBitsKHR m_surfaceTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
     vk::Extent2D m_extent;

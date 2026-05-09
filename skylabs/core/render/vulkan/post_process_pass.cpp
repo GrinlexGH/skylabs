@@ -3,16 +3,16 @@
 
 namespace Vulkan {
 CPostProcessPass::CPostProcessPass(
-    CRendererContext& context,
-    const InFlight<CImage>& inAttachment
-) : m_rendererContext(&context)
+    const CreationTools& context,
+    const InFlight<CImage>& inAttachment,
+    vk::Format swapchainFormat
+) : m_deviceContext(&context.m_deviceContext), m_inFlightContext(&context.m_inFlightContext)
 {
-    auto& inFlightContext = context.InFlightContext();
-    auto& deviceContext = context.DeviceContext();
-    auto& descriptorLayoutCache = context.DescriptorLayoutCache();
-    auto& descriptorAllocator = context.DescriptorAllocator();
-    auto& pipelineLayoutCache = context.PipelineLayoutCache();
-    auto& swapchain = context.Swapchain();
+    auto& inFlightContext = context.m_inFlightContext;
+    auto& deviceContext = context.m_deviceContext;
+    auto& descriptorLayoutCache = context.m_descriptorLayoutCache;
+    auto& descriptorAllocator = context.m_descriptorAllocator;
+    auto& pipelineLayoutCache = context.m_pipelineLayoutCache;
 
     m_sampler = CSampler { deviceContext, { .m_filtering = vk::Filter::eNearest } };
 
@@ -21,7 +21,7 @@ CPostProcessPass::CPostProcessPass(
         { 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment }
     });
 
-    m_swapchainDescriptorSet = InFlight{ inFlightContext,
+    m_swapchainDescriptorSet = InFlight { inFlightContext,
         descriptorAllocator.Allocate(std::vector(inFlightContext.FrameCount(), *swapchainSetLayout))
     };
 
@@ -49,7 +49,7 @@ CPostProcessPass::CPostProcessPass(
     });
 
     // Pipeline
-    std::array swapchainColorFormats { swapchain.SurfaceFormat().format };
+    std::array swapchainColorFormats { swapchainFormat };
     m_pipelineSwapchain = CGraphicsPipeline { deviceContext, {
         .m_layout = swapchainPipelineLayout,
         .m_shaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain },
@@ -57,18 +57,16 @@ CPostProcessPass::CPostProcessPass(
     }};
 }
 
-void CPostProcessPass::Draw(const CCommandBuffer& cmd, const std::uint32_t imageIndex) {
-    auto& swapchain = m_rendererContext->Swapchain();
-
+void CPostProcessPass::Draw(const CCommandBuffer& cmd, const CImage& swapchainImage) {
     vk::RenderingAttachmentInfo swapchainAttachInfo {};
-    swapchainAttachInfo.imageView = *swapchain.Images()[imageIndex].View();
+    swapchainAttachInfo.imageView = *swapchainImage.View();
     swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     swapchainAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     swapchainAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
     swapchainAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
 
     vk::RenderingInfo swapchainRenderInfo {};
-    swapchainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, swapchain.Extent() };
+    swapchainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, swapchainImage.Extent2D() };
     swapchainRenderInfo.layerCount = 1;
     swapchainRenderInfo.colorAttachmentCount = 1;
     swapchainRenderInfo.pColorAttachments = &swapchainAttachInfo;
@@ -79,11 +77,11 @@ void CPostProcessPass::Draw(const CCommandBuffer& cmd, const std::uint32_t image
     cmd->setViewport(0, {
         {
             0.0f, 0.0f,
-            static_cast<float>(swapchain.Extent().width), static_cast<float>(swapchain.Extent().height),
+            static_cast<float>(swapchainImage.Extent().width), static_cast<float>(swapchainImage.Extent().height),
             0.0f, 1.0f
         }
     });
-    cmd->setScissor(0, { { { 0, 0 }, swapchain.Extent() } });
+    cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
 
     cmd->bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics, m_pipelineSwapchain.Layout(), 0,
@@ -94,8 +92,8 @@ void CPostProcessPass::Draw(const CCommandBuffer& cmd, const std::uint32_t image
 }
 
 void CPostProcessPass::Resize(const InFlight<CImage>& inAttachment) {
-    for (const auto i : Utils::Range(m_rendererContext->InFlightContext().FrameCount())) {
-        CDescriptorWriter descriptorWriter { m_rendererContext->DeviceContext() };
+    for (const auto i : Utils::Range(m_inFlightContext->FrameCount())) {
+        CDescriptorWriter descriptorWriter { *m_deviceContext };
         descriptorWriter
             .WriteImage(0, inAttachment[i].View(), *m_sampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_swapchainDescriptorSet[i]);

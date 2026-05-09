@@ -14,10 +14,12 @@ target_sources(
         main.cpp
         render/renderer.hpp
         render/vertex.hpp
-        render/vulkan/command_buffer.cpp
-        render/vulkan/command_buffer.hpp
-        render/vulkan/command_buffer_allocator.cpp
-        render/vulkan/command_buffer_allocator.hpp
+        render/vulkan/command_recording/command_buffer.cpp
+        render/vulkan/command_recording/command_buffer.hpp
+        render/vulkan/command_recording/command_buffer_allocator.cpp
+        render/vulkan/command_recording/command_buffer_allocator.hpp
+        render/vulkan/command_recording/sync_state.cpp
+        render/vulkan/command_recording/sync_state.hpp
         render/vulkan/context/allocator.cpp
         render/vulkan/context/allocator.hpp
         render/vulkan/context/context.cpp
@@ -55,13 +57,10 @@ target_sources(
         render/vulkan/resources/image.hpp
         render/vulkan/resources/sampler.cpp
         render/vulkan/resources/sampler.hpp
-        render/vulkan/sync_state.cpp
-        render/vulkan/sync_state.hpp
+        render/vulkan/submesh.hpp
+        render/vulkan/render_pass.hpp
         render/vulkan/main_pass.cpp
         render/vulkan/main_pass.hpp
-        render/vulkan/renderer_context.cpp
-        render/vulkan/renderer_context.hpp
-        render/vulkan/submesh.hpp
         render/vulkan/post_process_pass.cpp
         render/vulkan/post_process_pass.hpp
 )

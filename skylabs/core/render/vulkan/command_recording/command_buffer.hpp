@@ -2,7 +2,7 @@
 #include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
-#include <skylabs/core/render/vulkan/sync_state.hpp>
+#include <skylabs/core/render/vulkan/command_recording/sync_state.hpp>
 
 #include <variant>
 

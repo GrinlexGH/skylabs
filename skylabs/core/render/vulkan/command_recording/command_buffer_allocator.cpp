@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/command_buffer_allocator.hpp>
+#include <skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp>
 
 namespace Vulkan {
 CCommandBufferAllocator::CCommandBufferAllocator(const CDeviceContext& context, std::uint32_t familyIndex) : m_context(&context) {

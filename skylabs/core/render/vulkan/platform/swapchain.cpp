@@ -5,22 +5,17 @@
 namespace Vulkan {
 CSwapchain::CSwapchain(
     const CDeviceContext& context,
-    const vk::SurfaceKHR surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
-) : m_context(&context), m_associatedSurface(surface) {
-    CreateSwapchain(surface, imageCount, presentMode);
+) : m_deviceContext(&context){
+    CreateSwapchain(*context.Surface(), imageCount, presentMode);
 }
 
-void CSwapchain::Recreate(
-    const std::optional<vk::SurfaceKHR> surface,
-    const std::optional<std::uint32_t> imageCount,
-    const std::optional<vk::PresentModeKHR> presentMode
-) {
+void CSwapchain::Recreate(const SwapchainRecreateInfo& recreateInfo) {
     CreateSwapchain(
-        surface.value_or(m_associatedSurface),
-        imageCount.value_or(m_images.size()),
-        presentMode.value_or(m_presentMode),
+        *m_deviceContext->Surface(),
+        recreateInfo.m_imageCount.value_or(m_images.size()),
+        recreateInfo.m_presentMode.value_or(m_presentMode),
         *m_handle
     );
 }
@@ -31,13 +26,13 @@ void CSwapchain::CreateSwapchain(
     const vk::PresentModeKHR presentMode,
     VkSwapchainKHR oldHandle
 ) {
-    const CDevice& device = m_context->Device();
+    const CDevice& device = m_deviceContext->Device();
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
-    const vk::SurfaceCapabilitiesKHR caps = m_context->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
+    const vk::SurfaceCapabilitiesKHR caps = m_deviceContext->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
     m_surfaceTransform = caps.currentTransform;
 
-    const auto [width, height] = m_context->Window()->DrawableSize();
+    const auto [width, height] = m_deviceContext->Window()->DrawableSize();
 
     vkb::SwapchainBuilder builder { device.VkbDevice(), surface };
     auto swapchainResult = builder
@@ -74,7 +69,11 @@ void CSwapchain::CreateSwapchain(
 void CSwapchain::CreateImages() {
     m_images.clear();
     for (auto& image : m_handle.getImages()) {
-        m_images.emplace_back(*m_context, image, vk::Extent3D { m_extent, 1 }, m_surfaceFormat.format, 1, 1, vk::SampleCountFlagBits::e1);
+        m_images.emplace_back(*m_deviceContext, image,
+            vk::Extent3D { m_extent, 1 }, m_surfaceFormat.format,
+            1, 1,
+            vk::SampleCountFlagBits::e1
+        );
     }
 }
 
@@ -107,7 +106,7 @@ vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayPro
     presentInfo.setSwapchains({ *m_handle });
     presentInfo.setImageIndices({ imageIndex });
 
-    const vk::raii::Queue& queue = *m_context->Device().GraphicsQueue();
+    const vk::raii::Queue& queue = *m_deviceContext->Device().GraphicsQueue();
     vk::Result result = static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
         static_cast<VkQueue>(*queue),
         reinterpret_cast<VkPresentInfoKHR const*>(&presentInfo)

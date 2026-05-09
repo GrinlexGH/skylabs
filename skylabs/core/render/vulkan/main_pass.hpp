@@ -1,8 +1,8 @@
 #pragma once
-#include <skylabs/core/render/vulkan/renderer_context.hpp>
+#include <skylabs/core/render/vulkan/render_pass.hpp>
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 #include <skylabs/core/render/vulkan/resources/sampler.hpp>
-#include <skylabs/core/render/vulkan/command_buffer.hpp>
+#include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/submesh.hpp>
 
@@ -17,7 +17,7 @@ class CMainPass
 {
 public:
     explicit CMainPass(std::nullptr_t) {}
-    explicit CMainPass(CRendererContext& context);
+    explicit CMainPass(const CreationTools& context, Utils::Extent2D renderExtent);
     CMainPass(const CMainPass&) = delete;
     CMainPass(CMainPass&&) noexcept = default;
     CMainPass& operator=(const CMainPass&) = delete;
@@ -31,7 +31,7 @@ public:
         const CBuffer& indexBuffer,
         std::span<const SubMesh> meshes
     );
-    void Resize();
+    void Resize(Utils::Extent2D newExtent);
 
     InFlight<CImage>& MainAttachment() { return m_mainColor; }
     InFlight<CImage>& MainMSAAAttachment() { return m_mainColorMSAA; }
@@ -39,7 +39,8 @@ public:
     InFlight<CBuffer>& MVP() { return m_mvp; }
 
 private:
-    CRendererContext* m_rendererContext = nullptr;
+    const CDeviceContext* m_deviceContext = nullptr;
+    const CInFlightContext* m_inFlightContext = nullptr;
 
     CSampler m_nearestSampler { nullptr };
 

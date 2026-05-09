@@ -28,23 +28,27 @@ public:
     using Clock = std::chrono::high_resolution_clock;
     using TimePoint = std::chrono::time_point<Clock>;
 
-    CTimer() : m_Start(Clock::now()) {}
+    CTimer() : m_start(Clock::now()) {}
 
-    void reset() { m_Start = Clock::now(); }
+    void reset() { m_start = Clock::now(); }
 
-    double elapsedSeconds() const {
-        return std::chrono::duration<double>(Clock::now() - m_Start).count();
+    auto elapsedSeconds() const {
+        return std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - m_start).count();
     }
 
-    double elapsedMilliseconds() const {
-        return std::chrono::duration<double, std::milli>(Clock::now() - m_Start).count();
+    auto elapsedMilliseconds() const {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - m_start).count();
     }
 
-    long long elapsedMicroseconds() const {
-        return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - m_Start).count();
+    auto elapsedMicroseconds() const {
+        return std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - m_start).count();
+    }
+
+    auto elapsedNanoseconds() const {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - m_start).count();
     }
 
 private:
-    TimePoint m_Start;
+    TimePoint m_start;
 };
 }

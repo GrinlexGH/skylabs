@@ -1,4 +1,3 @@
-#include <skylabs/core/pch.hpp>
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
 
 namespace Vulkan {

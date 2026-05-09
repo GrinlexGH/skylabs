@@ -1,6 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/core/render/vulkan/command_buffer.hpp>
+#include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 
 namespace Vulkan {
 class CCommandBufferAllocator

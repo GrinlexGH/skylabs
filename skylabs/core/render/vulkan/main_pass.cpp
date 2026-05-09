@@ -6,13 +6,16 @@ struct MainConstants {
     std::uint32_t textureIndex = 0;
 };
 
-CMainPass::CMainPass(CRendererContext& context) : m_rendererContext(&context) {
-    auto& inFlightContext = context.InFlightContext();
-    auto& deviceContext = context.DeviceContext();
-    auto& descriptorLayoutCache = context.DescriptorLayoutCache();
-    auto& descriptorAllocator = context.DescriptorAllocator();
-    auto& pipelineLayoutCache = context.PipelineLayoutCache();
-    auto [width, height] = context.Swapchain().Extent();
+CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent) :
+    m_deviceContext(&context.m_deviceContext),
+    m_inFlightContext(&context.m_inFlightContext)
+{
+    auto& inFlightContext = context.m_inFlightContext;
+    auto& deviceContext = context.m_deviceContext;
+    auto& descriptorLayoutCache = context.m_descriptorLayoutCache;
+    auto& descriptorAllocator = context.m_descriptorAllocator;
+    auto& pipelineLayoutCache = context.m_pipelineLayoutCache;
+    auto [width, height] = renderExtent;
 
     m_nearestSampler = CSampler { deviceContext, { .m_filtering = vk::Filter::eNearest } };
 
@@ -83,8 +86,8 @@ CMainPass::CMainPass(CRendererContext& context) : m_rendererContext(&context) {
 }
 
 void CMainPass::WriteDescriptors(const std::vector<CImage>& textures) {
-    CDescriptorWriter descriptorWriter { m_rendererContext->DeviceContext() };
-    for (const auto i : Utils::Range(m_rendererContext->InFlightContext().FrameCount())) {
+    CDescriptorWriter descriptorWriter { *m_deviceContext };
+    for (const auto i : Utils::Range(m_inFlightContext->FrameCount())) {
         descriptorWriter.Clear();
         for (std::uint32_t j = 0; const auto& texture : textures) {
             descriptorWriter.WriteImage(
@@ -108,7 +111,7 @@ void CMainPass::Draw(
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachInfo.clearValue.color = vk::ClearColorValue(11.0f / 255.0f, 16.0f / 255.0f, 38.0f / 255.0f, 1.0f);
+    colorAttachInfo.clearValue.color = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
     colorAttachInfo.resolveImageView = m_mainColor.Get().View();
     colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eAverage;
@@ -164,22 +167,20 @@ void CMainPass::Draw(
     cmd->endRendering();
 }
 
-void CMainPass::Resize() {
-    const auto& deviceContext = m_rendererContext->DeviceContext();
-    const auto& inFlightContext = m_rendererContext->InFlightContext();
-    auto [width, height] = m_rendererContext->Swapchain().Extent();
+void CMainPass::Resize(Utils::Extent2D newExtent) {
+    auto [width, height] = newExtent;
 
-    m_mainColor = InFlight<CImage> { inFlightContext, deviceContext, ImageCreateInfo {
+    m_mainColor = InFlight<CImage> { *m_inFlightContext, *m_deviceContext, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
     }};
 
-    m_mainColorMSAA = InFlight<CImage> { inFlightContext, deviceContext, ImageCreateInfo {
+    m_mainColorMSAA = InFlight<CImage> { *m_inFlightContext, *m_deviceContext, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eColorAttachment
     }};
 
-    m_mainDepthMSAA = InFlight<CImage> { inFlightContext, deviceContext, ImageCreateInfo {
+    m_mainDepthMSAA = InFlight<CImage> { *m_inFlightContext, *m_deviceContext, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eD32Sfloat, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};

@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
 #include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/public/window.hpp>
 

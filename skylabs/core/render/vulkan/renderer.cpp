@@ -10,7 +10,6 @@
 #include <SDL3_image/SDL_image.h>
 #include <tiny_obj_loader.h>
 
-#include <chrono>
 #include <random>
 #include <ranges>
 
@@ -44,36 +43,44 @@ namespace Vulkan {
 CRenderer::CRenderer(const IWindow* const window) {
     assert(window);
 
-    m_rendererContext = std::make_unique<CRendererContext>(window);
+    m_deviceContext = CDeviceContext { window };
 
-    const auto& context = m_rendererContext->DeviceContext();
-    auto& swapchain = m_rendererContext->Swapchain();
-    const auto& inFlightContext = m_rendererContext->InFlightContext();
+    m_swapchain = CSwapchain { m_deviceContext, 3, vk::PresentModeKHR::eMailbox };
+    m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
 
-    m_commandBufferAllocator = CCommandBufferAllocator { context, context.Device().GraphicsQueue().FamilyIndex() };
-    m_graphicsCmd = InFlight { inFlightContext,
+    m_pipelineLayoutCache = CPipelineLayoutCache { m_deviceContext };
+    m_descriptorLayoutCache = CDescriptorLayoutCache { m_deviceContext };
+    m_descriptorAllocator = CDescriptorAllocator { m_deviceContext };
+
+    m_commandBufferAllocator = CCommandBufferAllocator {
+        m_deviceContext, m_deviceContext.Device().GraphicsQueue().FamilyIndex()
+    };
+    m_graphicsCmd = InFlight { m_inFlightContext,
         m_commandBufferAllocator.Allocate(
-            vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(inFlightContext.FrameCount())
+            vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(m_inFlightContext.FrameCount())
         )
     };
 
-    // Synchronization resources
-    m_firstUse = InFlight<bool> { inFlightContext, true };
-    m_fence = InFlight<vk::raii::Fence> { inFlightContext, *context.Device(),
-        vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled }
+    m_firstUse = InFlight<bool> { m_inFlightContext, true };
+    m_fence = InFlight<vk::raii::Fence> { m_inFlightContext,
+        *m_deviceContext.Device(), vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled }
     };
-    m_imageAvailableSemaphore = InFlight<vk::raii::Semaphore> { inFlightContext, *context.Device(),
-        vk::SemaphoreCreateInfo {}
+    m_imageAvailableSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext,
+        *m_deviceContext.Device(), vk::SemaphoreCreateInfo {}
     };
 
-    const std::size_t imageCount = swapchain.Images().size();
+    const std::size_t imageCount = m_swapchain.Images().size();
     m_renderFinishedSemaphores.reserve(imageCount);
-    for ([[maybe_unused]] auto _ : Utils::Range(imageCount)) {
-        m_renderFinishedSemaphores.emplace_back(*context.Device(), vk::SemaphoreCreateInfo {});
+    for (auto i = 0u; i < imageCount; ++i) {
+        m_renderFinishedSemaphores.emplace_back(*m_deviceContext.Device(), vk::SemaphoreCreateInfo {});
     }
 
-    m_mainPass = CMainPass { *m_rendererContext };
-    m_postProcessPass = CPostProcessPass { *m_rendererContext, m_mainPass.MainAttachment() };
+    m_mainPass = CMainPass {
+        GetCreationTools(), { m_swapchain.Extent().width, m_swapchain.Extent().height }
+    };
+    m_postProcessPass = CPostProcessPass {
+        GetCreationTools(), m_mainPass.MainAttachment(), m_swapchain.SurfaceFormat().format
+    };
 
     LoadTextures();
     LoadModels();
@@ -82,8 +89,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 }
 
 CRenderer::~CRenderer() {
-    if (**m_rendererContext->DeviceContext().Device()) {
-        try { m_rendererContext->DeviceContext().Device()->waitIdle();}
+    if (**m_deviceContext.Device()) {
+        try { m_deviceContext.Device()->waitIdle();}
         catch (const vk::SystemError& e) {
             Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
         }
@@ -100,15 +107,14 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 }
 
 void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
-    const auto& device = m_rendererContext->DeviceContext().Device();
-    const auto& swapchain = m_rendererContext->Swapchain();
+    const auto& device = m_deviceContext.Device();
     const auto& cmd = m_graphicsCmd.Get();
 
     const auto& mainColor = m_mainPass.MainAttachment().Get();
     const auto& mainColorMSAA = m_mainPass.MainMSAAAttachment().Get();
     const auto& mainDepthMSAA = m_mainPass.DepthMSAAAttachment().Get();
 
-    const auto& swapchainImages = m_rendererContext->Swapchain().Images();
+    const auto& swapchainImages = m_swapchain.Images();
 
     UpdateMVP(view, fov);
 
@@ -119,7 +125,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     );
 
     // Acquire next image from the swapchain
-    auto acquireResult = swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
+    auto acquireResult = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (!acquireResult) {
         if (acquireResult.error() == vk::Result::eSuboptimalKHR) {
             m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *device, vk::SemaphoreCreateInfo {} };
@@ -163,7 +169,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
             Usage::eNone, Usage::eColorAttachment }
     });
 
-    m_postProcessPass.Draw(cmd, imageIndex);
+    m_postProcessPass.Draw(cmd, m_swapchain.Images()[imageIndex]);
 
     cmd.PipelineBarrier({
         ImageBarrier { swapchainImages[imageIndex], swapchainImages[imageIndex].FullRange(),
@@ -179,20 +185,20 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     finalSubmit.setWaitDstStageMask({ waitStage });
     finalSubmit.setCommandBuffers({ **cmd });
     finalSubmit.setSignalSemaphores({ *m_renderFinishedSemaphores[imageIndex] });
-    m_rendererContext->DeviceContext().Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
+    m_deviceContext.Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
     // Present
     HandleSwapchainResult(
-        swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] }),
+        m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] }),
         "present"
     );
 
-    m_rendererContext->InFlightContext().NextFrame();
+    m_inFlightContext.NextFrame();
 }
 
 void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string_view context) {
     // Wait all frame fences
-    std::ignore = m_rendererContext->DeviceContext().Device()->waitForFences(
+    std::ignore = m_deviceContext.Device()->waitForFences(
         m_fence
             | std::views::transform([](const auto& f) { return *f; })
             | std::ranges::to<std::vector>(),
@@ -208,8 +214,8 @@ void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string
     }
 
     if (m_needSurfaceRecreation) {
-        m_rendererContext->Swapchain().Clear();
-        m_rendererContext->DeviceContext().RecreateSurface();
+        m_swapchain.Clear();
+        m_deviceContext.RepairSurface();
         RecreateSwapchain();
         m_needSurfaceRecreation = false;
         m_needSwapchainRecreation = false;
@@ -223,12 +229,10 @@ void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string
 }
 
 void CRenderer::RecreateSwapchain() {
-    auto& swapchain = m_rendererContext->Swapchain();
+    const auto [oldWidth, oldHeight] = m_swapchain.Extent();
+    m_swapchain.Recreate({ });
 
-    const auto [oldWidth, oldHeight] = swapchain.Extent();
-    swapchain.Recreate(*m_rendererContext->DeviceContext().Surface());
-
-    if (const auto [newWidth, newHeight] = swapchain.Extent();
+    if (const auto [newWidth, newHeight] = m_swapchain.Extent();
         oldWidth != newWidth || oldHeight != newHeight
     ) { ResizeTextures(); }
 }
@@ -237,15 +241,15 @@ void CRenderer::ResizeTextures() {
     // Reset sync state
     for (auto&& i : m_firstUse) { i = true; }
 
-    m_mainPass.Resize();
+    m_mainPass.Resize({ m_swapchain.Extent().width, m_swapchain.Extent().height });
     m_postProcessPass.Resize(m_mainPass.MainAttachment());
 }
 
 void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
-    auto [width, height] = m_rendererContext->Swapchain().Extent();
+    auto [width, height] = m_swapchain.Extent();
 
     // Rotate render if we need
-    vk::SurfaceTransformFlagBitsKHR surfaceTransform = m_rendererContext->Swapchain().SurfaceTransform();
+    vk::SurfaceTransformFlagBitsKHR surfaceTransform = m_swapchain.SurfaceTransform();
     glm::mat4 rot = glm::mat4(1.0f);
 
     if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
@@ -266,8 +270,6 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
 }
 
 void CRenderer::LoadTextures() {
-    const auto& deviceContext = m_rendererContext->DeviceContext();
-
     auto LoadTexture = [&](const std::string& path, const std::string& debugName) {
         std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
         SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
@@ -283,7 +285,7 @@ void CRenderer::LoadTextures() {
         const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
         if (m_stagingBuffer.Size() < imageSize) {
             m_stagingBuffer = CBuffer {
-                deviceContext, imageSize,
+                m_deviceContext, imageSize,
                 vk::BufferUsageFlagBits::eTransferSrc,
                 MemoryLocation::eHostVisible
             };
@@ -293,7 +295,7 @@ void CRenderer::LoadTextures() {
         const std::uint32_t mipLevels =
             static_cast<std::uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1;
 
-        CImage texture { deviceContext, {
+        CImage texture { m_deviceContext, {
             .m_extent = vk::Extent3D {
                 static_cast<std::uint32_t>(image->w),
                 static_cast<std::uint32_t>(image->h),
@@ -307,7 +309,7 @@ void CRenderer::LoadTextures() {
                 vk::ImageUsageFlagBits::eSampled,
         }};
 
-        m_graphicsCmd.Get().ImmediateSubmit(*deviceContext.Device().GraphicsQueue(),
+        m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
             [&](const CCommandBuffer& cmd) {
                 cmd.PipelineBarrier({ ImageBarrier { texture, texture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
                 cmd.Copy(texture, m_stagingBuffer);
@@ -317,8 +319,8 @@ void CRenderer::LoadTextures() {
 
         SDL_DestroySurface(image);
 
-        if (deviceContext.Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
-            deviceContext.Device()->setDebugUtilsObjectNameEXT(*texture, debugName);
+        if (m_deviceContext.Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
+            m_deviceContext.Device()->setDebugUtilsObjectNameEXT(*texture, debugName);
         }
 
         return texture;
@@ -329,8 +331,6 @@ void CRenderer::LoadTextures() {
 }
 
 void CRenderer::LoadModels() {
-    const auto& deviceContext = m_rendererContext->DeviceContext();
-
     auto LoadModel = [&](const std::string_view filename) {
         std::vector<CVertex> vertices;
         std::vector<std::uint16_t> indices;
@@ -397,7 +397,7 @@ void CRenderer::LoadModels() {
 
         vk::DeviceSize totalSize = vSize + iSize;
         if (m_stagingBuffer.Size() < totalSize) {
-            m_stagingBuffer = CBuffer { deviceContext, totalSize,
+            m_stagingBuffer = CBuffer { m_deviceContext, totalSize,
                 vk::BufferUsageFlagBits::eTransferSrc, MemoryLocation::eHostVisible
             };
         }
@@ -405,7 +405,7 @@ void CRenderer::LoadModels() {
         std::memcpy(m_stagingBuffer.Data(), vertices.data(), vSize);
         std::memcpy(static_cast<std::uint8_t*>(m_stagingBuffer.Data()) + vSize, indices.data(), iSize);
 
-        m_graphicsCmd.Get().ImmediateSubmit(*deviceContext.Device().GraphicsQueue(),
+        m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
             [&](const CCommandBuffer& cmd) {
                 cmd.Copy(m_vertexBuffer, m_stagingBuffer, vSize, { 0, mesh.VtxOffset() });
                 cmd.Copy(m_indexBuffer, m_stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
@@ -416,13 +416,13 @@ void CRenderer::LoadModels() {
     };
 
     m_vertexBuffer = CBuffer {
-        deviceContext, GEOMETRY_POOL_SIZE,
+        m_deviceContext, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
         MemoryLocation::eDeviceOnly
     };
 
     m_indexBuffer = CBuffer {
-        deviceContext, GEOMETRY_POOL_SIZE,
+        m_deviceContext, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
         MemoryLocation::eDeviceOnly
     };

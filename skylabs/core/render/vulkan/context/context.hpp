@@ -24,7 +24,7 @@ public:
     [[nodiscard]] const CDevice& Device() const noexcept { return m_device; }
     [[nodiscard]] const CAllocator& Allocator() const noexcept { return m_allocator; }
 
-    void RecreateSurface();
+    void RepairSurface();
 
 private:
     const IWindow* m_window = nullptr;

@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/command_buffer.hpp>
+#include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 
 namespace Vulkan {
 CCommandBuffer::CCommandBuffer(const CDeviceContext& context, vk::raii::CommandBuffer&& commandBuffer) :

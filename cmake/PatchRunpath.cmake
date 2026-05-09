@@ -11,13 +11,13 @@ endif()
 
 find_program(PATCHELF_EXE patchelf)
 if(NOT PATCHELF_EXE)
+    message(STATUS "patchelf wasn't found")
     return()
 endif()
 
 foreach(_file IN LISTS FILES_TO_PATCH)
-    message("PATCHING ${_file}")
-
     if(EXISTS "${_file}")
+        message(STATUS "Patching ${_file}")
         execute_process(
             COMMAND ${PATCHELF_EXE} --set-rpath "$ORIGIN" "${_file}"
             RESULT_VARIABLE _res
