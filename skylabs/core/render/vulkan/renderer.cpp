@@ -44,11 +44,11 @@ namespace Vulkan {
 CRenderer::CRenderer(const IWindow* const window) {
     assert(window);
 
-    m_rendererContext = CRendererContext { window };
+    m_rendererContext = std::make_unique<CRendererContext>(window);
 
-    const auto& context = m_rendererContext.DeviceContext();
-    auto& swapchain = m_rendererContext.Swapchain();
-    const auto& inFlightContext = m_rendererContext.InFlightContext();
+    const auto& context = m_rendererContext->DeviceContext();
+    auto& swapchain = m_rendererContext->Swapchain();
+    const auto& inFlightContext = m_rendererContext->InFlightContext();
 
     m_commandBufferAllocator = CCommandBufferAllocator { context, context.Device().GraphicsQueue().FamilyIndex() };
     m_graphicsCmd = InFlight { inFlightContext,
@@ -72,8 +72,8 @@ CRenderer::CRenderer(const IWindow* const window) {
         m_renderFinishedSemaphores.emplace_back(*context.Device(), vk::SemaphoreCreateInfo {});
     }
 
-    m_mainPass = CMainPass { m_rendererContext };
-    m_postProcessPass = CPostProcessPass { m_rendererContext, m_mainPass.MainAttachment() };
+    m_mainPass = CMainPass { *m_rendererContext };
+    m_postProcessPass = CPostProcessPass { *m_rendererContext, m_mainPass.MainAttachment() };
 
     LoadTextures();
     LoadModels();
@@ -82,8 +82,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 }
 
 CRenderer::~CRenderer() {
-    if (**m_rendererContext.DeviceContext().Device()) {
-        try { m_rendererContext.DeviceContext().Device()->waitIdle();}
+    if (**m_rendererContext->DeviceContext().Device()) {
+        try { m_rendererContext->DeviceContext().Device()->waitIdle();}
         catch (const vk::SystemError& e) {
             Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
         }
@@ -100,15 +100,15 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 }
 
 void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
-    const auto& device = m_rendererContext.DeviceContext().Device();
-    const auto& swapchain = m_rendererContext.Swapchain();
+    const auto& device = m_rendererContext->DeviceContext().Device();
+    const auto& swapchain = m_rendererContext->Swapchain();
     const auto& cmd = m_graphicsCmd.Get();
 
     const auto& mainColor = m_mainPass.MainAttachment().Get();
     const auto& mainColorMSAA = m_mainPass.MainMSAAAttachment().Get();
     const auto& mainDepthMSAA = m_mainPass.DepthMSAAAttachment().Get();
 
-    const auto& swapchainImages = m_rendererContext.Swapchain().Images();
+    const auto& swapchainImages = m_rendererContext->Swapchain().Images();
 
     UpdateMVP(view, fov);
 
@@ -179,7 +179,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     finalSubmit.setWaitDstStageMask({ waitStage });
     finalSubmit.setCommandBuffers({ **cmd });
     finalSubmit.setSignalSemaphores({ *m_renderFinishedSemaphores[imageIndex] });
-    m_rendererContext.DeviceContext().Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
+    m_rendererContext->DeviceContext().Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
     // Present
     HandleSwapchainResult(
@@ -187,12 +187,12 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
         "present"
     );
 
-    m_rendererContext.InFlightContext().NextFrame();
+    m_rendererContext->InFlightContext().NextFrame();
 }
 
 void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string_view context) {
     // Wait all frame fences
-    std::ignore = m_rendererContext.DeviceContext().Device()->waitForFences(
+    std::ignore = m_rendererContext->DeviceContext().Device()->waitForFences(
         m_fence
             | std::views::transform([](const auto& f) { return *f; })
             | std::ranges::to<std::vector>(),
@@ -208,8 +208,8 @@ void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string
     }
 
     if (m_needSurfaceRecreation) {
-        m_rendererContext.Swapchain().Clear();
-        m_rendererContext.DeviceContext().RecreateSurface();
+        m_rendererContext->Swapchain().Clear();
+        m_rendererContext->DeviceContext().RecreateSurface();
         RecreateSwapchain();
         m_needSurfaceRecreation = false;
         m_needSwapchainRecreation = false;
@@ -223,10 +223,10 @@ void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string
 }
 
 void CRenderer::RecreateSwapchain() {
-    auto& swapchain = m_rendererContext.Swapchain();
+    auto& swapchain = m_rendererContext->Swapchain();
 
     const auto [oldWidth, oldHeight] = swapchain.Extent();
-    swapchain.Recreate(*m_rendererContext.DeviceContext().Surface());
+    swapchain.Recreate(*m_rendererContext->DeviceContext().Surface());
 
     if (const auto [newWidth, newHeight] = swapchain.Extent();
         oldWidth != newWidth || oldHeight != newHeight
@@ -242,10 +242,10 @@ void CRenderer::ResizeTextures() {
 }
 
 void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
-    auto [width, height] = m_rendererContext.Swapchain().Extent();
+    auto [width, height] = m_rendererContext->Swapchain().Extent();
 
     // Rotate render if we need
-    vk::SurfaceTransformFlagBitsKHR surfaceTransform = m_rendererContext.Swapchain().SurfaceTransform();
+    vk::SurfaceTransformFlagBitsKHR surfaceTransform = m_rendererContext->Swapchain().SurfaceTransform();
     glm::mat4 rot = glm::mat4(1.0f);
 
     if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
@@ -266,7 +266,7 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
 }
 
 void CRenderer::LoadTextures() {
-    const auto& deviceContext = m_rendererContext.DeviceContext();
+    const auto& deviceContext = m_rendererContext->DeviceContext();
 
     auto LoadTexture = [&](const std::string& path, const std::string& debugName) {
         std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
@@ -329,7 +329,7 @@ void CRenderer::LoadTextures() {
 }
 
 void CRenderer::LoadModels() {
-    const auto& deviceContext = m_rendererContext.DeviceContext();
+    const auto& deviceContext = m_rendererContext->DeviceContext();
 
     auto LoadModel = [&](const std::string_view filename) {
         std::vector<CVertex> vertices;

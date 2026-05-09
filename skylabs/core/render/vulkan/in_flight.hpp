@@ -33,7 +33,7 @@ public:
     }
 
     template <typename... Args>
-    InFlight(const CInFlightContext& context, Args&&... args) : m_context(&context) {
+    explicit InFlight(const CInFlightContext& context, Args&&... args) : m_context(&context) {
         m_data.reserve(context.FrameCount());
         for (std::size_t i = 0; i < context.FrameCount(); ++i) {
             m_data.emplace_back(std::forward<Args>(args)...);

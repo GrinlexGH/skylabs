@@ -37,7 +37,7 @@ private:
 
     void UpdateMVP(const glm::mat4& view, float fov);
 
-    CRendererContext m_rendererContext { nullptr };
+    std::unique_ptr<CRendererContext> m_rendererContext { nullptr };
 
     CCommandBufferAllocator m_commandBufferAllocator { nullptr };
     InFlight<CCommandBuffer> m_graphicsCmd { nullptr };

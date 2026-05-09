@@ -9,15 +9,14 @@ namespace Vulkan {
 class CRendererContext
 {
 public:
-    explicit CRendererContext(std::nullptr_t) {}
     explicit CRendererContext(const IWindow* window);
     CRendererContext(const CRendererContext&) = delete;
-    CRendererContext(CRendererContext&&) noexcept = default;
+    CRendererContext(CRendererContext&&) = delete;
     CRendererContext& operator=(const CRendererContext&) = delete;
-    CRendererContext& operator=(CRendererContext&&) noexcept = default;
+    CRendererContext& operator=(CRendererContext&&) = delete;
     ~CRendererContext() = default;
 
-    CDeviceContext& DeviceContext() const { return *m_context; }
+    CDeviceContext& DeviceContext() { return m_context; }
     CInFlightContext& InFlightContext() { return m_inFlightContext; }
     CSwapchain& Swapchain() { return m_swapchain; }
     CPipelineLayoutCache& PipelineLayoutCache() { return m_pipelineLayoutCache; }
@@ -27,7 +26,7 @@ public:
 private:
     static constexpr auto FRAMES_IN_FLIGHT_COUNT = 1;
 
-    std::unique_ptr<CDeviceContext> m_context { nullptr }; // Do not lose the pointer on move
+    CDeviceContext m_context { nullptr };
     CInFlightContext m_inFlightContext { nullptr };
 
     CSwapchain m_swapchain { nullptr };

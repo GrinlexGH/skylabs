@@ -5,8 +5,6 @@
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
 
 namespace Vulkan {
-//====================
-// Context stores vulkan globals needed to create vulkan objects
 class CDeviceContext
 {
 public:

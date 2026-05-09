@@ -13,7 +13,6 @@ CPostProcessPass::CPostProcessPass(
     auto& descriptorAllocator = context.DescriptorAllocator();
     auto& pipelineLayoutCache = context.PipelineLayoutCache();
     auto& swapchain = context.Swapchain();
-    auto [width, height] = swapchain.Extent();
 
     m_sampler = CSampler { deviceContext, { .m_filtering = vk::Filter::eNearest } };
 
