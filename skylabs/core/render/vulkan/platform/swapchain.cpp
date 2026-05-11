@@ -42,6 +42,18 @@ void CSwapchain::CreateSwapchain(
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eFifo))
         .use_default_image_usage_flags()
+        .set_desired_format(static_cast<VkSurfaceFormatKHR>(
+            vk::SurfaceFormatKHR { vk::Format::eR16G16B16A16Sfloat, vk::ColorSpaceKHR::eHdr10St2084EXT }
+        ))
+        .add_fallback_format(static_cast<VkSurfaceFormatKHR>(
+            vk::SurfaceFormatKHR { vk::Format::eA2R10G10B10SnormPack32, vk::ColorSpaceKHR::eHdr10St2084EXT }
+        ))
+        .add_fallback_format(static_cast<VkSurfaceFormatKHR>(
+            vk::SurfaceFormatKHR { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear }
+        ))
+        .add_fallback_format(static_cast<VkSurfaceFormatKHR>(
+            vk::SurfaceFormatKHR { vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear }
+        ))
         .set_desired_extent(width, height)
         .set_desired_min_image_count(imageCount)
         .set_pre_transform_flags(static_cast<VkSurfaceTransformFlagBitsKHR>(m_surfaceTransform))
@@ -82,22 +94,18 @@ void CSwapchain::Clear() {
     m_images.clear();
 }
 
-std::expected<std::uint32_t, vk::Result> CSwapchain::AcquireImage(vk::Semaphore semaphore, vk::Fence fence) const {
+std::pair<vk::Result, std::uint32_t> CSwapchain::AcquireImage(vk::Semaphore semaphore, vk::Fence fence) const {
     std::uint32_t imageIndex;
     vk::Result result = static_cast<vk::Result>(m_handle.getDispatcher()->vkAcquireNextImageKHR(
         static_cast<VkDevice>(m_handle.getDevice()),
         static_cast<VkSwapchainKHR>(*m_handle),
-        std::numeric_limits<std::uint64_t>::max(),
+        UINT64_MAX,
         static_cast<VkSemaphore>(semaphore),
         static_cast<VkFence>(fence),
         &imageIndex
     ));
 
-    if (result == vk::Result::eSuccess) {
-        return imageIndex;
-    }
-
-    return std::unexpected(result);
+    return { result, imageIndex };
 }
 
 vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayProxy<const vk::Semaphore>& semaphores) const {
@@ -106,7 +114,7 @@ vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayPro
     presentInfo.setSwapchains({ *m_handle });
     presentInfo.setImageIndices({ imageIndex });
 
-    const vk::raii::Queue& queue = *m_deviceContext->Device().GraphicsQueue();
+    const vk::raii::Queue& queue = *m_deviceContext->Device().PresentQueue();
     vk::Result result = static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
         static_cast<VkQueue>(*queue),
         reinterpret_cast<VkPresentInfoKHR const*>(&presentInfo)

@@ -26,7 +26,7 @@ public:
     void Recreate(const SwapchainRecreateInfo& recreateInfo);
     void Clear();
 
-    [[nodiscard]] std::expected<std::uint32_t, vk::Result> AcquireImage(vk::Semaphore semaphore = {}, vk::Fence fence = {}) const;
+    [[nodiscard]] std::pair<vk::Result, std::uint32_t> AcquireImage(vk::Semaphore semaphore = {}, vk::Fence fence = {}) const;
     [[nodiscard]] vk::Result PresentImage(std::uint32_t imageIndex, const vk::ArrayProxy<const vk::Semaphore>& semaphores = {}) const;
 
     [[nodiscard]] vk::SurfaceFormatKHR SurfaceFormat() const { return m_surfaceFormat; }

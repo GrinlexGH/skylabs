@@ -64,7 +64,6 @@ CInstance::CInstance(const bool setupDebugUtils) {
         vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
         vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
-
     vkb::InstanceBuilder instanceBuilder;
     instanceBuilder
         .set_app_name(Skylabs::GAME_NAME)
@@ -107,7 +106,9 @@ CInstance::CInstance(const bool setupDebugUtils) {
 }
 
 std::vector<const char*> CInstance::SetupExtensions(const vk::raii::Context& context, [[maybe_unused]] const bool setupDebugUtils) {
-    boost::container::flat_set<std::string_view> requestedExtensions {};
+    boost::container::flat_set<std::string_view> requestedExtensions {
+        vk::EXTSwapchainColorSpaceExtensionName
+    };
 
 #ifdef DEBUG
     if (setupDebugUtils) {

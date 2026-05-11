@@ -69,4 +69,11 @@ target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     stc::stc
 )
 
-skylabs_configure_target(${CURRENT_TARGET_NAME})
+skylabs_configure_target(${CURRENT_TARGET_NAME}
+    RUNTIME_PLUGINS
+        SDL3_mixer::FLAC
+        SDL3_mixer::libmpg123
+        SDL3_mixer::ogg
+        SDL3_mixer::vorbis
+        SDL3_mixer::vorbisfile
+)

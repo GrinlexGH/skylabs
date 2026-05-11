@@ -34,10 +34,10 @@ foreach(shader IN LISTS SOURCES)
 
     cmake_path(GET shader PARENT_PATH shader_dir)
 
-    set(shader_out_dir "${SKYLABS_SHADER_OUTPUT_DIRECTORY}/${shader_dir}")
+    set(shader_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${shader_dir}")
     set(shader_out_path "${shader_out_dir}/${shader_name_we}.spv")
 
-    set(depfile_path "${CMAKE_CURRENT_BINARY_DIR}/${shader_name_we}.d")
+    set(depfile_path "${shader_out_dir}/${shader_name_we}.d")
 
     set(shader_stage_name "${SLANG_STAGE_${shader_stage}}")
 
@@ -72,15 +72,6 @@ add_custom_target(${CURRENT_TARGET_NAME} ALL
     SOURCES ${SOURCES} ${IMPORTS}
 )
 
-if(ANDROID)
-    add_custom_command(
-        TARGET ${CURRENT_TARGET_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${SKYLABS_ANDROID_ROOT}/app/src/main/assets"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-            "${SKYLABS_SHADER_OUTPUT_DIRECTORY}"
-            "${SKYLABS_ANDROID_ROOT}/app/src/main/assets/${SKYLABS_SHADER_OUTPUT_DIRECTORY_BASE}"
-        COMMENT "Copying shaders to android assets"
-    )
-endif()
-
-skylabs_configure_target(${CURRENT_TARGET_NAME})
+skylabs_configure_target(${CURRENT_TARGET_NAME}
+    INSTALL_FILES ${shader_out_names} INSTALL_SUBDIR shaders
+)

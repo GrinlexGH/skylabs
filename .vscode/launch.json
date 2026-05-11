@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
             "externalConsole": true,
             "stopAtEntry": false,
             "MIMode": "gdb",
@@ -30,7 +30,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
             "console": "integratedTerminal",
             "stopOnEntry": false,
             "initCommands": [
@@ -45,7 +45,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
             "console": "integratedTerminal",
             "stopAtEntry": false
         }

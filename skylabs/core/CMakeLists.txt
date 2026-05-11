@@ -88,8 +88,4 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     Catch2::Catch2
 )
 
-skylabs_configure_target(${CURRENT_TARGET_NAME}
-    RUNTIME_DEPS
-        SDL3_mixer::FLAC
-        SDL3_mixer::libmpg123
-)
+skylabs_configure_target(${CURRENT_TARGET_NAME})

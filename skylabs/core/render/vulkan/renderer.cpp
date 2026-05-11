@@ -125,17 +125,15 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     );
 
     // Acquire next image from the swapchain
-    auto acquireResult = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
-    if (!acquireResult) {
-        if (acquireResult.error() == vk::Result::eSuboptimalKHR) {
+    auto [acquireResult, imageIndex] = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
+    if (acquireResult != vk::Result::eSuccess) {
+        if (acquireResult == vk::Result::eSuboptimalKHR) {
             m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *device, vk::SemaphoreCreateInfo {} };
         }
 
-        HandleSwapchainResult(acquireResult.error(), "acquire");
+        HandleSwapchainResult(acquireResult, "acquire");
         return;
     }
-
-    const std::uint32_t imageIndex = *acquireResult;
 
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
     device->resetFences({ m_fence.Get() });

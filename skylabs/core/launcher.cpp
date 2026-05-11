@@ -15,10 +15,10 @@ bool SDLCALL HandleAppEvents(void*, SDL_Event* event) {
         case SDL_EVENT_LOW_MEMORY:
         // Restore
         case SDL_EVENT_DID_ENTER_FOREGROUND:
-            return false;
+        // Default
+        default: return true;
     }
-
-    return true;
+    std::unreachable();
 }
 }
 
@@ -33,6 +33,10 @@ void CLauncher::Create() {
 #ifdef PLATFORM_ANDROID
     SDL_SetWindowFullscreen(*m_window, true);
 #endif
+
+    for (auto i = 0; i < MIX_GetNumAudioDecoders(); i++) {
+        Log::Debug("{}", MIX_GetAudioDecoder(i));
+    }
 
     m_mixer = SDL::Mixer::CMixer {};
     m_track = SDL::Mixer::CTrack { m_mixer };

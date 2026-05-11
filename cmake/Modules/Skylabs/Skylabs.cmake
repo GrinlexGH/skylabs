@@ -19,20 +19,31 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
-# Set library paths in RUNPATH so that the
-# file(GET_RUNTIME_DEPENDENCIES) can find and copy .so files of
-# these libraries. It will then restore RUNPATH
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
 set(CMAKE_INSTALL_RPATH "$<IF:$<PLATFORM_ID:Darwin>,@loader_path,\$ORIGIN>")
 
-set(CMAKE_PDB_OUTPUT_DIRECTORY ${SKYLABS_BIN_OUTPUT_DIRECTORY})
-set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY ${SKYLABS_BIN_OUTPUT_DIRECTORY})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SKYLABS_BIN_OUTPUT_DIRECTORY})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SKYLABS_BIN_OUTPUT_DIRECTORY})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SKYLABS_LIB_OUTPUT_DIRECTORY})
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
+endif()
 
-# Setup skylabs target
+get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+# Configures a target with common Skylabs project settings:
+# - Creates IDE source groups for target sources
+# - Applies common compiler and linker options
+# - Adds platform, compiler, architecture, and library definitions
+# - Configures install rules for binaries, libraries, and runtime dependencies
+# - Installs additional files
+# - Copies addition files to Android assets if needed
+# - Installs optional runtime plugin targets
+# - Copies optional runtime plugins into Android jniLibs directory
+#
+# Options:
+#   ROOT               Install executable/library into install root instead of bin/lib
+#   RUNTIME_PLUGINS    Additional runtime plugin targets to install/copy
+#   INSTALL_FILES      Additional files to install/copy
+#   INSTALL_SUBDIR     Destination subdirectory for INSTALL_FILES
 function(skylabs_configure_target target_name)
     if(NOT TARGET ${target_name})
         return()
@@ -43,13 +54,31 @@ function(skylabs_configure_target target_name)
         return()
     endif()
 
+    cmake_parse_arguments(ARG "ROOT" "INSTALL_SUBDIR" "RUNTIME_PLUGINS;INSTALL_FILES" ${ARGN})
+
     # Source groups
     get_target_property(sources ${target_name} SOURCES)
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${sources})
 
+    # Copy output files for custom targets
+    if(ARG_INSTALL_FILES AND ARG_INSTALL_SUBDIR)
+        install(FILES ${ARG_INSTALL_FILES}
+            DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>${ARG_INSTALL_SUBDIR}
+        )
+
+        if(ANDROID)
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory
+                    "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_INSTALL_SUBDIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${ARG_INSTALL_FILES} "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_INSTALL_SUBDIR}"
+            )
+        endif()
+    endif()
+
+    # C++ compiler setup
     get_target_property(target_type ${target_name} TYPE)
-    set(allowed_types "STATIC_LIBRARY" "MODULE_LIBRARY" "SHARED_LIBRARY" "OBJECT_LIBRARY" "INTERFACE_LIBRARY" "EXECUTABLE")
-    if(NOT(target_type IN_LIST allowed_types))
+    if(NOT("${target_type}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|INTERFACE_LIBRARY|EXECUTABLE"))
         return()
     endif()
 
@@ -85,7 +114,7 @@ function(skylabs_configure_target target_name)
     target_compile_definitions(${target_name} PRIVATE
         $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DEBUG>
 
-        $<$<PLATFORM_ID:Windows>:PLATFORM_WINDOWS VK_USE_PLATFORM_WIN32_KHR UNICODE _UNICODE>
+        $<$<PLATFORM_ID:Windows>:PLATFORM_WINDOWS UNICODE _UNICODE>
         $<$<PLATFORM_ID:Linux>:PLATFORM_LINUX _XOPEN_SOURCE=700>
         $<$<PLATFORM_ID:Darwin>:PLATFORM_APPLE>
         $<$<PLATFORM_ID:Android>:PLATFORM_ANDROID>
@@ -109,63 +138,47 @@ function(skylabs_configure_target target_name)
         VULKAN_HPP_USE_STD_EXPECTED=1
     )
 
-    # DLL copying
-    set(allowed_types "EXECUTABLE" "SHARED_LIBRARY" "MODULE_LIBRARY")
-    if(NOT(target_type IN_LIST allowed_types))
+    if("${target_type}" MATCHES "OBJECT_LIBRARY|INTERFACE_LIBRARY")
         return()
     endif()
 
-    cmake_parse_arguments(ARG "" "" "RUNTIME_DEPS" ${ARGN})
+    install(TARGETS ${target_name}
+        RUNTIME_DEPENDENCY_SET skylabs_runtime_dependencies
+        ARCHIVE DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,lib>
+        LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
+        RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
+    )
 
-    set(EXTRA_DLLS "")
-    if(WIN32)
-        set(EXTRA_DLLS "$<TARGET_RUNTIME_DLLS:${target_name}>")
-
-        # Get compilers path
-        cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_DIR)
-        cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_DIR)
-    endif()
-
-    foreach(dep IN LISTS ARG_RUNTIME_DEPS)
-        if(TARGET ${dep})
-            list(APPEND EXTRA_DLLS "$<TARGET_FILE:${dep}>")
-            list(APPEND EXTRA_DLL_NAMES "$<TARGET_FILE_NAME:${dep}>")
-        endif()
-    endforeach()
-
-    set(COPIED_EXTRA_DLLS "")
-    if(EXTRA_DLLS)
-        if(ANDROID)
-            set(DLLS_DESTANATION "${SKYLABS_ANDROID_ROOT}/app/src/main/jniLibs/${CMAKE_ANDROID_ARCH_ABI}")
-        else()
-            set(DLLS_DESTANATION "$<TARGET_FILE_DIR:${target_name}>")
-        endif()
-
-        add_custom_command(TARGET ${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${DLLS_DESTANATION}
-            COMMAND ${CMAKE_COMMAND} -E copy -t ${DLLS_DESTANATION} ${EXTRA_DLLS}
-            COMMAND_EXPAND_LISTS
-            COMMENT "Copying runtime DLLs to ${target_name} output directory"
-        )
-
-        foreach(_NAME ${EXTRA_DLL_NAMES})
-            list(APPEND COPIED_EXTRA_DLLS "${DLLS_DESTANATION}/${_NAME}")
-        endforeach()
-    endif()
+    install(IMPORTED_RUNTIME_ARTIFACTS ${ARG_RUNTIME_PLUGINS}
+        RUNTIME_DEPENDENCY_SET skylabs_runtime_dependencies
+        LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
+        RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
+    )
 
     if(ANDROID)
-        return()
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E
+                make_directory "${SKYLABS_ANDROID_JNILIBS_DIR}"
+        )
+        foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_FILE:${plugin_target}> "${SKYLABS_ANDROID_JNILIBS_DIR}"
+            )
+        endforeach()
     endif()
-
-    add_custom_command(TARGET ${target_name} POST_BUILD
-        COMMAND ${CMAKE_COMMAND}
-        "\"-DOUTPUT_DIR=$<TARGET_FILE_DIR:${target_name}>\""
-        "\"-DDIRECTORIES=${CXX_COMPILER_DIR};${C_COMPILER_DIR};${CONAN_RUNTIME_LIB_DIRS}\""
-        "\"-D${target_type}=$<TARGET_FILE:${target_name}>\""
-        "\"-DUNIX=${UNIX}\""
-        -P ${CMAKE_SOURCE_DIR}/cmake/CopyDeps.cmake
-        COMMAND ${CMAKE_COMMAND} "\"-DFILES_TO_PATCH=${COPIED_EXTRA_DLLS}\""
-        -P ${CMAKE_SOURCE_DIR}/cmake/PatchRunpath.cmake
-        COMMENT "Resolving and copying symlinked dependencies..."
-    )
 endfunction()
+
+include(InstallRequiredSystemLibraries)
+install(RUNTIME_DEPENDENCY_SET skylabs_runtime_dependencies
+    PRE_EXCLUDE_REGEXES
+        "api-ms-win-.*" "ext-ms-.*"
+        "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
+    POST_EXCLUDE_REGEXES
+        "^\/lib.*" "^\/usr\/lib.*"
+        "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
+    LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>bin
+    RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>bin
+)
+
+install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION $<IF:$<BOOL:${IS_MULTI_CONFIG}>,$<CONFIG>/,.>)

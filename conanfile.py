@@ -28,7 +28,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("sdl_ttf/3.2.2")
         self.requires("boost/1.91.0-1")
         self.requires("steamworks_sdk/1.64")
-        self.requires("vulkan-headers/1.4.350")
+        self.requires("vulkan-headers/1.4.351")
         self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
         self.requires("vk-bootstrap/1.4.349")
         self.requires("entt/3.16.0")
@@ -42,6 +42,44 @@ class SkylabsRecipe(ConanFile):
 
         if self.settings.os == "Android":
             self.requires("vulkan-validation-layers-android/1.4.341.0")
+
+    def generate(self):
+        if self.settings.os == "Android":
+            self.create_sdl_android_sources_symlink()
+            self.create_vulkan_validation_symlink()
+
+    def layout(self):
+        cmake_layout(self)
+
+    def create_sdl_android_sources_symlink(self):
+        sdl_java_src = os.path.abspath(
+            os.path.join(self.dependencies["sdl"].package_folder, "android-project", "app", "src", "main", "java", "org", "libsdl"
+        ))
+        project_java_dir = os.path.join(
+            self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl"
+        )
+
+        self._create_symlink(sdl_java_src, project_java_dir, target_is_directory=True)
+
+    def create_vulkan_validation_symlink(self):
+        arch_map = {
+            "armv8": "arm64-v8a",
+            "armv7": "armeabi-v7a",
+            "x86": "x86",
+            "x86_64": "x86_64",
+        }
+        android_abi = arch_map.get(str(self.settings.arch))
+        if not android_abi:
+            return
+
+        vvl_bin = os.path.abspath(os.path.join(
+            self.dependencies["vulkan-validation-layers-android"].package_folder, android_abi, "libVkLayer_khronos_validation.so"
+        ))
+        project_jniLibs_dir = os.path.join(
+            self.source_folder, "android", "app", "src", "main", "jniLibs", android_abi, "libVkLayer_khronos_validation.so"
+        )
+
+        self._create_symlink(vvl_bin, project_jniLibs_dir)
 
     def _create_symlink(self, source, destonation, target_is_directory=False):
         if not os.path.exists(source):
@@ -57,33 +95,3 @@ class SkylabsRecipe(ConanFile):
             self.output.info(f"Symlink created: {destonation} -> {source}")
         except Exception as e:
             self.output.warning(f"Failed to create symlink: {e}")
-
-    def create_sdl_android_sources_symlink(self):
-        sdl_java_src = os.path.abspath(os.path.join(self.dependencies["sdl"].package_folder, "android-project", "app", "src", "main", "java", "org", "libsdl"))
-        project_java_dir = os.path.join(self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl")
-
-        self._create_symlink(sdl_java_src, project_java_dir, target_is_directory=True)
-
-    def create_vulkan_validation_symlink(self):
-        arch_map = {
-            "armv8": "arm64-v8a",
-            "armv7": "armeabi-v7a",
-            "x86": "x86",
-            "x86_64": "x86_64",
-        }
-        android_abi = arch_map.get(str(self.settings.arch))
-        if not android_abi:
-            return
-
-        vvl_bin = os.path.abspath(os.path.join(self.dependencies["vulkan-validation-layers-android"].package_folder, android_abi, "libVkLayer_khronos_validation.so"))
-        project_jniLibs_dir = os.path.join(self.source_folder, "android", "app", "src", "main", "jniLibs", android_abi, "libVkLayer_khronos_validation.so")
-
-        self._create_symlink(vvl_bin, project_jniLibs_dir)
-
-    def generate(self):
-        if self.settings.os == "Android":
-            self.create_sdl_android_sources_symlink()
-            self.create_vulkan_validation_symlink()
-
-    def layout(self):
-        cmake_layout(self)

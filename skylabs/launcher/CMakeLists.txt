@@ -11,9 +11,8 @@ endif()
 
 set_target_properties(${CURRENT_TARGET_NAME}
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${SKYLABS_ROOT_OUTPUT_DIRECTORY}
-    VS_DEBUGGER_WORKING_DIRECTORY ${SKYLABS_ROOT_DIR}
-    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    VS_DEBUGGER_COMMAND $<INSTALL_PREFIX>/$<TARGET_FILE_NAME:${CURRENT_TARGET_NAME}>
+    VS_DEBUGGER_WORKING_DIRECTORY $<INSTALL_PREFIX>
     # WIN32_EXECUTABLE $<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>> # Do not show console in release
 )
 
@@ -25,4 +24,4 @@ target_sources(
         main.c
 )
 
-skylabs_configure_target(${CURRENT_TARGET_NAME})
+skylabs_configure_target(${CURRENT_TARGET_NAME} ROOT)
