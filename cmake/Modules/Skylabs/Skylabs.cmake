@@ -142,15 +142,33 @@ function(skylabs_configure_target target_name)
         return()
     endif()
 
+    set(RUNTIME_LOOKUP_DIRECTORIES "")
+    if(WIN32)
+        list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}")
+        cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_BIN_DIR)
+        list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CXX_COMPILER_BIN_DIR}")
+        cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_BIN_DIR)
+        list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${C_COMPILER_BIN_DIR}")
+    endif()
+
     install(TARGETS ${target_name}
-        RUNTIME_DEPENDENCY_SET skylabs_runtime_dependencies
+        RUNTIME_DEPENDENCIES
+        DIRECTORIES ${RUNTIME_LOOKUP_DIRECTORIES}
+        PRE_EXCLUDE_REGEXES
+            "api-ms-win-.*" "ext-ms-.*"
+            "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
+        POST_EXCLUDE_REGEXES
+            "^\/lib.*" "^\/usr\/lib.*"
+            "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
+        POST_INCLUDE_REGEXES
+            "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
         ARCHIVE DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,lib>
         LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
         RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
     )
 
     install(IMPORTED_RUNTIME_ARTIFACTS ${ARG_RUNTIME_PLUGINS}
-        RUNTIME_DEPENDENCY_SET skylabs_runtime_dependencies
+        RUNTIME_DEPENDENCY_SET
         LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
         RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
     )
@@ -169,16 +187,4 @@ function(skylabs_configure_target target_name)
     endif()
 endfunction()
 
-include(InstallRequiredSystemLibraries)
-install(RUNTIME_DEPENDENCY_SET skylabs_runtime_dependencies
-    PRE_EXCLUDE_REGEXES
-        "api-ms-win-.*" "ext-ms-.*"
-        "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
-    POST_EXCLUDE_REGEXES
-        "^\/lib.*" "^\/usr\/lib.*"
-        "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
-    LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>bin
-    RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>bin
-)
-
-install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION $<IF:$<BOOL:${IS_MULTI_CONFIG}>,$<CONFIG>/,.>)
+install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION $<IF:$<BOOL:${IS_MULTI_CONFIG}>,$<CONFIG>,.>)

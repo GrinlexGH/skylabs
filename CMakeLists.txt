@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.28...4.3)
 project(Skylabs HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 LANGUAGES CXX C)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
