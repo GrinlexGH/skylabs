@@ -40,11 +40,10 @@ get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 # - Copies optional runtime plugins into Android jniLibs directory
 #
 # Options:
-#   ROOT               Install executable/library into install root instead of bin/lib
-#   WIN32_IN_RELEASE   Sets WIN32_EXECUTABLE target property in release mode
-#   RUNTIME_PLUGINS    Additional runtime plugin targets to install/copy
-#   INSTALL_FILES      Additional files to install/copy
-#   INSTALL_SUBDIR     Destination subdirectory for INSTALL_FILES
+#   DESTINATION                   Subdirectory where target and its dependencies will be installed
+#   RUNTIME_PLUGINS               Additional runtime plugin targets to install
+#   INSTALL_FILES                 Additional files to install
+#   INSTALL_FILES_DESTINATION     Destination subdirectory for INSTALL_FILES
 function(skylabs_configure_target target_name)
     if(NOT TARGET ${target_name})
         return()
@@ -55,20 +54,20 @@ function(skylabs_configure_target target_name)
         return()
     endif()
 
-    cmake_parse_arguments(ARG "ROOT;WIN32_IN_RELEASE" "INSTALL_SUBDIR" "RUNTIME_PLUGINS;INSTALL_FILES" ${ARGN})
+    cmake_parse_arguments(ARG "WIN32_IN_RELEASE" "DESTINATION;INSTALL_FILES_DESTINATION" "RUNTIME_PLUGINS;INSTALL_FILES" ${ARGN})
 
     # Copy output files for custom targets
-    if(ARG_INSTALL_FILES AND ARG_INSTALL_SUBDIR)
+    if(ARG_INSTALL_FILES AND INSTALL_FILES_DESTINATION)
         install(FILES ${ARG_INSTALL_FILES}
-            DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>${ARG_INSTALL_SUBDIR}
+            DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>${INSTALL_FILES_DESTINATION}
         )
 
         if(ANDROID)
             add_custom_command(TARGET ${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory
-                    "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_INSTALL_SUBDIR}"
+                    "${SKYLABS_ANDROID_ASSETS_DIR}/${INSTALL_FILES_DESTINATION}"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${ARG_INSTALL_FILES} "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_INSTALL_SUBDIR}"
+                    ${ARG_INSTALL_FILES} "${SKYLABS_ANDROID_ASSETS_DIR}/${INSTALL_FILES_DESTINATION}"
             )
         endif()
     endif()
@@ -77,8 +76,8 @@ function(skylabs_configure_target target_name)
     if(ARG_RUNTIME_PLUGINS)
         install(IMPORTED_RUNTIME_ARTIFACTS ${ARG_RUNTIME_PLUGINS}
             RUNTIME_DEPENDENCY_SET
-            LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,lib>
-            RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
+            LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${DESTINATION}>,${DESTINATION},lib>
+            RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${DESTINATION}>,${DESTINATION},bin>
         )
 
         if(ANDROID)
@@ -111,12 +110,6 @@ function(skylabs_configure_target target_name)
             VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/$<CONFIG>/$<TARGET_FILE_NAME:${target_name}>
             VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/$<CONFIG>
         )
-
-        if(ARG_WIN32_IN_RELEASE)
-            set_target_properties(${target_name} PROPERTIES
-                WIN32_EXECUTABLE $<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>>
-            )
-        endif()
     endif()
 
     # Complex generator expression conditions
@@ -201,9 +194,9 @@ function(skylabs_configure_target target_name)
             "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
         POST_INCLUDE_REGEXES
             "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
-        ARCHIVE DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,lib>
-        LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,lib>
-        RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_ROOT}>,.,bin>
+        ARCHIVE DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${DESTINATION}>,${DESTINATION},lib>
+        LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${DESTINATION}>,${DESTINATION},lib>
+        RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${DESTINATION}>,${DESTINATION},bin>
     )
 endfunction()
 
