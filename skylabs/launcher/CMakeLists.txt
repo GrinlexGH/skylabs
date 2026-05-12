@@ -24,4 +24,15 @@ target_sources(
         main.c
 )
 
+# https://github.com/baldurk/renderdoc/issues/3403
+if(UNIX)
+    configure_file(
+        "${SKYLABS_ROOT_DIR}/cmake/launch_proper_env.sh.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/launch_proper_env.sh"
+        @ONLY
+    )
+
+    install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/launch_proper_env.sh" DESTINATION .)
+endif()
+
 skylabs_configure_target(${CURRENT_TARGET_NAME} ROOT)

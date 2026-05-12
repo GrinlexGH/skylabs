@@ -14,6 +14,7 @@ public:
     ~CAudio();
 
     [[nodiscard]] MIX_Audio* operator*() { return m_audio; }
+    operator bool() const { return !!m_audio; }
 
 private:
     void Cleanup();
