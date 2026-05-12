@@ -151,34 +151,14 @@ int main() {
 #define PERROR_EXIT_CHECK(expr, msg) do { if (expr) { perror(msg); CLEANUP_AND_EXIT(); } } while(0)
 #define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { fprintf(stderr, msg, __VA_ARGS__); CLEANUP_AND_EXIT(); } } while(0)
 
-#define LOAD_PATH "/bin/core.so"
+#define LOAD_PATH "core.so"
 
 int main(int argc, char* argv[]) {
     int ret = 0;
-    char* exePath = NULL;
-    char* libPath = NULL;
     void* hCore = NULL;
 
-    // Get program path
-    exePath = realpath("/proc/self/exe", NULL);
-    PERROR_EXIT_CHECK(!exePath, "Failed to get executable path");
-
-    // Remove filename
-    char* lastSlash = strrchr(exePath, '/');
-    *lastSlash = '\0';
-
-    int corePathLen = (lastSlash - exePath) + (sizeof(LOAD_PATH) / sizeof(LOAD_PATH[0]));
-    libPath = malloc(sizeof(char) * corePathLen);
-    PERROR_EXIT_CHECK(!libPath, "Failed to allocate memory for core path");
-
-    snprintf(libPath, corePathLen, "%s" LOAD_PATH, exePath);
-    free(exePath);
-    exePath = NULL;
-
-    hCore = dlopen(libPath, RTLD_LAZY);
+    hCore = dlopen(LOAD_PATH, RTLD_LAZY);
     PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", dlerror());
-    free(libPath);
-    libPath = NULL;
 
     main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
     const char* dlsymError = dlerror();
@@ -187,8 +167,6 @@ int main(int argc, char* argv[]) {
     ret = coreMain(argc, argv);
 
 cleanup:
-    if (exePath) free(exePath);
-    if (libPath) free(libPath);
     if (hCore) dlclose(hCore);
     return ret;
 }
