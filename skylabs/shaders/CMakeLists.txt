@@ -73,5 +73,6 @@ add_custom_target(${CURRENT_TARGET_NAME} ALL
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME}
-    INSTALL_FILES ${shader_out_names} INSTALL_SUBDIR shaders
+    INSTALL_FILES ${shader_out_names}
+    INSTALL_FILES_DESTINATION shaders
 )
