@@ -27,101 +27,33 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
 endif()
 
-get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+function(skylabs_target_setup_ide target_name vs_startup)
+    cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "" ${ARGN})
 
-# Configures a target with common Skylabs project settings:
-# - Creates IDE source groups for target sources
-# - Applies common compiler and linker options
-# - Adds platform, compiler, architecture, and library definitions
-# - Configures install rules for binaries, libraries, and runtime dependencies
-# - Installs additional files
-# - Copies addition files to Android assets if needed
-# - Installs optional runtime plugin targets
-# - Copies optional runtime plugins into Android jniLibs directory
-#
-# Options:
-#   WIN32_IN_RELEASE              Set WIN32_EXECUTABLE in release configuration
-#   DESTINATION                   Subdirectory where target and its dependencies will be installed
-#   RUNTIME_PLUGINS               Additional runtime plugin targets to install
-#   INSTALL_FILES                 Additional files to install
-#   INSTALL_FILES_DESTINATION     Destination subdirectory for INSTALL_FILES
-function(skylabs_configure_target target_name)
-    if(NOT TARGET ${target_name})
-        return()
-    endif()
+    get_target_property(TARGET_TYPE ${target_name} TYPE)
+    get_target_property(TARGET_SOURCES ${target_name} SOURCES)
 
-    get_target_property(aliased_target ${target_name} ALIASED_TARGET)
-    if(${aliased_target})
-        return()
-    endif()
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${TARGET_SOURCES})
 
-    cmake_parse_arguments(ARG "WIN32_IN_RELEASE" "DESTINATION;INSTALL_FILES_DESTINATION" "RUNTIME_PLUGINS;INSTALL_FILES" ${ARGN})
-
-    # Copy output files for custom targets
-    if(ARG_INSTALL_FILES AND ARG_INSTALL_FILES_DESTINATION)
-        install(FILES ${ARG_INSTALL_FILES}
-            DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>${ARG_INSTALL_FILES_DESTINATION}
-        )
-
-        if(ANDROID)
-            add_custom_command(TARGET ${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory
-                    "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_INSTALL_FILES_DESTINATION}"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${ARG_INSTALL_FILES} "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_INSTALL_FILES_DESTINATION}"
-            )
-        endif()
-    endif()
-
-    # Copy additional runtime plugins
-    get_target_property(target_type ${target_name} TYPE)
-    set(LIBRARY_DIRECTORY $<IF:$<AND:$<BOOL:${WIN32}>,$<STREQUAL:"${target_type}","MODULE_LIBRARY">>,bin,lib>)
-
-    if(ARG_RUNTIME_PLUGINS)
-        install(IMPORTED_RUNTIME_ARTIFACTS ${ARG_RUNTIME_PLUGINS}
-            RUNTIME_DEPENDENCY_SET
-            LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_DESTINATION}>,${ARG_DESTINATION},${LIBRARY_DIRECTORY}>
-            RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_DESTINATION}>,${ARG_DESTINATION},bin>
-        )
-
-        if(ANDROID)
-            add_custom_command(TARGET ${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E
-                    make_directory "${SKYLABS_ANDROID_JNILIBS_DIR}"
-            )
-            foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
-                add_custom_command(TARGET ${target_name} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        $<TARGET_FILE:${plugin_target}> "${SKYLABS_ANDROID_JNILIBS_DIR}"
-                )
-            endforeach()
-        endif()
-    endif()
-
-    # Source groups
-    get_target_property(sources ${target_name} SOURCES)
-    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${sources})
-
-    if(NOT("${target_type}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|INTERFACE_LIBRARY|EXECUTABLE"))
-        return()
-    endif()
-
-    # Executable target properties
-    if("${target_type}" STREQUAL "EXECUTABLE")
+    if("${TARGET_TYPE}" STREQUAL "EXECUTABLE")
         set_target_properties(${target_name} PROPERTIES
-            INSTALL_RPATH \$ORIGIN:$ORIGIN/../lib/
-            VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/$<CONFIG>/$<TARGET_FILE_NAME:${target_name}>
-            VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/$<CONFIG>
+            VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${ARG_RUNTIME_DESTINATION}/$<TARGET_FILE_NAME:${target_name}>
+            VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}
         )
 
-        if(ARG_WIN32_IN_RELEASE)
-            set_target_properties(${target_name} PROPERTIES
-                WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>
-            )
+        if(vs_startup)
+            set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${target_name})
         endif()
     endif()
+endfunction()
 
-    # Complex generator expression conditions
+function(skylabs_target_setup_compilation target_name win32_in_release)
+    get_target_property(TARGET_TYPE ${target_name} TYPE)
+
+    if(win32_in_release AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE"))
+        set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)
+    endif()
+
     set(IS_GNU_LIKE $<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
     set(IS_MSVC_LIKE $<OR:$<CXX_COMPILER_ID:MSVC>,$<STREQUAL:${CMAKE_CXX_COMPILER_FRONTEND_VARIANT},MSVC>>)
     set(SHOULD_USE_LTO $<BOOL:${LTO_AVAILABLE}>)
@@ -177,12 +109,29 @@ function(skylabs_configure_target target_name)
         VULKAN_HPP_TYPESAFE_CONVERSION=1
         VULKAN_HPP_USE_STD_EXPECTED=1
     )
+endfunction()
 
-    if("${target_type}" MATCHES "STATIC_LIBRARY|OBJECT_LIBRARY|INTERFACE_LIBRARY")
-        return()
+function(skylabs_target_setup_install target_name)
+    cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "RUNTIME_PLUGINS" ${ARGN})
+
+    get_target_property(TARGET_TYPE ${target_name} TYPE)
+
+    if(UNIX AND "${TARGET_TYPE}" STREQUAL "EXECUTABLE")
+        set_target_properties(${target_name} PROPERTIES INSTALL_RPATH "\$ORIGIN:$ORIGIN/../lib/")
     endif()
 
-    # Install dll/exe/so with its dependencies
+    set(runtime_dest "bin")
+    if(WIN32 AND ("${TARGET_TYPE}" STREQUAL "MODULE_LIBRARY"))
+        set(library_dest bin)
+    else()
+        set(library_dest lib)
+    endif()
+
+    if(ARG_RUNTIME_DESTINATION)
+        set(runtime_dest ${ARG_RUNTIME_DESTINATION})
+        set(library_dest ${ARG_RUNTIME_DESTINATION})
+    endif()
+
     set(RUNTIME_LOOKUP_DIRECTORIES "")
     if(WIN32)
         list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}")
@@ -203,10 +152,105 @@ function(skylabs_configure_target target_name)
             "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
         POST_INCLUDE_REGEXES
             "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
-        ARCHIVE DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_DESTINATION}>,${ARG_DESTINATION},${LIBRARY_DIRECTORY}>
-        LIBRARY DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_DESTINATION}>,${ARG_DESTINATION},${LIBRARY_DIRECTORY}>
-        RUNTIME DESTINATION $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>$<IF:$<BOOL:${ARG_DESTINATION}>,${ARG_DESTINATION},bin>
+        ARCHIVE DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
+        LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
+        RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
     )
+
+    if(ARG_RUNTIME_PLUGINS)
+        install(IMPORTED_RUNTIME_ARTIFACTS ${ARG_RUNTIME_PLUGINS}
+            RUNTIME_DEPENDENCY_SET
+            LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
+            RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
+        )
+
+        if(ANDROID)
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E
+                    make_directory "${SKYLABS_ANDROID_JNILIBS_DIR}"
+            )
+            foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        $<TARGET_FILE:${plugin_target}> "${SKYLABS_ANDROID_JNILIBS_DIR}"
+                )
+            endforeach()
+        endif()
+    endif()
 endfunction()
 
-install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION $<IF:$<BOOL:${IS_MULTI_CONFIG}>,$<CONFIG>,.>)
+function(skylabs_target_setup_install_custom_files target_name)
+    cmake_parse_arguments(ARG "" "DESTINATION" "FILES" ${ARGN})
+
+    install(FILES ${ARG_FILES}
+        DESTINATION ${SKYLABS_INSTALL_SUBDIR}${ARG_DESTINATION}
+    )
+
+    if(ANDROID)
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+                "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${ARG_FILES} "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
+        )
+    endif()
+endfunction()
+
+# Options:
+#   WIN32_IN_RELEASE            Set WIN32_EXECUTABLE target property in release mode
+#   VS_STARTUP                  Set target as Visual Studio default startup project
+#   RUNTIME_DESTINATION         Subdir of install destination
+#   RUNTIME_PLUGINS             Additional targets for install as IMPORTED_RUNTIME_ARTIFACTS
+#   CUSTOM_FILES                List of custom files to install with target
+#   CUSTOM_FILES_DESTINATION    Subdir of install destination
+function(skylabs_configure_target target_name)
+    if(NOT TARGET ${target_name})
+        return()
+    endif()
+
+    get_target_property(aliased_target ${target_name} ALIASED_TARGET)
+    if(${aliased_target})
+        return()
+    endif()
+
+    set(options WIN32_IN_RELEASE VS_STARTUP)
+    set(oneValueArgs RUNTIME_DESTINATION CUSTOM_FILES_DESTINATION)
+    set(multiValueArgs RUNTIME_PLUGINS CUSTOM_FILES)
+    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    get_target_property(TARGET_TYPE ${target_name} TYPE)
+
+    skylabs_target_setup_ide(${target_name}
+        ${ARG_VS_STARTUP}
+        RUNTIME_DESTINATION "${ARG_RUNTIME_DESTINATION}"
+    )
+
+    if(ARG_CUSTOM_FILES AND ARG_CUSTOM_FILES_DESTINATION)
+        skylabs_target_setup_install_custom_files(${target_name}
+            FILES ${ARG_CUSTOM_FILES}
+            DESTINATION "${ARG_CUSTOM_FILES_DESTINATION}"
+        )
+    endif()
+
+    if(NOT("${TARGET_TYPE}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|INTERFACE_LIBRARY|EXECUTABLE"))
+        return()
+    endif()
+
+    skylabs_target_setup_compilation(${target_name} ${ARG_WIN32_IN_RELEASE})
+
+    if("${TARGET_TYPE}" MATCHES "INTERFACE_LIBRARY")
+        return()
+    endif()
+
+    set(install_args "")
+    if(ARG_RUNTIME_DESTINATION)
+        list(APPEND install_args RUNTIME_DESTINATION "${ARG_RUNTIME_DESTINATION}")
+    endif()
+    if(ARG_RUNTIME_PLUGINS)
+        list(APPEND install_args RUNTIME_PLUGINS ${ARG_RUNTIME_PLUGINS})
+    endif()
+
+    skylabs_target_setup_install(${target_name} ${install_args})
+endfunction()
+
+install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)

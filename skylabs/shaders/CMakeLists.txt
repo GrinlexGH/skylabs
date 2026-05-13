@@ -7,9 +7,8 @@ set(SOURCES
     shaderSwapchain.frag.slang
     shaderSwapchain.vert.slang
     shaderUI.frag.slang
+    main.slang
 )
-
-set(IMPORTS )
 
 set(SLANG_STAGE_vert "vertex")
 set(SLANG_STAGE_frag "fragment")
@@ -27,7 +26,7 @@ foreach(shader IN LISTS SOURCES)
     set(shader_abs_path "${CMAKE_CURRENT_SOURCE_DIR}/${shader}")
 
     cmake_path(GET shader FILENAME shader_name)
-    cmake_path(GET shader STEM LAST_ONLY shader_name_we)
+    cmake_path(GET shader_name STEM LAST_ONLY shader_name_we)
     cmake_path(GET shader_name_we EXTENSION LAST_ONLY shader_stage)
     string(REGEX REPLACE "^\\." "" shader_stage "${shader_stage}")
     string(TOLOWER "${shader_stage}" shader_stage)
@@ -40,9 +39,7 @@ foreach(shader IN LISTS SOURCES)
     set(depfile_path "${shader_out_dir}/${shader_name_we}.d")
 
     set(shader_stage_name "${SLANG_STAGE_${shader_stage}}")
-
     if(NOT shader_stage_name)
-        message(WARNING "Unknown shader stage suffix: ${shader_stage} for ${shader}")
         continue()
     endif()
 
@@ -69,10 +66,10 @@ endforeach()
 
 add_custom_target(${CURRENT_TARGET_NAME} ALL
     DEPENDS ${shader_out_names}
-    SOURCES ${SOURCES} ${IMPORTS}
+    SOURCES ${SOURCES}
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME}
-    INSTALL_FILES ${shader_out_names}
-    INSTALL_FILES_DESTINATION shaders
+    CUSTOM_FILES ${shader_out_names}
+    CUSTOM_FILES_DESTINATION shaders
 )

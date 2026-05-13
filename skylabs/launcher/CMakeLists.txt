@@ -9,8 +9,6 @@ else()
     add_executable(${CURRENT_TARGET_NAME})
 endif()
 
-set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CURRENT_TARGET_NAME})
-
 target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
@@ -28,4 +26,7 @@ if(UNIX)
     install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/launch.sh" DESTINATION .)
 endif()
 
-skylabs_configure_target(${CURRENT_TARGET_NAME} DESTINATION .)
+skylabs_configure_target(${CURRENT_TARGET_NAME}
+    RUNTIME_DESTINATION $<IF:$<BOOL:${WIN32}>,.,bin>
+    VS_STARTUP
+)

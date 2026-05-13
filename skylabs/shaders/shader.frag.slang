@@ -1,3 +1,5 @@
+import main;
+
 struct PushConstants {
     uint textureIndex;
 };
@@ -7,11 +9,6 @@ PushConstants pc;
 
 [[vk::binding(1)]]
 Sampler2D allTextures[];
-
-struct VOut {
-    float4 outPosition : SV_Position;
-    [[vk::location(0)]] float2 uv : TEXCOORD0;
-};
 
 [shader("fragment")]
 float4 main(VOut input) : SV_Target {

@@ -1,3 +1,5 @@
+import main;
+
 struct UniformBufferObject {
     float4x4 model;
     float4x4 view;
@@ -6,11 +8,6 @@ struct UniformBufferObject {
 
 [[vk::binding(0)]]
 ConstantBuffer<UniformBufferObject> ubo;
-
-struct VOut {
-    float4 outPosition : SV_Position;
-    [[vk::location(0)]] float2 uv;
-};
 
 struct VIn {
     [[vk::location(0)]] float3 position;
