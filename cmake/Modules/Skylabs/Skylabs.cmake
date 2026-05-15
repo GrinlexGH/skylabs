@@ -27,6 +27,8 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
 endif()
 
+include(GNUInstallDirs)
+
 function(skylabs_target_setup_ide target_name vs_startup)
     cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "" ${ARGN})
 
@@ -120,11 +122,11 @@ function(skylabs_target_setup_install target_name)
         set_target_properties(${target_name} PROPERTIES INSTALL_RPATH "\$ORIGIN:$ORIGIN/../lib/")
     endif()
 
-    set(runtime_dest "bin")
+    set(runtime_dest ${CMAKE_INSTALL_BINDIR})
     if(WIN32 AND ("${TARGET_TYPE}" STREQUAL "MODULE_LIBRARY"))
-        set(library_dest bin)
+        set(library_dest ${CMAKE_INSTALL_BINDIR})
     else()
-        set(library_dest lib)
+        set(library_dest ${CMAKE_INSTALL_LIBDIR})
     endif()
 
     if(ARG_RUNTIME_DESTINATION)
