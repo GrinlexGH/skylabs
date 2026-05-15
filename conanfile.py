@@ -28,7 +28,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("sdl_ttf/3.2.2")
         self.requires("boost/1.91.0-1")
         self.requires("steamworks_sdk/1.64")
-        self.requires("vulkan-headers/1.4.351")
+        self.requires("vulkan-headers/1.4.352")
         self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
         self.requires("vk-bootstrap/1.4.350")
         self.requires("entt/3.16.0")
