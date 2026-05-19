@@ -14,6 +14,7 @@ abstract class ConanInstallTask @Inject constructor(
     abstract val conanFile: RegularFileProperty
 
     @get:Input abstract val arch: Property<String>
+    @get:Input abstract val apiLevel: Property<Int>
     @get:Input abstract val buildType: Property<String>
     @get:Input abstract val ndkPath: Property<String>
 
@@ -28,9 +29,12 @@ abstract class ConanInstallTask @Inject constructor(
             "install", conanfileDir.absolutePath,
             "-r", "skylabs", "-r", "conancenter",
             "-pr", "android",
-            "-c", "tools.android:ndk_path=${ndkPath.get()}",
-            "-s", "build_type=${buildType.get()}",
             "-s", "arch=${arch.get()}",
+            "-s", "os.api_level=${apiLevel.get()}",
+            "-s", "build_type=${buildType.get()}",
+            "-s", "compiler.version=21",                    //!!! Depends on this file configuration, dont forget to update !!!
+            "-s", "compiler.libcxx=c++_static",             //!!! Depends on this file configuration, dont forget to update !!!
+            "-c", "tools.android:ndk_path=${ndkPath.get()}",
             "--build", "missing",
             "-c", "tools.cmake.cmake_layout:build_folder_vars=['settings.arch']",
         )
@@ -123,10 +127,12 @@ androidComponents {
                     else -> abi
                 }
 
-                buildType.set(configName)
                 conanFile.set(if (conanfilePy.exists()) conanfilePy else conanfileTxt)
                 arch.set(conanArch)
+                apiLevel.set(android.defaultConfig.minSdk!!)
+                buildType.set(configName)
                 ndkPath.set(androidComponents.sdkComponents.ndkDirectory.map { it.asFile.absolutePath })
+
                 outputDir.set(projectRootFile.resolve("build/$conanArch/$configName"))
             }
         }
