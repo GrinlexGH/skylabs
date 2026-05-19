@@ -30,7 +30,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("steamworks_sdk/1.64")
         self.requires("vulkan-headers/1.4.352")
         self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
-        self.requires("vk-bootstrap/1.4.350")
+        self.requires("vk-bootstrap/1.4.352")
         self.requires("entt/3.16.0")
         self.requires("tinyobjloader/2.0.0rc13")
         self.requires("glm/1.0.3")
