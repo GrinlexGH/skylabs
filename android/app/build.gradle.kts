@@ -27,7 +27,7 @@ abstract class ConanInstallTask @Inject constructor(
 
         val args = listOf(
             "install", conanfileDir.absolutePath,
-            "-r", "skylabs", "-r", "conancenter",
+            "-r", "skylabs", "-r", "conancenter",           // You can modify this line for your remotes like artifactory
             "-pr", "android",
             "-s", "arch=${arch.get()}",
             "-s", "os.api_level=${apiLevel.get()}",
