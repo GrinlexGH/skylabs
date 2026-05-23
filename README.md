@@ -78,7 +78,7 @@ conan config install ./conan/conan-config/config
 
 ```bash
 # Install dependencies
-conan install . -r skylabs -r conancenter --build=missing
+conan install . -r skylabs --build=missing
 
 # Configure project
 cmake --preset conan-default
@@ -91,7 +91,7 @@ cmake --build build
 
 ### 📱 3. Android Build
 
-The Android pipeline is **fully automated via Gradle** - no manual Conan step required.
+The Android pipeline is **fully automated via Gradle** - no manual Conan step required (you can change conan setup manually from [`build.gradle.kts`](android/app/build.gradle.kts) if you need).
 
 ```bash
 cd android
@@ -99,7 +99,7 @@ cd android
 ```
 
 > [!TIP]
-> Gradle triggers Conan internally during the `preBuild` phase. It uses android-specific Conan profile (you can copy from my Conan config repo).
+> Gradle triggers conan internally during the `configureCMake` phase. It uses android-specific conan profile (you can copy from my conan config repo).
 
 ## 📚 References & Resources
 * [UTF-8 Everywhere](https://utf8everywhere.org/)
