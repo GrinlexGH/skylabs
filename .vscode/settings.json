@@ -1,0 +1,5 @@
+{
+    "files.associations": {
+        "**/conan/conan-config/config/profiles/*": "jinja-toml"
+    }
+}

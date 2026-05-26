@@ -1,5 +1,4 @@
 # Tools
-.vscode/*
 .cache/
 .PVS-Studio/
 .vs/
@@ -9,10 +8,6 @@
 # Build folders
 build/
 out/
-
-# Do not ignore vscode useful stuff
-!.vscode/launch.json
-!.vscode/skylabs.code-snippets
 
 # CMake user presets
 CMakeUserPresets.json
