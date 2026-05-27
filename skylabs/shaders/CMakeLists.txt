@@ -49,7 +49,7 @@ foreach(shader IN LISTS SOURCES)
         OUTPUT "${shader_out_path}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${shader_out_dir}"
 
-        COMMAND Slangc::slangc
+        COMMAND slang::slangc
             "${shader_abs_path}"
             -entry "main"
             -stage "${shader_stage_name}"

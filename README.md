@@ -38,9 +38,7 @@ Ensure you have the following tools installed before compiling:
 |------------------|---------------------------|
 | **CMake**        | Latest version            |
 | **C++ Compiler** | Latest MSVC / GCC / Clang |
-| **Python**       | 3.x                       |
 | **Conan**        | 2.x                       |
-| **Vulkan SDK**   | Latest SDK (only slang)   |
 | **Android SDK**  | Latest SDK (optional)     |
 
 ## ⚙️ Configuration & Building
