@@ -19,8 +19,6 @@ class SkylabsRecipe(ConanFile):
         "boost/*:with_container_hash": True,
         "boost/*:with_range": True,
         "boost/*:with_unordered": True,
-
-        "slang/*:with_dxil": False
     }
 
     def requirements(self):

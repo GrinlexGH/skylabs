@@ -58,15 +58,15 @@ target_sources(
 target_precompile_headers(${CURRENT_TARGET_NAME} PUBLIC pch.hpp)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
-    SDL3::SDL3
-    SDL3_mixer::SDL3_mixer
-    SDL3_ttf::SDL3_ttf
-    Vulkan::Headers
     Boost::headers
     Boost::nowide
     Boost::container
     fmt::fmt
+    SDL3::SDL3
+    SDL3_mixer::SDL3_mixer
+    SDL3_ttf::SDL3_ttf
     stc::stc
+    Vulkan::Headers
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME}

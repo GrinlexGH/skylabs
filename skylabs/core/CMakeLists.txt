@@ -71,21 +71,18 @@ add_dependencies(${CURRENT_TARGET_NAME} shaders)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     public
-
-    SDL3_image::SDL3_image
-    SteamworksSDK::SteamworksSDK
-    Vulkan::Headers
-
-    VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
-    vk-bootstrap::vk-bootstrap
-    glm::glm
-
+    Catch2::Catch2
     EnTT::EnTT
     frozen::frozen
+    glbinding::glbinding
+    glm::glm
+    SDL3_image::SDL3_image
     stb::stb
+    SteamworksSDK::SteamworksSDK
     tinyobjloader::tinyobjloader
-
-    Catch2::Catch2
+    vk-bootstrap::vk-bootstrap
+    Vulkan::Headers
+    VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})
