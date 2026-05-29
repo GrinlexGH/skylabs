@@ -1,6 +1,7 @@
 #include <skylabs/public/filesystem.hpp>
 #include <skylabs/public/sdl/filesystem.hpp>
 #include <skylabs/public/os.hpp>
+#include <skylabs/public/logging.hpp>
 
 namespace {
 template <typename T>
@@ -26,9 +27,8 @@ Filesystem& Filesystem::Instance() {
 }
 
 Filesystem::Filesystem() {
-    Mount("assets", "");
-    Mount("assets", "assets");
-    Mount("res", "");
+    Mount("assets", OS::PathJoin(OS::GetExecutableDirectory(), "assets"));
+    Mount("assets", OS::GetExecutableDirectory());
     Mount("res", OS::GetExecutableDirectory());
 }
 
@@ -52,8 +52,11 @@ std::string Filesystem::ResolvePath(std::string_view uri) const {
             std::string fullPath = root.empty() ? std::string(relativePath) : root + "/" + std::string(relativePath);
 
             SDL_PathInfo info;
+            Log::Debug("Checking path: {}", fullPath);
             if (SDL_GetPathInfo(fullPath.c_str(), &info)) {
                 return fullPath;
+            } else {
+                Log::Warning("{}", SDL_GetError());
             }
         }
     }
