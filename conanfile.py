@@ -19,6 +19,8 @@ class SkylabsRecipe(ConanFile):
         "boost/*:with_container_hash": True,
         "boost/*:with_range": True,
         "boost/*:with_unordered": True,
+
+        "slang/*:with_dxil": False
     }
 
     def requirements(self):
@@ -34,7 +36,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("sdl_mixer/3.2.2")
         self.requires("sdl_ttf/3.2.2")
         self.requires("simple_term_colors/1.0")
-        self.requires("slang/2026.9.1")
+        self.requires("slang/2026.10")
         self.requires("stb/cci.20260313")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
