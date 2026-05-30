@@ -31,7 +31,6 @@ private:
     static constexpr auto FRAMES_IN_FLIGHT_COUNT = 3;
     static constexpr auto GEOMETRY_POOL_SIZE = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
-    void HandleSwapchainResult(vk::Result result, std::string_view context);
     void RecreateSwapchain();
     void ResizeTextures();
     void LoadTextures();

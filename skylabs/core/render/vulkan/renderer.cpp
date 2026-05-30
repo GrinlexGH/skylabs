@@ -212,37 +212,6 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     m_inFlightContext.NextFrame();
 }
 
-void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string_view context) {
-    // Wait all frame fences
-    std::ignore = m_deviceContext.Device()->waitForFences(
-        m_fence
-            | std::views::transform([](const auto& f) { return *f; })
-            | std::ranges::to<std::vector>(),
-        vk::True, std::numeric_limits<std::uint64_t>::max()
-    );
-
-    if (result != vk::Result::eSuccess &&
-        result != vk::Result::eSuboptimalKHR &&
-        result != vk::Result::eErrorSurfaceLostKHR &&
-        result != vk::Result::eErrorOutOfDateKHR
-    ) {
-        throw std::runtime_error(fmt::format("Failed to {} image: {}", context, vk::to_string(result)));
-    }
-
-    if (m_needSurfaceRecreation) {
-        m_swapchain.Clear();
-        m_deviceContext.RepairSurface();
-        m_needSwapchainRecreation = true;
-        m_needSurfaceRecreation = false;
-    }
-
-    // You cant recreate swapchain if surface is lost
-    if (result != vk::Result::eErrorSurfaceLostKHR && m_needSwapchainRecreation) {
-        RecreateSwapchain();
-        m_needSwapchainRecreation = false;
-    }
-}
-
 void CRenderer::RecreateSwapchain() {
     const auto [oldWidth, oldHeight] = m_swapchain.Extent();
     m_swapchain.Recreate({ });
