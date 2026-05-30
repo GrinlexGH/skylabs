@@ -1,11 +1,5 @@
 # skylabs
-set(PROJECTS
-    shaders
-    launcher
-    core
-    public
-)
-
-foreach(PROJECT ${PROJECTS})
-    add_subdirectory(${PROJECT})
-endforeach()
+add_subdirectory(shaders)
+add_subdirectory(launcher)
+add_subdirectory(core)
+add_subdirectory(public)
