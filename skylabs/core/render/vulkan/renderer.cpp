@@ -146,9 +146,6 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
         if (vk::Result::eErrorSurfaceLostKHR == acquireResult) {
             return;
         }
-        if (vk::Result::eSuboptimalKHR == acquireResult) {
-            m_needSwapchainRecreation = true;
-        }
     }
 
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
