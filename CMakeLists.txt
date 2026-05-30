@@ -172,17 +172,24 @@ function(skylabs_target_setup_install target_name)
         list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${C_COMPILER_BIN_DIR}")
     endif()
 
+    set(RUNTIME_DEPENDENCIES_ARGS "")
+    if(NOT CMAKE_CROSSCOMPILING)
+        set(RUNTIME_DEPENDENCIES_ARGS
+            RUNTIME_DEPENDENCIES
+            DIRECTORIES ${RUNTIME_LOOKUP_DIRECTORIES}
+            PRE_EXCLUDE_REGEXES
+                "api-ms-win-.*" "ext-ms-.*"
+                "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
+            POST_EXCLUDE_REGEXES
+                "^\/lib.*" "^\/usr\/lib.*"
+                "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
+            POST_INCLUDE_REGEXES
+                "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
+        )
+    endif()
+
     install(TARGETS ${target_name}
-        RUNTIME_DEPENDENCIES
-        DIRECTORIES ${RUNTIME_LOOKUP_DIRECTORIES}
-        PRE_EXCLUDE_REGEXES
-            "api-ms-win-.*" "ext-ms-.*"
-            "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
-        POST_EXCLUDE_REGEXES
-            "^\/lib.*" "^\/usr\/lib.*"
-            "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
-        POST_INCLUDE_REGEXES
-            "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
+        ${RUNTIME_DEPENDENCIES_ARGS}
         ARCHIVE DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
         LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
         RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}

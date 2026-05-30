@@ -1,12 +1,11 @@
 import os
 
 from conan import ConanFile
-from conan.tools.cmake import cmake_layout
+from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.build import cross_building
 
 class SkylabsRecipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators = "CMakeDeps", "CMakeToolchain"
-
     package_type = "application"
 
     default_options = {
@@ -20,6 +19,9 @@ class SkylabsRecipe(ConanFile):
         "boost/*:with_range": True,
         "boost/*:with_unordered": True,
     }
+
+    def build_requirements(self):
+        self.tool_requires("slang/2026.10")
 
     def requirements(self):
         self.requires("boost/1.91.0-1")
@@ -46,6 +48,17 @@ class SkylabsRecipe(ConanFile):
             self.requires("vulkan-validation-layers-android/1.4.350.0")
 
     def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+
+        tc = CMakeToolchain(self)
+        if cross_building(self):
+            slang_host = self.dependencies.build["slang"]
+            ext = ".exe" if self.settings_build.os == "Windows" else ""
+            slang_compiler_path = os.path.join(slang_host.package_folder, "bin", f"slangc{ext}")
+            tc.variables["SLANG_COMPILER"] = slang_compiler_path.replace("\\", "/")
+
+        tc.generate()
         if self.settings.os == "Android":
             self.create_sdl_android_sources_symlink()
             self.create_vulkan_validation_symlink()

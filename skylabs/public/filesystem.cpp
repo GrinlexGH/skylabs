@@ -27,9 +27,15 @@ Filesystem& Filesystem::Instance() {
 }
 
 Filesystem::Filesystem() {
+#ifdef PLATFORM_ANDROID
+    Mount("assets", "");
+    Mount("assets", "assets:/");
+    Mount("res", "");
+#else
     Mount("assets", OS::PathJoin(OS::GetExecutableDirectory(), "assets"));
     Mount("assets", OS::GetExecutableDirectory());
     Mount("res", OS::GetExecutableDirectory());
+#endif
 }
 
 void Filesystem::Mount(std::string_view scheme, std::string_view physicalPath) {
@@ -52,11 +58,8 @@ std::string Filesystem::ResolvePath(std::string_view uri) const {
             std::string fullPath = root.empty() ? std::string(relativePath) : root + "/" + std::string(relativePath);
 
             SDL_PathInfo info;
-            Log::Debug("Checking path: {}", fullPath);
             if (SDL_GetPathInfo(fullPath.c_str(), &info)) {
                 return fullPath;
-            } else {
-                Log::Warning("{}", SDL_GetError());
             }
         }
     }

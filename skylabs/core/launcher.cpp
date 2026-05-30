@@ -140,7 +140,9 @@ void CLauncher::ProcessEvents() {
                 m_renderer->m_needSurfaceRecreation = true;
                 break;
 
-            case SDL_EVENT_WINDOW_RESIZED:
+            case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+            case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
                 m_renderer->m_needSwapchainRecreation = true;
                 break;
 

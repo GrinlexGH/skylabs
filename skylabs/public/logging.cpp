@@ -11,7 +11,7 @@ namespace Log {
 void Log(Type type, const std::string& str) {
     const std::scoped_lock lock(g_mutex);
     switch (type) {
-        case Type::eDebug: SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS LOG: %s", str.c_str()); break;
+        case Type::eDebug:
         case Type::eInfo: SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS LOG: %s", str.c_str()); break;
         case Type::eWarning: SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS LOG: %s", str.c_str()); break;
         case Type::eError: SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS LOG: %s", str.c_str()); break;

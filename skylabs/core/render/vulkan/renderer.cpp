@@ -106,15 +106,24 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
     }
 }
 
-void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
+void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
     const auto& device = m_deviceContext.Device();
+
+    if (m_needSurfaceRecreation) {
+        device->waitIdle();
+        m_swapchain.Clear();
+        m_deviceContext.RepairSurface();
+        m_needSwapchainRecreation = true;
+        m_needSurfaceRecreation = false;
+    }
+
+    if (m_needSwapchainRecreation) {
+        device->waitIdle();
+        RecreateSwapchain();
+        m_needSwapchainRecreation = false;
+    }
+
     const auto& cmd = m_graphicsCmd.Get();
-
-    const auto& mainColor = m_mainPass.MainAttachment().Get();
-    const auto& mainColorMSAA = m_mainPass.MainMSAAAttachment().Get();
-    const auto& mainDepthMSAA = m_mainPass.DepthMSAAAttachment().Get();
-
-    const auto& swapchainImages = m_swapchain.Images();
 
     UpdateMVP(view, fov);
 
@@ -127,16 +136,28 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     // Acquire next image from the swapchain
     auto [acquireResult, imageIndex] = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (acquireResult != vk::Result::eSuccess) {
-        if (acquireResult == vk::Result::eSuboptimalKHR) {
-            m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *device, vk::SemaphoreCreateInfo {} };
+        Log::Debug("Acquire result: {}", vk::to_string(acquireResult));
+        if (vk::Result::eErrorOutOfDateKHR == acquireResult) {
+            device->waitIdle();
+            RecreateSwapchain();
+            m_needSwapchainRecreation = false;
+            return;
         }
-
-        HandleSwapchainResult(acquireResult, "acquire");
-        return;
+        if (vk::Result::eErrorSurfaceLostKHR == acquireResult) {
+            return;
+        }
+        if (vk::Result::eSuboptimalKHR == acquireResult) {
+            m_needSwapchainRecreation = true;
+        }
     }
 
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
     device->resetFences({ m_fence.Get() });
+
+    const auto& mainColor = m_mainPass.MainAttachment().Get();
+    const auto& mainColorMSAA = m_mainPass.MainMSAAAttachment().Get();
+    const auto& mainDepthMSAA = m_mainPass.DepthMSAAAttachment().Get();
+    const auto& swapchainImages = m_swapchain.Images();
 
     cmd->reset();
     cmd->begin({});
@@ -186,10 +207,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float deltatime) {
     m_deviceContext.Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
     // Present
-    HandleSwapchainResult(
-        m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] }),
-        "present"
-    );
+    vk::Result presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
+    if (presentResult != vk::Result::eSuccess) {
+        Log::Debug("Present result: {}", vk::to_string(presentResult));
+    }
 
     m_inFlightContext.NextFrame();
 }
@@ -214,9 +235,8 @@ void CRenderer::HandleSwapchainResult(const vk::Result result, const std::string
     if (m_needSurfaceRecreation) {
         m_swapchain.Clear();
         m_deviceContext.RepairSurface();
-        RecreateSwapchain();
+        m_needSwapchainRecreation = true;
         m_needSurfaceRecreation = false;
-        m_needSwapchainRecreation = false;
     }
 
     // You cant recreate swapchain if surface is lost
