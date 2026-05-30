@@ -21,7 +21,8 @@ class SkylabsRecipe(ConanFile):
     }
 
     def build_requirements(self):
-        self.tool_requires("slang/2026.10")
+        if cross_building(self, True):
+            self.tool_requires("slang/2026.10")
 
     def requirements(self):
         self.requires("boost/1.91.0-1")
@@ -52,7 +53,7 @@ class SkylabsRecipe(ConanFile):
         deps.generate()
 
         tc = CMakeToolchain(self)
-        if cross_building(self):
+        if cross_building(self, True):
             slang_host = self.dependencies.build["slang"]
             ext = ".exe" if self.settings_build.os == "Windows" else ""
             slang_compiler_path = os.path.join(slang_host.package_folder, "bin", f"slangc{ext}")
