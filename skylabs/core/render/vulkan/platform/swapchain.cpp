@@ -1,5 +1,5 @@
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
-
+#include <skylabs/public/logging.hpp>
 #include <fmt/ranges.h>
 
 namespace Vulkan {
@@ -74,6 +74,12 @@ void CSwapchain::CreateSwapchain(
     m_extent = sw.extent;
     m_presentMode = static_cast<vk::PresentModeKHR>(sw.present_mode);
     m_surfaceFormat = { sw.image_format, sw.color_space };
+
+    Log::Debug(
+        "Swapchain format: {} x {}",
+        vk::to_string(static_cast<vk::Format>(sw.image_format)),
+        vk::to_string(static_cast<vk::ColorSpaceKHR>(sw.color_space))
+    );
 
     CreateImages();
 }

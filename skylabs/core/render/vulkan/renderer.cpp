@@ -45,7 +45,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_deviceContext = CDeviceContext { window };
 
-    m_swapchain = CSwapchain { m_deviceContext, 3, vk::PresentModeKHR::eMailbox };
+    m_swapchain = CSwapchain { m_deviceContext, 2, vk::PresentModeKHR::eMailbox };
     m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
 
     m_pipelineLayoutCache = CPipelineLayoutCache { m_deviceContext };
@@ -365,8 +365,8 @@ void CRenderer::LoadModels() {
         return std::tuple { vertices, indices };
     };
 
-    auto UploadToPool = [&](const std::string& path) {
-        SubMesh mesh;
+    auto UploadToPool = [&](const std::string& path, const std::uint32_t textureIndex) {
+        SubMesh mesh { textureIndex };
         auto [vertices, indices] = LoadModel(path);
 
         vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
@@ -411,7 +411,7 @@ void CRenderer::LoadModels() {
         MemoryLocation::eDeviceOnly
     };
 
-    m_meshes.push_back(UploadToPool("assets://matroskin.obj"));
-    m_meshes.push_back(UploadToPool("assets://viking_room.obj"));
+    m_meshes.push_back(UploadToPool("assets://matroskin.obj", 0));
+    m_meshes.push_back(UploadToPool("assets://viking_room.obj", 1));
 }
 }

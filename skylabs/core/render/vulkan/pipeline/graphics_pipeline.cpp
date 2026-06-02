@@ -4,7 +4,8 @@
 #include <ranges>
 
 namespace {
-constexpr frozen::map<VertexFormat, vk::Format, 3> g_vertexFormat = {
+constexpr frozen::map<VertexFormat, vk::Format, 4> g_vertexFormat = {
+    { VertexFormat::Float32, vk::Format::eR32Sfloat },
     { VertexFormat::Float32x2, vk::Format::eR32G32Sfloat },
     { VertexFormat::Float32x3, vk::Format::eR32G32B32Sfloat },
     { VertexFormat::Float32x4, vk::Format::eR32G32B32A32Sfloat },

@@ -149,8 +149,8 @@ void CMainPass::Draw(
         *m_mainDescriptorSet.Get(),{}
         );
 
-        for (std::uint32_t i = 0; auto& mesh : meshes) {
-            mainConstants.textureIndex = i;
+        for (auto& mesh : meshes) {
+            mainConstants.textureIndex = mesh.textureIndex;
             cmd->pushConstants<MainConstants>(
                 m_pipeline.Layout(), vk::ShaderStageFlagBits::eFragment, 0,mainConstants
             );
@@ -161,8 +161,6 @@ void CMainPass::Draw(
                 static_cast<std::int32_t>(mesh.VtxOffset() / sizeof(CVertex)),
                 0
             );
-
-            i++;
         }
     cmd->endRendering();
 }

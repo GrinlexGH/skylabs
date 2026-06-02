@@ -5,6 +5,7 @@
 #include <array>
 
 enum class VertexFormat : std::uint8_t {
+    Float32,
     Float32x2,
     Float32x3,
     Float32x4,

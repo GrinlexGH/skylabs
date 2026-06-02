@@ -3,6 +3,8 @@
 
 namespace Vulkan {
 struct SubMesh {
+    std::uint32_t textureIndex = 0;
+
     std::uint32_t indexCount = 0;
     vma::raii::VirtualAllocation vtxAlloc = nullptr;
     vma::raii::VirtualAllocation idxAlloc = nullptr;
