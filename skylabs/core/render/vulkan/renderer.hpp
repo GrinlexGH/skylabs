@@ -35,6 +35,7 @@ private:
     void ResizeTextures();
     void LoadTextures();
     void LoadModels();
+    void LoadObjects();
 
     void UpdateMVP(const glm::mat4& view, float fov);
 
@@ -76,5 +77,7 @@ private:
 
     CMainPass m_mainPass { nullptr };
     CPostProcessPass m_postProcessPass { nullptr };
+
+    std::vector<CObject> m_objects;
 };
 }

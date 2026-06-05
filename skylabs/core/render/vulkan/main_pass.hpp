@@ -5,10 +5,10 @@
 #include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/submesh.hpp>
+#include <skylabs/core/render/object.hpp>
 
 namespace Vulkan {
 struct CMVP {
-    glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
 };
@@ -29,7 +29,8 @@ public:
         const CCommandBuffer& cmd,
         const CBuffer& vertexBuffer,
         const CBuffer& indexBuffer,
-        std::span<const SubMesh> meshes
+        std::span<const SubMesh> meshes,
+        std::vector<CObject> objects
     );
     void Resize(Utils::Extent2D newExtent);
 

@@ -45,7 +45,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_deviceContext = CDeviceContext { window };
 
-    m_swapchain = CSwapchain { m_deviceContext, 2, vk::PresentModeKHR::eMailbox };
+    m_swapchain = CSwapchain { m_deviceContext, 2, vk::PresentModeKHR::eFifo };
     m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
 
     m_pipelineLayoutCache = CPipelineLayoutCache { m_deviceContext };
@@ -84,6 +84,7 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     LoadTextures();
     LoadModels();
+    LoadObjects();
 
     m_mainPass.WriteDescriptors(m_meshTextures);
 }
@@ -176,7 +177,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
         });
     }
 
-    m_mainPass.Draw(cmd, m_vertexBuffer, m_indexBuffer, m_meshes);
+    m_mainPass.Draw(cmd, m_vertexBuffer, m_indexBuffer, m_meshes, m_objects);
 
     cmd.PipelineBarrier({
         ImageBarrier { mainColor, mainColor.FullRange(),
@@ -245,7 +246,6 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
     }
 
     const CMVP ubo {
-        .model = glm::mat4(1.0f),
         .view = view,
         .proj = rot * ReverseZPerspective(width, height, fov),
     };
@@ -365,8 +365,8 @@ void CRenderer::LoadModels() {
         return std::tuple { vertices, indices };
     };
 
-    auto UploadToPool = [&](const std::string& path, const std::uint32_t textureIndex) {
-        SubMesh mesh { textureIndex };
+    auto UploadToPool = [&](const std::string& path) {
+        SubMesh mesh { };
         auto [vertices, indices] = LoadModel(path);
 
         vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
@@ -411,7 +411,12 @@ void CRenderer::LoadModels() {
         MemoryLocation::eDeviceOnly
     };
 
-    m_meshes.push_back(UploadToPool("assets://matroskin.obj", 0));
-    m_meshes.push_back(UploadToPool("assets://viking_room.obj", 1));
+    m_meshes.push_back(UploadToPool("assets://matroskin.obj"));
+    m_meshes.push_back(UploadToPool("assets://viking_room.obj"));
+}
+
+void CRenderer::LoadObjects() {
+    m_objects.emplace_back(0, 0, glm::rotate(glm::translate(glm::identity<glm::mat4>(), glm::vec3 { 0, 0, 1 }), glm::radians(90.0f), glm::vec3 { 1, 0, 0 }));
+    m_objects.emplace_back(1, 1);
 }
 }

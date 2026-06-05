@@ -1,7 +1,8 @@
 import main;
 
 struct PushConstants {
-    uint textureIndex;
+    uint32_t textureIndex;
+    float4x4 model;
 };
 
 [[vk::push_constant]]

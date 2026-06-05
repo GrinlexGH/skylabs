@@ -42,12 +42,6 @@ void CSwapchain::CreateSwapchain(
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eFifo))
         .use_default_image_usage_flags()
-        .set_desired_format(static_cast<VkSurfaceFormatKHR>(
-            vk::SurfaceFormatKHR { vk::Format::eR16G16B16A16Sfloat, vk::ColorSpaceKHR::eHdr10St2084EXT }
-        ))
-        .add_fallback_format(static_cast<VkSurfaceFormatKHR>(
-            vk::SurfaceFormatKHR { vk::Format::eA2R10G10B10SnormPack32, vk::ColorSpaceKHR::eHdr10St2084EXT }
-        ))
         .add_fallback_format(static_cast<VkSurfaceFormatKHR>(
             vk::SurfaceFormatKHR { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear }
         ))

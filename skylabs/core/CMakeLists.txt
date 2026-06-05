@@ -63,6 +63,7 @@ target_sources(
         render/vulkan/main_pass.hpp
         render/vulkan/post_process_pass.cpp
         render/vulkan/post_process_pass.hpp
+        render/object.hpp
 )
 
 target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)

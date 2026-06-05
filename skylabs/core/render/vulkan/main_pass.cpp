@@ -1,9 +1,11 @@
 #include <skylabs/core/render/vulkan/main_pass.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
+#include <glm/ext/matrix_transform.hpp>
 
 namespace Vulkan {
 struct MainConstants {
-    std::uint32_t textureIndex = 0;
+    alignas(16) std::uint32_t textureIndex = 0;
+    alignas(16) glm::mat4x4 model = glm::identity<glm::mat4x4>();
 };
 
 CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent) :
@@ -67,8 +69,10 @@ CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent)
 
     // Pipeline
     const vk::raii::PipelineLayout& mainPipelineLayout = pipelineLayoutCache.GetLayout({
-        { *mainSetLayout },
-        { { vk::ShaderStageFlagBits::eFragment, 0, sizeof(std::uint32_t) } }
+        .m_descriptorSetLayouts = { *mainSetLayout },
+        .m_pushConstants = {
+            { vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex, 0, sizeof(MainConstants) }
+        }
     });
 
     std::array colorFormats = { m_mainColor.Get().Format() };
@@ -104,7 +108,8 @@ void CMainPass::Draw(
     const CCommandBuffer& cmd,
     const CBuffer& vertexBuffer,
     const CBuffer& indexBuffer,
-    const std::span<const SubMesh> meshes
+    const std::span<const SubMesh> meshes,
+    std::vector<CObject> objects
 ) {
     vk::RenderingAttachmentInfo colorAttachInfo {};
     colorAttachInfo.imageView = m_mainColorMSAA.Get().View();
@@ -132,7 +137,7 @@ void CMainPass::Draw(
 
     auto [width, height] = m_mainColor.Get().Extent2D();
 
-    MainConstants mainConstants { 0 };
+    MainConstants mainConstants { };
     cmd->beginRendering(mainRenderInfo);
         cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
 
@@ -149,10 +154,13 @@ void CMainPass::Draw(
         *m_mainDescriptorSet.Get(),{}
         );
 
-        for (auto& mesh : meshes) {
-            mainConstants.textureIndex = mesh.textureIndex;
+        for(auto& object : objects) {
+            mainConstants.textureIndex = *object.textureIndex;
+            mainConstants.model = object.model;
+            auto& mesh = meshes[*object.meshIndex];
+
             cmd->pushConstants<MainConstants>(
-                m_pipeline.Layout(), vk::ShaderStageFlagBits::eFragment, 0,mainConstants
+                m_pipeline.Layout(), vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex, 0, mainConstants
             );
 
             cmd->drawIndexed(
