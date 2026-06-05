@@ -21,27 +21,27 @@ class SkylabsRecipe(ConanFile):
 
     def build_requirements(self):
         if self.settings.os == "Android":
-            self.tool_requires("slang/2026.10")
+            self.tool_requires("slang/2026.10.2")
 
     def requirements(self):
         self.requires("boost/1.91.0-1")
         self.requires("catch2/3.15.0")
         self.requires("entt/3.16.0")
         self.requires("fmt/12.1.0")
-        self.requires("frozen/cci.20260418")
+        self.requires("frozen/cci.20260421")
         self.requires("glbinding/3.5.0")
         self.requires("glm/1.0.3")
-        self.requires("sdl/3.4.8")
+        self.requires("sdl/3.4.10")
         self.requires("sdl_image/3.4.4")
-        self.requires("sdl_mixer/3.2.2")
+        self.requires("sdl_mixer/3.2.4")
         self.requires("sdl_ttf/3.2.2")
         self.requires("simple_term_colors/1.0")
-        self.requires("slang/2026.10")
+        self.requires("slang/2026.10.2")
         self.requires("stb/cci.20260313")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
         self.requires("vk-bootstrap/1.4.352")
-        self.requires("vulkan-headers/1.4.352")
+        self.requires("vulkan-headers/1.4.353")
         self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
 
         if self.settings.os == "Android":
