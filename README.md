@@ -76,7 +76,7 @@ conan config install ./conan/conan-config/config
 
 ```bash
 # Install dependencies
-conan install . -r skylabs --build=missing
+conan install . -r skylabs --build=missing -c "&:tools.cmake.cmaketoolchain:generator=Ninja" -c "&:tools.env.virtualenv:powershell=pwsh"
 
 # Configure project
 cmake --preset conan-default

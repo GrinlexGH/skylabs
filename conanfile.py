@@ -20,8 +20,7 @@ class SkylabsRecipe(ConanFile):
     }
 
     def build_requirements(self):
-        if self.settings.os == "Android":
-            self.tool_requires("slang/2026.10.2")
+        self.tool_requires("slang/2026.10.2")
 
     def requirements(self):
         self.requires("boost/1.91.0-1")
@@ -29,14 +28,11 @@ class SkylabsRecipe(ConanFile):
         self.requires("entt/3.16.0")
         self.requires("fmt/12.1.0")
         self.requires("frozen/cci.20260421")
-        self.requires("glbinding/3.5.0")
         self.requires("glm/1.0.3")
         self.requires("sdl/3.4.10")
         self.requires("sdl_image/3.4.4")
         self.requires("sdl_mixer/3.2.4")
         self.requires("sdl_ttf/3.2.2")
-        self.requires("simple_term_colors/1.0")
-        self.requires("slang/2026.10.2")
         self.requires("stb/cci.20260313")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
@@ -52,18 +48,12 @@ class SkylabsRecipe(ConanFile):
         deps.generate()
         tc = CMakeToolchain(self)
         if self.settings.os == "Android":
-            tc.variables["SLANG_COMPILER"] = self.get_slangc()
             self.create_sdl_android_sources_symlink()
             self.create_vulkan_validation_symlink()
         tc.generate()
 
     def layout(self):
         cmake_layout(self)
-
-    def get_slangc(self):
-        slang_host = self.dependencies.build["slang"]
-        ext = ".exe" if self.settings_build.os == "Windows" else ""
-        return os.path.join(slang_host.package_folder, "bin", f"slangc{ext}")
 
     def create_sdl_android_sources_symlink(self):
         sdl_java_src = os.path.abspath(

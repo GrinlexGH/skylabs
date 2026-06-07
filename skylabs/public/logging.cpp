@@ -1,45 +1,52 @@
 #include <skylabs/public/logging.hpp>
 
-namespace {
-std::mutex g_mutex;
-}
-
 #ifdef PLATFORM_ANDROID
 #include <SDL3/SDL_log.h>
+#endif
 
 namespace Log {
-void Log(Type type, const std::string& str) {
-    const std::scoped_lock lock(g_mutex);
-    switch (type) {
-        case Type::eDebug:
-        case Type::eInfo: SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS LOG: %s", str.c_str()); break;
-        case Type::eWarning: SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS LOG: %s", str.c_str()); break;
-        case Type::eError: SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS LOG: %s", str.c_str()); break;
-        default: std::unreachable();
+void SubmitLog(Level level, const std::string& message) {
+#ifdef PLATFORM_ANDROID
+    const char* msg = log.text.c_str();
+    switch (log.level) {
+        case Log::Level::eFatal: SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
+        case Log::Level::eError: SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
+        case Log::Level::eWarning: SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
+        case Log::Level::eInfo: SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
+        case Log::Level::eDebug: SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
+        case Log::Level::eVerbose: SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
+        case Log::Level::eTrace: SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: (TRACE) %s", msg); break;
+        default: break;
+    }
+#else
+    struct LogConfig {
+        std::string_view name;
+        fmt::text_style style;
+    };
+
+    constexpr frozen::unordered_map<Level, LogConfig, 7> levelConfigs = {{
+        { Level::eFatal,   { "Fatal",   fmt::fg(fmt::color::dark_red) } },
+        { Level::eError,   { "Error",   fmt::fg(fmt::rgb(204, 0, 0)) } },
+        { Level::eWarning, { "Warning", fmt::fg(fmt::rgb(196, 160, 0)) } },
+        { Level::eInfo,    { "Info",    fmt::fg(fmt::rgb(114, 159, 207)) } },
+        { Level::eDebug,   { "Debug",   fmt::fg(fmt::rgb(168, 228, 160)) } },
+        { Level::eVerbose, { "Verbose", fmt::fg(fmt::color::dark_gray) } },
+        { Level::eTrace,   { "Trace",   fmt::fg(fmt::color::blue) } }
+    }};
+
+    if (levelConfigs.contains(level)) {
+        const auto& config = levelConfigs.at(level);
+        fmt::print(config.style, "[{}] ", config.name);
+    } else {
+        fmt::print("[Unknown] ");
+    }
+
+    fmt::println("{}", message);
+#endif
+
+    if (level == Log::Level::eFatal) {
+        std::fflush(stdout);
+        std::abort();
     }
 }
 }
-
-#else
-
-namespace {
-constexpr std::array<std::tuple<std::string_view, int, int, int>, static_cast<std::size_t>(Log::Type::eCount)> logInfo = { {
-    { "Debug", 168, 228, 160 },
-    { "Info", 114, 159, 207 },
-    { "Warning", 196, 160, 0 },
-    { "Error", 204, 0, 0 },
-} };
-}
-
-namespace Log {
-void Log(Type type, const std::string& str) {
-    auto [label, r, g, b] = logInfo[static_cast<std::size_t>(type)];
-
-    const std::scoped_lock lock(g_mutex);
-    std::cout << stc::true_color
-              << '[' << stc::rgb_fg(r, g, b) << label << stc::reset_fg << "] "
-              << str << std::endl;
-}
-}
-
-#endif

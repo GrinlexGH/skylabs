@@ -69,7 +69,7 @@ void CSwapchain::CreateSwapchain(
     m_presentMode = static_cast<vk::PresentModeKHR>(sw.present_mode);
     m_surfaceFormat = { sw.image_format, sw.color_space };
 
-    Log::Debug(
+    SKY_LOG_DEBUG(
         "Swapchain format: {} x {}",
         vk::to_string(static_cast<vk::Format>(sw.image_format)),
         vk::to_string(static_cast<vk::ColorSpaceKHR>(sw.color_space))

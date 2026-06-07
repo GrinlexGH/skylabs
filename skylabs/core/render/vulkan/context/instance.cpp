@@ -15,13 +15,13 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     switch (messageSeverity) {
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-            Log::Info("{}", pCallbackData->pMessage);
+            SKY_LOG_INFO("{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-            Log::Warning("{}", pCallbackData->pMessage);
+            SKY_LOG_WARN("{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-            Log::Error("{}\n", pCallbackData->pMessage);
+            SKY_LOG_ERROR("{}\n", pCallbackData->pMessage);
             break;
     }
 

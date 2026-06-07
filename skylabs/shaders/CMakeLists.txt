@@ -1,6 +1,7 @@
 # shaders
 set(CURRENT_TARGET_NAME shaders)
 
+# TODO: runtime compile
 set(SOURCES
     shader.frag.slang
     shader.vert.slang
@@ -45,16 +46,11 @@ foreach(shader IN LISTS SOURCES)
 
     list(APPEND shader_out_names "${shader_out_path}")
 
-    set(slang_executable slang::slangc)
-    if(SLANG_COMPILER)
-        set(slang_executable "${SLANG_COMPILER}")
-    endif()
-
     add_custom_command(
         OUTPUT "${shader_out_path}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${shader_out_dir}"
 
-        COMMAND "${slang_executable}"
+        COMMAND slang::slangc
             "${shader_abs_path}"
             -entry "main"
             -stage "${shader_stage_name}"

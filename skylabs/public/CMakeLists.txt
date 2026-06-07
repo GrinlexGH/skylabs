@@ -62,10 +62,10 @@ target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     Boost::nowide
     Boost::container
     fmt::fmt
+    frozen::frozen
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer
     SDL3_ttf::SDL3_ttf
-    stc::stc
     Vulkan::Headers
 )
 

@@ -30,7 +30,7 @@ std::string GetLastErrorMessage() {
 void EnableVTP() {
     const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (handle == INVALID_HANDLE_VALUE) {
-        Log::Error("Failed to get stdout handle: {}", GetLastErrorMessage());
+        SKY_LOG_ERROR("Failed to get stdout handle: {}", GetLastErrorMessage());
         return;
     }
 
@@ -38,17 +38,17 @@ void EnableVTP() {
 
     DWORD originalMode = 0;
     if (!GetConsoleMode(handle, &originalMode)) {
-        Log::Error("Failed to get console mode: {}", GetLastErrorMessage());
+        SKY_LOG_ERROR("Failed to get console mode: {}", GetLastErrorMessage());
         return;
     }
 
     if ((originalMode & VTP_FLAGS) == VTP_FLAGS) {
-        Log::Debug("Virtual terminal processing already set for STD_OUTPUT.");
+        SKY_LOG_DEBUG("Virtual terminal processing already set for STD_OUTPUT.");
         return;
     }
 
     if (!SetConsoleMode(handle, originalMode | VTP_FLAGS)) {
-        Log::Error("Failed to set virtual terminal processing flags: {}", GetLastErrorMessage());
+        SKY_LOG_ERROR("Failed to set virtual terminal processing flags: {}", GetLastErrorMessage());
     }
 }
 }

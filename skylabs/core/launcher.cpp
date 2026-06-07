@@ -35,7 +35,7 @@ void CLauncher::Create() {
 #endif
 
     for (auto i = 0; i < MIX_GetNumAudioDecoders(); i++) {
-        Log::Debug("{}", MIX_GetAudioDecoder(i));
+        SKY_LOG_DEBUG("{}", MIX_GetAudioDecoder(i));
     }
 
     m_mixer = SDL::Mixer::CMixer {};
@@ -83,7 +83,7 @@ void CLauncher::Main() {
         if (elapsedTime >= 1000.0f) {
             std::string title = "Skylabs | FPS: " + std::to_string(frameCount) + " | DT: " + std::to_string(deltaTimeMs).substr(0, 4) + "ms";
             SDL_SetWindowTitle(*m_window, title.c_str());
-            Log::Debug("{}", title);
+            SKY_LOG_DEBUG("{}", title);
             elapsedTime -= 1000.0f;
             frameCount = 0;
         }
@@ -236,7 +236,7 @@ void CLauncher::HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent) {
                 break;
             m_textInputActive = false;
             SDL_StopTextInput(*m_window);
-            Log::Debug("Keyboard Closed. Final text: {}", m_inputBuffer);
+            SKY_LOG_DEBUG("Keyboard Closed. Final text: {}", m_inputBuffer);
             m_inputBuffer.clear();
         } break;
 
@@ -268,5 +268,5 @@ void CLauncher::HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent) {
 
 void CLauncher::HandleTextInput(const SDL_TextInputEvent& textEvent) {
     m_inputBuffer += textEvent.text;
-    Log::Info("[Input] Current buffer: {}", m_inputBuffer);
+    SKY_LOG_INFO("[Input] Current buffer: {}", m_inputBuffer);
 }

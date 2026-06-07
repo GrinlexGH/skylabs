@@ -74,8 +74,6 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     public
     Catch2::Catch2
     EnTT::EnTT
-    frozen::frozen
-    glbinding::glbinding
     glm::glm
     SDL3_image::SDL3_image
     stb::stb
