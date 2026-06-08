@@ -17,13 +17,16 @@ class CRenderer final : public IRenderer
 public:
     explicit CRenderer(const IWindow* window);
     CRenderer(const CRenderer&) = delete;
-    CRenderer(CRenderer&&) = delete;
+    CRenderer(CRenderer&&) noexcept = default;
     CRenderer& operator=(const CRenderer&) = delete;
-    CRenderer& operator=(CRenderer&&) = delete;
+    CRenderer& operator=(CRenderer&&) noexcept = default;
     ~CRenderer() override;
 
     static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window);
     void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
+
+    std::uint32_t UploadMesh(const std::vector<CVertex>& vertices, const std::vector<std::uint16_t>& indices);
+    void UploadGameObject(std::uint32_t meshId, glm::mat4 matrix, std::uint16_t colorID);
 
     CCommandBufferAllocator& CommandBufferAllocator() { return m_commandBufferAllocator; }
 

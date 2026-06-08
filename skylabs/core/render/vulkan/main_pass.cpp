@@ -47,7 +47,6 @@ CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent)
     // Descriptor set
     const vk::raii::DescriptorSetLayout& mainSetLayout = descriptorLayoutCache.GetLayout({
         { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
-        { 1, vk::DescriptorType::eCombinedImageSampler, 2, vk::ShaderStageFlagBits::eFragment }
     });
 
     m_mainDescriptorSet = InFlight { inFlightContext,

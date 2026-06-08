@@ -6,46 +6,19 @@
 #include <span>
 #include <thread>
 
-namespace {
-bool SDLCALL HandleAppEvents(void*, SDL_Event* event) {
-    switch (event->type) {
-        // Save data
-        case SDL_EVENT_WILL_ENTER_BACKGROUND:
-        // Clear much memory
-        case SDL_EVENT_LOW_MEMORY:
-        // Restore
-        case SDL_EVENT_DID_ENTER_FOREGROUND:
-        // Default
-        default: return true;
-    }
-    std::unreachable();
-}
-}
-
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
-    m_sdlttfContext = SDL::TTF::CContext {};
-    m_sdlmixerContext = SDL::Mixer::CContext {};
-    SDL_SetEventFilter(HandleAppEvents, nullptr);
-
     m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
 
 #ifdef PLATFORM_ANDROID
     SDL_SetWindowFullscreen(*m_window, true);
 #endif
 
-    for (auto i = 0; i < MIX_GetNumAudioDecoders(); i++) {
-        SKY_LOG_DEBUG("{}", MIX_GetAudioDecoder(i));
-    }
-
-    m_mixer = SDL::Mixer::CMixer {};
-    m_track = SDL::Mixer::CTrack { m_mixer };
-    m_music = SDL::Mixer::CAudio { m_mixer, "assets://Interlude.mp3" };
-
-    m_track.SetAudio(m_music);
-
     m_renderer = Vulkan::CRenderer::TryToCreate(&m_window);
-    if (!m_renderer) { throw std::runtime_error("Cannot initialize vulkan!\n"); }
+
+    auto [v, i] = GenerateDisk();
+    auto oi = m_renderer->UploadMesh(v, i);
+    m_renderer->UploadGameObject(oi, glm::translate(glm::mat4(1.0f), glm::vec3(1, 2, 1)), 1);
 }
 
 void CLauncher::Main() {
@@ -55,9 +28,6 @@ void CLauncher::Main() {
     auto lastTick = std::chrono::high_resolution_clock::now();
     int frameCount = 0;
     float elapsedTime = 0.0f;
-
-    MIX_SetTrackGain(*m_track, 0.05f);
-    MIX_PlayTrack(*m_track, 0);
 
     while (!m_quit) {
         auto frameStart = std::chrono::high_resolution_clock::now();
@@ -90,10 +60,7 @@ void CLauncher::Main() {
     }
 }
 
-void CLauncher::Destroy() {
-    MIX_StopTrack(*m_track, MIX_TrackMSToFrames(*m_track, 100));
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-}
+void CLauncher::Destroy() {}
 
 void CLauncher::Update(float deltaTime) {
     const std::span keyboardState = SDL::GetKeyboardState();
@@ -269,4 +236,32 @@ void CLauncher::HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent) {
 void CLauncher::HandleTextInput(const SDL_TextInputEvent& textEvent) {
     m_inputBuffer += textEvent.text;
     SKY_LOG_INFO("[Input] Current buffer: {}", m_inputBuffer);
+}
+
+std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::GenerateDisk() {
+    std::vector<CVertex> vertices;
+    std::vector<std::uint16_t> indices;
+
+    auto segments = 8;
+
+    for (uint32_t i = 0; i <= segments; ++i) {
+        float angle = i * 2.0f * glm::pi<float>() / segments;
+        float x = std::cos(angle);
+        float z = std::sin(angle);
+
+        vertices.push_back(CVertex{ .m_position = glm::vec3(x, -0.5f, z) });
+        vertices.push_back(CVertex{ .m_position = glm::vec3(x, 0.5f, z) });
+    }
+
+    for (uint32_t i = 0; i < segments; ++i) {
+        uint16_t b0 = i * 2;       // bottom current
+        uint16_t t0 = b0 + 1;      // top current
+        uint16_t b1 = (i + 1) * 2; // bottom next
+        uint16_t t1 = b1 + 1;      // top next
+
+        indices.push_back(b0); indices.push_back(t0); indices.push_back(t1);
+        indices.push_back(b0); indices.push_back(t1); indices.push_back(b1);
+    }
+
+    return { vertices, indices };
 }

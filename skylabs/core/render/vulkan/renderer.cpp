@@ -82,9 +82,17 @@ CRenderer::CRenderer(const IWindow* const window) {
         GetCreationTools(), m_mainPass.MainAttachment(), m_swapchain.SurfaceFormat().format
     };
 
-    LoadTextures();
-    LoadModels();
-    LoadObjects();
+    m_vertexBuffer = CBuffer {
+        m_deviceContext, GEOMETRY_POOL_SIZE,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+        MemoryLocation::eDeviceOnly
+    };
+
+    m_indexBuffer = CBuffer {
+        m_deviceContext, GEOMETRY_POOL_SIZE,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+        MemoryLocation::eDeviceOnly
+    };
 
     m_mainPass.WriteDescriptors(m_meshTextures);
 }
@@ -253,121 +261,9 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
     std::memcpy(m_mainPass.MVP().Get().Data(), &ubo, sizeof(ubo));
 }
 
-void CRenderer::LoadTextures() {
-    auto LoadTexture = [&](const std::string& path, const std::string& debugName) {
-        std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
-        SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
-
-        SDL_Surface* imageRaw = IMG_Load_IO(sdlStream, false);
-        if (!imageRaw) {
-            throw std::runtime_error("Failed to load texture: " + path);
-        }
-
-        SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_RGBA32);
-        SDL_DestroySurface(imageRaw);
-
-        const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
-        if (m_stagingBuffer.Size() < imageSize) {
-            m_stagingBuffer = CBuffer {
-                m_deviceContext, imageSize,
-                vk::BufferUsageFlagBits::eTransferSrc,
-                MemoryLocation::eHostVisible
-            };
-        }
-        std::memcpy(m_stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
-
-        const std::uint32_t mipLevels =
-            static_cast<std::uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1;
-
-        CImage texture { m_deviceContext, {
-            .m_extent = vk::Extent3D {
-                static_cast<std::uint32_t>(image->w),
-                static_cast<std::uint32_t>(image->h),
-                1
-            },
-            .m_format = vk::Format::eR8G8B8A8Srgb,
-            .m_mipLevels = mipLevels,
-            .m_usageFlags =
-                vk::ImageUsageFlagBits::eTransferSrc |
-                vk::ImageUsageFlagBits::eTransferDst |
-                vk::ImageUsageFlagBits::eSampled,
-        }};
-
-        m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
-            [&](const CCommandBuffer& cmd) {
-                cmd.PipelineBarrier({ ImageBarrier { texture, texture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
-                cmd.Copy(texture, m_stagingBuffer);
-                cmd.GenerateMipmaps(texture);
-            }
-        );
-
-        SDL_DestroySurface(image);
-
-        if (m_deviceContext.Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
-            m_deviceContext.Device()->setDebugUtilsObjectNameEXT(*texture, debugName);
-        }
-
-        return texture;
-    };
-
-    m_meshTextures.push_back(LoadTexture("assets://matroskin.png", "matroskin"));
-    m_meshTextures.push_back(LoadTexture("assets://viking_room.png", "viking-room"));
-}
-
-void CRenderer::LoadModels() {
-    auto LoadModel = [&](const std::string_view filename) {
-        std::vector<CVertex> vertices;
-        std::vector<std::uint16_t> indices;
-
-        tinyobj::ObjReader reader;
-        reader.ParseFromString(Filesystem::LoadAsString(filename), "");
-        if (!reader.Valid()) {
-            throw std::runtime_error(reader.Warning() + " " + reader.Error());
-        }
-
-        tinyobj::attrib_t attrib = reader.GetAttrib();
-        std::vector<tinyobj::shape_t> shapes = reader.GetShapes();
-
-        std::unordered_map<CVertex, std::uint32_t> uniqueVertices {};
-        for (const auto& shape : shapes) {
-            for (const auto& index : shape.mesh.indices) {
-                CVertex vertex {};
-
-                if (index.vertex_index >= 0) {
-                    vertex.m_position = {
-                        attrib.vertices[(3 * index.vertex_index) + 0],
-                        attrib.vertices[(3 * index.vertex_index) + 1],
-                        attrib.vertices[(3 * index.vertex_index) + 2]
-                    };
-                }
-
-                if (index.texcoord_index >= 0) {
-                    vertex.m_texCoord = {
-                        attrib.texcoords[(2 * index.texcoord_index) + 0],
-                        1.0f - attrib.texcoords[(2 * index.texcoord_index) + 1]
-                    };
-                } else {
-                    vertex.m_texCoord = {
-                        (vertex.m_position.x * 0.5f) + 0.5f,
-                        (vertex.m_position.z * 0.5f) + 0.5f
-                    };
-                }
-
-                if (!uniqueVertices.contains(vertex)) {
-                    uniqueVertices[vertex] = static_cast<std::uint32_t>(vertices.size());
-                    vertices.push_back(vertex);
-                }
-
-                indices.push_back(static_cast<std::uint16_t>(uniqueVertices[vertex]));
-            }
-        }
-
-        return std::tuple { vertices, indices };
-    };
-
-    auto UploadToPool = [&](const std::string& path) {
+std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const std::vector<std::uint16_t>& indices) {
+    auto UploadToPool = [&]() {
         SubMesh mesh { };
-        auto [vertices, indices] = LoadModel(path);
 
         vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
         vk::DeviceSize iSize = indices.size() * sizeof(indices[0]);
@@ -399,24 +295,178 @@ void CRenderer::LoadModels() {
         return mesh;
     };
 
-    m_vertexBuffer = CBuffer {
-        m_deviceContext, GEOMETRY_POOL_SIZE,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-        MemoryLocation::eDeviceOnly
-    };
-
-    m_indexBuffer = CBuffer {
-        m_deviceContext, GEOMETRY_POOL_SIZE,
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-        MemoryLocation::eDeviceOnly
-    };
-
-    m_meshes.push_back(UploadToPool("assets://matroskin.obj"));
-    m_meshes.push_back(UploadToPool("assets://viking_room.obj"));
+    m_meshes.push_back(UploadToPool());
+    return m_meshes.size() - 1;
 }
 
-void CRenderer::LoadObjects() {
-    m_objects.emplace_back(0, 0, glm::rotate(glm::translate(glm::identity<glm::mat4>(), glm::vec3 { 0, 0, 1 }), glm::radians(90.0f), glm::vec3 { 1, 0, 0 }));
-    m_objects.emplace_back(1, 1);
+void CRenderer::UploadGameObject(std::uint32_t meshId, glm::mat4 matrix, std::uint16_t colorID) {
+    m_objects.emplace_back(meshId, colorID, matrix);
 }
+
+// void CRenderer::LoadTextures() {
+//     auto LoadTexture = [&](const std::string& path, const std::string& debugName) {
+//         std::unique_ptr<IFileStream> stream = Filesystem::LoadAsIO(path);
+//         SDL_IOStream* sdlStream = SDL::CreateIOStreamFromResource(stream.get());
+
+//         SDL_Surface* imageRaw = IMG_Load_IO(sdlStream, false);
+//         if (!imageRaw) {
+//             throw std::runtime_error("Failed to load texture: " + path);
+//         }
+
+//         SDL_Surface* image = SDL_ConvertSurface(imageRaw, SDL_PIXELFORMAT_RGBA32);
+//         SDL_DestroySurface(imageRaw);
+
+//         const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
+//         if (m_stagingBuffer.Size() < imageSize) {
+//             m_stagingBuffer = CBuffer {
+//                 m_deviceContext, imageSize,
+//                 vk::BufferUsageFlagBits::eTransferSrc,
+//                 MemoryLocation::eHostVisible
+//             };
+//         }
+//         std::memcpy(m_stagingBuffer.Data(), image->pixels, static_cast<std::size_t>(imageSize));
+
+//         const std::uint32_t mipLevels =
+//             static_cast<std::uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1;
+
+//         CImage texture { m_deviceContext, {
+//             .m_extent = vk::Extent3D {
+//                 static_cast<std::uint32_t>(image->w),
+//                 static_cast<std::uint32_t>(image->h),
+//                 1
+//             },
+//             .m_format = vk::Format::eR8G8B8A8Srgb,
+//             .m_mipLevels = mipLevels,
+//             .m_usageFlags =
+//                 vk::ImageUsageFlagBits::eTransferSrc |
+//                 vk::ImageUsageFlagBits::eTransferDst |
+//                 vk::ImageUsageFlagBits::eSampled,
+//         }};
+
+//         m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
+//             [&](const CCommandBuffer& cmd) {
+//                 cmd.PipelineBarrier({ ImageBarrier { texture, texture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
+//                 cmd.Copy(texture, m_stagingBuffer);
+//                 cmd.GenerateMipmaps(texture);
+//             }
+//         );
+
+//         SDL_DestroySurface(image);
+
+//         if (m_deviceContext.Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
+//             m_deviceContext.Device()->setDebugUtilsObjectNameEXT(*texture, debugName);
+//         }
+
+//         return texture;
+//     };
+
+//     m_meshTextures.push_back(LoadTexture("assets://matroskin.png", "matroskin"));
+//     m_meshTextures.push_back(LoadTexture("assets://viking_room.png", "viking-room"));
+// }
+
+// void CRenderer::LoadModels() {
+//     auto LoadModel = [&](const std::string_view filename) {
+//         std::vector<CVertex> vertices;
+//         std::vector<std::uint16_t> indices;
+
+//         tinyobj::ObjReader reader;
+//         reader.ParseFromString(Filesystem::LoadAsString(filename), "");
+//         if (!reader.Valid()) {
+//             throw std::runtime_error(reader.Warning() + " " + reader.Error());
+//         }
+
+//         tinyobj::attrib_t attrib = reader.GetAttrib();
+//         std::vector<tinyobj::shape_t> shapes = reader.GetShapes();
+
+//         std::unordered_map<CVertex, std::uint32_t> uniqueVertices {};
+//         for (const auto& shape : shapes) {
+//             for (const auto& index : shape.mesh.indices) {
+//                 CVertex vertex {};
+
+//                 if (index.vertex_index >= 0) {
+//                     vertex.m_position = {
+//                         attrib.vertices[(3 * index.vertex_index) + 0],
+//                         attrib.vertices[(3 * index.vertex_index) + 1],
+//                         attrib.vertices[(3 * index.vertex_index) + 2]
+//                     };
+//                 }
+
+//                 if (index.texcoord_index >= 0) {
+//                     vertex.m_texCoord = {
+//                         attrib.texcoords[(2 * index.texcoord_index) + 0],
+//                         1.0f - attrib.texcoords[(2 * index.texcoord_index) + 1]
+//                     };
+//                 } else {
+//                     vertex.m_texCoord = {
+//                         (vertex.m_position.x * 0.5f) + 0.5f,
+//                         (vertex.m_position.z * 0.5f) + 0.5f
+//                     };
+//                 }
+
+//                 if (!uniqueVertices.contains(vertex)) {
+//                     uniqueVertices[vertex] = static_cast<std::uint32_t>(vertices.size());
+//                     vertices.push_back(vertex);
+//                 }
+
+//                 indices.push_back(static_cast<std::uint16_t>(uniqueVertices[vertex]));
+//             }
+//         }
+
+//         return std::tuple { vertices, indices };
+//     };
+
+//     auto UploadToPool = [&](const std::string& path) {
+//         SubMesh mesh { };
+//         auto [vertices, indices] = LoadModel(path);
+
+//         vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
+//         vk::DeviceSize iSize = indices.size() * sizeof(indices[0]);
+
+//         vma::VirtualAllocationCreateInfo allocationInfo { };
+//         allocationInfo.setSize(vSize);
+//         mesh.vtxAlloc = vma::raii::VirtualAllocation { m_vertexBuffer.VirtualBlock(), allocationInfo };
+//         allocationInfo.setSize(iSize);
+//         mesh.idxAlloc = vma::raii::VirtualAllocation { m_indexBuffer.VirtualBlock(), allocationInfo };
+//         mesh.indexCount = static_cast<std::uint32_t>(indices.size());
+
+//         vk::DeviceSize totalSize = vSize + iSize;
+//         if (m_stagingBuffer.Size() < totalSize) {
+//             m_stagingBuffer = CBuffer { m_deviceContext, totalSize,
+//                 vk::BufferUsageFlagBits::eTransferSrc, MemoryLocation::eHostVisible
+//             };
+//         }
+
+//         std::memcpy(m_stagingBuffer.Data(), vertices.data(), vSize);
+//         std::memcpy(static_cast<std::uint8_t*>(m_stagingBuffer.Data()) + vSize, indices.data(), iSize);
+
+//         m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
+//             [&](const CCommandBuffer& cmd) {
+//                 cmd.Copy(m_vertexBuffer, m_stagingBuffer, vSize, { 0, mesh.VtxOffset() });
+//                 cmd.Copy(m_indexBuffer, m_stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
+//             }
+//         );
+
+//         return mesh;
+//     };
+
+//     m_vertexBuffer = CBuffer {
+//         m_deviceContext, GEOMETRY_POOL_SIZE,
+//         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+//         MemoryLocation::eDeviceOnly
+//     };
+
+//     m_indexBuffer = CBuffer {
+//         m_deviceContext, GEOMETRY_POOL_SIZE,
+//         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+//         MemoryLocation::eDeviceOnly
+//     };
+
+//     m_meshes.push_back(UploadToPool("assets://matroskin.obj"));
+//     m_meshes.push_back(UploadToPool("assets://viking_room.obj"));
+// }
+
+// void CRenderer::LoadObjects() {
+//     m_objects.emplace_back(0, 0, glm::rotate(glm::translate(glm::identity<glm::mat4>(), glm::vec3 { 0, 0, 1 }), glm::radians(90.0f), glm::vec3 { 1, 0, 0 }));
+//     m_objects.emplace_back(1, 1);
+// }
 }
