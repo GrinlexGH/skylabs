@@ -18,7 +18,7 @@ public:
 
     explicit CCamera(
         glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f),
+        glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
         float yaw = YAW,
         float pitch = PITCH
     ) : m_position(position), m_front(glm::vec3(1.0f, 0.0f, 0.0f)), m_worldUp(up), m_yaw(yaw), m_pitch(pitch) {
@@ -94,9 +94,9 @@ private:
 
     void UpdateCameraVectors() {
         glm::vec3 front;
-        front.x = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
-        front.y = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
-        front.z = sin(glm::radians(m_pitch));
+        front.x = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+        front.y = sin(glm::radians(m_pitch));
+        front.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
 
         m_front = normalize(front);
         m_right = normalize(cross(m_front, m_worldUp));

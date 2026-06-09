@@ -18,7 +18,48 @@ void CLauncher::Create() {
 
     auto [v, i] = GenerateDisk();
     auto oi = m_renderer->UploadMesh(v, i);
-    m_renderer->UploadGameObject(oi, glm::translate(glm::mat4(1.0f), glm::vec3(1, 2, 1)), 1);
+    m_towers.emplace_back(glm::vec3(-1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1), std::vector <SDisk> {
+        {3, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3)},
+        {2, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2)},
+        {1, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1)}
+    }, 1);
+    m_towers.emplace_back(glm::vec3(0.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector <SDisk> {}, 2);
+    m_towers.emplace_back(glm::vec3(1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector <SDisk> {}, 3);
+    m_cursor = m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 4);
+}
+
+void CLauncher::UpdateVisuals(float deltaTime) {
+    const float DISK_HEIGHT = 0.15f;
+    const float BASE_RADIUS = 0.10f;
+
+    for (auto& tower : m_towers) {
+        glm::mat4 stemModel = glm::mat4(1.0f);
+        stemModel = glm::translate(stemModel, tower.basePosition);
+        stemModel = glm::scale(stemModel, glm::vec3(0.02f, 1.2f, 0.02f));
+        tower.stemRenderObject.SetMatrix(stemModel);
+
+        for (std::size_t i = 0; i < tower.disks.size(); ++i) {
+            auto& disk = tower.disks[i];
+
+            glm::vec3 diskPos = tower.basePosition + glm::vec3(0.0f, i * DISK_HEIGHT, 0.0f);
+            if (disk.isselected)
+                diskPos.y += 0.25f;
+
+            float currentRadius = BASE_RADIUS * disk.size;
+
+            glm::mat4 diskModel = glm::mat4(1.0f);
+            diskModel = glm::translate(diskModel, diskPos);
+            diskModel = glm::scale(diskModel, glm::vec3(currentRadius, DISK_HEIGHT, currentRadius));
+
+            disk.renderObject.SetMatrix(diskModel);
+        }
+    }
+
+    glm::mat4 cursorModel = glm::inverse(m_camera.ViewMatrix());
+    cursorModel = glm::translate(cursorModel, glm::vec3(0.0f, 0.0f, -0.5f));
+    cursorModel = glm::rotate(cursorModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    cursorModel = glm::scale(cursorModel, glm::vec3(0.008f, 0.005f, 0.008f)); 
+    m_cursor.SetMatrix(cursorModel);
 }
 
 void CLauncher::Main() {
@@ -39,6 +80,7 @@ void CLauncher::Main() {
 
         if (!m_minimized) {
             Update(deltaTimeMs);
+            UpdateVisuals(deltaTimeMs);
             Render(deltaTimeMs);
         } else {
             auto frameEnd = std::chrono::high_resolution_clock::now();
@@ -80,6 +122,55 @@ void CLauncher::Update(float deltaTime) {
         if (keyboardState[SDL_SCANCODE_S]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eBackward, deltaTime);
         if (keyboardState[SDL_SCANCODE_A]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
         if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
+    }
+
+    glm::mat4 invView = glm::inverse(m_camera.ViewMatrix()); 
+    glm::vec3 rayOrigin = glm::vec3(invView[3]);        
+    glm::vec3 rayDir = glm::normalize(-glm::vec3(invView[2]));
+
+    int closestTowerIdx = -1;
+    float minT = std::numeric_limits<float>::max(); 
+    
+    const float hitRadius = 0.05f; 
+    const float towerHeight = 1.2f; 
+
+    for (int i = 0; i < m_towers.size(); ++i) {
+        auto& tower = m_towers[i];
+        
+        float dx = rayOrigin.x - tower.basePosition.x;
+        float dz = rayOrigin.z - tower.basePosition.z;
+        
+        float denom = rayDir.x * rayDir.x + rayDir.z * rayDir.z;
+        if (denom < 0.0001f) continue;
+
+        float t = -(dx * rayDir.x + dz * rayDir.z) / denom;
+        if (t < 0.0f) continue;
+
+        glm::vec3 hitPoint = rayOrigin + t * rayDir;
+
+        if (hitPoint.y >= tower.basePosition.y && hitPoint.y <= tower.basePosition.y + towerHeight) {
+            float distSq = (hitPoint.x - tower.basePosition.x) * (hitPoint.x - tower.basePosition.x) + 
+                           (hitPoint.z - tower.basePosition.z) * (hitPoint.z - tower.basePosition.z);
+            
+            if (distSq <= hitRadius * hitRadius) {
+                if (t < minT) {
+                    minT = t;
+                    closestTowerIdx = i;
+                }
+            }
+        }
+    }
+
+    if (closestTowerIdx != m_hoveredTowerIdx) {
+        if (m_hoveredTowerIdx != -1) {
+            m_towers[m_hoveredTowerIdx].stemRenderObject.SetColor(m_towers[m_hoveredTowerIdx].baseColorId);
+        }
+        
+        m_hoveredTowerIdx = closestTowerIdx;
+        
+        if (m_hoveredTowerIdx != -1) {
+            m_towers[m_hoveredTowerIdx].stemRenderObject.SetColor(4); 
+        }
     }
 }
 
@@ -135,10 +226,72 @@ void CLauncher::ProcessEvents() {
                 m_camera.ProcessMouseScroll(e.wheel.y);
                 break;
 
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                Click();
+                break;
+
             case SDL_EVENT_TEXT_INPUT:
                 HandleTextInput(e.text);
                 break;
         }
+    }
+}
+
+void CLauncher::Click() {
+    if (m_hoveredTowerIdx == -1)
+        return;
+    auto [tt, dd] = m_towerDiskselecte;
+    if (tt == -1) {
+        if (m_towers[m_hoveredTowerIdx].disks.empty()) {
+            return;
+        }
+        int mindiskSize = 50000;
+        int mindiskIndex = 0;
+        for (int j = 0; auto& i : m_towers[m_hoveredTowerIdx].disks) {
+            if (i.size < mindiskSize) {
+                mindiskSize = i.size;
+                mindiskIndex = j;
+            }
+            j++;
+        }
+
+        m_towers[m_hoveredTowerIdx].disks[mindiskIndex].isselected = true;
+        auto& [t, d] = m_towerDiskselecte;
+        t = m_hoveredTowerIdx;
+        d = mindiskIndex;
+    } else {
+        if (m_hoveredTowerIdx == tt) {
+            return;
+        }
+        if (!m_towers[m_hoveredTowerIdx].disks.empty()) {
+            int mindiskSize = 50000;
+            int mindiskIndex = 0;
+            for (int j = 0; auto& i : m_towers[m_hoveredTowerIdx].disks) {
+                if (i.size < mindiskSize) {
+                    mindiskSize = i.size;
+                    mindiskIndex = j;
+                }
+                j++;
+            }
+            if (m_towers[m_hoveredTowerIdx].disks[mindiskIndex].size < m_towers[tt].disks[dd].size) {
+                if (m_towers[m_hoveredTowerIdx].disks.empty()) {
+                    return;
+                }
+                m_towers[tt].disks[dd].isselected = false;
+                m_towers[m_hoveredTowerIdx].disks[mindiskIndex].isselected = true;
+                auto& [t, d] = m_towerDiskselecte;
+                t = m_hoveredTowerIdx;
+                d = mindiskIndex;
+                return;
+            }
+        }
+
+        m_towers[tt].disks[dd].isselected = false;
+        m_towers[m_hoveredTowerIdx].disks.push_back(m_towers[tt].disks[dd]);
+        m_towers[tt].disks.erase(m_towers[tt].disks.begin() + dd);
+        auto& [t, d] = m_towerDiskselecte;
+        t = -1;
+        d = -1;
     }
 }
 
@@ -207,7 +360,7 @@ void CLauncher::HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent) {
             m_inputBuffer.clear();
         } break;
 
-        case SDLK_P: {
+        case SDLK_Z: {
             static bool mouseModeSwitch = true;
             SDL_SetWindowRelativeMouseMode(*m_window, mouseModeSwitch);
             mouseModeSwitch = !mouseModeSwitch;
@@ -242,25 +395,48 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
     std::vector<CVertex> vertices;
     std::vector<std::uint16_t> indices;
 
-    auto segments = 8;
+    const uint32_t segments = 32;
 
     for (uint32_t i = 0; i <= segments; ++i) {
         float angle = i * 2.0f * glm::pi<float>() / segments;
         float x = std::cos(angle);
         float z = std::sin(angle);
 
-        vertices.push_back(CVertex{ .m_position = glm::vec3(x, -0.5f, z) });
-        vertices.push_back(CVertex{ .m_position = glm::vec3(x, 0.5f, z) });
+        glm::vec3 sideNormal = glm::normalize(glm::vec3(x, 0.0f, z));
+        vertices.push_back(CVertex { .m_position = glm::vec3(x, 0.0f, z), .m_normal = sideNormal });
+        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_normal = sideNormal });
     }
 
-    for (uint32_t i = 0; i < segments; ++i) {
-        uint16_t b0 = i * 2;       // bottom current
-        uint16_t t0 = b0 + 1;      // top current
-        uint16_t b1 = (i + 1) * 2; // bottom next
-        uint16_t t1 = b1 + 1;      // top next
+    for (uint16_t i = 0; i < segments; ++i) {
+        uint16_t b0 = i * 2;
+        uint16_t t0 = b0 + 1;
+        uint16_t b1 = (i + 1) * 2;
+        uint16_t t1 = b1 + 1;
 
-        indices.push_back(b0); indices.push_back(t0); indices.push_back(t1);
-        indices.push_back(b0); indices.push_back(t1); indices.push_back(b1);
+        indices.push_back(b0); indices.push_back(b1); indices.push_back(t1);
+        indices.push_back(b0); indices.push_back(t1); indices.push_back(t0);
+    }
+
+    uint16_t topCapCenterIndex = static_cast<uint16_t>(vertices.size());
+    vertices.push_back(CVertex { .m_position = glm::vec3(0.0f, 1.0f, 0.0f), .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
+
+    uint16_t topCapEdgeStart = static_cast<uint16_t>(vertices.size());
+
+    for (uint32_t i = 0; i <= segments; ++i) {
+        float angle = i * 2.0f * glm::pi<float>() / segments;
+        float x = std::cos(angle);
+        float z = std::sin(angle);
+
+        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
+    }
+
+    for (uint16_t i = 0; i < segments; ++i) {
+        uint16_t currentEdge = topCapEdgeStart + i;
+        uint16_t nextEdge = currentEdge + 1;
+
+        indices.push_back(topCapCenterIndex);
+        indices.push_back(nextEdge);
+        indices.push_back(currentEdge);
     }
 
     return { vertices, indices };

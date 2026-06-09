@@ -4,7 +4,7 @@
 
 namespace Vulkan {
 struct MainConstants {
-    alignas(16) std::uint32_t textureIndex = 0;
+    alignas(16) std::uint32_t colorId = 0;
     alignas(16) glm::mat4x4 model = glm::identity<glm::mat4x4>();
 };
 
@@ -108,7 +108,7 @@ void CMainPass::Draw(
     const CBuffer& vertexBuffer,
     const CBuffer& indexBuffer,
     const std::span<const SubMesh> meshes,
-    std::vector<CObject> objects
+    std::vector<CRenderObject> objects
 ) {
     vk::RenderingAttachmentInfo colorAttachInfo {};
     colorAttachInfo.imageView = m_mainColorMSAA.Get().View();
@@ -154,9 +154,9 @@ void CMainPass::Draw(
         );
 
         for(auto& object : objects) {
-            mainConstants.textureIndex = *object.textureIndex;
+            mainConstants.colorId = object.colorId;
             mainConstants.model = object.model;
-            auto& mesh = meshes[*object.meshIndex];
+            auto& mesh = meshes[object.meshId];
 
             cmd->pushConstants<MainConstants>(
                 m_pipeline.Layout(), vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex, 0, mainConstants

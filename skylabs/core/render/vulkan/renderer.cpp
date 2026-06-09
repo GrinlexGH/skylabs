@@ -299,8 +299,19 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const 
     return m_meshes.size() - 1;
 }
 
-void CRenderer::UploadGameObject(std::uint32_t meshId, glm::mat4 matrix, std::uint16_t colorID) {
-    m_objects.emplace_back(meshId, colorID, matrix);
+::CRenderObject& CRenderer::GetObjectData(const std::uint32_t id) {
+    assert(id < m_objects.size());
+    return m_objects[id];
+}
+
+const ::CRenderObject& CRenderer::GetObjectData(const std::uint32_t id) const {
+    assert(id < m_objects.size());
+    return m_objects[id];
+}
+
+CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 matrix, std::uint16_t colorId) {
+    m_objects.emplace_back(meshId, colorId, matrix);
+    return CRenderObject { this, static_cast<std::uint32_t>(m_objects.size() - 1) };
 }
 
 // void CRenderer::LoadTextures() {

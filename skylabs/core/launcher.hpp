@@ -4,6 +4,7 @@
 #include <skylabs/public/sdl/window.hpp>
 #include <skylabs/core/render/renderer.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
+#include <skylabs/core/render/vulkan/render_object.hpp>
 #include <skylabs/core/render/vertex.hpp>
 #include <skylabs/core/camera.hpp>
 
@@ -27,6 +28,19 @@ struct UIButton
     }
 };
 
+struct SDisk {
+    int size;
+    Vulkan::CRenderObject renderObject;
+    bool isselected;
+};
+
+struct STower {
+    glm::vec3 basePosition;
+    Vulkan::CRenderObject stemRenderObject;
+    std::vector<SDisk> disks;
+    std::uint16_t baseColorId;
+};
+
 class CLauncher final : public CBaseApplication
 {
 public:
@@ -38,6 +52,8 @@ private:
     void ProcessEvents();
     void Update(float deltaTime);
     void Render(float deltaTime);
+    void UpdateVisuals(float deltaTime);
+    void Click();
 
     void HandleTouchEvent(const SDL_Event& e);
     void HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent);
@@ -54,10 +70,15 @@ private:
 
     Joystick m_leftJoystick;
     UIButton m_chatButton = { 0.8f, 0.05f, 0.15f, 0.1f };
-    CCamera m_camera { glm::vec3(1.0f, 0.0f, 0.0f) };
+    CCamera m_camera { glm::vec3(0.0f, 0.0f, 0.0f) };
 
     SDL::CContext m_sdlContext { nullptr };
 
     SDL::CWindow m_window { nullptr };
     std::unique_ptr<Vulkan::CRenderer> m_renderer { nullptr };
+
+    std::vector<STower> m_towers;
+    Vulkan::CRenderObject m_cursor { nullptr };
+    int m_hoveredTowerIdx = -1;
+    std::tuple<int, int> m_towerDiskselecte { -1, -1 };
 };

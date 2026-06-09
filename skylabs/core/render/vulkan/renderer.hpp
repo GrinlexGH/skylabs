@@ -10,6 +10,8 @@
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
 #include <skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp>
+#include <skylabs/core/render/vulkan/render_object.hpp>
+#include <skylabs/core/render/render_object.hpp>
 
 namespace Vulkan {
 class CRenderer final : public IRenderer
@@ -26,7 +28,10 @@ public:
     void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
 
     std::uint32_t UploadMesh(const std::vector<CVertex>& vertices, const std::vector<std::uint16_t>& indices);
-    void UploadGameObject(std::uint32_t meshId, glm::mat4 matrix, std::uint16_t colorID);
+
+    ::CRenderObject& GetObjectData(std::uint32_t id);
+    const ::CRenderObject& GetObjectData(std::uint32_t id) const;
+    CRenderObject UploadGameObject(std::uint32_t meshId, glm::mat4 matrix, std::uint16_t colorID);
 
     CCommandBufferAllocator& CommandBufferAllocator() { return m_commandBufferAllocator; }
 
@@ -81,6 +86,6 @@ private:
     CMainPass m_mainPass { nullptr };
     CPostProcessPass m_postProcessPass { nullptr };
 
-    std::vector<CObject> m_objects;
+    std::vector<::CRenderObject> m_objects;
 };
 }

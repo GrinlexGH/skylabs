@@ -5,7 +5,7 @@
 #include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/submesh.hpp>
-#include <skylabs/core/render/object.hpp>
+#include <skylabs/core/render/render_object.hpp>
 
 namespace Vulkan {
 struct CMVP {
@@ -30,7 +30,7 @@ public:
         const CBuffer& vertexBuffer,
         const CBuffer& indexBuffer,
         std::span<const SubMesh> meshes,
-        std::vector<CObject> objects
+        std::vector<CRenderObject> objects
     );
     void Resize(Utils::Extent2D newExtent);
 

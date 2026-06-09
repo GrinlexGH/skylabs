@@ -19,19 +19,16 @@ PushConstants pc;
 struct VIn {
     [[vk::location(0)]] float3 position;
     [[vk::location(1)]] float2 texCoord;
+    [[vk::location(2)]] float3 normal;
 };
 
 [shader("vertex")]
 VOut main(VIn input, uint vertexIndex : SV_VertexID) {
     VOut output;
 
-    float4 worldPos = float4(input.position, 1.0);
-    if (vertexIndex >= 4) {
-        worldPos = mul(pc.model, worldPos);
-    }
-
-    output.outPosition = mul(ubo.proj, mul(ubo.view, worldPos));
+    output.outPosition = mul(ubo.proj, mul(ubo.view, mul(pc.model, float4(input.position, 1.0))));
     output.uv = input.texCoord;
+    output.normal = mul((float3x3)pc.model, input.normal);
 
     return output;
 }
