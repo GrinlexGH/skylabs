@@ -36,8 +36,8 @@ class SkylabsRecipe(ConanFile):
         self.requires("stb/cci.20260313")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
-        self.requires("vk-bootstrap/1.4.352")
-        self.requires("vulkan-headers/1.4.353")
+        self.requires("vk-bootstrap/1.4.353")
+        self.requires("vulkan-headers/1.4.354")
         self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
 
         if self.settings.os == "Android":

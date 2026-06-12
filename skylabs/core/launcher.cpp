@@ -58,7 +58,7 @@ void CLauncher::UpdateVisuals(float deltaTime) {
     glm::mat4 cursorModel = glm::inverse(m_camera.ViewMatrix());
     cursorModel = glm::translate(cursorModel, glm::vec3(0.0f, 0.0f, -0.5f));
     cursorModel = glm::rotate(cursorModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    cursorModel = glm::scale(cursorModel, glm::vec3(0.008f, 0.005f, 0.008f)); 
+    cursorModel = glm::scale(cursorModel, glm::vec3(0.008f, 0.005f, 0.008f));
     m_cursor.SetMatrix(cursorModel);
 }
 
@@ -124,22 +124,22 @@ void CLauncher::Update(float deltaTime) {
         if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
     }
 
-    glm::mat4 invView = glm::inverse(m_camera.ViewMatrix()); 
-    glm::vec3 rayOrigin = glm::vec3(invView[3]);        
+    glm::mat4 invView = glm::inverse(m_camera.ViewMatrix());
+    glm::vec3 rayOrigin = glm::vec3(invView[3]);
     glm::vec3 rayDir = glm::normalize(-glm::vec3(invView[2]));
 
     int closestTowerIdx = -1;
-    float minT = std::numeric_limits<float>::max(); 
-    
-    const float hitRadius = 0.05f; 
-    const float towerHeight = 1.2f; 
+    float minT = std::numeric_limits<float>::max();
+
+    const float hitRadius = 0.05f;
+    const float towerHeight = 1.2f;
 
     for (int i = 0; i < m_towers.size(); ++i) {
         auto& tower = m_towers[i];
-        
+
         float dx = rayOrigin.x - tower.basePosition.x;
         float dz = rayOrigin.z - tower.basePosition.z;
-        
+
         float denom = rayDir.x * rayDir.x + rayDir.z * rayDir.z;
         if (denom < 0.0001f) continue;
 
@@ -149,9 +149,9 @@ void CLauncher::Update(float deltaTime) {
         glm::vec3 hitPoint = rayOrigin + t * rayDir;
 
         if (hitPoint.y >= tower.basePosition.y && hitPoint.y <= tower.basePosition.y + towerHeight) {
-            float distSq = (hitPoint.x - tower.basePosition.x) * (hitPoint.x - tower.basePosition.x) + 
+            float distSq = (hitPoint.x - tower.basePosition.x) * (hitPoint.x - tower.basePosition.x) +
                            (hitPoint.z - tower.basePosition.z) * (hitPoint.z - tower.basePosition.z);
-            
+
             if (distSq <= hitRadius * hitRadius) {
                 if (t < minT) {
                     minT = t;
@@ -165,11 +165,11 @@ void CLauncher::Update(float deltaTime) {
         if (m_hoveredTowerIdx != -1) {
             m_towers[m_hoveredTowerIdx].stemRenderObject.SetColor(m_towers[m_hoveredTowerIdx].baseColorId);
         }
-        
+
         m_hoveredTowerIdx = closestTowerIdx;
-        
+
         if (m_hoveredTowerIdx != -1) {
-            m_towers[m_hoveredTowerIdx].stemRenderObject.SetColor(4); 
+            m_towers[m_hoveredTowerIdx].stemRenderObject.SetColor(4);
         }
     }
 }
