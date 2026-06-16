@@ -19,9 +19,9 @@ class CRenderer final : public IRenderer
 public:
     explicit CRenderer(const IWindow* window);
     CRenderer(const CRenderer&) = delete;
-    CRenderer(CRenderer&&) noexcept = default;
+    CRenderer(CRenderer&&) = delete;
     CRenderer& operator=(const CRenderer&) = delete;
-    CRenderer& operator=(CRenderer&&) noexcept = default;
+    CRenderer& operator=(CRenderer&&) = delete;
     ~CRenderer() override;
 
     static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window);
