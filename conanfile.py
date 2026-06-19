@@ -33,7 +33,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("sdl_image/3.4.4")
         self.requires("sdl_mixer/3.2.4")
         self.requires("sdl_ttf/3.2.2")
-        self.requires("stb/cci.20260313")
+        self.requires("stb/cci.20260413")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
         self.requires("vk-bootstrap/1.4.353")
@@ -41,7 +41,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
 
         if self.settings.os == "Android":
-            self.requires("vulkan-validation-layers-android/1.4.350.0")
+            self.requires("vulkan-validation-layers-android/1.4.350.1")
 
     def generate(self):
         deps = CMakeDeps(self)
