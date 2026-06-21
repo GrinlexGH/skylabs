@@ -1,6 +1,5 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
-#include <deque>
 
 namespace Vulkan {
 class CDescriptorWriter {

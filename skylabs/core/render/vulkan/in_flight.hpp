@@ -4,29 +4,23 @@
 namespace Vulkan {
 class CInFlightContext {
 public:
-    explicit CInFlightContext(std::nullptr_t) {}
-    explicit CInFlightContext(std::size_t count) : m_frameCount(count) {}
+    CInFlightContext() = default;
+    explicit CInFlightContext(const std::size_t count) : m_frameCount(count) {}
 
     [[nodiscard]] unsigned int InFlightIndex() const { return m_inFlightIndex; }
     [[nodiscard]] std::size_t FrameCount() const { return m_frameCount; }
 
-    void NextFrame() { if (m_frameCount > 0) m_inFlightIndex = (m_inFlightIndex + 1) % m_frameCount; }
+    void NextFrame() { m_inFlightIndex = (m_inFlightIndex + 1) % m_frameCount; }
 
 private:
     unsigned int m_inFlightIndex = 0;
-    std::size_t m_frameCount = 0;
+    std::size_t m_frameCount = 1;
 };
 
 template <typename T>
 class InFlight {
 public:
     explicit InFlight(std::nullptr_t) : m_context(nullptr) {}
-
-    InFlight(InFlight&) = delete;
-    InFlight(InFlight&&) noexcept = default;
-    InFlight& operator=(InFlight&) = delete;
-    InFlight& operator=(InFlight&&) noexcept = default;
-    ~InFlight() = default;
 
     InFlight(const CInFlightContext& context, std::vector<T>&& data) : m_context(&context), m_data(std::move(data)) {
         assert(m_data.size() == context.FrameCount() && "Container size must match frame count");
@@ -56,8 +50,8 @@ public:
     auto end() const { return m_data.end(); }
 
     constexpr decltype(auto) Get() { return m_data[m_context->InFlightIndex()]; }
-    constexpr decltype(auto) Get() const { return m_data[m_context->InFlightIndex()]; }
     constexpr decltype(auto) operator[](std::size_t index) { return m_data[index]; }
+    constexpr decltype(auto) Get() const { return m_data[m_context->InFlightIndex()]; }
     constexpr decltype(auto) operator[](std::size_t index) const { return m_data[index]; }
 
     constexpr const T* Data() const { return m_data.data(); }

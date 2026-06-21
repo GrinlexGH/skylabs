@@ -1,17 +1,12 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
-#include <skylabs/public/sdl/filesystem.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
 #include <skylabs/core/camera.hpp>
 
 #include <glm/gtx/hash.hpp>
 #include <glm/ext/scalar_reciprocal.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <SDL3_image/SDL_image.h>
 #include <tiny_obj_loader.h>
-
-#include <random>
-#include <ranges>
 
 template<> struct std::hash<CVertex> {
     std::size_t operator()(const CVertex& vertex) const noexcept {

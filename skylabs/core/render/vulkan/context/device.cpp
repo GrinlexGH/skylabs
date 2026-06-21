@@ -1,7 +1,5 @@
 #include <skylabs/core/render/vulkan/context/device.hpp>
 
-#include <fmt/ranges.h>
-
 namespace {
 bool TryEnableFeatures(vkb::PhysicalDevice& phys, const vk::PhysicalDeviceFeatures& f) {
     return phys.enable_features_if_present(static_cast<VkPhysicalDeviceFeatures>(f));

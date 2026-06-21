@@ -3,8 +3,6 @@
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/core/render/vertex.hpp>
 
-#include <vector>
-
 namespace Vulkan {
 struct VertexBufferBinding
 {

@@ -4,8 +4,6 @@
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 #include <skylabs/core/render/vulkan/command_recording/sync_state.hpp>
 
-#include <variant>
-
 namespace Vulkan {
 enum class BarrierType : std::uint8_t
 {

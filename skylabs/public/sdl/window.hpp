@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/public/pch.hpp>
 #include <skylabs/public/window.hpp>
 
 namespace SDL {

@@ -1,5 +1,4 @@
 #include <skylabs/public/sdl/filesystem.hpp>
-#include <SDL3/SDL.h>
 
 namespace {
 Sint64 SDLCALL StreamSizeBridge(void* userdata) {

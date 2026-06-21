@@ -58,11 +58,10 @@ conan remote add skylabs ./conan/conan-recipes -t local-recipes-index -f
 
 ---
 
-### 🌍 Optional: Install Global Conan Config
+### 🌍 Install Global Conan Config
 
 > [!CAUTION]
 > This will **overwrite your global Conan configuration**.
-> Use it only if you want a fully reproducible environment identical to this project.
 
 ```bash
 conan config install ./conan/conan-config/config
@@ -72,11 +71,9 @@ conan config install ./conan/conan-config/config
 
 ### 💻 2. Desktop Build
 
-####
-
 ```bash
 # Install dependencies
-conan install . -r skylabs --build=missing -c "&:tools.cmake.cmaketoolchain:generator=Ninja" -c "&:tools.env.virtualenv:powershell=pwsh"
+conan install . -r skylabs -pr msvc-18 --build=missing -c "&:tools.cmake.cmaketoolchain:generator=Ninja" -c "&:tools.env.virtualenv:powershell=pwsh"
 
 # Configure project
 cmake --preset conan-default

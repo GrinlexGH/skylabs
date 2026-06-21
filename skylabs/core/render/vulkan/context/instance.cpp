@@ -2,8 +2,6 @@
 #include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
 
-#include <fmt/ranges.h>
-
 namespace {
 #ifdef DEBUG
 VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(

@@ -12,13 +12,13 @@ enum class Level : std::int8_t {
     eTrace
 };
 
-inline std::atomic<Level> g_runtimeLevel { Level::eTrace };
+inline std::atomic g_runtimeLevel { Level::eTrace };
 
 inline bool ShouldLog(Level level) {
     return static_cast<std::int8_t>(level) <= static_cast<std::int8_t>(g_runtimeLevel.load(std::memory_order_relaxed));
 }
 
-inline void SetRuntimeLevel(Level level) {
+inline void SetRuntimeLevel(const Level level) {
     g_runtimeLevel.store(level, std::memory_order_relaxed);
 }
 

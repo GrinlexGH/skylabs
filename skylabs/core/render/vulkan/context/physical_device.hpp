@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/instance.hpp>
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
 
 namespace Vulkan {

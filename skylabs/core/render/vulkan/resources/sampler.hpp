@@ -1,8 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/context.hpp>
 
-#include <variant>
-
 namespace Vulkan {
 struct SamplerCreateInfo {
     struct MinMagFilter {

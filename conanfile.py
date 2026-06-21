@@ -26,7 +26,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("boost/1.91.0-1")
         self.requires("catch2/3.15.1")
         self.requires("entt/3.16.0")
-        self.requires("fmt/12.1.0")
+        self.requires("fmt/12.2.0")
         self.requires("frozen/cci.20260421")
         self.requires("glm/1.0.3")
         self.requires("sdl/3.4.10")

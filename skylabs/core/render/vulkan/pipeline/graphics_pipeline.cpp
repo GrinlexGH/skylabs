@@ -1,8 +1,5 @@
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 
-#include <frozen/map.h>
-#include <ranges>
-
 namespace {
 constexpr frozen::map<VertexFormat, vk::Format, 4> g_vertexFormat = {
     { VertexFormat::Float32, vk::Format::eR32Sfloat },

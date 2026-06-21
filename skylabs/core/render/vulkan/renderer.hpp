@@ -60,7 +60,7 @@ private:
     CDeviceContext m_deviceContext { nullptr };
 
     CSwapchain m_swapchain { nullptr };
-    CInFlightContext m_inFlightContext { nullptr };
+    CInFlightContext m_inFlightContext;
 
     CPipelineLayoutCache m_pipelineLayoutCache { nullptr };
     CDescriptorLayoutCache m_descriptorLayoutCache { nullptr };

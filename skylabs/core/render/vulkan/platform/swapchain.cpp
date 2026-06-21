@@ -1,6 +1,5 @@
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
 #include <skylabs/public/logging.hpp>
-#include <fmt/ranges.h>
 
 namespace Vulkan {
 CSwapchain::CSwapchain(

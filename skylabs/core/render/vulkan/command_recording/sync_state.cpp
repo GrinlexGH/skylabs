@@ -1,7 +1,5 @@
 #include <skylabs/core/render/vulkan/command_recording/sync_state.hpp>
 
-#include <frozen/map.h>
-
 namespace {
 constexpr frozen::map<Vulkan::Usage, std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2, vk::ImageLayout>, 9> g_usageState {
     { Vulkan::Usage::eNone, { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone, vk::ImageLayout::eUndefined } },

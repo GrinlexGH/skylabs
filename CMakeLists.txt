@@ -234,7 +234,7 @@ function(skylabs_target_setup_install_custom_files target_name)
     endif()
 endfunction()
 
-# Options:
+# Parameters:
 #   WIN32_IN_RELEASE            Set WIN32_EXECUTABLE target property in release mode
 #   VS_STARTUP                  Set target as Visual Studio default startup project
 #   RUNTIME_DESTINATION         Subdir of install destination
@@ -276,7 +276,7 @@ function(skylabs_configure_target target_name)
 
     skylabs_target_setup_compilation(${target_name} ${ARG_WIN32_IN_RELEASE})
 
-    if("${TARGET_TYPE}" MATCHES "INTERFACE_LIBRARY")
+    if("${TARGET_TYPE}" STREQUAL "INTERFACE_LIBRARY")
         return()
     endif()
 
@@ -310,6 +310,7 @@ find_package(SteamworksSDK CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(vk-bootstrap CONFIG REQUIRED)
 find_package(VulkanHeaders CONFIG REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
 
 # Skylabs
