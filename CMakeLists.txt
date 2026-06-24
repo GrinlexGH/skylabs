@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.28...4.3)
-project(Skylabs HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 LANGUAGES CXX C)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
+
+project(Skylabs HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 LANGUAGES CXX C)
 
 # Global settings
 set(SKYLABS_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
