@@ -8,10 +8,6 @@ class SkylabsRecipe(ConanFile):
     package_type = "application"
 
     default_options = {
-        "sdl_image/*:with_libtiff": False,
-        "sdl_image/*:with_libwebp": False,
-        "sdl_image/*:with_avif": False,
-
         "boost/*:with_nowide": True,
         "boost/*:with_container": True,
         "boost/*:with_container_hash": True,
@@ -62,9 +58,7 @@ class SkylabsRecipe(ConanFile):
         sdl_java_src = os.path.abspath(
             os.path.join(self.dependencies["sdl"].package_folder, "android-project", "app", "src", "main", "java", "org", "libsdl"
         ))
-        project_java_dir = os.path.join(
-            self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl"
-        )
+        project_java_dir = os.path.join(self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl")
 
         self._create_symlink(sdl_java_src, project_java_dir, target_is_directory=True)
 

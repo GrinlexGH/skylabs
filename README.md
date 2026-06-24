@@ -76,7 +76,7 @@ conan config install ./conan/conan-config/config
 
 ```bash
 # Install dependencies
-conan install . -r skylabs -pr msvc-18 --build=missing -c "tools.cmake.cmaketoolchain:extra_variables={ `"CMAKE_EXPERIMENTAL_CXX_IMPORT_STD`": `"f35a9ac6-8463-4d38-8eec-5d6008153e7d`" }" -c "tools.cmake.cmaketoolchain:generator=Ninja" -c "&:tools.env.virtualenv:powershell=pwsh"
+conan install . -r skylabs -r conancenter -pr msvc-18 --build=missing -c "tools.cmake.cmaketoolchain:extra_variables={ `"CMAKE_EXPERIMENTAL_CXX_IMPORT_STD`": `"f35a9ac6-8463-4d38-8eec-5d6008153e7d`" }" -c "tools.cmake.cmaketoolchain:generator=Ninja" -c "&:tools.env.virtualenv:powershell=pwsh"
 
 # Configure project
 cmake --preset conan-debug
