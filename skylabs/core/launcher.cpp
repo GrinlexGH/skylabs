@@ -102,8 +102,6 @@ void CLauncher::Main() {
 void CLauncher::Destroy() {}
 
 void CLauncher::Update(float deltaTime) {
-    const std::span keyboardState = SDL::GetKeyboardState();
-
     if (m_leftJoystick.active) {
         if (std::abs(m_leftJoystick.dirY) > 0.1f) {
             auto direction = (m_leftJoystick.dirY < 0) ? CCamera::MoveDirection::eForward : CCamera::MoveDirection::eBackward;
@@ -115,6 +113,7 @@ void CLauncher::Update(float deltaTime) {
             m_camera.ProcessKeyboard(direction, deltaTime * std::abs(m_leftJoystick.dirX));
         }
     } else {
+        const std::span keyboardState = SDL::GetKeyboardState();
         if (keyboardState[SDL_SCANCODE_W]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eForward, deltaTime);
         if (keyboardState[SDL_SCANCODE_S]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eBackward, deltaTime);
         if (keyboardState[SDL_SCANCODE_A]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
@@ -400,8 +399,8 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
         float z = std::sin(angle);
 
         glm::vec3 sideNormal = glm::gtc::normalize(glm::vec3(x, 0.0f, z));
-        vertices.push_back(CVertex { .m_position = glm::vec3(x, 0.0f, z), .m_texCoord = {}, .m_normal = sideNormal});
-        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_texCoord = {}, .m_normal = sideNormal });
+        vertices.emplace_back(glm::vec3(x, 0.0f, z), glm::vec2 {}, sideNormal);
+        vertices.emplace_back(glm::vec3(x, 1.0f, z), glm::vec2 {}, sideNormal);
     }
 
     for (uint16_t i = 0; i < segments; ++i) {
@@ -414,17 +413,17 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
         indices.push_back(b0); indices.push_back(t1); indices.push_back(t0);
     }
 
-    uint16_t topCapCenterIndex = static_cast<uint16_t>(vertices.size());
-    vertices.push_back(CVertex { .m_position = glm::vec3(0.0f, 1.0f, 0.0f), .m_texCoord = {}, .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
+    std::size_t topCapCenterIndex = vertices.size();
+    vertices.emplace_back(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2 {}, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    uint16_t topCapEdgeStart = static_cast<uint16_t>(vertices.size());
+    std::size_t topCapEdgeStart = vertices.size();
 
     for (uint32_t i = 0; i <= segments; ++i) {
         float angle = i * 2.0f * glm::gtc::pi<float>() / segments;
         float x = std::cos(angle);
         float z = std::sin(angle);
 
-        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_texCoord = {}, .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
+        vertices.emplace_back(glm::vec3(x, 1.0f, z), glm::vec2 {}, glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     for (uint16_t i = 0; i < segments; ++i) {

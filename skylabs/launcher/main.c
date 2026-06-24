@@ -143,7 +143,6 @@ int main() {
 #elifdef PLATFORM_LINUX
 #include <dlfcn.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -158,7 +157,8 @@ int main(int argc, char* argv[]) {
     void* hCore = NULL;
 
     hCore = dlopen(LOAD_PATH, RTLD_LAZY);
-    PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", dlerror());
+    const char* loadError = dlerror();
+    PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", loadError ? loadError : "Unknown error");
 
     main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
     const char* dlsymError = dlerror();

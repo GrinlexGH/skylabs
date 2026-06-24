@@ -109,15 +109,17 @@ void CMainPass::Draw(
     const CBuffer& vertexBuffer,
     const CBuffer& indexBuffer,
     const std::span<const SubMesh> meshes,
-    std::vector<CRenderObject> objects
+    const std::vector<CRenderObject>& objects
 ) {
+    auto& mainColor = m_mainColor.Get();
+
     vk::RenderingAttachmentInfo colorAttachInfo {};
     colorAttachInfo.imageView = m_mainColorMSAA.Get().View();
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
     colorAttachInfo.clearValue.color = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
-    colorAttachInfo.resolveImageView = m_mainColor.Get().View();
+    colorAttachInfo.resolveImageView = mainColor.View();
     colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eAverage;
 
@@ -129,13 +131,13 @@ void CMainPass::Draw(
     depthAttachInfo.clearValue.depthStencil = vk::ClearDepthStencilValue { 0.0f, 0 };
 
     vk::RenderingInfo mainRenderInfo {};
-    mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, m_mainColor.Get().Extent2D() };
+    mainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, mainColor.Extent2D() };
     mainRenderInfo.layerCount = 1;
     mainRenderInfo.colorAttachmentCount = 1;
     mainRenderInfo.pColorAttachments = &colorAttachInfo;
     mainRenderInfo.pDepthAttachment = &depthAttachInfo;
 
-    auto [width, height] = m_mainColor.Get().Extent2D();
+    auto [width, height] = mainColor.Extent2D();
 
     MainConstants mainConstants { };
     cmd->beginRendering(mainRenderInfo);

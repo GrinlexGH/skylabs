@@ -63,11 +63,11 @@ std::size_t CFileStream::Write(const void* ptr, std::size_t size) {
 }
 
 std::int64_t CFileStream::Seek(std::int64_t offset, Whence whence) {
-    SDL_IOWhence sdlWhence {};
+    SDL_IOWhence sdlWhence = SDL_IO_SEEK_SET;
     switch (whence) {
-        case Whence::eBegin: sdlWhence = SDL_IO_SEEK_SET; break;
         case Whence::eCursor: sdlWhence = SDL_IO_SEEK_CUR; break;
         case Whence::eEnd: sdlWhence = SDL_IO_SEEK_END; break;
+        default: break;
     }
 
     return m_stream ? SDL_SeekIO(m_stream, offset, sdlWhence) : -1;
