@@ -1,6 +1,8 @@
 #pragma once
 #include <skylabs/core/pch.hpp>
 
+import vulkan;
+
 namespace Vulkan {
 class CInstance
 {

@@ -5,6 +5,8 @@
 #include <boost/nowide/convert.hpp>
 #endif
 
+import std;
+
 namespace OS {
 PUBLIC_CLASS std::string GetExecutableDirectory() {
     static const std::string cachedPath = []() {

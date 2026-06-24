@@ -1,6 +1,8 @@
 #pragma once
 #include <skylabs/public/utils.hpp>
 
+import vulkan;
+
 class PUBLIC_CLASS IWindow
 {
 public:

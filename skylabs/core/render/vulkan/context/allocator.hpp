@@ -1,6 +1,8 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/device.hpp>
 
+import vk_mem_alloc;
+
 namespace Vulkan {
 class CAllocator
 {

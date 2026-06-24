@@ -1,8 +1,5 @@
 #pragma once
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-
-#include <array>
+import glm;
 
 enum class VertexFormat : std::uint8_t {
     Float32,

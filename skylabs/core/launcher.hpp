@@ -30,8 +30,8 @@ struct UIButton
 
 struct SDisk {
     int size;
-    Vulkan::CRenderObject renderObject;
     bool isselected;
+    Vulkan::CRenderObject renderObject;
 };
 
 struct STower {

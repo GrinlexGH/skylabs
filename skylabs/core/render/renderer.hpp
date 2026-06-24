@@ -1,5 +1,5 @@
 #pragma once
-#include <glm/glm.hpp>
+import glm;
 
 class IRenderer
 {

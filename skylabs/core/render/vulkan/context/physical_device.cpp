@@ -1,5 +1,7 @@
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 
+import fmt;
+
 namespace Vulkan {
 CPhysicalDevice::CPhysicalDevice(const CInstance& instance, const CSurface& surface) {
     vkb::PhysicalDeviceSelector selector { instance.VkbInstance(), **surface };

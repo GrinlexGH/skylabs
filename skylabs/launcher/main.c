@@ -111,7 +111,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         PRINTF_EXIT_CHECK(!len, L"Failed to get length of converted command line argument %d", i);
 
         argv[i] = malloc(len);
-        PRINTF_EXIT_CHECK(!len, L"Failed to allocate memory for command line argument %d", i);
+        PRINTF_EXIT_CHECK(!argv[i], L"Failed to allocate memory for command line argument %d", i);
 
         len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, NULL, NULL);
         PRINTF_EXIT_CHECK(!len, L"Failed to convert command line argument %d to UTF-8", i);

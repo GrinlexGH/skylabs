@@ -1,9 +1,5 @@
 #pragma once
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include <algorithm>
+import glm;
 
 class CCamera
 {
@@ -26,7 +22,7 @@ public:
     }
 
     glm::mat4 ViewMatrix() const {
-        return lookAt(m_position, m_position + m_front, m_up);
+        return glm::gtc::lookAt(m_position, m_position + m_front, m_up);
     }
 
     float Fov() const { return m_fov; }

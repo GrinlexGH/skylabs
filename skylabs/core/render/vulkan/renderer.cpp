@@ -3,10 +3,9 @@
 #include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
 #include <skylabs/core/camera.hpp>
 
-#include <glm/gtx/hash.hpp>
-#include <glm/ext/scalar_reciprocal.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <tiny_obj_loader.h>
+
+import glm;
 
 template<> struct std::hash<CVertex> {
     std::size_t operator()(const CVertex& vertex) const noexcept {
@@ -241,11 +240,11 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
     glm::mat4 rot = glm::mat4(1.0f);
 
     if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
-        rot = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
+        rot = glm::gtc::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
     } else if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate270) {
-        rot = glm::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0, 0, 1));
+        rot = glm::gtc::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0, 0, 1));
     } else if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate180) {
-        rot = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
+        rot = glm::gtc::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
     }
 
     const CMVP ubo {
@@ -290,8 +289,8 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const 
         return mesh;
     };
 
-    m_meshes.push_back(UploadToPool());
-    return m_meshes.size() - 1;
+    m_meshes.emplace_back(UploadToPool());
+    return static_cast<std::uint32_t>(m_meshes.size() - 1);
 }
 
 ::CRenderObject& CRenderer::GetObjectData(const std::uint32_t id) {

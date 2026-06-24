@@ -17,6 +17,9 @@ class SkylabsRecipe(ConanFile):
         "boost/*:with_container_hash": True,
         "boost/*:with_range": True,
         "boost/*:with_unordered": True,
+
+        "boost/*:use_modules": True,
+        "fmt/*:use_modules": True,
     }
 
     def build_requirements(self):
@@ -36,9 +39,9 @@ class SkylabsRecipe(ConanFile):
         self.requires("stb/cci.20260413")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
-        self.requires("vk-bootstrap/1.4.353")
+        self.requires("vk-bootstrap/1.4.354")
         self.requires("vulkan-headers/1.4.354")
-        self.requires("vulkan-memory-allocator-hpp/3.3.0+3")
+        self.requires("vulkan-memory-allocator-hpp/pr-87")
 
         if self.settings.os == "Android":
             self.requires("vulkan-validation-layers-android/1.4.350.1")

@@ -8,7 +8,6 @@ target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
         camera.hpp
-        header_factory.cpp
         launcher.cpp
         launcher.hpp
         main.cpp
@@ -76,14 +75,14 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     public
     Catch2::Catch2
     EnTT::EnTT
-    glm::glm
     SDL3_image::SDL3_image
     stb::stb
     SteamworksSDK::SteamworksSDK
     tinyobjloader::tinyobjloader
     vk-bootstrap::vk-bootstrap
-    Vulkan::Headers
-    VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
+    glm-HppModule
+    Vulkan-HppModule
+    VulkanMemoryAllocator-HppModule
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})

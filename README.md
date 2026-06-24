@@ -34,12 +34,12 @@ git submodule update --init --recursive
 
 Ensure you have the following tools installed before compiling:
 
-| Tool             | Requirement               |
-|------------------|---------------------------|
-| **CMake**        | Latest version            |
-| **C++ Compiler** | Latest MSVC / GCC / Clang |
-| **Conan**        | 2.x                       |
-| **Android SDK**  | Latest SDK (optional)     |
+| Tool                | Requirement               |
+|---------------------|---------------------------|
+| **CMake**           | Latest nightly version    |
+| **C++ Compiler**    | Latest MSVC / Clang       |
+| **Conan**           | 2.x                       |
+| ~~**Android SDK**~~ | ~~Latest SDK (optional)~~ |
 
 ## ⚙️ Configuration & Building
 
@@ -71,12 +71,15 @@ conan config install ./conan/conan-config/config
 
 ### 💻 2. Desktop Build
 
+> [!WARNING]
+> This project is using C++ 20 modules, so you need to set `CMAKE_EXPERIMENTAL_CXX_IMPORT_STD` to uuid which your version of cmake uses. You can see it in cmake [sources](https://github.com/Kitware/CMake/blob/master/Help/dev/experimental.rst#c-import-std-support).
+
 ```bash
 # Install dependencies
-conan install . -r skylabs -pr msvc-18 --build=missing -c "&:tools.cmake.cmaketoolchain:generator=Ninja" -c "&:tools.env.virtualenv:powershell=pwsh"
+conan install . -r skylabs -pr msvc-18 --build=missing -c "tools.cmake.cmaketoolchain:extra_variables={ `"CMAKE_EXPERIMENTAL_CXX_IMPORT_STD`": `"f35a9ac6-8463-4d38-8eec-5d6008153e7d`" }" -c "tools.cmake.cmaketoolchain:generator=Ninja" -c "&:tools.env.virtualenv:powershell=pwsh"
 
 # Configure project
-cmake --preset conan-default
+cmake --preset conan-debug
 
 # Build
 cmake --build build
@@ -84,9 +87,12 @@ cmake --build build
 
 ---
 
-### 📱 3. Android Build
+### 📱 ~~3. Android Build~~
 
-The Android pipeline is **fully automated via Gradle** - no manual Conan step required (you can change conan setup manually from [`build.gradle.kts`](android/app/build.gradle.kts) if you need).
+> [!WARNING]
+> Android support is deprecated due to the fact that the ndk doesn't support C++ 23 `import std;`
+
+~~The Android pipeline is **fully automated via Gradle** - no manual Conan step required (you can change conan setup manually from [`build.gradle.kts`](android/app/build.gradle.kts) if you need).~~
 
 ```bash
 cd android
@@ -94,7 +100,7 @@ cd android
 ```
 
 > [!TIP]
-> Gradle triggers conan internally during the `configureCMake` phase. It uses android-specific conan profile (you can copy from my conan config repo).
+> ~~Gradle triggers conan internally during the `configureCMake` phase. It uses android-specific conan profile (you can copy it from my conan config repo).~~
 
 ## 📚 References & Resources
 * [UTF-8 Everywhere](https://utf8everywhere.org/)

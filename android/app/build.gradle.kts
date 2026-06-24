@@ -32,11 +32,11 @@ abstract class ConanInstallTask @Inject constructor(
             "-s", "arch=${arch.get()}",
             "-s", "os.api_level=${apiLevel.get()}",
             "-s", "build_type=${buildType.get()}",
-            "-s", "compiler.version=21",                    //!!! Depends on this file configuration, dont forget to update !!!
-            "-s", "compiler.libcxx=c++_static",             //!!! Depends on this file configuration, dont forget to update !!!
+            "-s", "compiler.version=21",                    //!!! Depends on this file configuration, don't forget to update !!!
+            "-s", "compiler.libcxx=c++_static",             //!!! Depends on this file configuration, don't forget to update !!!
             "-c", "tools.android:ndk_path=${ndkPath.get()}",
-            "--build", "missing",
             "-c", "tools.cmake.cmake_layout:build_folder_vars=['settings.arch']",
+            "--build", "missing",
         )
 
         logger.lifecycle(">> conan ${args.joinToString(" ")}")
@@ -109,7 +109,9 @@ android {
 }
 
 androidComponents {
-    tasks.register("prepareKotlinBuildScriptModel")
+    tasks.register("prepareKotlinBuildScriptModel") {
+        description = "Android Studio pre-sync."
+    }
 
     onVariants { variant ->
         val variantName = variant.name.replaceFirstChar { it.uppercase() }
@@ -119,6 +121,8 @@ androidComponents {
         // Setup conan tasks
         val conanTaskProviders = abis.map { abi ->
             tasks.register<ConanInstallTask>("conanInstall${configName}[${abi}]") {
+                description = "Conan install for $abi"
+
                 val conanfileTxt = projectRootFile.resolve("conanfile.txt")
                 val conanfilePy = projectRootFile.resolve("conanfile.py")
                 val conanArch = when (abi) {
@@ -142,7 +146,7 @@ androidComponents {
             dependsOn(conanTaskProviders)
         }
 
-        // Android studio hack
+        // Android Studio hack
         tasks.findByName("prepareKotlinBuildScriptModel")?.dependsOn(conanTaskProviders)
 
         // Merge assets after build

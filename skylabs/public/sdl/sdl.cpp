@@ -1,5 +1,7 @@
 #include <skylabs/public/sdl/sdl.hpp>
 
+import fmt;
+
 namespace SDL {
 PUBLIC_CLASS Utils::Extent2D GetWindowSizeInPixels(SDL_Window* window) {
     int w, h;

@@ -1,11 +1,12 @@
 #include <skylabs/core/render/vulkan/main_pass.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
-#include <glm/ext/matrix_transform.hpp>
+
+import glm;
 
 namespace Vulkan {
 struct MainConstants {
     alignas(16) std::uint32_t colorId = 0;
-    alignas(16) glm::mat4x4 model = glm::identity<glm::mat4x4>();
+    alignas(16) glm::mat4x4 model = glm::gtc::identity<glm::mat4x4>();
 };
 
 CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent) :

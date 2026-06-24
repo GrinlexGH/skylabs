@@ -1,6 +1,8 @@
 #pragma once
 #include <skylabs/public/pch.hpp>
 
+import std;
+
 namespace Utils {
 struct Extent2D {
     std::uint32_t m_width = 0;

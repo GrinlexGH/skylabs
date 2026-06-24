@@ -3,7 +3,6 @@ project(Skylabs HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 LANGUAGES
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
-set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 # Global settings
 set(SKYLABS_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
@@ -29,11 +28,9 @@ set(SKYLABS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set(SKYLABS_VERSION_WORD "Melons")
 
 # CMake options
-if(NOT MINGW)
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT LTO_AVAILABLE)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
-endif()
+include(CheckIPOSupported)
+check_ipo_supported(RESULT LTO_AVAILABLE)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -41,6 +38,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+
+set(CMAKE_CXX_MODULE_STD ON)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -57,10 +56,51 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
 endif()
 
-# Functions to setup targets
-function(skylabs_target_setup_ide target_name vs_startup)
-    cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "" ${ARGN})
+set(IS_LANG_CCXX $<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>)
+set(IS_GNU_LIKE $<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
+set(IS_MSVC_LIKE $<OR:$<CXX_COMPILER_ID:MSVC>,$<STREQUAL:${CMAKE_CXX_COMPILER_FRONTEND_VARIANT},MSVC>>)
 
+add_compile_options(
+    "$<$<AND:${IS_LANG_CCXX},${IS_GNU_LIKE}>:-Wall;-Wextra;-Wpedantic>"
+    "$<$<AND:${IS_LANG_CCXX},$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes;-Wno-reserved-module-identifier>"
+    "$<$<AND:${IS_LANG_CCXX},${IS_MSVC_LIKE}>:/utf-8;/Zc:__cplusplus;/Zc:preprocessor;/W4>"
+    "$<$<AND:${IS_LANG_CCXX},${IS_MSVC_LIKE},$<BOOL:${LTO_AVAILABLE}>>:/Gy;/Gw>"
+    "$<$<AND:${IS_LANG_CCXX},$<BOOL:${LTO_AVAILABLE}>,$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:${CMAKE_CXX_COMPILER_VERSION},19.35>>:/Zc:checkGwOdr>"
+)
+
+add_link_options(
+    "$<$<AND:${IS_LANG_CCXX},$<CXX_COMPILER_ID:MSVC>>:/ignore:4099>"
+)
+
+add_compile_definitions(
+    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DEBUG>"
+
+    "$<$<PLATFORM_ID:Windows>:PLATFORM_WINDOWS;UNICODE;_UNICODE>"
+    "$<$<PLATFORM_ID:Linux>:PLATFORM_LINUX;_XOPEN_SOURCE=700>"
+    "$<$<PLATFORM_ID:Darwin>:PLATFORM_APPLE>"
+    "$<$<PLATFORM_ID:Android>:PLATFORM_ANDROID>"
+
+    "$<$<CXX_COMPILER_ID:MSVC>:COMPILER_MSVC>"
+    "$<$<CXX_COMPILER_ID:GNU>:COMPILER_GCC>"
+    "$<$<CXX_COMPILER_ID:Clang>:COMPILER_CLANG>"
+    "$<$<CXX_COMPILER_ID:AppleClang>:COMPILER_CLANG>"
+
+    "$<$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>:ARCH_64>"
+    "$<$<EQUAL:${CMAKE_SIZEOF_VOID_P},4>:ARCH_32>"
+
+    "_CRT_SECURE_NO_WARNINGS=1"
+    "NOMINMAX=1"
+    "GLM_FORCE_DEPTH_ZERO_TO_ONE=1"
+    "GLM_FORCE_RADIANS=1"
+    "GLM_ENABLE_EXPERIMENTAL=1"
+    "VULKAN_HPP_TYPESAFE_CONVERSION=1"
+    "VULKAN_HPP_USE_STD_EXPECTED=1"
+    "VK_NO_PROTOTYPES=1"
+    "FMT_IMPORT_STD=1"
+)
+
+# Functions to setup targets
+function(skylabs_target_setup_ide target_name vs_startup runtime_destination)
     get_target_property(TARGET_TYPE ${target_name} TYPE)
     get_target_property(TARGET_SOURCES ${target_name} SOURCES)
 
@@ -68,7 +108,7 @@ function(skylabs_target_setup_ide target_name vs_startup)
 
     if("${TARGET_TYPE}" STREQUAL "EXECUTABLE")
         set_target_properties(${target_name} PROPERTIES
-            VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${ARG_RUNTIME_DESTINATION}/$<TARGET_FILE_NAME:${target_name}>
+            VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${runtime_destination}/$<TARGET_FILE_NAME:${target_name}>
             VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}
         )
 
@@ -78,75 +118,10 @@ function(skylabs_target_setup_ide target_name vs_startup)
     endif()
 endfunction()
 
-function(skylabs_target_setup_compilation target_name win32_in_release)
-    get_target_property(TARGET_TYPE ${target_name} TYPE)
-
-    if(win32_in_release AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE"))
-        set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)
-    endif()
-
-    set(IS_GNU_LIKE $<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
-    set(IS_MSVC_LIKE $<OR:$<CXX_COMPILER_ID:MSVC>,$<STREQUAL:${CMAKE_CXX_COMPILER_FRONTEND_VARIANT},MSVC>>)
-    set(SHOULD_USE_LTO $<BOOL:${LTO_AVAILABLE}>)
-
-    # Compile options
-    target_compile_options(${target_name} PRIVATE
-        $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:
-            $<${IS_GNU_LIKE}:
-                -Wall -Wextra -Wpedantic
-                $<$<AND:$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes>
-            >
-            $<${IS_MSVC_LIKE}:
-                /utf-8 /Zc:__cplusplus /W4
-                $<${SHOULD_USE_LTO}:
-                    /Gy /Gw
-                    $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:${CMAKE_CXX_COMPILER_VERSION},19.35>>:/Zc:checkGwOdr>
-                >
-            >
-        >
-    )
-
-    # Link options
-    target_link_options(${target_name} PRIVATE
-        $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:
-            $<$<CXX_COMPILER_ID:MSVC>:/ignore:4099>
-        >
-    )
-
-    # Defines
-    target_compile_definitions(${target_name} PRIVATE
-        $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DEBUG>
-
-        $<$<PLATFORM_ID:Windows>:PLATFORM_WINDOWS UNICODE _UNICODE>
-        $<$<PLATFORM_ID:Linux>:PLATFORM_LINUX _XOPEN_SOURCE=700>
-        $<$<PLATFORM_ID:Darwin>:PLATFORM_APPLE>
-        $<$<PLATFORM_ID:Android>:PLATFORM_ANDROID>
-
-        $<$<CXX_COMPILER_ID:MSVC>:COMPILER_MSVC>
-        $<$<CXX_COMPILER_ID:GNU>:COMPILER_GCC>
-        $<$<CXX_COMPILER_ID:Clang>:COMPILER_CLANG>
-        $<$<CXX_COMPILER_ID:AppleClang>:COMPILER_CLANG>
-
-        $<$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>:ARCH_64>
-        $<$<EQUAL:${CMAKE_SIZEOF_VOID_P},4>:ARCH_32>
-
-        _CRT_SECURE_NO_WARNINGS
-        NOMINMAX
-
-        GLM_FORCE_DEPTH_ZERO_TO_ONE=1
-        GLM_FORCE_RADIANS=1
-        GLM_ENABLE_EXPERIMENTAL=1
-
-        VULKAN_HPP_TYPESAFE_CONVERSION=1
-        VULKAN_HPP_USE_STD_EXPECTED=1
-    )
-endfunction()
-
 function(skylabs_target_setup_install target_name)
     cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "RUNTIME_PLUGINS" ${ARGN})
 
     get_target_property(TARGET_TYPE ${target_name} TYPE)
-
     if(UNIX AND "${TARGET_TYPE}" STREQUAL "EXECUTABLE")
         set_target_properties(${target_name} PROPERTIES INSTALL_RPATH "\$ORIGIN:\$ORIGIN/../lib")
     endif()
@@ -242,26 +217,12 @@ endfunction()
 #   CUSTOM_FILES                List of custom files to install with target
 #   CUSTOM_FILES_DESTINATION    Subdir of install destination
 function(skylabs_configure_target target_name)
-    if(NOT TARGET ${target_name})
-        return()
-    endif()
-
-    get_target_property(aliased_target ${target_name} ALIASED_TARGET)
-    if(${aliased_target})
-        return()
-    endif()
-
     set(options WIN32_IN_RELEASE VS_STARTUP)
     set(oneValueArgs RUNTIME_DESTINATION CUSTOM_FILES_DESTINATION)
     set(multiValueArgs RUNTIME_PLUGINS CUSTOM_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    get_target_property(TARGET_TYPE ${target_name} TYPE)
-
-    skylabs_target_setup_ide(${target_name}
-        ${ARG_VS_STARTUP}
-        RUNTIME_DESTINATION "${ARG_RUNTIME_DESTINATION}"
-    )
+    skylabs_target_setup_ide(${target_name} "${ARG_VS_STARTUP}" "${ARG_RUNTIME_DESTINATION}")
 
     if(ARG_CUSTOM_FILES AND ARG_CUSTOM_FILES_DESTINATION)
         skylabs_target_setup_install_custom_files(${target_name}
@@ -270,14 +231,13 @@ function(skylabs_configure_target target_name)
         )
     endif()
 
-    if(NOT("${TARGET_TYPE}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|INTERFACE_LIBRARY|EXECUTABLE"))
+    get_target_property(TARGET_TYPE ${target_name} TYPE)
+    if(NOT("${TARGET_TYPE}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|EXECUTABLE"))
         return()
     endif()
 
-    skylabs_target_setup_compilation(${target_name} ${ARG_WIN32_IN_RELEASE})
-
-    if("${TARGET_TYPE}" STREQUAL "INTERFACE_LIBRARY")
-        return()
+    if(${ARG_WIN32_IN_RELEASE} AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE"))
+        set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)
     endif()
 
     set(install_args "")
@@ -297,9 +257,7 @@ install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
 find_package(Boost COMPONENTS nowide container CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 find_package(frozen CONFIG REQUIRED)
-find_package(glm CONFIG REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_image CONFIG REQUIRED)
 find_package(SDL3_mixer CONFIG REQUIRED)
@@ -309,9 +267,57 @@ find_package(stb CONFIG REQUIRED)
 find_package(SteamworksSDK CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(vk-bootstrap CONFIG REQUIRED)
-find_package(VulkanHeaders CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+
+# vulkan headers module
+find_package(VulkanHeaders CONFIG REQUIRED)
+get_target_property(VULKAN_INCLUDE_DIR Vulkan::Headers INTERFACE_INCLUDE_DIRECTORIES)
+add_library(Vulkan-HppModule OBJECT)
+target_sources(Vulkan-HppModule PUBLIC
+    FILE_SET CXX_MODULES
+    BASE_DIRS ${VULKAN_INCLUDE_DIR}
+    FILES
+        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.cppm
+        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan_video.cppm
+)
+target_link_libraries(Vulkan-HppModule PUBLIC Vulkan::Headers)
+
+# vulkan memory allocator module
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
+get_target_property(VMA_HPP_INCLUDE_DIR VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp INTERFACE_INCLUDE_DIRECTORIES)
+add_library(VulkanMemoryAllocator-HppModule OBJECT)
+target_sources(VulkanMemoryAllocator-HppModule PUBLIC
+    FILE_SET CXX_MODULES
+    BASE_DIRS ${VMA_HPP_INCLUDE_DIR}
+    FILES
+        ${VMA_HPP_INCLUDE_DIR}/vk_mem_alloc.cppm
+)
+set_source_files_properties(${VMA_HPP_INCLUDE_DIR}/vk_mem_alloc.cppm PROPERTIES COMPILE_OPTIONS "$<${IS_GNU_LIKE}:-w>")
+target_link_libraries(VulkanMemoryAllocator-HppModule PUBLIC VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp Vulkan-HppModule)
+
+# glm module
+find_package(glm CONFIG REQUIRED)
+get_target_property(GLM_INCLUDE_DIR glm::glm-header-only INTERFACE_INCLUDE_DIRECTORIES)
+add_library(glm-HppModule OBJECT)
+target_sources(glm-HppModule PUBLIC
+    FILE_SET CXX_MODULES
+    BASE_DIRS ${GLM_INCLUDE_DIR}
+    FILES
+        ${GLM_INCLUDE_DIR}/glm/glm.cppm
+)
+target_link_libraries(glm-HppModule PUBLIC glm::glm-header-only)
+
+# fmt module
+find_package(fmt CONFIG REQUIRED)
+get_target_property(FMT_INCLUDE_DIR fmt::fmt INTERFACE_INCLUDE_DIRECTORIES)
+add_library(fmt-HppModule OBJECT)
+target_sources(fmt-HppModule PUBLIC
+    FILE_SET CXX_MODULES
+    BASE_DIRS ${FMT_INCLUDE_DIR}
+    FILES
+        ${FMT_INCLUDE_DIR}/fmt/src/fmt.cc
+)
+target_link_libraries(fmt-HppModule PUBLIC fmt::fmt-header-only)
 
 # Skylabs
 include_directories("${PROJECT_SOURCE_DIR}")

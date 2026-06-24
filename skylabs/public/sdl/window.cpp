@@ -1,6 +1,8 @@
 #include <skylabs/public/sdl/window.hpp>
 #include <skylabs/public/sdl/sdl.hpp>
 
+import fmt;
+
 namespace SDL {
 CWindow::CWindow(const char* title, const int w, const int h, const SDL_WindowFlags flags) :
     m_handle(SDL_CreateWindow(title, w, h, flags))

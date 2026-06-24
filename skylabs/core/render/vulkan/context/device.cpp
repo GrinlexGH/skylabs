@@ -1,5 +1,7 @@
 #include <skylabs/core/render/vulkan/context/device.hpp>
 
+import fmt;
+
 namespace {
 bool TryEnableFeatures(vkb::PhysicalDevice& phys, const vk::PhysicalDeviceFeatures& f) {
     return phys.enable_features_if_present(static_cast<VkPhysicalDeviceFeatures>(f));

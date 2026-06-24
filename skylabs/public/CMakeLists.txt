@@ -61,12 +61,12 @@ target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     Boost::headers
     Boost::nowide
     Boost::container
-    fmt::fmt
     frozen::frozen
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer
     SDL3_ttf::SDL3_ttf
-    Vulkan::Headers
+    fmt-HppModule
+    Vulkan-HppModule
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME}

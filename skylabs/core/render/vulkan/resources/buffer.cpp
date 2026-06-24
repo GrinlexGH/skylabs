@@ -25,7 +25,12 @@ CBuffer::CBuffer(
     }
 
     vma::AllocationInfo allocationInfo;
-    m_handle = vma::raii::Buffer { *context.Allocator(), bufferInfo, allocCreateInfo, allocationInfo };
+    m_handle = vma::raii::Buffer {
+        *context.Allocator(),
+        bufferInfo,
+        allocCreateInfo,
+        vk::Optional { allocationInfo }
+    };
 
     if (allocCreateInfo.flags & vma::AllocationCreateFlagBits::eMapped) {
         m_data = allocationInfo.pMappedData;

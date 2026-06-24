@@ -3,9 +3,6 @@
 #include <skylabs/public/logging.hpp>
 #include <skylabs/public/sdl/sdl.hpp>
 
-#include <span>
-#include <thread>
-
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
     m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
@@ -19,23 +16,23 @@ void CLauncher::Create() {
     auto [v, i] = GenerateDisk();
     auto oi = m_renderer->UploadMesh(v, i);
     m_towers.emplace_back(glm::vec3(-1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1), std::vector <SDisk> {
-        {3, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3)},
-        {2, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2)},
-        {1, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1)}
+        { 3, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3) },
+        { 2, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2) },
+        { 1, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1) }
     }, 1);
     m_towers.emplace_back(glm::vec3(0.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector <SDisk> {}, 2);
     m_towers.emplace_back(glm::vec3(1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector <SDisk> {}, 3);
     m_cursor = m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 4);
 }
 
-void CLauncher::UpdateVisuals(float deltaTime) {
+void CLauncher::UpdateVisuals(float /*deltaTime*/) {
     const float DISK_HEIGHT = 0.15f;
     const float BASE_RADIUS = 0.10f;
 
     for (auto& tower : m_towers) {
         glm::mat4 stemModel = glm::mat4(1.0f);
-        stemModel = glm::translate(stemModel, tower.basePosition);
-        stemModel = glm::scale(stemModel, glm::vec3(0.02f, 1.2f, 0.02f));
+        stemModel = glm::gtc::translate(stemModel, tower.basePosition);
+        stemModel = glm::gtc::scale(stemModel, glm::vec3(0.02f, 1.2f, 0.02f));
         tower.stemRenderObject.SetMatrix(stemModel);
 
         for (std::size_t i = 0; i < tower.disks.size(); ++i) {
@@ -48,17 +45,17 @@ void CLauncher::UpdateVisuals(float deltaTime) {
             float currentRadius = BASE_RADIUS * disk.size;
 
             glm::mat4 diskModel = glm::mat4(1.0f);
-            diskModel = glm::translate(diskModel, diskPos);
-            diskModel = glm::scale(diskModel, glm::vec3(currentRadius, DISK_HEIGHT, currentRadius));
+            diskModel = glm::gtc::translate(diskModel, diskPos);
+            diskModel = glm::gtc::scale(diskModel, glm::vec3(currentRadius, DISK_HEIGHT, currentRadius));
 
             disk.renderObject.SetMatrix(diskModel);
         }
     }
 
     glm::mat4 cursorModel = glm::inverse(m_camera.ViewMatrix());
-    cursorModel = glm::translate(cursorModel, glm::vec3(0.0f, 0.0f, -0.5f));
-    cursorModel = glm::rotate(cursorModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    cursorModel = glm::scale(cursorModel, glm::vec3(0.008f, 0.005f, 0.008f));
+    cursorModel = glm::gtc::translate(cursorModel, glm::vec3(0.0f, 0.0f, -0.5f));
+    cursorModel = glm::gtc::rotate(cursorModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    cursorModel = glm::gtc::scale(cursorModel, glm::vec3(0.008f, 0.005f, 0.008f));
     m_cursor.SetMatrix(cursorModel);
 }
 
@@ -124,9 +121,9 @@ void CLauncher::Update(float deltaTime) {
         if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
     }
 
-    glm::mat4 invView = glm::inverse(m_camera.ViewMatrix());
+    glm::mat4 invView = glm::gtc::inverse(m_camera.ViewMatrix());
     glm::vec3 rayOrigin = glm::vec3(invView[3]);
-    glm::vec3 rayDir = glm::normalize(-glm::vec3(invView[2]));
+    glm::vec3 rayDir = glm::gtc::normalize(-glm::vec3(invView[2]));
 
     int closestTowerIdx = -1;
     float minT = std::numeric_limits<float>::max();
@@ -134,7 +131,7 @@ void CLauncher::Update(float deltaTime) {
     const float hitRadius = 0.05f;
     const float towerHeight = 1.2f;
 
-    for (int i = 0; i < m_towers.size(); ++i) {
+    for (std::size_t i = 0; i < m_towers.size(); ++i) {
         auto& tower = m_towers[i];
 
         float dx = rayOrigin.x - tower.basePosition.x;
@@ -155,7 +152,7 @@ void CLauncher::Update(float deltaTime) {
             if (distSq <= hitRadius * hitRadius) {
                 if (t < minT) {
                     minT = t;
-                    closestTowerIdx = i;
+                    closestTowerIdx = static_cast<int>(i);
                 }
             }
         }
@@ -398,13 +395,13 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
     const uint32_t segments = 32;
 
     for (uint32_t i = 0; i <= segments; ++i) {
-        float angle = i * 2.0f * glm::pi<float>() / segments;
+        float angle = i * 2.0f * glm::gtc::pi<float>() / segments;
         float x = std::cos(angle);
         float z = std::sin(angle);
 
-        glm::vec3 sideNormal = glm::normalize(glm::vec3(x, 0.0f, z));
-        vertices.push_back(CVertex { .m_position = glm::vec3(x, 0.0f, z), .m_normal = sideNormal });
-        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_normal = sideNormal });
+        glm::vec3 sideNormal = glm::gtc::normalize(glm::vec3(x, 0.0f, z));
+        vertices.push_back(CVertex { .m_position = glm::vec3(x, 0.0f, z), .m_texCoord = {}, .m_normal = sideNormal});
+        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_texCoord = {}, .m_normal = sideNormal });
     }
 
     for (uint16_t i = 0; i < segments; ++i) {
@@ -418,16 +415,16 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
     }
 
     uint16_t topCapCenterIndex = static_cast<uint16_t>(vertices.size());
-    vertices.push_back(CVertex { .m_position = glm::vec3(0.0f, 1.0f, 0.0f), .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
+    vertices.push_back(CVertex { .m_position = glm::vec3(0.0f, 1.0f, 0.0f), .m_texCoord = {}, .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
 
     uint16_t topCapEdgeStart = static_cast<uint16_t>(vertices.size());
 
     for (uint32_t i = 0; i <= segments; ++i) {
-        float angle = i * 2.0f * glm::pi<float>() / segments;
+        float angle = i * 2.0f * glm::gtc::pi<float>() / segments;
         float x = std::cos(angle);
         float z = std::sin(angle);
 
-        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
+        vertices.push_back(CVertex { .m_position = glm::vec3(x, 1.0f, z), .m_texCoord = {}, .m_normal = glm::vec3(0.0f, 1.0f, 0.0f) });
     }
 
     for (uint16_t i = 0; i < segments; ++i) {
