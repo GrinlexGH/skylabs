@@ -1,10 +1,16 @@
-#pragma once
-#include <skylabs/core/render/vulkan/context/instance.hpp>
-#include <skylabs/core/render/vulkan/context/device.hpp>
-#include <skylabs/core/render/vulkan/context/allocator.hpp>
-#include <skylabs/core/render/vulkan/platform/surface.hpp>
+module;
+#include <skylabs/core/pch.hpp>
+#include <skylabs/public/window.hpp>
 
-namespace Vulkan {
+export module skylabs.vulkan.context;
+export import :instance;
+export import :surface;
+export import :physical_device;
+export import :device;
+export import :allocator;
+
+export namespace Vulkan
+{
 class CContext
 {
 public:

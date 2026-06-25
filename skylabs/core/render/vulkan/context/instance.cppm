@@ -1,9 +1,10 @@
-#pragma once
+module;
 #include <skylabs/core/pch.hpp>
 
-import vulkan;
+export module skylabs.vulkan.context:instance;
+export import vulkan;
 
-namespace Vulkan {
+export namespace Vulkan {
 class CInstance
 {
 public:
