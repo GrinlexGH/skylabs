@@ -39,7 +39,7 @@ vk::ImageAspectFlags DetermineAspect(vk::Format format) {
 
 namespace Vulkan {
 CImage::CImage(
-    const CDeviceContext& context,
+    const CContext& context,
     const ImageCreateInfo& options
 ) : m_format(options.m_format), m_extent(options.m_extent),
     m_mipLevels(options.m_mipLevels), m_arrayLevels(options.m_arrayLevels), m_sampleCount(options.m_sampleCount),
@@ -71,7 +71,7 @@ CImage::CImage(
 }
 
 CImage::CImage(
-    const CDeviceContext& context,
+    const CContext& context,
     vk::Image imported,
     vk::Extent3D extent, vk::Format format,
     std::uint32_t mipLevels, std::uint32_t arrayLevels,

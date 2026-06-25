@@ -18,7 +18,7 @@ void CLauncher::Create() {
     m_towers.emplace_back(glm::vec3(-1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1), std::vector <SDisk> {
         { 3, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3) },
         { 2, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2) },
-        { 1, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1) }
+        { 1, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1) },
     }, 1);
     m_towers.emplace_back(glm::vec3(0.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector <SDisk> {}, 2);
     m_towers.emplace_back(glm::vec3(1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector <SDisk> {}, 3);

@@ -7,7 +7,7 @@
 namespace Vulkan {
 struct CreationTools
 {
-    const CDeviceContext& m_deviceContext;
+    const CContext& m_context;
     const CInFlightContext& m_inFlightContext;
     CPipelineLayoutCache& m_pipelineLayoutCache;
     CDescriptorLayoutCache& m_descriptorLayoutCache;

@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/pipeline/compute_pipeline.hpp>
 
 namespace Vulkan {
-CComputePipeline::CComputePipeline(const CDeviceContext& context, ComputePipelineCreateInfo options) {
+CComputePipeline::CComputePipeline(const CContext& context, ComputePipelineCreateInfo options) {
     vk::PipelineShaderStageCreateInfo shader {};
     shader.stage = options.m_shader->Stage();
     shader.module = **options.m_shader;

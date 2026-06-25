@@ -40,7 +40,7 @@ public:
     InFlight<CBuffer>& MVP() { return m_mvp; }
 
 private:
-    const CDeviceContext* m_deviceContext = nullptr;
+    const CContext* m_context = nullptr;
     const CInFlightContext* m_inFlightContext = nullptr;
 
     CSampler m_nearestSampler { nullptr };

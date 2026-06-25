@@ -12,7 +12,7 @@ class CBuffer
 public:
     explicit CBuffer(std::nullptr_t) {}
     CBuffer(
-        const CDeviceContext& context,
+        const CContext& context,
         vk::DeviceSize size,
         vk::BufferUsageFlags usage,
         MemoryLocation location

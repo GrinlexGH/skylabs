@@ -13,7 +13,7 @@ class CSwapchain
 {
 public:
     explicit CSwapchain(std::nullptr_t) {}
-    explicit CSwapchain(const CDeviceContext& context, std::uint32_t imageCount, vk::PresentModeKHR presentMode);
+    explicit CSwapchain(const CContext& context, std::uint32_t imageCount, vk::PresentModeKHR presentMode);
     CSwapchain(const CSwapchain&) = delete;
     CSwapchain(CSwapchain&&) noexcept = default;
     CSwapchain& operator=(const CSwapchain&) = delete;
@@ -45,7 +45,7 @@ private:
     );
     void CreateImages();
 
-    const CDeviceContext* m_deviceContext = nullptr;
+    const CContext* m_context = nullptr;
 
     vk::raii::SwapchainKHR m_handle = nullptr;
 

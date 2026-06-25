@@ -17,7 +17,7 @@ class CPipelineLayoutCache
 {
 public:
     explicit CPipelineLayoutCache(std::nullptr_t) {}
-    explicit CPipelineLayoutCache(const CDeviceContext& context);
+    explicit CPipelineLayoutCache(const CContext& context);
 
     const vk::raii::PipelineLayout& GetLayout(PipelineLayoutInfo layoutInfo);
     void Clear() { m_cache.clear(); }

@@ -24,7 +24,7 @@ public:
     void Resize(const InFlight<CImage>& inAttachment);
 
 private:
-    const CDeviceContext* m_deviceContext = nullptr;
+    const CContext* m_context = nullptr;
     const CInFlightContext* m_inFlightContext = nullptr;
 
     CSampler m_sampler { nullptr };

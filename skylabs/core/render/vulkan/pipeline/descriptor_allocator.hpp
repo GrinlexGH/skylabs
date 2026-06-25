@@ -5,7 +5,7 @@ namespace Vulkan {
 class CDescriptorAllocator {
 public:
     explicit CDescriptorAllocator(std::nullptr_t) {}
-    explicit CDescriptorAllocator(const CDeviceContext& context);
+    explicit CDescriptorAllocator(const CContext& context);
     CDescriptorAllocator(const CDescriptorAllocator&) = delete;
     CDescriptorAllocator(CDescriptorAllocator&&) noexcept = default;
     CDescriptorAllocator& operator=(const CDescriptorAllocator&) = delete;

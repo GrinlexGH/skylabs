@@ -49,7 +49,7 @@ private:
 
     CreationTools GetCreationTools() {
         return {
-            m_deviceContext,
+            m_context,
             m_inFlightContext,
             m_pipelineLayoutCache,
             m_descriptorLayoutCache,
@@ -57,7 +57,7 @@ private:
         };
     }
 
-    CDeviceContext m_deviceContext { nullptr };
+    CContext m_context { nullptr };
 
     CSwapchain m_swapchain { nullptr };
     CInFlightContext m_inFlightContext;

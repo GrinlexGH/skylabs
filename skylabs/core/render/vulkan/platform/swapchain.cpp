@@ -3,16 +3,16 @@
 
 namespace Vulkan {
 CSwapchain::CSwapchain(
-    const CDeviceContext& context,
+    const CContext& context,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode
-) : m_deviceContext(&context){
+) : m_context(&context){
     CreateSwapchain(*context.Surface(), imageCount, presentMode);
 }
 
 void CSwapchain::Recreate(const SwapchainRecreateInfo& recreateInfo) {
     CreateSwapchain(
-        *m_deviceContext->Surface(),
+        *m_context->Surface(),
         recreateInfo.m_imageCount.value_or(m_images.size()),
         recreateInfo.m_presentMode.value_or(m_presentMode),
         *m_handle
@@ -25,13 +25,13 @@ void CSwapchain::CreateSwapchain(
     const vk::PresentModeKHR presentMode,
     VkSwapchainKHR oldHandle
 ) {
-    const CDevice& device = m_deviceContext->Device();
+    const CDevice& device = m_context->Device();
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
-    const vk::SurfaceCapabilitiesKHR caps = m_deviceContext->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
+    const vk::SurfaceCapabilitiesKHR caps = m_context->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
     m_surfaceTransform = caps.currentTransform;
 
-    const auto [width, height] = m_deviceContext->Window()->DrawableSize();
+    const auto [width, height] = m_context->Window()->DrawableSize();
 
     vkb::SwapchainBuilder builder { device.VkbDevice(), surface };
     auto swapchainResult = builder
@@ -80,7 +80,7 @@ void CSwapchain::CreateSwapchain(
 void CSwapchain::CreateImages() {
     m_images.clear();
     for (auto& image : m_handle.getImages()) {
-        m_images.emplace_back(*m_deviceContext, image,
+        m_images.emplace_back(*m_context, image,
             vk::Extent3D { m_extent, 1 }, m_surfaceFormat.format,
             1, 1,
             vk::SampleCountFlagBits::e1
@@ -113,7 +113,7 @@ vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex, const vk::ArrayPro
     presentInfo.setSwapchains({ *m_handle });
     presentInfo.setImageIndices({ imageIndex });
 
-    const vk::raii::Queue& queue = *m_deviceContext->Device().PresentQueue();
+    const vk::raii::Queue& queue = *m_context->Device().PresentQueue();
     vk::Result result = static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
         static_cast<VkQueue>(*queue),
         reinterpret_cast<VkPresentInfoKHR const*>(&presentInfo)

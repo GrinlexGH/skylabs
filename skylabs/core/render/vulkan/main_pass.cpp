@@ -9,37 +9,37 @@ struct MainConstants {
     alignas(16) glm::mat4x4 model = glm::gtc::identity<glm::mat4x4>();
 };
 
-CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent) :
-    m_deviceContext(&context.m_deviceContext),
-    m_inFlightContext(&context.m_inFlightContext)
+CMainPass::CMainPass(const CreationTools& creationTools, Utils::Extent2D renderExtent) :
+    m_context(&creationTools.m_context),
+    m_inFlightContext(&creationTools.m_inFlightContext)
 {
-    auto& inFlightContext = context.m_inFlightContext;
-    auto& deviceContext = context.m_deviceContext;
-    auto& descriptorLayoutCache = context.m_descriptorLayoutCache;
-    auto& descriptorAllocator = context.m_descriptorAllocator;
-    auto& pipelineLayoutCache = context.m_pipelineLayoutCache;
+    auto& inFlightContext = creationTools.m_inFlightContext;
+    auto& context = creationTools.m_context;
+    auto& descriptorLayoutCache = creationTools.m_descriptorLayoutCache;
+    auto& descriptorAllocator = creationTools.m_descriptorAllocator;
+    auto& pipelineLayoutCache = creationTools.m_pipelineLayoutCache;
     auto [width, height] = renderExtent;
 
-    m_nearestSampler = CSampler { deviceContext, { .m_filtering = vk::Filter::eNearest } };
+    m_nearestSampler = CSampler { context, { .m_filtering = vk::Filter::eNearest } };
 
     // Attachments
-    m_mainColor = InFlight<CImage> { inFlightContext, deviceContext, ImageCreateInfo {
+    m_mainColor = InFlight<CImage> { inFlightContext, context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
     }};
 
-    m_mainColorMSAA = InFlight<CImage> { inFlightContext, deviceContext, ImageCreateInfo {
+    m_mainColorMSAA = InFlight<CImage> { inFlightContext, context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eColorAttachment
     }};
 
-    m_mainDepthMSAA = InFlight<CImage> { inFlightContext, deviceContext, ImageCreateInfo {
+    m_mainDepthMSAA = InFlight<CImage> { inFlightContext, context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eD32Sfloat, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};
 
     // Descriptors
-    m_mvp = InFlight<CBuffer> { inFlightContext, deviceContext,
+    m_mvp = InFlight<CBuffer> { inFlightContext, context,
         sizeof(CMVP),
         vk::BufferUsageFlagBits::eUniformBuffer,
         MemoryLocation::eHostVisible
@@ -55,7 +55,7 @@ CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent)
     };
 
     // Write descriptors
-    CDescriptorWriter descriptorWriter { deviceContext };
+    CDescriptorWriter descriptorWriter { context };
     for (auto i : Utils::Range(inFlightContext.FrameCount())) {
         descriptorWriter.Clear();
         descriptorWriter
@@ -64,8 +64,8 @@ CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent)
     }
 
     // Shaders
-    const CShader vertexShader(deviceContext, vk::ShaderStageFlagBits::eVertex, "res://shaders/shader.vert.spv");
-    const CShader fragmentShader(deviceContext, vk::ShaderStageFlagBits::eFragment, "res://shaders/shader.frag.spv");
+    const CShader vertexShader(context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shader.vert.spv");
+    const CShader fragmentShader(context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shader.frag.spv");
 
     // Pipeline
     const vk::raii::PipelineLayout& mainPipelineLayout = pipelineLayoutCache.GetLayout({
@@ -77,7 +77,7 @@ CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent)
 
     std::array colorFormats = { m_mainColor.Get().Format() };
 
-    m_pipeline = CGraphicsPipeline { deviceContext, {
+    m_pipeline = CGraphicsPipeline { context, {
         .m_layout = *mainPipelineLayout,
         .m_shaders = { &vertexShader, &fragmentShader },
         .m_vertexBindings = {{
@@ -90,7 +90,7 @@ CMainPass::CMainPass(const CreationTools& context, Utils::Extent2D renderExtent)
 }
 
 void CMainPass::WriteDescriptors(const std::vector<CImage>& textures) {
-    CDescriptorWriter descriptorWriter { *m_deviceContext };
+    CDescriptorWriter descriptorWriter { *m_context };
     for (const auto i : Utils::Range(m_inFlightContext->FrameCount())) {
         descriptorWriter.Clear();
         for (std::uint32_t j = 0; const auto& texture : textures) {
@@ -178,17 +178,17 @@ void CMainPass::Draw(
 void CMainPass::Resize(Utils::Extent2D newExtent) {
     auto [width, height] = newExtent;
 
-    m_mainColor = InFlight<CImage> { *m_inFlightContext, *m_deviceContext, ImageCreateInfo {
+    m_mainColor = InFlight<CImage> { *m_inFlightContext, *m_context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled
     }};
 
-    m_mainColorMSAA = InFlight<CImage> { *m_inFlightContext, *m_deviceContext, ImageCreateInfo {
+    m_mainColorMSAA = InFlight<CImage> { *m_inFlightContext, *m_context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eR8G8B8A8Srgb, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eColorAttachment
     }};
 
-    m_mainDepthMSAA = InFlight<CImage> { *m_inFlightContext, *m_deviceContext, ImageCreateInfo {
+    m_mainDepthMSAA = InFlight<CImage> { *m_inFlightContext, *m_context, ImageCreateInfo {
         { width, height, 1 }, vk::Format::eD32Sfloat, 1, 1,
         vk::SampleCountFlagBits::e4, vk::ImageUsageFlagBits::eDepthStencilAttachment
     }};

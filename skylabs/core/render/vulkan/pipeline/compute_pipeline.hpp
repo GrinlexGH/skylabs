@@ -13,7 +13,7 @@ class CComputePipeline
 {
 public:
     explicit CComputePipeline(std::nullptr_t) {}
-    explicit CComputePipeline(const CDeviceContext& context, ComputePipelineCreateInfo options = {});
+    explicit CComputePipeline(const CContext& context, ComputePipelineCreateInfo options = {});
     CComputePipeline(const CComputePipeline&) = delete;
     CComputePipeline(CComputePipeline&&) noexcept = default;
     CComputePipeline& operator=(const CComputePipeline&) = delete;

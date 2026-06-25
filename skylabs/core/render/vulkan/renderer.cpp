@@ -37,17 +37,17 @@ namespace Vulkan {
 CRenderer::CRenderer(const IWindow* const window) {
     assert(window);
 
-    m_deviceContext = CDeviceContext { window };
+    m_context = CContext { window };
 
-    m_swapchain = CSwapchain { m_deviceContext, 2, vk::PresentModeKHR::eFifo };
+    m_swapchain = CSwapchain { m_context, 2, vk::PresentModeKHR::eFifo };
     m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
 
-    m_pipelineLayoutCache = CPipelineLayoutCache { m_deviceContext };
-    m_descriptorLayoutCache = CDescriptorLayoutCache { m_deviceContext };
-    m_descriptorAllocator = CDescriptorAllocator { m_deviceContext };
+    m_pipelineLayoutCache = CPipelineLayoutCache { m_context };
+    m_descriptorLayoutCache = CDescriptorLayoutCache { m_context };
+    m_descriptorAllocator = CDescriptorAllocator { m_context };
 
     m_commandBufferAllocator = CCommandBufferAllocator {
-        m_deviceContext, m_deviceContext.Device().GraphicsQueue().FamilyIndex()
+        m_context, m_context.Device().GraphicsQueue().FamilyIndex()
     };
     m_graphicsCmd = InFlight { m_inFlightContext,
         m_commandBufferAllocator.Allocate(
@@ -57,16 +57,16 @@ CRenderer::CRenderer(const IWindow* const window) {
 
     m_firstUse = InFlight<bool> { m_inFlightContext, true };
     m_fence = InFlight<vk::raii::Fence> { m_inFlightContext,
-        *m_deviceContext.Device(), vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled }
+        *m_context.Device(), vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled }
     };
     m_imageAvailableSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext,
-        *m_deviceContext.Device(), vk::SemaphoreCreateInfo {}
+        *m_context.Device(), vk::SemaphoreCreateInfo {}
     };
 
     const std::size_t imageCount = m_swapchain.Images().size();
     m_renderFinishedSemaphores.reserve(imageCount);
     for (auto i = 0u; i < imageCount; ++i) {
-        m_renderFinishedSemaphores.emplace_back(*m_deviceContext.Device(), vk::SemaphoreCreateInfo {});
+        m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo {});
     }
 
     m_mainPass = CMainPass {
@@ -77,13 +77,13 @@ CRenderer::CRenderer(const IWindow* const window) {
     };
 
     m_vertexBuffer = CBuffer {
-        m_deviceContext, GEOMETRY_POOL_SIZE,
+        m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
         MemoryLocation::eDeviceOnly
     };
 
     m_indexBuffer = CBuffer {
-        m_deviceContext, GEOMETRY_POOL_SIZE,
+        m_context, GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
         MemoryLocation::eDeviceOnly
     };
@@ -92,8 +92,8 @@ CRenderer::CRenderer(const IWindow* const window) {
 }
 
 CRenderer::~CRenderer() {
-    if (**m_deviceContext.Device()) {
-        try { m_deviceContext.Device()->waitIdle();}
+    if (**m_context.Device()) {
+        try { m_context.Device()->waitIdle();}
         catch (const vk::SystemError& e) {
             SKY_LOG_ERROR("Failed to wait device idle in renderer destructor: {}", e.what());
         }
@@ -110,12 +110,12 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
 }
 
 void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
-    const auto& device = m_deviceContext.Device();
+    const auto& device = m_context.Device();
 
     if (m_needSurfaceRecreation) {
         device->waitIdle();
         m_swapchain.Clear();
-        m_deviceContext.RepairSurface();
+        m_context.RepairSurface();
         m_needSwapchainRecreation = true;
         m_needSurfaceRecreation = false;
     }
@@ -204,7 +204,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     finalSubmit.setWaitDstStageMask({ waitStage });
     finalSubmit.setCommandBuffers({ **cmd });
     finalSubmit.setSignalSemaphores({ *m_renderFinishedSemaphores[imageIndex] });
-    m_deviceContext.Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
+    m_context.Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
     // Present
     vk::Result presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
@@ -271,7 +271,7 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const 
 
         vk::DeviceSize totalSize = vSize + iSize;
         if (m_stagingBuffer.Size() < totalSize) {
-            m_stagingBuffer = CBuffer { m_deviceContext, totalSize,
+            m_stagingBuffer = CBuffer { m_context, totalSize,
                 vk::BufferUsageFlagBits::eTransferSrc, MemoryLocation::eHostVisible
             };
         }
@@ -279,7 +279,7 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const 
         std::memcpy(m_stagingBuffer.Data(), vertices.data(), vSize);
         std::memcpy(static_cast<std::uint8_t*>(m_stagingBuffer.Data()) + vSize, indices.data(), iSize);
 
-        m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
+        m_graphicsCmd.Get().ImmediateSubmit(*m_context.Device().GraphicsQueue(),
             [&](const CCommandBuffer& cmd) {
                 cmd.Copy(m_vertexBuffer, m_stagingBuffer, vSize, { 0, mesh.VtxOffset() });
                 cmd.Copy(m_indexBuffer, m_stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
@@ -324,7 +324,7 @@ CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 
 //         const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(image->w) * image->h * 4;
 //         if (m_stagingBuffer.Size() < imageSize) {
 //             m_stagingBuffer = CBuffer {
-//                 m_deviceContext, imageSize,
+//                 m_context, imageSize,
 //                 vk::BufferUsageFlagBits::eTransferSrc,
 //                 MemoryLocation::eHostVisible
 //             };
@@ -334,7 +334,7 @@ CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 
 //         const std::uint32_t mipLevels =
 //             static_cast<std::uint32_t>(std::floor(std::log2(std::max(image->w, image->h)))) + 1;
 
-//         CImage texture { m_deviceContext, {
+//         CImage texture { m_context, {
 //             .m_extent = vk::Extent3D {
 //                 static_cast<std::uint32_t>(image->w),
 //                 static_cast<std::uint32_t>(image->h),
@@ -348,7 +348,7 @@ CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 
 //                 vk::ImageUsageFlagBits::eSampled,
 //         }};
 
-//         m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
+//         m_graphicsCmd.Get().ImmediateSubmit(*m_context.Device().GraphicsQueue(),
 //             [&](const CCommandBuffer& cmd) {
 //                 cmd.PipelineBarrier({ ImageBarrier { texture, texture.FullRange(), Vulkan::Usage::eNone, Vulkan::Usage::eTransferWrite } });
 //                 cmd.Copy(texture, m_stagingBuffer);
@@ -358,8 +358,8 @@ CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 
 
 //         SDL_DestroySurface(image);
 
-//         if (m_deviceContext.Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
-//             m_deviceContext.Device()->setDebugUtilsObjectNameEXT(*texture, debugName);
+//         if (m_context.Instance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
+//             m_context.Device()->setDebugUtilsObjectNameEXT(*texture, debugName);
 //         }
 
 //         return texture;
@@ -436,7 +436,7 @@ CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 
 
 //         vk::DeviceSize totalSize = vSize + iSize;
 //         if (m_stagingBuffer.Size() < totalSize) {
-//             m_stagingBuffer = CBuffer { m_deviceContext, totalSize,
+//             m_stagingBuffer = CBuffer { m_context, totalSize,
 //                 vk::BufferUsageFlagBits::eTransferSrc, MemoryLocation::eHostVisible
 //             };
 //         }
@@ -444,7 +444,7 @@ CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 
 //         std::memcpy(m_stagingBuffer.Data(), vertices.data(), vSize);
 //         std::memcpy(static_cast<std::uint8_t*>(m_stagingBuffer.Data()) + vSize, indices.data(), iSize);
 
-//         m_graphicsCmd.Get().ImmediateSubmit(*m_deviceContext.Device().GraphicsQueue(),
+//         m_graphicsCmd.Get().ImmediateSubmit(*m_context.Device().GraphicsQueue(),
 //             [&](const CCommandBuffer& cmd) {
 //                 cmd.Copy(m_vertexBuffer, m_stagingBuffer, vSize, { 0, mesh.VtxOffset() });
 //                 cmd.Copy(m_indexBuffer, m_stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
@@ -455,13 +455,13 @@ CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 
 //     };
 
 //     m_vertexBuffer = CBuffer {
-//         m_deviceContext, GEOMETRY_POOL_SIZE,
+//         m_context, GEOMETRY_POOL_SIZE,
 //         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
 //         MemoryLocation::eDeviceOnly
 //     };
 
 //     m_indexBuffer = CBuffer {
-//         m_deviceContext, GEOMETRY_POOL_SIZE,
+//         m_context, GEOMETRY_POOL_SIZE,
 //         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
 //         MemoryLocation::eDeviceOnly
 //     };

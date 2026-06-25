@@ -24,7 +24,7 @@ class CGraphicsPipeline
 {
 public:
     explicit CGraphicsPipeline(std::nullptr_t) {}
-    explicit CGraphicsPipeline(const CDeviceContext& context, GraphicsPipelineCreateInfo options = {});
+    explicit CGraphicsPipeline(const CContext& context, GraphicsPipelineCreateInfo options = {});
     CGraphicsPipeline(const CGraphicsPipeline&) = delete;
     CGraphicsPipeline(CGraphicsPipeline&&) noexcept = default;
     CGraphicsPipeline& operator=(const CGraphicsPipeline&) = delete;

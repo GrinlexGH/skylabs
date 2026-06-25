@@ -5,17 +5,17 @@
 #include <skylabs/core/render/vulkan/platform/surface.hpp>
 
 namespace Vulkan {
-class CDeviceContext
+class CContext
 {
 public:
-    CDeviceContext() = delete;
-    explicit CDeviceContext(std::nullptr_t) {}
-    explicit CDeviceContext(const IWindow* window);
-    CDeviceContext(CDeviceContext&) = delete;
-    CDeviceContext(CDeviceContext&&) = default;
-    CDeviceContext& operator=(CDeviceContext&) = delete;
-    CDeviceContext& operator=(CDeviceContext&&) = default;
-    ~CDeviceContext() = default;
+    CContext() = delete;
+    explicit CContext(std::nullptr_t) {}
+    explicit CContext(const IWindow* window);
+    CContext(CContext&) = delete;
+    CContext(CContext&&) = default;
+    CContext& operator=(CContext&) = delete;
+    CContext& operator=(CContext&&) = default;
+    ~CContext() = default;
 
     [[nodiscard]] const IWindow* Window() const noexcept { return m_window; }
     [[nodiscard]] const CInstance& Instance() const noexcept { return m_instance; }
