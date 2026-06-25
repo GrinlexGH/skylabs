@@ -6,6 +6,7 @@
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/submesh.hpp>
 #include <skylabs/core/render/render_object.hpp>
+#include <skylabs/public/utils.hpp>
 
 namespace Vulkan {
 struct CMVP {

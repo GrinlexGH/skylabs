@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 #include <skylabs/core/render/vertex.hpp>
 
@@ -23,6 +22,8 @@ struct GraphicsPipelineCreateInfo
 class CGraphicsPipeline
 {
 public:
+
+
     explicit CGraphicsPipeline(std::nullptr_t) {}
     explicit CGraphicsPipeline(const CContext& context, GraphicsPipelineCreateInfo options = {});
     CGraphicsPipeline(const CGraphicsPipeline&) = delete;

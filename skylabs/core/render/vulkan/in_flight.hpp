@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
+import skylabs.vulkan.context;
 
 namespace Vulkan {
 class CInFlightContext {

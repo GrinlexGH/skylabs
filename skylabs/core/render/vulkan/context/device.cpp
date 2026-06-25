@@ -1,5 +1,5 @@
-#include <skylabs/core/render/vulkan/context/device.hpp>
-
+module skylabs.vulkan.context;
+import :device;
 import fmt;
 
 namespace {

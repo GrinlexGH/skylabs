@@ -1,5 +1,6 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
+import skylabs.vulkan.context;
+
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/resources/buffer.hpp>
 #include <skylabs/core/render/vulkan/command_recording/sync_state.hpp>

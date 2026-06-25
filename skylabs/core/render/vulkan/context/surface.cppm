@@ -1,13 +1,16 @@
-#pragma once
-#include <skylabs/core/render/vulkan/context/instance.hpp>
+module;
 #include <skylabs/public/window.hpp>
 
-namespace Vulkan {
+export module skylabs.vulkan.context:surface;
+export import :instance;
+
+export namespace Vulkan {
 class CSurface
 {
 public:
     explicit CSurface(std::nullptr_t) {}
-    explicit CSurface(const CInstance& instance, const IWindow* window);
+    explicit CSurface(const CInstance& instance, const IWindow* window) :
+        m_handle(*instance, window->CreateSurface(*instance)) {}
     CSurface(const CSurface&) = delete;
     CSurface(CSurface&& other) noexcept = default;
     CSurface& operator=(const CSurface&) = delete;

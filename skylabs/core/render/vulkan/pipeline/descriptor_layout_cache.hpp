@@ -1,5 +1,6 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
+import skylabs.vulkan.context;
+
 #include <boost/unordered_map.hpp>
 
 namespace Vulkan {

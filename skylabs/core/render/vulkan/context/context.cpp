@@ -1,4 +1,6 @@
-#include <skylabs/core/render/vulkan/context/context.hpp>
+module;
+#include <skylabs/public/window.hpp>
+module skylabs.vulkan.context;
 
 namespace Vulkan {
 CContext::CContext(const IWindow* const window) :

@@ -1,9 +1,32 @@
-#pragma once
-#include <skylabs/core/render/vulkan/context/instance.hpp>
-#include <skylabs/core/render/vulkan/context/physical_device.hpp>
-#include <skylabs/core/render/vulkan/context/queue.hpp>
+export module skylabs.vulkan.context:device;
+export import :physical_device;
 
-namespace Vulkan {
+export namespace Vulkan {
+class CQueue
+{
+public:
+    explicit CQueue(std::nullptr_t) {}
+    explicit CQueue(
+        const vk::raii::Device& device,
+        const VkQueue queue,
+        const std::uint32_t familyIndex
+    ) : m_handle(device, queue), m_familyIndex(familyIndex) {}
+    CQueue(CQueue&) = delete;
+    CQueue(CQueue&&) = default;
+    CQueue& operator=(CQueue&) = delete;
+    CQueue& operator=(CQueue&&) = default;
+    ~CQueue() = default;
+
+    [[nodiscard]] const vk::raii::Queue& operator*() const noexcept { return m_handle; }
+    [[nodiscard]] const vk::raii::Queue* operator->() const noexcept { return &m_handle; }
+
+    [[nodiscard]] std::uint32_t FamilyIndex() const noexcept { return m_familyIndex; }
+
+private:
+    vk::raii::Queue m_handle { nullptr };
+    std::uint32_t m_familyIndex = 0;
+};
+
 struct DeviceCaps
 {
     bool m_maintenance5 = false;

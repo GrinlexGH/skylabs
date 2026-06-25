@@ -7,6 +7,16 @@ set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES PREFIX "" IMPORT_PREFIX 
 target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
+    FILE_SET CXX_MODULES
+    FILES
+        render/vulkan/context/instance.cppm
+        render/vulkan/context/surface.cppm
+        render/vulkan/context/physical_device.cppm
+        render/vulkan/context/device.cppm
+        render/vulkan/context/allocator.cppm
+        render/vulkan/context/context.cppm
+    FILE_SET SOURCES
+    FILES
         camera.hpp
         launcher.cpp
         launcher.hpp
@@ -19,17 +29,11 @@ target_sources(
         render/vulkan/command_recording/command_buffer_allocator.hpp
         render/vulkan/command_recording/sync_state.cpp
         render/vulkan/command_recording/sync_state.hpp
-        render/vulkan/context/allocator.cpp
-        render/vulkan/context/allocator.hpp
-        render/vulkan/context/context.cpp
-        render/vulkan/context/context.hpp
-        render/vulkan/context/device.cpp
-        render/vulkan/context/device.hpp
         render/vulkan/context/instance.cpp
-        render/vulkan/context/instance.hpp
         render/vulkan/context/physical_device.cpp
-        render/vulkan/context/physical_device.hpp
-        render/vulkan/context/queue.hpp
+        render/vulkan/context/device.cpp
+        render/vulkan/context/allocator.cpp
+        render/vulkan/context/context.cpp
         render/vulkan/pipeline/compute_pipeline.cpp
         render/vulkan/pipeline/compute_pipeline.hpp
         render/vulkan/pipeline/descriptor_layout_cache.cpp
@@ -40,8 +44,6 @@ target_sources(
         render/vulkan/pipeline/pipeline_layout_cache.hpp
         render/vulkan/pipeline/shader.cpp
         render/vulkan/pipeline/shader.hpp
-        render/vulkan/platform/surface.cpp
-        render/vulkan/platform/surface.hpp
         render/vulkan/platform/swapchain.cpp
         render/vulkan/platform/swapchain.hpp
         render/vulkan/pipeline/descriptor_allocator.cpp

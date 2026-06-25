@@ -1,7 +1,8 @@
-#pragma once
-#include <skylabs/core/render/vulkan/platform/surface.hpp>
+module;
+export module skylabs.vulkan.context:physical_device;
+export import :surface;
 
-namespace Vulkan {
+export namespace Vulkan {
 class CPhysicalDevice
 {
 public:

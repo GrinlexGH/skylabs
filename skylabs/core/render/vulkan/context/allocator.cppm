@@ -1,9 +1,8 @@
-#pragma once
-#include <skylabs/core/render/vulkan/context/device.hpp>
+export module skylabs.vulkan.context:allocator;
+export import :device;
+export import vk_mem_alloc;
 
-import vk_mem_alloc;
-
-namespace Vulkan {
+export namespace Vulkan {
 class CAllocator
 {
 public:

@@ -1,6 +1,8 @@
-#include <skylabs/core/render/vulkan/context/instance.hpp>
+module;
 #include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
+module skylabs.vulkan.context;
+import :instance;
 
 namespace {
 #ifdef DEBUG
