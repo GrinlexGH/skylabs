@@ -78,7 +78,6 @@ private:
     std::unique_ptr<Vulkan::CRenderer> m_renderer { nullptr };
 
     std::vector<STower> m_towers;
-    Vulkan::CRenderObject m_cursor { nullptr };
     int m_hoveredTowerIdx = -1;
     std::tuple<int, int> m_towerDiskselecte { -1, -1 };
 };

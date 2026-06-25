@@ -22,7 +22,6 @@ void CLauncher::Create() {
     }, 1);
     m_towers.emplace_back(glm::vec3(0.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector <SDisk> {}, 2);
     m_towers.emplace_back(glm::vec3(1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector <SDisk> {}, 3);
-    m_cursor = m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 4);
 }
 
 void CLauncher::UpdateVisuals(float /*deltaTime*/) {
@@ -51,12 +50,6 @@ void CLauncher::UpdateVisuals(float /*deltaTime*/) {
             disk.renderObject.SetMatrix(diskModel);
         }
     }
-
-    glm::mat4 cursorModel = glm::inverse(m_camera.ViewMatrix());
-    cursorModel = glm::gtc::translate(cursorModel, glm::vec3(0.0f, 0.0f, -0.5f));
-    cursorModel = glm::gtc::rotate(cursorModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    cursorModel = glm::gtc::scale(cursorModel, glm::vec3(0.008f, 0.005f, 0.008f));
-    m_cursor.SetMatrix(cursorModel);
 }
 
 void CLauncher::Main() {

@@ -8,5 +8,24 @@ struct VOut {
 
 [shader("fragment")]
 float4 main(VOut input) : SV_Target {
-    return uOut.Sample(input.uv);
+    float4 sceneColor = uOut.Sample(input.uv);
+
+    uint width, height;
+    uOut.GetDimensions(width, height);
+
+    float2 pixelPos = input.uv * float2(width, height);
+    float2 centerPixel = float2(width, height) * 0.5;
+
+    float dist = distance(pixelPos, centerPixel);
+
+    float radius = 3.0;
+
+    if (dist <= radius) {
+        return float4(0.0, 1.0, 0.0, 1.0);
+    }
+    else if (dist <= radius + 1.0) {
+        return float4(0.0, 0.0, 0.0, 1.0);
+    }
+
+    return sceneColor;
 }
