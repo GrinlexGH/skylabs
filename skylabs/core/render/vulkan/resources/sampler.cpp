@@ -1,4 +1,7 @@
-#include <skylabs/core/render/vulkan/resources/sampler.hpp>
+module;
+#include <cassert>
+module skylabs.vulkan.resources;
+import :sampler;
 
 namespace Vulkan {
 CSampler::CSampler(

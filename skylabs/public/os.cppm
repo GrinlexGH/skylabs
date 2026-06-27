@@ -1,9 +1,9 @@
-#pragma once
-#include <skylabs/public/pch.hpp>
+module;
+#include <skylabs/public/dll_export.hpp>
+export module skylabs.pub.os;
+export import std;
 
-import std;
-
-namespace OS {
+export namespace OS {
 PUBLIC_CLASS std::string GetExecutableDirectory();
 
 template <typename... Args>

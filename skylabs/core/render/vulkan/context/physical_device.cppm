@@ -1,4 +1,5 @@
 module;
+#include <VkBootstrap.h>
 export module skylabs.vulkan.context:physical_device;
 export import :surface;
 

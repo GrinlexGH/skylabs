@@ -1,4 +1,5 @@
-#include <skylabs/core/render/vulkan/resources/buffer.hpp>
+module skylabs.vulkan.resources;
+import :buffer;
 
 namespace Vulkan {
 CBuffer::CBuffer(

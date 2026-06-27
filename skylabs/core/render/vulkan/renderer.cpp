@@ -1,10 +1,7 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
-#include <skylabs/public/logging.hpp>
-#include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
-#include <skylabs/core/camera.hpp>
-
 #include <tiny_obj_loader.h>
 
+import skylabs.pub.logging;
 import glm;
 
 template<> struct std::hash<CVertex> {
@@ -95,7 +92,7 @@ CRenderer::~CRenderer() {
     if (**m_context.Device()) {
         try { m_context.Device()->waitIdle();}
         catch (const vk::SystemError& e) {
-            SKY_LOG_ERROR("Failed to wait device idle in renderer destructor: {}", e.what());
+            Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
         }
     }
 }
@@ -104,7 +101,7 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
     try {
         return std::make_unique<CRenderer>(window);
     } catch (const std::exception& e) {
-        SKY_LOG_ERROR("Cannot initialize vulkan renderer: {}", e.what());
+        Log::Error("Cannot initialize vulkan renderer: {}", e.what());
         return nullptr;
     }
 }
@@ -139,7 +136,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     // Acquire next image from the swapchain
     auto [acquireResult, imageIndex] = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (acquireResult != vk::Result::eSuccess) {
-        SKY_LOG_DEBUG("Acquire result: {}", vk::to_string(acquireResult));
+        Log::Debug("Acquire result: {}", vk::to_string(acquireResult));
         if (vk::Result::eErrorOutOfDateKHR == acquireResult) {
             device->waitIdle();
             RecreateSwapchain();
@@ -209,7 +206,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     // Present
     vk::Result presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
     if (presentResult != vk::Result::eSuccess) {
-        SKY_LOG_DEBUG("Present result: {}", vk::to_string(presentResult));
+        Log::Debug("Present result: {}", vk::to_string(presentResult));
     }
 
     m_inFlightContext.NextFrame();

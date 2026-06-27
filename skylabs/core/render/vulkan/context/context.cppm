@@ -1,13 +1,10 @@
-module;
-#include <skylabs/core/pch.hpp>
-#include <skylabs/public/window.hpp>
-
 export module skylabs.vulkan.context;
 export import :instance;
 export import :surface;
 export import :physical_device;
 export import :device;
 export import :allocator;
+export import skylabs.pub.window;
 
 export namespace Vulkan
 {

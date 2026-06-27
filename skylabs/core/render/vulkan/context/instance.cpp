@@ -1,8 +1,12 @@
 module;
-#include <skylabs/public/logging.hpp>
+#include <boost/container/flat_set.hpp>
+#include <vulkan/vulkan.h>
+#include <VkBootstrap.h>
 #include "project_info.hpp"
 module skylabs.vulkan.context;
 import :instance;
+import skylabs.pub.logging;
+import fmt;
 
 namespace {
 #ifdef DEBUG
@@ -15,13 +19,13 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     switch (messageSeverity) {
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-            SKY_LOG_INFO("{}", pCallbackData->pMessage);
+            Log::Info("{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-            SKY_LOG_WARN("{}", pCallbackData->pMessage);
+            Log::Warning("{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-            SKY_LOG_ERROR("{}\n", pCallbackData->pMessage);
+            Log::Error("{}\n", pCallbackData->pMessage);
             break;
     }
 

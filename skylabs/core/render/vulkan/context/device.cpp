@@ -1,3 +1,6 @@
+module;
+#include <VkBootstrap.h>
+#include <boost/container/flat_set.hpp>
 module skylabs.vulkan.context;
 import :device;
 import fmt;

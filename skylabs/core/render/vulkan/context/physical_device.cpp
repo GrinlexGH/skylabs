@@ -1,3 +1,5 @@
+module;
+#include <VkBootstrap.h>
 module skylabs.vulkan.context;
 import :physical_device;
 import fmt;

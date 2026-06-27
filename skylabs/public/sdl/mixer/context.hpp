@@ -1,5 +1,6 @@
 #pragma once
-#include <skylabs/public/pch.hpp>
+#include <skylabs/public/dll_export.hpp>
+import std;
 
 namespace SDL::Mixer {
 class PUBLIC_CLASS CContext {

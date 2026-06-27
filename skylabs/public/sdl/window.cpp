@@ -1,6 +1,7 @@
-#include <skylabs/public/sdl/window.hpp>
-#include <skylabs/public/sdl/sdl.hpp>
-
+module;
+#include <SDL3/SDL.h>
+module skylabs.pub.sdl;
+import :window;
 import fmt;
 
 namespace SDL {

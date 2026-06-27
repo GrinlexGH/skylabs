@@ -3,8 +3,6 @@
 #include <skylabs/core/render/vulkan/main_pass.hpp>
 #include <skylabs/core/render/vulkan/post_process_pass.hpp>
 #include <skylabs/core/render/vulkan/in_flight.hpp>
-#include <skylabs/core/render/vulkan/resources/buffer.hpp>
-#include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
@@ -12,7 +10,9 @@
 #include <skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp>
 #include <skylabs/core/render/vulkan/render_object.hpp>
 #include <skylabs/core/render/render_object.hpp>
-#include <skylabs/public/window.hpp>
+
+import skylabs.pub.window;
+import skylabs.vulkan.resources;
 
 namespace Vulkan {
 class CRenderer final : public IRenderer

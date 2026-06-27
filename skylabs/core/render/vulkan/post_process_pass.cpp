@@ -1,6 +1,7 @@
 #include <skylabs/core/render/vulkan/post_process_pass.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp>
-#include <skylabs/public/utils.hpp>
+#include <cassert>
+import skylabs.pub.utils;
 
 namespace Vulkan {
 CPostProcessPass::CPostProcessPass(

@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 import skylabs.vulkan.context;
 
 namespace Vulkan {

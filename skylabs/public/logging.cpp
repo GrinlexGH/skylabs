@@ -1,11 +1,12 @@
-#include <skylabs/public/logging.hpp>
-
+module;
+#include <frozen/unordered_map.h>
 #ifdef PLATFORM_ANDROID
 #include <SDL3/SDL_log.h>
 #endif
+module skylabs.pub.logging;
 
 namespace Log {
-void SubmitLog(Level level, const std::string& message) {
+void SubmitLog(const Level level, const std::source_location& loc, const std::string& message) {
 #ifdef PLATFORM_ANDROID
     const char* msg = log.text.c_str();
     switch (log.level) {
@@ -35,8 +36,8 @@ void SubmitLog(Level level, const std::string& message) {
     }};
 
     if (levelConfigs.contains(level)) {
-        const auto& config = levelConfigs.at(level);
-        fmt::print(config.style, "[{}] ", config.name);
+        const auto& [name, style] = levelConfigs.at(level);
+        fmt::print(style, "[{}] {}: ", name, loc.file_name());
     } else {
         fmt::print("[Unknown] ");
     }
@@ -44,7 +45,7 @@ void SubmitLog(Level level, const std::string& message) {
     fmt::println("{}", message);
 #endif
 
-    if (level == Log::Level::eFatal) {
+    if (level == Level::eFatal) {
         std::fflush(stdout);
         std::abort();
     }

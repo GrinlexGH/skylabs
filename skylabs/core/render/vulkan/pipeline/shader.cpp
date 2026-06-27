@@ -1,5 +1,6 @@
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
-#include <skylabs/public/filesystem.hpp>
+
+import skylabs.pub.filesystem;
 
 namespace Vulkan {
 CShader::CShader(const CContext& context, const vk::ShaderStageFlagBits type, const std::string_view name) : m_stage(type) {

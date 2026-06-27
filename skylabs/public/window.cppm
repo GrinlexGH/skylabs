@@ -1,9 +1,10 @@
-#pragma once
-#include <skylabs/public/utils.hpp>
+module;
+#include <skylabs/public/dll_export.hpp>
+export module skylabs.pub.window;
+export import skylabs.pub.utils;
+export import vulkan;
 
-import vulkan;
-
-class PUBLIC_CLASS IWindow
+export class PUBLIC_CLASS IWindow
 {
 public:
     IWindow() = default;

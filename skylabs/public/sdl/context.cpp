@@ -1,6 +1,8 @@
-#include <skylabs/public/sdl/context.hpp>
-
+module;
+#include <SDL3/SDL.h>
 #include "project_info.hpp"
+module skylabs.pub.sdl;
+import :context;
 
 namespace SDL {
 CContext::CContext(const SDL_InitFlags flags) {

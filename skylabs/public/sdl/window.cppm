@@ -1,7 +1,10 @@
-#pragma once
-#include <skylabs/public/window.hpp>
+module;
+#include <skylabs/public/dll_export.hpp>
+#include <SDL3/SDL.h>
+export module skylabs.pub.sdl:window;
+export import skylabs.pub.window;
 
-namespace SDL {
+export namespace SDL {
 class PUBLIC_CLASS CWindow final : public IWindow
 {
 public:

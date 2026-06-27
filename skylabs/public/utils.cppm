@@ -1,9 +1,8 @@
-#pragma once
-#include <skylabs/public/pch.hpp>
+module;
+export module skylabs.pub.utils;
+export import std;
 
-import std;
-
-namespace Utils {
+export namespace Utils {
 struct Extent2D {
     std::uint32_t m_width = 0;
     std::uint32_t m_height = 0;
@@ -11,7 +10,7 @@ struct Extent2D {
 
 template<std::integral T>
 auto Range(T start, T end) {
-    return boost::irange(start, end);
+    return std::views::iota(start, end);
 }
 
 template<std::integral T>
@@ -21,7 +20,12 @@ auto Range(T end) {
 
 template<std::integral T, std::integral U>
 auto Range(T start, T end, U step = 1) {
-    return boost::irange(start, end, step);
+    // TODO: use std::stride on clang 23 release
+    auto count = end > start ? (end - start + step - 1) / step : 0;
+    return std::views::iota(static_cast<std::size_t>(0), static_cast<std::size_t>(count))
+         | std::views::transform([start, step](std::size_t i) {
+               return static_cast<T>(start + i * step);
+           });
 }
 
 class CTimer

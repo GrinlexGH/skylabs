@@ -1,4 +1,6 @@
+#include <SDL3_ttf/SDL_ttf.h>
 #include <skylabs/public/sdl/ttf/context.hpp>
+import std;
 
 namespace SDL::TTF {
 CContext::CContext() {

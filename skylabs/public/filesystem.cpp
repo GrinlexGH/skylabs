@@ -1,7 +1,9 @@
-#include <skylabs/public/filesystem.hpp>
-#include <skylabs/public/sdl/filesystem.hpp>
-#include <skylabs/public/os.hpp>
-#include <skylabs/public/logging.hpp>
+module;
+#include <SDL3/SDL.h>
+module skylabs.pub.filesystem;
+import skylabs.pub.sdl;
+import skylabs.pub.os;
+import std;
 
 namespace {
 template <typename T>
@@ -43,7 +45,7 @@ void Filesystem::Mount(std::string_view scheme, std::string_view physicalPath) {
 }
 
 std::string Filesystem::ResolvePath(std::string_view uri) const {
-    size_t protocolEnd = uri.find("://");
+    std::size_t protocolEnd = uri.find("://");
 
     if (protocolEnd == std::string_view::npos) {
         return std::string(uri);

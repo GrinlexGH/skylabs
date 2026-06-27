@@ -1,3 +1,6 @@
+module;
+#include <VkBootstrap.h>
+#include <boost/container/flat_set.hpp>
 export module skylabs.vulkan.context:device;
 export import :physical_device;
 

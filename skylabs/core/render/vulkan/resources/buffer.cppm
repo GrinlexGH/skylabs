@@ -1,7 +1,7 @@
-#pragma once
-import skylabs.vulkan.context;
+export module skylabs.vulkan.resources:buffer;
+export import skylabs.vulkan.context;
 
-namespace Vulkan {
+export namespace Vulkan {
 enum class MemoryLocation : std::uint8_t {
     eDeviceOnly = 0,
     eHostVisible,

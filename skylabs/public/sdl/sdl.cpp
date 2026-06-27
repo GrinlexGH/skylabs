@@ -1,5 +1,8 @@
-#include <skylabs/public/sdl/sdl.hpp>
-
+module;
+#include <skylabs/public/dll_export.hpp>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+module skylabs.pub.sdl;
 import fmt;
 
 namespace SDL {

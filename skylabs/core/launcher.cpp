@@ -1,7 +1,8 @@
 #include <skylabs/core/launcher.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
-#include <skylabs/public/logging.hpp>
-#include <skylabs/public/sdl/sdl.hpp>
+
+import skylabs.pub.sdl;
+import skylabs.pub.logging;
 
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
@@ -85,7 +86,7 @@ void CLauncher::Main() {
         if (elapsedTime >= 1000.0f) {
             std::string title = "Skylabs | FPS: " + std::to_string(frameCount) + " | DT: " + std::to_string(deltaTimeMs).substr(0, 4) + "ms";
             SDL_SetWindowTitle(*m_window, title.c_str());
-            SKY_LOG_DEBUG("{}", title);
+            Log::Debug("{}", title);
             elapsedTime -= 1000.0f;
             frameCount = 0;
         }
@@ -345,7 +346,7 @@ void CLauncher::HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent) {
                 break;
             m_textInputActive = false;
             SDL_StopTextInput(*m_window);
-            SKY_LOG_DEBUG("Keyboard Closed. Final text: {}", m_inputBuffer);
+            Log::Debug("Keyboard Closed. Final text: {}", m_inputBuffer);
             m_inputBuffer.clear();
         } break;
 
@@ -377,7 +378,7 @@ void CLauncher::HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent) {
 
 void CLauncher::HandleTextInput(const SDL_TextInputEvent& textEvent) {
     m_inputBuffer += textEvent.text;
-    SKY_LOG_INFO("[Input] Current buffer: {}", m_inputBuffer);
+    Log::Info("[Input] Current buffer: {}", m_inputBuffer);
 }
 
 std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::GenerateDisk() {

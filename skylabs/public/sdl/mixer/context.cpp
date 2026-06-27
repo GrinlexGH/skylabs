@@ -1,6 +1,5 @@
-#include <skylabs/public/sdl/mixer/context.hpp>
-
 #include <SDL3_mixer/SDL_mixer.h>
+#include <skylabs/public/sdl/mixer/context.hpp>
 
 namespace SDL::Mixer {
 CContext::CContext() {

@@ -1,5 +1,3 @@
-module;
-#include <skylabs/public/window.hpp>
 module skylabs.vulkan.context;
 
 namespace Vulkan {

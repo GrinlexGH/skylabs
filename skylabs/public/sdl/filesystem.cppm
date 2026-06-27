@@ -1,8 +1,10 @@
-#pragma once
-#include <skylabs/public/pch.hpp>
-#include <skylabs/public/filesystem.hpp>
+module;
+#include <skylabs/public/dll_export.hpp>
+#include <SDL3/SDL.h>
+export module skylabs.pub.sdl:filesystem;
+export import skylabs.pub.filesystem;
 
-namespace SDL {
+export namespace SDL {
 class PUBLIC_CLASS CFileStream final : public IFileStream {
 public:
     explicit CFileStream(SDL_IOStream* stream);

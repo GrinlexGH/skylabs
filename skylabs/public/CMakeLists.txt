@@ -16,10 +16,11 @@ configure_file(
 target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
-        sdl/context.cpp
-        sdl/filesystem.cpp
+    FILE_SET SOURCES FILES
         sdl/sdl.cpp
         sdl/window.cpp
+        sdl/context.cpp
+        sdl/filesystem.cpp
         sdl/ttf/context.cpp
         sdl/mixer/context.cpp
         sdl/mixer/mixer.cpp
@@ -30,11 +31,17 @@ target_sources(
         logging.cpp
         os.cpp
     PUBLIC
+    FILE_SET CXX_MODULES FILES
+        utils.cppm
+        window.cppm
+        filesystem.cppm
+        os.cppm
+        logging.cppm
+        sdl/sdl.cppm
+        sdl/context.cppm
+        sdl/window.cppm
+        sdl/filesystem.cppm
     FILE_SET HEADERS FILES
-        sdl/context.hpp
-        sdl/filesystem.hpp
-        sdl/sdl.hpp
-        sdl/window.hpp
         sdl/ttf/context.hpp
         sdl/mixer/context.hpp
         sdl/mixer/mixer.hpp
@@ -42,11 +49,6 @@ target_sources(
         sdl/mixer/audio.hpp
         application.hpp
         dll_export.hpp
-        filesystem.hpp
-        logging.hpp
-        os.hpp
-        utils.hpp
-        window.hpp
     FILE_SET generated_headers
         TYPE HEADERS
         BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
@@ -54,8 +56,6 @@ target_sources(
             ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET_NAME}_export.h
             ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
 )
-
-target_precompile_headers(${CURRENT_TARGET_NAME} PUBLIC pch.hpp)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     Boost::headers

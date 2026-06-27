@@ -1,12 +1,12 @@
 #pragma once
 #include <skylabs/public/application.hpp>
-#include <skylabs/public/sdl/context.hpp>
-#include <skylabs/public/sdl/window.hpp>
 #include <skylabs/core/render/renderer.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/core/render/vulkan/render_object.hpp>
 #include <skylabs/core/render/vertex.hpp>
 #include <skylabs/core/camera.hpp>
+
+import skylabs.pub.sdl;
 
 struct Joystick
 {

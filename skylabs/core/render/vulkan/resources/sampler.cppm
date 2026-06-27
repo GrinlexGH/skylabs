@@ -1,7 +1,7 @@
-#pragma once
-import skylabs.vulkan.context;
+export module skylabs.vulkan.resources:sampler;
+export import skylabs.vulkan.context;
 
-namespace Vulkan {
+export namespace Vulkan {
 struct SamplerCreateInfo {
     struct MinMagFilter {
         vk::Filter m_min = vk::Filter::eNearest;

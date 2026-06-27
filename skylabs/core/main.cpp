@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <boost/nowide/convert.hpp>
 
-#include <skylabs/public/logging.hpp>
+import skylabs.pub.logging;
 
 namespace {
 std::string GetLastErrorMessage() {
@@ -30,7 +30,7 @@ std::string GetLastErrorMessage() {
 void EnableVTP() {
     const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (handle == INVALID_HANDLE_VALUE) {
-        SKY_LOG_ERROR("Failed to get stdout handle: {}", GetLastErrorMessage());
+        Log::Error("Failed to get stdout handle: {}", GetLastErrorMessage());
         return;
     }
 
@@ -38,17 +38,17 @@ void EnableVTP() {
 
     DWORD originalMode = 0;
     if (!GetConsoleMode(handle, &originalMode)) {
-        SKY_LOG_ERROR("Failed to get console mode: {}", GetLastErrorMessage());
+        Log::Error("Failed to get console mode: {}", GetLastErrorMessage());
         return;
     }
 
     if ((originalMode & VTP_FLAGS) == VTP_FLAGS) {
-        SKY_LOG_DEBUG("Virtual terminal processing already set for STD_OUTPUT.");
+        Log::Debug("Virtual terminal processing already set for STD_OUTPUT.");
         return;
     }
 
     if (!SetConsoleMode(handle, originalMode | VTP_FLAGS)) {
-        SKY_LOG_ERROR("Failed to set virtual terminal processing flags: {}", GetLastErrorMessage());
+        Log::Error("Failed to set virtual terminal processing flags: {}", GetLastErrorMessage());
     }
 }
 }

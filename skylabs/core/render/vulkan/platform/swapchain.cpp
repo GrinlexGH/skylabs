@@ -1,5 +1,9 @@
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
-#include <skylabs/public/logging.hpp>
+#include <cassert>
+#include <VkBootstrap.h>
+
+import skylabs.pub.logging;
+import fmt;
 
 namespace Vulkan {
 CSwapchain::CSwapchain(
@@ -68,7 +72,7 @@ void CSwapchain::CreateSwapchain(
     m_presentMode = static_cast<vk::PresentModeKHR>(sw.present_mode);
     m_surfaceFormat = { sw.image_format, sw.color_space };
 
-    SKY_LOG_DEBUG(
+    Log::Debug(
         "Swapchain format: {} x {}",
         vk::to_string(static_cast<vk::Format>(sw.image_format)),
         vk::to_string(static_cast<vk::ColorSpaceKHR>(sw.color_space))

@@ -1,14 +1,16 @@
-#pragma once
-#include <skylabs/public/pch.hpp>
+module;
+#include <skylabs/public/dll_export.hpp>
+export module skylabs.pub.filesystem;
+export import std;
 
-enum class Whence : std::uint8_t
+export enum class Whence : std::uint8_t
 {
     eBegin,
     eCursor,
     eEnd,
 };
 
-class IFileStream {
+export class IFileStream {
 public:
     virtual ~IFileStream() = default;
     virtual std::size_t Read(void* ptr, std::size_t size) = 0;
@@ -19,7 +21,7 @@ public:
     virtual bool Flush() = 0;
 };
 
-class PUBLIC_CLASS Filesystem {
+export class PUBLIC_CLASS Filesystem {
 public:
     static Filesystem& Instance();
 

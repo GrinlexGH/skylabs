@@ -1,7 +1,7 @@
 #pragma once
+#include <vulkan/vulkan.h>
 import skylabs.vulkan.context;
-
-#include <skylabs/core/render/vulkan/resources/image.hpp>
+import skylabs.vulkan.resources;
 
 namespace Vulkan {
 struct SwapchainRecreateInfo

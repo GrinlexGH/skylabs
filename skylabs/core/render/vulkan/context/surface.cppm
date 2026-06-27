@@ -1,8 +1,7 @@
 module;
-#include <skylabs/public/window.hpp>
-
 export module skylabs.vulkan.context:surface;
 export import :instance;
+export import skylabs.pub.window;
 
 export namespace Vulkan {
 class CSurface

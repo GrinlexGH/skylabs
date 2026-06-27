@@ -1,15 +1,14 @@
-#include <skylabs/public/os.hpp>
-
+module;
+#include <skylabs/public/dll_export.hpp>
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
 #include <boost/nowide/convert.hpp>
 #endif
-
-import std;
+module skylabs.pub.os;
 
 namespace OS {
 PUBLIC_CLASS std::string GetExecutableDirectory() {
-    static const std::string cachedPath = []() {
+    static const std::string cachedPath = [] {
         std::filesystem::path p;
 #ifdef PLATFORM_WINDOWS
         std::wstring buffer(100, L'\0');

@@ -1,12 +1,12 @@
 #pragma once
 #include <skylabs/core/render/vulkan/render_pass.hpp>
-#include <skylabs/core/render/vulkan/resources/buffer.hpp>
-#include <skylabs/core/render/vulkan/resources/sampler.hpp>
 #include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/submesh.hpp>
 #include <skylabs/core/render/render_object.hpp>
-#include <skylabs/public/utils.hpp>
+
+import skylabs.vulkan.resources;
+import skylabs.pub.utils;
 
 namespace Vulkan {
 struct CMVP {

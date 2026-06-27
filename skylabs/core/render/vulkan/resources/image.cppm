@@ -1,7 +1,7 @@
-#pragma once
-import skylabs.vulkan.context;
+export module skylabs.vulkan.resources:image;
+export import skylabs.vulkan.context;
 
-namespace Vulkan {
+export namespace Vulkan {
 struct ImageCreateInfo
 {
     vk::Extent3D m_extent {};

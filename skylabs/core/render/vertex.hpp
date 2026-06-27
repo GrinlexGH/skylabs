@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 import glm;
 
 enum class VertexFormat : std::uint8_t {

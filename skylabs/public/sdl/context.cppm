@@ -1,7 +1,10 @@
-#pragma once
-#include <skylabs/public/pch.hpp>
+module;
+#include <skylabs/public/dll_export.hpp>
+#include <SDL3/SDL.h>
+export module skylabs.pub.sdl:context;
+export import std;
 
-namespace SDL {
+export namespace SDL {
 class PUBLIC_CLASS CContext {
 public:
     CContext() = delete;
