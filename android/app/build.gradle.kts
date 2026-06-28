@@ -24,6 +24,9 @@ abstract class ConanInstallTask @Inject constructor(
     @TaskAction
     fun run() {
         val conanfileDir = conanFile.get().asFile.parentFile
+        //!!! Android ndk doesn't support import std (28.06.2026)
+        //!!! Set your cmake uuid (https://github.com/Kitware/CMake/blob/master/Help/dev/experimental.rst#c-import-std-support)
+        val extraVariables = """{ "CMAKE_EXPERIMENTAL_CXX_IMPORT_STD": "f35a9ac6-8463-4d38-8eec-5d6008153e7d", }"""
 
         val args = listOf(
             "install", conanfileDir.absolutePath,
@@ -39,8 +42,7 @@ abstract class ConanInstallTask @Inject constructor(
             "-s", "compiler.libcxx=c++_static",
             "-c", "tools.android:ndk_path=${ndkPath.get()}",
             "-c", "tools.cmake.cmake_layout:build_folder_vars=['settings.arch']",
-            //!!! Set your cmake uuid (https://github.com/Kitware/CMake/blob/master/Help/dev/experimental.rst#c-import-std-support)
-            "-c", "tools.cmake.cmaketoolchain:extra_variables={ \\\"CMAKE_EXPERIMENTAL_CXX_IMPORT_STD\\\": \\\"f35a9ac6-8463-4d38-8eec-5d6008153e7d\\\" }",
+            "-c", "tools.cmake.cmaketoolchain:extra_variables=$extraVariables",
             "-c", "tools.cmake.cmaketoolchain:generator=Ninja",
             "--build", "missing",
         )
