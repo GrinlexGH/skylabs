@@ -1,8 +1,8 @@
 #pragma once
+#include <skylabs/core/render/vulkan/command_recording/sync_state.hpp>
+
 import skylabs.vulkan.context;
 import skylabs.vulkan.resources;
-
-#include <skylabs/core/render/vulkan/command_recording/sync_state.hpp>
 
 namespace Vulkan {
 enum class BarrierType : std::uint8_t
