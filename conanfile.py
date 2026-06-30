@@ -19,7 +19,7 @@ class SkylabsRecipe(ConanFile):
     }
 
     def build_requirements(self):
-        self.tool_requires("slang/2026.12")
+        self.tool_requires("slang/2026.12.1")
 
     def requirements(self):
         self.requires("boost/1.91.0-1")
@@ -35,7 +35,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("stb/cci.20260413")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
-        self.requires("vk-bootstrap/1.4.354")
+        self.requires("vk-bootstrap/1.4.355")
         self.requires("vulkan-headers/1.4.355")
         self.requires("vulkan-memory-allocator-hpp/pr-87")
 
