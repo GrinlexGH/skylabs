@@ -32,40 +32,36 @@ static void ShowSystemError(const wchar_t* msg) {
         (LPWSTR)&errorMsg, 0, NULL
     );
     ShowError(msg, errorMsg);
-    if (errorMsg) LocalFree(errorMsg);
+    LocalFree(errorMsg);
 }
 
+#define MESSAGE_CLEANUP_CHECK(expr, msg) do { if (expr) { PresentErrorMessage(msg); goto cleanup; } } while(0)
+#define SYSTEM_CLEANUP_CHECK(expr, msg) do { if (expr) { ShowSystemError(msg); goto cleanup; } } while(0)
+
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+#define EXIT_CHECK(expr) do { if (expr) { CLEANUP_AND_EXIT(); } } while(0)
 #define MESSAGE_EXIT_CHECK(expr, msg) do { if (expr) { PresentErrorMessage(msg); CLEANUP_AND_EXIT(); } } while(0)
 #define SYSTEM_EXIT_CHECK(expr, msg) do { if (expr) { ShowSystemError(msg); CLEANUP_AND_EXIT(); } } while(0)
 #define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { wchar_t msgBuf[128]; _snwprintf(msgBuf, _countof(msgBuf), msg, __VA_ARGS__); ShowSystemError(msgBuf); CLEANUP_AND_EXIT(); } } while(0)
+
 #define LOAD_DIR L"\\bin\\"
 #define LOAD_FILE L"core.dll"
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
-    (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nShowCmd;
-
-    int ret = 1;
+wchar_t* GetProgramPath(void) {
     wchar_t* exePath = NULL;
-    wchar_t* libPath = NULL;
-    HMODULE hCore = NULL;
-    int argc = 0;
-    LPWSTR* argvW = NULL;
-    char** argv = NULL;
 
-    // Get program path
     DWORD cap = MAX_PATH;
     exePath = malloc(cap * sizeof(wchar_t));
-    MESSAGE_EXIT_CHECK(!exePath, L"Failed to allocate memory to get executable path");
+    MESSAGE_CLEANUP_CHECK(!exePath, L"Failed to allocate memory to get executable path");
 
     while (1) {
         DWORD size = GetModuleFileNameW(NULL, exePath, cap);
-        SYSTEM_EXIT_CHECK(size == 0, L"Failed to get program path");
+        SYSTEM_CLEANUP_CHECK(size == 0, L"Failed to get program path");
 
         if (size == cap - 1) {
             cap += 100;
             wchar_t* tmp = realloc(exePath, cap * sizeof(wchar_t));
-            MESSAGE_EXIT_CHECK(!tmp, L"Failed to reallocate memory to get executable path");
+            MESSAGE_CLEANUP_CHECK(!tmp, L"Failed to reallocate memory to get executable path");
             exePath = tmp;
         } else {
             exePath[size] = '\0';
@@ -73,17 +69,37 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         }
     }
 
+    return exePath;
+
+cleanup:
+    free(exePath);
+    return NULL;
+}
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
+    (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nShowCmd;
+
+    int ret = 0;
+    wchar_t* exePath = NULL;
+    wchar_t* libPath = NULL;
+    HMODULE hCore = NULL;
+    LPWSTR* argvW = NULL;
+    char** argv = NULL;
+
+    exePath = GetProgramPath();
+    EXIT_CHECK(!exePath);
+
     // Remove filename
     wchar_t* lastSlash = wcsrchr(exePath, L'\\');
     *lastSlash = L'\0';
 
-    cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_DIR) + _countof(LOAD_FILE) - 1;
+    DWORD cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_DIR) + _countof(LOAD_FILE) - 1;
     libPath = malloc(cap * sizeof(wchar_t));
     MESSAGE_EXIT_CHECK(!libPath, L"Failed to allocate memory for library path");
 
     // Generate path to bin
     swprintf(libPath, cap, L"%ls" LOAD_DIR, exePath);
-    SetDllDirectoryW(libPath);
+    SYSTEM_EXIT_CHECK(!SetDllDirectoryW(libPath), L"Failed to set DLL directory");
 
     // Generate full dll path
     swprintf(libPath, cap, L"%ls" LOAD_DIR LOAD_FILE, exePath);
@@ -99,7 +115,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     SYSTEM_EXIT_CHECK(!coreMain, L"Failed to load library function");
 
     // Convert utf16 argv to utf8
-    argc = 0;
+    int argc = 0;
     argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
     SYSTEM_EXIT_CHECK(!argvW, L"Failed to get command line");
 
@@ -122,16 +138,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     ret = coreMain(argc, argv);
 
 cleanup:
-    if (exePath) free(exePath);
-    if (libPath) free(libPath);
-    if (hCore) FreeLibrary(hCore);
-    if (argvW) LocalFree(argvW);
     if (argv) {
         for (int i = 0; i < argc; ++i) {
-            if (argv[i]) free(argv[i]);
+            free(argv[i]);
         }
         free(argv);
     }
+    LocalFree(argvW);
+    if (hCore) FreeLibrary(hCore);
+    free(libPath);
+    free(exePath);
+
     return ret;
 }
 
