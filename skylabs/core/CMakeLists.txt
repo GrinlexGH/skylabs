@@ -68,6 +68,8 @@ target_sources(
         render/vulkan/render_object.cpp
 )
 
+target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
+
 add_dependencies(${CURRENT_TARGET_NAME} shaders)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
