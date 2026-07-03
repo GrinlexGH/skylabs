@@ -1,9 +1,5 @@
 #include <skylabs/public/os.hpp>
 
-#ifdef PLATFORM_WINDOWS
-#include <windows.h>
-#endif
-
 namespace OS {
 PUBLIC_CLASS std::string GetExecutableDirectory() {
     static const std::string cachedPath = [] {

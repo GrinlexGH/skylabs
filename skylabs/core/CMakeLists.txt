@@ -9,21 +9,22 @@ target_sources(
     PRIVATE
     FILE_SET SOURCES FILES
         camera.hpp
+        render/vulkan/command_recording/command_buffer_allocator.cpp
+        render/vulkan/command_recording/command_buffer_allocator.hpp
+        render/vulkan/command_recording/command_buffer.cpp
+        render/vulkan/command_recording/command_buffer.hpp
+        render/vulkan/command_recording/sync_state.cpp
+        render/vulkan/command_recording/sync_state.hpp
+        render/vulkan/context/allocator.cpp
+        render/vulkan/context/allocator.hpp
         launcher.cpp
         launcher.hpp
         main.cpp
         render/renderer.hpp
         render/vertex.hpp
-        render/vulkan/command_recording/command_buffer.cpp
-        render/vulkan/command_recording/command_buffer.hpp
-        render/vulkan/command_recording/command_buffer_allocator.cpp
-        render/vulkan/command_recording/command_buffer_allocator.hpp
-        render/vulkan/command_recording/sync_state.cpp
-        render/vulkan/command_recording/sync_state.hpp
         render/vulkan/context/instance.cpp
         render/vulkan/context/physical_device.cpp
         render/vulkan/context/device.cpp
-        render/vulkan/context/allocator.cpp
         render/vulkan/context/context.cpp
         render/vulkan/pipeline/compute_pipeline.cpp
         render/vulkan/pipeline/compute_pipeline.hpp
@@ -60,7 +61,6 @@ target_sources(
         render/vulkan/context/surface.hpp
         render/vulkan/context/physical_device.hpp
         render/vulkan/context/device.hpp
-        render/vulkan/context/allocator.hpp
         render/vulkan/context/context.hpp
         render/vulkan/resources/image.hpp
         render/vulkan/resources/buffer.hpp
