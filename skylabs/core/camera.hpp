@@ -1,5 +1,5 @@
 #pragma once
-import glm;
+#include <skylabs/core/pch.hpp>
 
 class CCamera
 {
@@ -22,7 +22,7 @@ public:
     }
 
     glm::mat4 ViewMatrix() const {
-        return glm::gtc::lookAt(m_position, m_position + m_front, m_up);
+        return glm::lookAt(m_position, m_position + m_front, m_up);
     }
 
     float Fov() const { return m_fov; }

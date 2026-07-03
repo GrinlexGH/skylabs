@@ -1,7 +1,4 @@
-module;
-#include <skylabs/core/pch.hpp>
-module skylabs.vulkan.context;
-import fmt;
+#include <skylabs/core/render/vulkan/context/physical_device.hpp>
 
 namespace Vulkan {
 CPhysicalDevice::CPhysicalDevice(const CInstance& instance, const CSurface& surface) {

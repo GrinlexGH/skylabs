@@ -1,8 +1,6 @@
 #include <skylabs/core/launcher.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
-
-import skylabs.pub.sdl;
-import skylabs.pub.logging;
+#include <skylabs/public/logging.hpp>
 
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
@@ -31,8 +29,8 @@ void CLauncher::UpdateVisuals(float /*deltaTime*/) {
 
     for (auto& tower : m_towers) {
         glm::mat4 stemModel = glm::mat4(1.0f);
-        stemModel = glm::gtc::translate(stemModel, tower.basePosition);
-        stemModel = glm::gtc::scale(stemModel, glm::vec3(0.02f, 1.2f, 0.02f));
+        stemModel = glm::translate(stemModel, tower.basePosition);
+        stemModel = glm::scale(stemModel, glm::vec3(0.02f, 1.2f, 0.02f));
         tower.stemRenderObject.SetMatrix(stemModel);
 
         for (std::size_t i = 0; i < tower.disks.size(); ++i) {
@@ -45,8 +43,8 @@ void CLauncher::UpdateVisuals(float /*deltaTime*/) {
             float currentRadius = BASE_RADIUS * disk.size;
 
             glm::mat4 diskModel = glm::mat4(1.0f);
-            diskModel = glm::gtc::translate(diskModel, diskPos);
-            diskModel = glm::gtc::scale(diskModel, glm::vec3(currentRadius, DISK_HEIGHT, currentRadius));
+            diskModel = glm::translate(diskModel, diskPos);
+            diskModel = glm::scale(diskModel, glm::vec3(currentRadius, DISK_HEIGHT, currentRadius));
 
             disk.renderObject.SetMatrix(diskModel);
         }
@@ -115,9 +113,9 @@ void CLauncher::Update(float deltaTime) {
         if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
     }
 
-    glm::mat4 invView = glm::gtc::inverse(m_camera.ViewMatrix());
+    glm::mat4 invView = glm::inverse(m_camera.ViewMatrix());
     glm::vec3 rayOrigin = glm::vec3(invView[3]);
-    glm::vec3 rayDir = glm::gtc::normalize(-glm::vec3(invView[2]));
+    glm::vec3 rayDir = glm::normalize(-glm::vec3(invView[2]));
 
     int closestTowerIdx = -1;
     float minT = std::numeric_limits<float>::max();
@@ -389,11 +387,11 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
     const uint32_t segments = 32;
 
     for (uint32_t i = 0; i <= segments; ++i) {
-        float angle = i * 2.0f * glm::gtc::pi<float>() / segments;
+        float angle = i * 2.0f * glm::pi<float>() / segments;
         float x = std::cos(angle);
         float z = std::sin(angle);
 
-        glm::vec3 sideNormal = glm::gtc::normalize(glm::vec3(x, 0.0f, z));
+        glm::vec3 sideNormal = glm::normalize(glm::vec3(x, 0.0f, z));
         vertices.emplace_back(glm::vec3(x, 0.0f, z), glm::vec2 {}, sideNormal);
         vertices.emplace_back(glm::vec3(x, 1.0f, z), glm::vec2 {}, sideNormal);
     }
@@ -414,7 +412,7 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
     std::size_t topCapEdgeStart = vertices.size();
 
     for (uint32_t i = 0; i <= segments; ++i) {
-        float angle = i * 2.0f * glm::gtc::pi<float>() / segments;
+        float angle = i * 2.0f * glm::pi<float>() / segments;
         float x = std::cos(angle);
         float z = std::sin(angle);
 

@@ -1,4 +1,4 @@
-module skylabs.vulkan.context;
+#include <skylabs/core/render/vulkan/context/allocator.hpp>
 
 namespace Vulkan {
 CAllocator::CAllocator(

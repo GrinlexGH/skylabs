@@ -1,8 +1,6 @@
 #pragma once
 #include <skylabs/core/pch.hpp>
 
-import glm;
-
 namespace Vulkan {
 class CRenderer;
 

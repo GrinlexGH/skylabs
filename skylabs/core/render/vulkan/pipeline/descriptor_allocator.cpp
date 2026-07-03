@@ -1,7 +1,5 @@
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
 
-#include <vulkan/vulkan.h>
-
 namespace {
 constexpr std::array g_types {
     vk::DescriptorType::eSampler,

@@ -1,9 +1,6 @@
-module;
-#include <SDL3/SDL.h>
-module skylabs.pub.filesystem;
-import skylabs.pub.sdl;
-import skylabs.pub.os;
-import std;
+#include <skylabs/public/filesystem.hpp>
+#include <skylabs/public/sdl/filestream.hpp>
+#include <skylabs/public/os.hpp>
 
 namespace {
 template <typename T>

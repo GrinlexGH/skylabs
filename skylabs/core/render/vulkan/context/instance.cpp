@@ -1,9 +1,6 @@
-module;
-#include <skylabs/core/pch.hpp>
+#include <skylabs/core/render/vulkan/context/instance.hpp>
+#include <skylabs/public/logging.hpp>
 #include "project_info.hpp"
-module skylabs.vulkan.context;
-import skylabs.pub.logging;
-import fmt;
 
 namespace {
 #ifdef DEBUG

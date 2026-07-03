@@ -10,9 +10,7 @@
 #include <skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp>
 #include <skylabs/core/render/vulkan/render_object.hpp>
 #include <skylabs/core/render/render_object.hpp>
-
-import skylabs.pub.window;
-import skylabs.vulkan.resources;
+#include <skylabs/public/window.hpp>
 
 namespace Vulkan {
 class CRenderer final : public IRenderer

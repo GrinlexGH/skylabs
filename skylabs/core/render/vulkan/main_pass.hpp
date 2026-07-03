@@ -4,9 +4,7 @@
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/submesh.hpp>
 #include <skylabs/core/render/render_object.hpp>
-
-import skylabs.vulkan.resources;
-import skylabs.pub.utils;
+#include <skylabs/core/render/vulkan/resources/sampler.hpp>
 
 namespace Vulkan {
 struct CMVP {

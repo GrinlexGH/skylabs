@@ -1,7 +1,4 @@
-module;
-#include <skylabs/core/pch.hpp>
-module skylabs.vulkan.context;
-import fmt;
+#include <skylabs/core/render/vulkan/context/device.hpp>
 
 namespace {
 bool TryEnableFeatures(vkb::PhysicalDevice& phys, const vk::PhysicalDeviceFeatures& f) {

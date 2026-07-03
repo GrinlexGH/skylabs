@@ -7,17 +7,6 @@ set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES PREFIX "" IMPORT_PREFIX 
 target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
-    FILE_SET CXX_MODULES FILES
-        render/vulkan/context/instance.cppm
-        render/vulkan/context/surface.cppm
-        render/vulkan/context/physical_device.cppm
-        render/vulkan/context/device.cppm
-        render/vulkan/context/allocator.cppm
-        render/vulkan/context/context.cppm
-        render/vulkan/resources/resources.cppm
-        render/vulkan/resources/image.cppm
-        render/vulkan/resources/buffer.cppm
-        render/vulkan/resources/sampler.cppm
     FILE_SET SOURCES FILES
         camera.hpp
         launcher.cpp
@@ -66,6 +55,16 @@ target_sources(
         render/render_object.hpp
         render/vulkan/render_object.hpp
         render/vulkan/render_object.cpp
+
+        render/vulkan/context/instance.hpp
+        render/vulkan/context/surface.hpp
+        render/vulkan/context/physical_device.hpp
+        render/vulkan/context/device.hpp
+        render/vulkan/context/allocator.hpp
+        render/vulkan/context/context.hpp
+        render/vulkan/resources/image.hpp
+        render/vulkan/resources/buffer.hpp
+        render/vulkan/resources/sampler.hpp
 )
 
 target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
@@ -81,9 +80,8 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     SteamworksSDK::SteamworksSDK
     tinyobjloader::tinyobjloader
     vk-bootstrap::vk-bootstrap
-    glm-HppModule
-    Vulkan-HppModule
-    VulkanMemoryAllocator-HppModule
+    glm::glm
+    VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME})

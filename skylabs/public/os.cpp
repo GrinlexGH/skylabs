@@ -1,10 +1,8 @@
-module;
-#include <skylabs/public/dll_export.hpp>
+#include <skylabs/public/os.hpp>
+
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
-#include <boost/nowide/convert.hpp>
 #endif
-module skylabs.pub.os;
 
 namespace OS {
 PUBLIC_CLASS std::string GetExecutableDirectory() {

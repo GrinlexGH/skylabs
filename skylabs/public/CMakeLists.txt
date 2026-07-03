@@ -7,11 +7,7 @@ set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES DEFINE_SYMBOL "PUBLIC_EX
 include(GenerateExportHeader)
 generate_export_header(${CURRENT_TARGET_NAME})
 
-configure_file(
-    ${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in
-    project_info.hpp
-    @ONLY
-)
+configure_file(${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in project_info.hpp @ONLY)
 
 target_sources(
     ${CURRENT_TARGET_NAME}
@@ -20,7 +16,7 @@ target_sources(
         sdl/sdl.cpp
         sdl/window.cpp
         sdl/context.cpp
-        sdl/filesystem.cpp
+        sdl/filestream.cpp
         sdl/ttf/context.cpp
         sdl/mixer/context.cpp
         sdl/mixer/mixer.cpp
@@ -31,24 +27,23 @@ target_sources(
         logging.cpp
         os.cpp
     PUBLIC
-    FILE_SET CXX_MODULES FILES
-        utils.cppm
-        window.cppm
-        filesystem.cppm
-        os.cppm
-        logging.cppm
-        sdl/sdl.cppm
-        sdl/context.cppm
-        sdl/window.cppm
-        sdl/filesystem.cppm
     FILE_SET HEADERS FILES
-        sdl/ttf/context.hpp
+        sdl/mixer/audio.hpp
         sdl/mixer/context.hpp
         sdl/mixer/mixer.hpp
         sdl/mixer/track.hpp
-        sdl/mixer/audio.hpp
+        sdl/ttf/context.hpp
+        sdl/context.hpp
+        sdl/filestream.hpp
+        sdl/sdl.hpp
+        sdl/window.hpp
         application.hpp
         dll_export.hpp
+        filesystem.hpp
+        logging.hpp
+        os.hpp
+        utils.hpp
+        window.hpp
     FILE_SET generated_headers
         TYPE HEADERS
         BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
@@ -57,16 +52,19 @@ target_sources(
             ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
 )
 
+target_precompile_headers(${CURRENT_TARGET_NAME} PUBLIC pch.hpp)
+
 target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     Boost::headers
     Boost::nowide
     Boost::container
+    Boost::range
     frozen::frozen
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer
     SDL3_ttf::SDL3_ttf
-    fmt-HppModule
-    Vulkan-HppModule
+    fmt::fmt
+    Vulkan::Headers
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME}

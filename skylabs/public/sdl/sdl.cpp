@@ -1,9 +1,4 @@
-module;
-#include <skylabs/public/dll_export.hpp>
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
-module skylabs.pub.sdl;
-import fmt;
+#include <skylabs/public/sdl/sdl.hpp>
 
 namespace SDL {
 PUBLIC_CLASS Utils::Extent2D GetWindowSizeInPixels(SDL_Window* window) {

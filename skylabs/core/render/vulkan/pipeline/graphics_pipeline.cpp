@@ -1,8 +1,4 @@
-#include <cassert>
-#include <frozen/map.h>
-
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
-#include <skylabs/core/render/vertex.hpp>
 
 namespace {
 constexpr frozen::map<VertexFormat, vk::Format, 4> g_vertexFormat = {

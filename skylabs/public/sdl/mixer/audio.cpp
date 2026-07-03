@@ -1,6 +1,5 @@
 #include <skylabs/public/sdl/mixer/audio.hpp>
-
-import skylabs.pub.sdl;
+#include <skylabs/public/sdl/filestream.hpp>
 
 namespace SDL::Mixer {
 CAudio::CAudio(CMixer& mixer, const std::string_view uri) {

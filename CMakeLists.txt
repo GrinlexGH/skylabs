@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 4.4)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 project(Skylabs HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 LANGUAGES CXX C)
 
@@ -40,8 +41,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-set(CMAKE_CXX_MODULE_STD ON)
-
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -63,7 +62,7 @@ set(IS_MSVC_LIKE $<OR:$<CXX_COMPILER_ID:MSVC>,$<STREQUAL:${CMAKE_CXX_COMPILER_FR
 
 add_compile_options(
     "$<$<AND:${IS_LANG_CCXX},${IS_GNU_LIKE}>:-Wall;-Wextra;-Wpedantic>"
-    "$<$<AND:${IS_LANG_CCXX},$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes;-Wno-reserved-module-identifier>"
+    "$<$<AND:${IS_LANG_CCXX},$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes>"
     "$<$<AND:${IS_LANG_CCXX},${IS_MSVC_LIKE}>:/utf-8;/Zc:__cplusplus;/Zc:preprocessor;/W4>"
     "$<$<AND:${IS_LANG_CCXX},${IS_MSVC_LIKE},$<BOOL:${LTO_AVAILABLE}>>:/Gy;/Gw>"
     "$<$<AND:${IS_LANG_CCXX},$<BOOL:${LTO_AVAILABLE}>,$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:${CMAKE_CXX_COMPILER_VERSION},19.35>>:/Zc:checkGwOdr>"
@@ -97,7 +96,6 @@ add_compile_definitions(
     "VULKAN_HPP_TYPESAFE_CONVERSION=1"
     "VULKAN_HPP_USE_STD_EXPECTED=1"
     "VK_NO_PROTOTYPES=1"
-    "FMT_IMPORT_STD=1"
 )
 
 # Functions to setup targets
@@ -139,17 +137,17 @@ function(skylabs_target_setup_install target_name)
         set(library_dest ${ARG_RUNTIME_DESTINATION})
     endif()
 
-    set(RUNTIME_LOOKUP_DIRECTORIES "")
-    if(WIN32)
-        list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}")
-        cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_BIN_DIR)
-        list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CXX_COMPILER_BIN_DIR}")
-        cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_BIN_DIR)
-        list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${C_COMPILER_BIN_DIR}")
-    endif()
-
     set(RUNTIME_DEPENDENCIES_ARGS "")
     if(NOT CMAKE_CROSSCOMPILING)
+        set(RUNTIME_LOOKUP_DIRECTORIES "")
+        if(WIN32)
+            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}")
+            cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_BIN_DIR)
+            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CXX_COMPILER_BIN_DIR}")
+            cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_BIN_DIR)
+            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${C_COMPILER_BIN_DIR}")
+        endif()
+
         set(RUNTIME_DEPENDENCIES_ARGS
             RUNTIME_DEPENDENCIES
             DIRECTORIES ${RUNTIME_LOOKUP_DIRECTORIES}
@@ -245,6 +243,7 @@ function(skylabs_configure_target target_name)
     if(ARG_RUNTIME_DESTINATION)
         list(APPEND install_args RUNTIME_DESTINATION "${ARG_RUNTIME_DESTINATION}")
     endif()
+
     if(ARG_RUNTIME_PLUGINS)
         list(APPEND install_args RUNTIME_PLUGINS ${ARG_RUNTIME_PLUGINS})
     endif()
@@ -255,10 +254,12 @@ endfunction()
 install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
 
 # Third party libraries
-find_package(Boost COMPONENTS nowide container CONFIG REQUIRED)
+find_package(Boost COMPONENTS nowide container range CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 find_package(frozen CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(SDL3_image CONFIG REQUIRED)
 find_package(SDL3_mixer CONFIG REQUIRED)
@@ -268,57 +269,9 @@ find_package(stb CONFIG REQUIRED)
 find_package(SteamworksSDK CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
 find_package(vk-bootstrap CONFIG REQUIRED)
-find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-
-# vulkan headers module
 find_package(VulkanHeaders CONFIG REQUIRED)
-get_target_property(VULKAN_INCLUDE_DIR Vulkan::Headers INTERFACE_INCLUDE_DIRECTORIES)
-add_library(Vulkan-HppModule OBJECT)
-target_sources(Vulkan-HppModule PUBLIC
-    FILE_SET CXX_MODULES
-    BASE_DIRS ${VULKAN_INCLUDE_DIR}
-    FILES
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.cppm
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan_video.cppm
-)
-target_link_libraries(Vulkan-HppModule PUBLIC Vulkan::Headers)
-
-# vulkan memory allocator module
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
-get_target_property(VMA_HPP_INCLUDE_DIR VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp INTERFACE_INCLUDE_DIRECTORIES)
-add_library(VulkanMemoryAllocator-HppModule OBJECT)
-target_sources(VulkanMemoryAllocator-HppModule PUBLIC
-    FILE_SET CXX_MODULES
-    BASE_DIRS ${VMA_HPP_INCLUDE_DIR}
-    FILES
-        ${VMA_HPP_INCLUDE_DIR}/vk_mem_alloc.cppm
-)
-set_source_files_properties(${VMA_HPP_INCLUDE_DIR}/vk_mem_alloc.cppm PROPERTIES COMPILE_OPTIONS "$<${IS_GNU_LIKE}:-w>")
-target_link_libraries(VulkanMemoryAllocator-HppModule PUBLIC VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp Vulkan-HppModule)
-
-# glm module
-find_package(glm CONFIG REQUIRED)
-get_target_property(GLM_INCLUDE_DIR glm::glm-header-only INTERFACE_INCLUDE_DIRECTORIES)
-add_library(glm-HppModule OBJECT)
-target_sources(glm-HppModule PUBLIC
-    FILE_SET CXX_MODULES
-    BASE_DIRS ${GLM_INCLUDE_DIR}
-    FILES
-        ${GLM_INCLUDE_DIR}/glm/glm.cppm
-)
-target_link_libraries(glm-HppModule PUBLIC glm::glm-header-only)
-
-# fmt module
-find_package(fmt CONFIG REQUIRED)
-get_target_property(FMT_INCLUDE_DIR fmt::fmt INTERFACE_INCLUDE_DIRECTORIES)
-add_library(fmt-HppModule OBJECT)
-target_sources(fmt-HppModule PUBLIC
-    FILE_SET CXX_MODULES
-    BASE_DIRS ${FMT_INCLUDE_DIR}
-    FILES
-        ${FMT_INCLUDE_DIR}/fmt/src/fmt.cc
-)
-target_link_libraries(fmt-HppModule PUBLIC fmt::fmt-header-only)
 
 # Skylabs
 include_directories("${PROJECT_SOURCE_DIR}")

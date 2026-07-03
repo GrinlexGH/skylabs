@@ -1,8 +1,5 @@
-module;
-#include <SDL3/SDL.h>
-module skylabs.pub.sdl;
-import :window;
-import fmt;
+#include <skylabs/public/sdl/window.hpp>
+#include <skylabs/public/sdl/sdl.hpp>
 
 namespace SDL {
 CWindow::CWindow(const char* title, const int w, const int h, const SDL_WindowFlags flags) :

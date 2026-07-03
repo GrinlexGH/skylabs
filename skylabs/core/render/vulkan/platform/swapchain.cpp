@@ -1,9 +1,5 @@
-#include <cassert>
-#include <VkBootstrap.h>
 #include <skylabs/core/render/vulkan/platform/swapchain.hpp>
-
-import skylabs.pub.logging;
-import fmt;
+#include <skylabs/public/logging.hpp>
 
 namespace Vulkan {
 CSwapchain::CSwapchain(

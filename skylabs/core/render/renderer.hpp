@@ -1,5 +1,5 @@
 #pragma once
-import glm;
+#include <skylabs/core/pch.hpp>
 
 class IRenderer
 {

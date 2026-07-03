@@ -1,11 +1,12 @@
-module;
-#include <frozen/unordered_map.h>
+#include <skylabs/public/logging.hpp>
+
 #ifdef PLATFORM_ANDROID
 #include <SDL3/SDL_log.h>
 #endif
-module skylabs.pub.logging;
 
 namespace Log {
+std::atomic<Level> g_runtimeLevel{Level::eTrace};
+
 void SubmitLog(const Level level, const std::source_location& loc, const std::string& message) {
 #ifdef PLATFORM_ANDROID
     const char* msg = log.text.c_str();

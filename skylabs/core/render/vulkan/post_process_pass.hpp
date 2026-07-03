@@ -2,9 +2,7 @@
 #include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 #include <skylabs/core/render/vulkan/render_pass.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
-#include <skylabs/core/render/vulkan/submesh.hpp>
-
-import skylabs.vulkan.resources;
+#include <skylabs/core/render/vulkan/resources/sampler.hpp>
 
 namespace Vulkan {
 class CPostProcessPass

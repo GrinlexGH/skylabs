@@ -1,6 +1,4 @@
 #pragma once
-import skylabs.vulkan.context;
-
 #include <skylabs/core/render/vulkan/pipeline/shader.hpp>
 
 namespace Vulkan {

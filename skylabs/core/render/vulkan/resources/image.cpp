@@ -1,7 +1,4 @@
-module;
-#include <cassert>
-module skylabs.vulkan.resources;
-import :image;
+#include <skylabs/core/render/vulkan/resources/image.hpp>
 
 namespace {
 vk::ImageViewType DetermineViewType(vk::Extent3D extent, std::uint32_t layers) {
