@@ -5,12 +5,12 @@
 #endif
 
 namespace Log {
-std::atomic<Level> g_runtimeLevel{Level::eTrace};
+std::atomic<Level> g_runtimeLevel { Level::eTrace };
 
 void SubmitLog(const Level level, const std::source_location& loc, const std::string& message) {
 #ifdef PLATFORM_ANDROID
-    const char* msg = log.text.c_str();
-    switch (log.level) {
+    const char* msg = message.c_str();
+    switch (level) {
         case Log::Level::eFatal: SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
         case Log::Level::eError: SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;
         case Log::Level::eWarning: SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;

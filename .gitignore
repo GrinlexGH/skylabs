@@ -4,6 +4,7 @@
 .vs/
 .idea/
 .gradle/
+.venv/
 
 # Build folders
 build/

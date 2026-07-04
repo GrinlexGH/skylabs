@@ -9,6 +9,9 @@ abstract class ConanInstallTask @Inject constructor(
     private val execOperations: ExecOperations
 ) : DefaultTask() {
 
+    @get:Internal
+    abstract val projectRootDir: DirectoryProperty
+
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val conanFile: RegularFileProperty
@@ -24,6 +27,21 @@ abstract class ConanInstallTask @Inject constructor(
     @TaskAction
     fun run() {
         val conanfileDir = conanFile.get().asFile.parentFile
+
+        val rootDir = this.projectRootDir.get().asFile
+        val venvDir = rootDir.resolve(".venv")
+
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+        val binDirName = if (isWindows) "Scripts" else "bin"
+        val venvBinDir = venvDir.resolve(binDirName)
+
+        val conanExecutable = if (venvBinDir.exists()) {
+            val exeName = if (isWindows) "conan.exe" else "conan"
+            val localConan = venvBinDir.resolve(exeName)
+            if (localConan.exists()) localConan.absolutePath else "conan"
+        } else {
+            "conan"
+        }
 
         val args = listOf(
             "install", conanfileDir.absolutePath,
@@ -42,12 +60,19 @@ abstract class ConanInstallTask @Inject constructor(
             "--build", "missing",
         )
 
+        logger.lifecycle(">> Using Conan executable: $conanExecutable")
         logger.lifecycle(">> conan ${args.joinToString(" ")}")
 
         execOperations.exec {
-            commandLine("conan")
+            commandLine(conanExecutable)
             args(args)
             workingDir = conanfileDir
+
+            if (venvBinDir.exists()) {
+                val currentPath = System.getenv("PATH") ?: ""
+                environment("PATH", "${venvBinDir.absolutePath}${File.pathSeparator}$currentPath")
+                environment("VIRTUAL_ENV", venvDir.absolutePath)
+            }
         }
     }
 }
@@ -133,6 +158,8 @@ androidComponents {
                     "armeabi-v7a" -> "armv7"
                     else -> abi
                 }
+
+                projectRootDir.set(projectRootFile)
 
                 conanFile.set(if (conanfilePy.exists()) conanfilePy else conanfileTxt)
                 arch.set(conanArch)
