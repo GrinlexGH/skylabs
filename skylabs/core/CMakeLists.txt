@@ -65,6 +65,7 @@ target_sources(
         render/vulkan/resources/image.hpp
         render/vulkan/resources/buffer.hpp
         render/vulkan/resources/sampler.hpp
+        header_factory.cpp
 )
 
 target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)

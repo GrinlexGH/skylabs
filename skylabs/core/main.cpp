@@ -2,11 +2,7 @@
 #include <skylabs/public/dll_export.hpp>
 
 #ifdef PLATFORM_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <boost/nowide/convert.hpp>
-
-import skylabs.pub.logging;
+#include <skylabs/public/logging.hpp>
 
 namespace {
 std::string GetLastErrorMessage() {

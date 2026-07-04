@@ -7,6 +7,7 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <boost/range/irange.hpp>
+#include <boost/nowide/convert.hpp>
 
 #include <fmt/format.h>
 #include <fmt/color.h>
