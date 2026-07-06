@@ -103,3 +103,4 @@ cd android
 * [UTF-8 Everywhere](https://utf8everywhere.org/)
 * [Canonical Project Structure](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1204r0.html)
 * [About console on Win32](https://www.devever.net/~hl/win32con)
+* [Predefined macros](https://github.com/cpredef/predef)
