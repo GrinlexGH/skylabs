@@ -16,7 +16,7 @@ static void ShowError(const wchar_t* msg, const wchar_t* detail) {
     size_t len = wcslen(msg) + (detail ? wcslen(detail) : 0) + 10;
     wchar_t* buf = malloc(len * sizeof(wchar_t));
     if (buf) {
-        _snwprintf(buf, len, L"%s:\n%s", msg, detail ? detail : L"");
+        _snwprintf_s(buf, len, _TRUNCATE, L"%s:\n%s", msg, detail ? detail : L"");
         PresentErrorMessage(buf);
         free(buf);
     } else {
@@ -42,7 +42,7 @@ static void ShowSystemError(const wchar_t* msg) {
 #define EXIT_CHECK(expr) do { if (expr) { CLEANUP_AND_EXIT(); } } while(0)
 #define MESSAGE_EXIT_CHECK(expr, msg) do { if (expr) { PresentErrorMessage(msg); CLEANUP_AND_EXIT(); } } while(0)
 #define SYSTEM_EXIT_CHECK(expr, msg) do { if (expr) { ShowSystemError(msg); CLEANUP_AND_EXIT(); } } while(0)
-#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { wchar_t msgBuf[128]; _snwprintf(msgBuf, _countof(msgBuf), msg, __VA_ARGS__); ShowSystemError(msgBuf); CLEANUP_AND_EXIT(); } } while(0)
+#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { wchar_t msgBuf[128]; _snwprintf_s(msgBuf, _countof(msgBuf), _TRUNCATE, msg, __VA_ARGS__); ShowSystemError(msgBuf); CLEANUP_AND_EXIT(); } } while(0)
 
 #define LOAD_DIR L"\\bin\\"
 #define LOAD_FILE L"core.dll"
@@ -84,6 +84,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     wchar_t* libPath = NULL;
     HMODULE hCore = NULL;
     LPWSTR* argvW = NULL;
+    int argc = 0;
     char** argv = NULL;
 
     exePath = GetProgramPath();
@@ -115,7 +116,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     SYSTEM_EXIT_CHECK(!coreMain, L"Failed to load library function");
 
     // Convert utf16 argv to utf8
-    int argc = 0;
     argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
     SYSTEM_EXIT_CHECK(!argvW, L"Failed to get command line");
 
