@@ -76,7 +76,7 @@ conan config install ./conan/conan-config/config
 
 ```bash
 # Install dependencies
-conan install . -r skylabs -r conancenter -pr msvc-18 -s build_type=Debug -s compiler.runtime_type=Debug --build=missing -c "&:tools.env.virtualenv:powershell=pwsh"
+conan install . -pr msvc-18 -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing -c "&:tools.env.virtualenv:powershell=pwsh"
 
 # Configure project
 cmake --preset conan-default

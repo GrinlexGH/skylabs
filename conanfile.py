@@ -12,9 +12,6 @@ class SkylabsRecipe(ConanFile):
         "boost/*:with_container_hash": True,
         "boost/*:with_range": True,
         "boost/*:with_unordered": True,
-
-        "boost/*:use_modules": True,
-        "fmt/*:use_modules": True,
     }
 
     def build_requirements(self):
@@ -84,10 +81,6 @@ class SkylabsRecipe(ConanFile):
         self._create_symlink(vvl_bin, project_jniLibs_dir)
 
     def _create_symlink(self, source, destonation, target_is_directory=False):
-        if not os.path.exists(source):
-            self.output.info(f"Path '{source}' doesn't exist")
-            return
-
         if os.path.exists(destonation):
             os.remove(destonation)
 
