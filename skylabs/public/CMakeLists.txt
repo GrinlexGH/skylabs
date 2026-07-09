@@ -58,7 +58,6 @@ target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
     Boost::headers
     Boost::nowide
     Boost::container
-    Boost::range
     frozen::frozen
     SDL3::SDL3
     SDL3_mixer::SDL3_mixer

@@ -1,12 +1,11 @@
 import os
 
 from conan import ConanFile
-from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.cmake import CMakeConfigDeps, CMakeToolchain, cmake_layout
 
 class SkylabsRecipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     package_type = "application"
-
     default_options = {
         "boost/*:with_nowide": True,
         "boost/*:with_container": True,
@@ -27,6 +26,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("entt/3.16.0")
         self.requires("fmt/12.2.0")
         self.requires("frozen/cci.20260421")
+        self.requires("glbinding/3.5.0")
         self.requires("glm/1.0.3")
         self.requires("sdl/3.4.12")
         self.requires("sdl_image/3.4.4")
@@ -35,15 +35,16 @@ class SkylabsRecipe(ConanFile):
         self.requires("stb/cci.20260413")
         self.requires("steamworks_sdk/1.64")
         self.requires("tinyobjloader/2.0.0rc13")
-        self.requires("vk-bootstrap/1.4.355")
-        self.requires("vulkan-headers/1.4.355")
-        self.requires("vulkan-memory-allocator-hpp/pr-87")
+        self.requires("vk-bootstrap/1.4.356")
+        self.requires("vulkan-headers/1.4.356")
+        self.requires("vulkan-memory-allocator/3.4.0")
+        self.requires("vulkan-memory-allocator-hpp/3.4.0-pre")
 
         if self.settings.os == "Android":
             self.requires("vulkan-validation-layers-android/1.4.350.1")
 
     def generate(self):
-        deps = CMakeDeps(self)
+        deps = CMakeConfigDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
         if self.settings.os == "Android":

@@ -82,6 +82,7 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     tinyobjloader::tinyobjloader
     vk-bootstrap::vk-bootstrap
     glm::glm
+    GPUOpen::VulkanMemoryAllocator
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
 )
 

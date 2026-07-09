@@ -255,7 +255,7 @@ endfunction()
 install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
 
 # Third party libraries
-find_package(Boost COMPONENTS nowide container range CONFIG REQUIRED)
+find_package(Boost COMPONENTS nowide container CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
