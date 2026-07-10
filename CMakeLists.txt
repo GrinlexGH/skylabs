@@ -255,6 +255,13 @@ endfunction()
 install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
 
 # Third party libraries
+if(ANDROID)
+    set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+    set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
+    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+endif()
+
 find_package(Boost COMPONENTS nowide container CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
@@ -273,6 +280,8 @@ find_package(vk-bootstrap CONFIG REQUIRED)
 find_package(VulkanHeaders CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
+
+set_target_properties(SteamworksSDK::AppTicket PROPERTIES IMPORTED_NO_SONAME ON) # CMakeConfigDeps hack
 
 # Skylabs
 include_directories("${PROJECT_SOURCE_DIR}")

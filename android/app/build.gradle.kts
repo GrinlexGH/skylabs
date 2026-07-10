@@ -84,7 +84,7 @@ android {
     namespace = "org.libsdl.app"
 
     compileSdk = 37
-    ndkVersion = "30.0.14904198"
+    ndkVersion = "30.0.15729638"
 
     defaultConfig {
         applicationId = "ru.grinlexstudios.skylabs"
