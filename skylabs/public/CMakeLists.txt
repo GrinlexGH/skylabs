@@ -40,6 +40,7 @@ target_sources(
         application.hpp
         dll_export.hpp
         filesystem.hpp
+        input.hpp
         logging.hpp
         os.hpp
         utils.hpp

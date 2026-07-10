@@ -15,6 +15,7 @@ Checks: >
   -modernize-use-trailing-return-type,
   -performance-no-int-to-ptr,
   -performance-avoid-endl,
+  -portability-avoid-pragma-once,
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
   -bugprone-switch-missing-default-case,
