@@ -281,7 +281,9 @@ find_package(VulkanHeaders CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
 
-set_target_properties(SteamworksSDK::AppTicket PROPERTIES IMPORTED_NO_SONAME ON) # CMakeConfigDeps hack
+if(NOT ANDROID)
+    set_target_properties(SteamworksSDK::AppTicket PROPERTIES IMPORTED_NO_SONAME ON) # CMakeConfigDeps hack
+endif()
 
 # Skylabs
 include_directories("${PROJECT_SOURCE_DIR}")

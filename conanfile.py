@@ -1,4 +1,6 @@
 import os
+import shutil
+from pathlib import Path
 
 from conan import ConanFile
 from conan.tools.cmake import CMakeConfigDeps, CMakeToolchain, cmake_layout
@@ -53,12 +55,10 @@ class SkylabsRecipe(ConanFile):
         cmake_layout(self)
 
     def create_sdl_android_sources_symlink(self):
-        sdl_java_src = os.path.abspath(
-            os.path.join(self.dependencies["sdl"].package_folder, "android-project", "app", "src", "main", "java", "org", "libsdl"
-        ))
-        project_java_dir = os.path.join(self.recipe_folder, "android", "app", "src", "main", "java", "org", "libsdl")
-
-        self._create_symlink(sdl_java_src, project_java_dir, target_is_directory=True)
+        sdl_pkg = Path(self.dependencies["sdl"].package_path)
+        src = sdl_pkg / "android-project" / "app" / "src" / "main" / "java" / "org" / "libsdl"
+        dst = Path(self.recipe_path) / "android" / "app" / "src" / "main" / "java" / "org" / "libsdl"
+        self._link_or_copy(src, dst, is_dir=True)
 
     def create_vulkan_validation_symlink(self):
         arch_map = {
@@ -67,26 +67,31 @@ class SkylabsRecipe(ConanFile):
             "x86": "x86",
             "x86_64": "x86_64",
         }
-        android_abi = arch_map.get(str(self.settings.arch))
-        if not android_abi:
+        abi = arch_map.get(str(self.settings.arch))
+        if not abi:
             return
 
-        vvl_bin = os.path.abspath(os.path.join(
-            self.dependencies["vulkan-validation-layers-android"].package_folder, android_abi, "libVkLayer_khronos_validation.so"
-        ))
-        project_jniLibs_dir = os.path.join(
-            self.source_folder, "android", "app", "src", "main", "jniLibs", android_abi, "libVkLayer_khronos_validation.so"
-        )
+        vvl_pkg = Path(self.dependencies["vulkan-validation-layers-android"].package_path)
 
-        self._create_symlink(vvl_bin, project_jniLibs_dir)
+        src = vvl_pkg / abi / "libVkLayer_khronos_validation.so"
+        dst = Path(self.source_folder) / "android" / "app" / "src" / "main" / "jniLibs" / abi / "libVkLayer_khronos_validation.so"
 
-    def _create_symlink(self, source, destonation, target_is_directory=False):
-        if os.path.exists(destonation):
-            os.remove(destonation)
+        self._link_or_copy(src, dst, is_dir=False)
 
-        os.makedirs(os.path.dirname(destonation), exist_ok=True)
+    def _link_or_copy(self, src: Path, dst: Path, is_dir: bool):
+        if dst.exists() or dst.is_symlink():
+            if dst.is_dir() and not dst.is_symlink():
+                shutil.rmtree(dst)
+            else:
+                dst.unlink()
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
         try:
-            os.symlink(source, destonation, target_is_directory=target_is_directory)
-            self.output.info(f"Symlink created: {destonation} -> {source}")
-        except Exception as e:
-            self.output.warning(f"Failed to create symlink: {e}")
+            os.symlink(src, dst, target_is_directory=is_dir)
+            self.output.info(f"Symlink created: {dst} -> {src}")
+        except OSError as e:
+            self.output.warning(f"Symlink failed: {e}. Falling back to copying: {dst}")
+            if is_dir:
+                shutil.copytree(src, dst)
+            else:
+                shutil.copy2(src, dst)
