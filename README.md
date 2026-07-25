@@ -38,7 +38,7 @@ Ensure you have the following tools installed before compiling:
 |------------------|---------------------------|
 | **CMake**        | Latest version            |
 | **C++ Compiler** | Latest MSVC / GCC / Clang |
-| **Conan**        | 2.x                       |
+| **Conan**        | Latest version            |
 | **Android SDK**  | Latest SDK (optional)     |
 
 ## ⚙️ Configuration & Building
@@ -104,3 +104,5 @@ cd android
 * [Canonical Project Structure](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1204r0.html)
 * [About console on Win32](https://www.devever.net/~hl/win32con)
 * [Predefined macros](https://github.com/cpredef/predef)
+* [Calendar Versioning](https://calver.org/)
+* [Semantic Versioning](https://semver.org)
