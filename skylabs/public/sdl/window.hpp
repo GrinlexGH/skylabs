@@ -17,10 +17,6 @@ public:
     [[nodiscard]] SDL_Window* operator*() const noexcept { return m_handle; }
 
     [[nodiscard]] Utils::Extent2D DrawableSize() const override;
-
-    // Vulkan
-    [[nodiscard]] vk::SurfaceKHR CreateSurface(vk::Instance instance) const override;
-
 private:
     SDL_Window* m_handle = nullptr;
 };

@@ -12,7 +12,7 @@ std::size_t DescriptorLayoutHash::operator()(const std::vector<vk::DescriptorSet
     return seed;
 }
 
-CDescriptorLayoutCache::CDescriptorLayoutCache(const CContext& context) : m_device(&*context.Device()) {}
+CDescriptorLayoutCache::CDescriptorLayoutCache(const vk::raii::Device& device) : m_device(&device) {}
 
 const vk::raii::DescriptorSetLayout& CDescriptorLayoutCache::GetLayout(std::vector<vk::DescriptorSetLayoutBinding> bindings) {
     std::ranges::sort(bindings, [](const auto& a, const auto& b) {

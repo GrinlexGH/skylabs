@@ -38,7 +38,7 @@ std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(s
 }
 
 namespace Vulkan {
-CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCreateInfo options) {
+CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPipelineCreateInfo options) {
     const std::vector vertexAttributeDescriptions = GenerateAttributeDescriptions(options.m_vertexBindings);
     const std::vector vertexBindingDescriptions =
         std::views::transform(options.m_vertexBindings, [](const VertexBufferBinding& binding) { return binding.m_description; })
@@ -148,6 +148,6 @@ CGraphicsPipeline::CGraphicsPipeline(const CContext& context, GraphicsPipelineCr
     pipelineInfo.basePipelineHandle = nullptr;
     pipelineInfo.pNext = &options.m_renderingInfo;
 
-    m_handle = vk::raii::Pipeline { (*context.Device()), nullptr, pipelineInfo };
+    m_handle = vk::raii::Pipeline { device, nullptr, pipelineInfo };
 }
 }

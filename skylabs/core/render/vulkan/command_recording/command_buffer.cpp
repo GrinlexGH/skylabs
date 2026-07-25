@@ -1,63 +1,91 @@
 #include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
 
 namespace Vulkan {
-CCommandBuffer::CCommandBuffer(const CContext& context, vk::raii::CommandBuffer&& commandBuffer) :
-    m_device(&*context.Device()), m_handle(std::move(commandBuffer))
+CCommandBuffer::CCommandBuffer(const vk::raii::Device& device, vk::raii::CommandBuffer&& commandBuffer) :
+    m_device(&device), m_handle(std::move(commandBuffer))
 {}
 
 void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const {
-    if (barriers.size() == 0) return;
+    if (barriers.empty()) return;
 
     std::vector<vk::BufferMemoryBarrier2> bufBarriers;
     std::vector<vk::ImageMemoryBarrier2> imgBarriers;
     bufBarriers.reserve(barriers.size());
     imgBarriers.reserve(barriers.size());
 
-    for (const auto& b : barriers) {
-        if (std::holds_alternative<ImageBarrier>(b)) {
-            auto& imgb = std::get<ImageBarrier>(b);
+    for (const auto& barrier : barriers) {
+        if (std::holds_alternative<ImageBarrier>(barrier)) {
+            const auto& [
+                image,
+                range,
+                oldUsage,
+                newUsage,
+                type,
+                srcQueue,
+                dstQueue
+            ] = std::get<ImageBarrier>(barrier);
 
-            vk::ImageMemoryBarrier2 imgBarrier {};
-            imgBarrier.image = *imgb.m_image;
-            imgBarrier.subresourceRange = imgb.m_range;
-            imgBarrier.srcQueueFamilyIndex = imgb.srcQueue;
-            imgBarrier.dstQueueFamilyIndex = imgb.dstQueue;
+            vk::ImageMemoryBarrier2 imageBarrier {};
+            imageBarrier.image = *image;
+            imageBarrier.subresourceRange = range;
+            imageBarrier.srcQueueFamilyIndex = srcQueue;
+            imageBarrier.dstQueueFamilyIndex = dstQueue;
 
-            std::tie(imgBarrier.srcStageMask, imgBarrier.srcAccessMask, imgBarrier.oldLayout) = MapUsageToVulkan(imgb.m_oldUsage);
-            std::tie(imgBarrier.dstStageMask, imgBarrier.dstAccessMask, imgBarrier.newLayout) = MapUsageToVulkan(imgb.m_newUsage);
+            std::tie(
+                imageBarrier.srcStageMask,
+                imageBarrier.srcAccessMask,
+                imageBarrier.oldLayout
+            ) = MapUsageToVulkan(oldUsage);
 
-            if (imgb.m_type == BarrierType::eRegular) {
-                imgBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
-                imgBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
-            } else if (imgb.m_type == BarrierType::eRelease) {
-                imgBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
-                imgBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
-            } else if (imgb.m_type == BarrierType::eAcquire) {
-                imgBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
-                imgBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
+            std::tie(
+                imageBarrier.dstStageMask,
+                imageBarrier.dstAccessMask,
+                imageBarrier.newLayout
+            ) = MapUsageToVulkan(newUsage);
+
+            if (type == BarrierType::eRegular) {
+                imageBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+                imageBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
+            } else if (type == BarrierType::eRelease) {
+                imageBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
+                imageBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
+            } else if (type == BarrierType::eAcquire) {
+                imageBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
+                imageBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
             }
 
-            imgBarriers.push_back(imgBarrier);
-        } else if (std::holds_alternative<BufferBarrier>(b)) {
-            vk::BufferMemoryBarrier2 bufBarrier {};
-            auto& bufb = std::get<BufferBarrier>(b);
-            bufBarrier.buffer = *bufb.m_buffer;
-            bufBarrier.size = bufb.m_buffer.Size();
-            bufBarrier.offset = 0;
-            bufBarrier.srcQueueFamilyIndex = bufb.srcQueue;
-            bufBarrier.dstQueueFamilyIndex = bufb.dstQueue;
+            imgBarriers.push_back(imageBarrier);
+        } else if (std::holds_alternative<BufferBarrier>(barrier)) {
+            const auto& [
+                buffer,
+                oldUsage,
+                newUsage,
+                type,
+                srcQueue,
+                dstQueue
+            ] = std::get<BufferBarrier>(barrier);
 
-            if (bufb.m_type == BarrierType::eRelease) {
-                bufBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
-                bufBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
-            } else if (bufb.m_type == BarrierType::eAcquire) {
-                bufBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
-                bufBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
+            vk::BufferMemoryBarrier2 bufferBarrier {};
+            bufferBarrier.buffer = *buffer;
+            bufferBarrier.size = buffer.Size();
+            bufferBarrier.offset = 0;
+            bufferBarrier.srcQueueFamilyIndex = srcQueue;
+            bufferBarrier.dstQueueFamilyIndex = dstQueue;
+
+            if (type == BarrierType::eRegular) {
+                bufferBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+                bufferBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
+            } else if (type == BarrierType::eRelease) {
+                bufferBarrier.dstStageMask = vk::PipelineStageFlagBits2::eNone;
+                bufferBarrier.dstAccessMask = vk::AccessFlagBits2::eNone;
+            } else if (type == BarrierType::eAcquire) {
+                bufferBarrier.srcStageMask = vk::PipelineStageFlagBits2::eNone;
+                bufferBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
             }
 
-            std::tie(bufBarrier.srcStageMask, bufBarrier.srcAccessMask, std::ignore) = MapUsageToVulkan(bufb.m_oldUsage);
-            std::tie(bufBarrier.dstStageMask, bufBarrier.dstAccessMask, std::ignore) = MapUsageToVulkan(bufb.m_newUsage);
-            bufBarriers.push_back(bufBarrier);
+            std::tie(bufferBarrier.srcStageMask, bufferBarrier.srcAccessMask, std::ignore) = MapUsageToVulkan(oldUsage);
+            std::tie(bufferBarrier.dstStageMask, bufferBarrier.dstAccessMask, std::ignore) = MapUsageToVulkan(newUsage);
+            bufBarriers.push_back(bufferBarrier);
         }
     }
 
@@ -70,7 +98,7 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
     m_handle.pipelineBarrier2(dependencyInfo);
 }
 
-void CCommandBuffer::GenerateMipmaps(const CImage& image, Usage srcUsage, Usage dstUsage) const {
+void CCommandBuffer::GenerateMipmaps(const CImage& image, const Usage srcUsage, const Usage dstUsage) const {
     std::int32_t mipWidth = static_cast<std::int32_t>(image.Extent().width);
     std::int32_t mipHeight = static_cast<std::int32_t>(image.Extent().height);
 
@@ -119,7 +147,7 @@ void CCommandBuffer::GenerateMipmaps(const CImage& image, Usage srcUsage, Usage 
     }});
 }
 
-void CCommandBuffer::Copy(const CImage& dst, const CBuffer& src) const {
+void CCommandBuffer::Copy(const CBuffer& src, const CImage& dst) const {
     vk::BufferImageCopy region;
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -134,7 +162,7 @@ void CCommandBuffer::Copy(const CImage& dst, const CBuffer& src) const {
     m_handle.copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
-void CCommandBuffer::Copy(const CBuffer& dst, const CBuffer& src, const vk::DeviceSize size, const BufferCopyOffsets offsets) const {
+void CCommandBuffer::Copy(const CBuffer& src, const CBuffer& dst, const vk::DeviceSize size, const BufferCopyOffsets offsets) const {
     vk::BufferCopy copyRegion {};
     copyRegion.srcOffset = offsets.m_srcOffset;
     copyRegion.dstOffset = offsets.m_dstOffset;

@@ -42,7 +42,7 @@ class CCommandBuffer
 {
 public:
     explicit CCommandBuffer(std::nullptr_t) {}
-    explicit CCommandBuffer(const CContext& context, vk::raii::CommandBuffer&& commandBuffer);
+    explicit CCommandBuffer(const vk::raii::Device& device, vk::raii::CommandBuffer&& commandBuffer);
 
     [[nodiscard]] const vk::raii::CommandBuffer& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::CommandBuffer* operator->() const noexcept { return &m_handle; }
@@ -57,18 +57,21 @@ public:
         vk::SubmitInfo submitInfo {};
         submitInfo.setCommandBuffers(*m_handle);
 
-        vk::raii::Fence fence { *m_device, vk::FenceCreateInfo {} };
+        const vk::raii::Fence fence { *m_device, vk::FenceCreateInfo {} };
         queue.submit(submitInfo, *fence);
 
-        if (m_device->waitForFences({ *fence }, true, std::numeric_limits<std::uint64_t>::max()) != vk::Result::eSuccess) {
+        if (m_device->waitForFences(
+                { *fence }, true, std::numeric_limits<std::uint64_t>::max()
+            ) != vk::Result::eSuccess
+        ) {
             throw std::runtime_error("Failed to wait for single-time command fence");
         }
     }
 
     void PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const;
 
-    void Copy(const CImage& dst, const CBuffer& src) const;
-    void Copy(const CBuffer& dst, const CBuffer& src, vk::DeviceSize size, BufferCopyOffsets offsets = {}) const;
+    void Copy(const CBuffer& src, const CImage& dst) const;
+    void Copy(const CBuffer& src, const CBuffer& dst, vk::DeviceSize size, BufferCopyOffsets offsets = {}) const;
 
     void GenerateMipmaps(const CImage& image, Usage srcUsage = Usage::eTransferWrite, Usage dstUsage = Usage::eSampledFragment) const;
 

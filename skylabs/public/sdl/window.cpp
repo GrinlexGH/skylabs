@@ -29,9 +29,4 @@ CWindow::~CWindow() {
 Utils::Extent2D CWindow::DrawableSize() const {
     return GetWindowSizeInPixels(m_handle);
 }
-
-// Vulkan
-vk::SurfaceKHR CWindow::CreateSurface(const vk::Instance instance) const {
-    return Vulkan::CreateSurface(m_handle, instance);
-}
 }

@@ -7,7 +7,7 @@
 namespace Log {
 std::atomic<Level> g_runtimeLevel { Level::eTrace };
 
-void SubmitLog(const Level level, const std::source_location& loc, const std::string& message) {
+void SubmitLog(const Level level, const std::source_location& /*loc*/, const std::string& message) {
 #ifdef PLATFORM_ANDROID
     const char* msg = message.c_str();
     switch (level) {
@@ -38,7 +38,7 @@ void SubmitLog(const Level level, const std::source_location& loc, const std::st
 
     if (levelConfigs.contains(level)) {
         const auto& [name, style] = levelConfigs.at(level);
-        fmt::print(style, "[{}] {}: ", name, loc.file_name());
+        fmt::print(style, "[{}]: ", name/*, loc.file_name()*/);
     } else {
         fmt::print("[Unknown] ");
     }

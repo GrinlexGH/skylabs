@@ -1,5 +1,6 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/allocator.hpp>
+#include <skylabs/public/window.hpp>
 
 namespace Vulkan
 {
@@ -8,7 +9,7 @@ class CContext
 public:
     CContext() = delete;
     explicit CContext(std::nullptr_t) {}
-    explicit CContext(const IWindow* window);
+    explicit CContext(const IWindow* window, const ISurfaceProvider* surfaceProvider);
     CContext(CContext&) = delete;
     CContext(CContext&&) = default;
     CContext& operator=(CContext&) = delete;
@@ -26,6 +27,7 @@ public:
 
 private:
     const IWindow* m_window = nullptr;
+    const ISurfaceProvider* m_surfaceProvider = nullptr;
     CInstance m_instance { nullptr };
     CSurface m_surface { nullptr };
     CPhysicalDevice m_physicalDevice { nullptr };

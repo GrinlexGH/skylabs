@@ -15,7 +15,7 @@ constexpr std::array g_types {
 }
 
 namespace Vulkan {
-CDescriptorAllocator::CDescriptorAllocator(const CContext& context) : m_device(&*context.Device()) { }
+CDescriptorAllocator::CDescriptorAllocator(const vk::raii::Device& device) : m_device(&device) { }
 
 vk::raii::DescriptorPool CDescriptorAllocator::CreatePool(std::uint32_t count) {
     std::vector<vk::DescriptorPoolSize> sizes;

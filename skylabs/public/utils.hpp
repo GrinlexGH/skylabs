@@ -51,4 +51,7 @@ public:
 private:
     TimePoint m_start;
 };
+
+template<class... Ts>
+struct Overloaded : Ts... { using Ts::operator()...; };
 }

@@ -1,13 +1,15 @@
 #pragma once
-#include <skylabs/public/application.hpp>
-#include <skylabs/public/sdl/sdl.hpp>
-#include <skylabs/public/sdl/context.hpp>
-#include <skylabs/public/sdl/window.hpp>
-#include <skylabs/core/render/vulkan/renderer.hpp>
-#include <skylabs/core/render/renderer.hpp>
-#include <skylabs/core/render/vulkan/render_object.hpp>
-#include <skylabs/core/render/vertex.hpp>
+#include <skylabs/public/sdl/event_pump.hpp>
 #include <skylabs/core/camera.hpp>
+#include <skylabs/core/render/renderer.hpp>
+#include <skylabs/core/render/vertex.hpp>
+#include <skylabs/core/render/vulkan/render_object.hpp>
+#include <skylabs/core/render/vulkan/renderer.hpp>
+#include <skylabs/public/application.hpp>
+#include <skylabs/public/sdl/context.hpp>
+#include <skylabs/public/sdl/sdl.hpp>
+#include <skylabs/public/sdl/vulkan/surface_provider.hpp>
+#include <skylabs/public/sdl/window.hpp>
 
 struct Joystick
 {
@@ -76,6 +78,8 @@ private:
     SDL::CContext m_sdlContext { nullptr };
 
     SDL::CWindow m_window { nullptr };
+    SDL::Vulkan::CSurfaceProvider m_surfaceProvider { nullptr };
+    SDL::CEventPump m_eventPump;
     std::unique_ptr<Vulkan::CRenderer> m_renderer { nullptr };
 
     std::vector<STower> m_towers;

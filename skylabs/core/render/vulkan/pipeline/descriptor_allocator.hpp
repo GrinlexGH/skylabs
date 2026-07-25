@@ -1,11 +1,11 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/core/pch.hpp>
 
 namespace Vulkan {
 class CDescriptorAllocator {
 public:
     explicit CDescriptorAllocator(std::nullptr_t) {}
-    explicit CDescriptorAllocator(const CContext& context);
+    explicit CDescriptorAllocator(const vk::raii::Device& device);
     CDescriptorAllocator(const CDescriptorAllocator&) = delete;
     CDescriptorAllocator(CDescriptorAllocator&&) noexcept = default;
     CDescriptorAllocator& operator=(const CDescriptorAllocator&) = delete;

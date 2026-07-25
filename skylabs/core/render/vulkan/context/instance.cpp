@@ -47,10 +47,10 @@ auto GetAvailableExtensions(const vk::raii::Context& context) {
 }
 
 namespace Vulkan {
-CInstance::CInstance(const bool setupDebugUtils) {
+CInstance::CInstance(const ISurfaceProvider* surfaceProvider, const bool setupDebugUtils) {
     const vk::raii::Context context;
 
-    const std::vector<const char*> enabledExtensions = SetupExtensions(context, setupDebugUtils);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(context, surfaceProvider, setupDebugUtils);
     constexpr std::uint32_t appVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     constexpr auto debugSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
@@ -103,7 +103,11 @@ CInstance::CInstance(const bool setupDebugUtils) {
 #endif
 }
 
-std::vector<const char*> CInstance::SetupExtensions(const vk::raii::Context& context, [[maybe_unused]] const bool setupDebugUtils) {
+std::vector<const char*> CInstance::SetupExtensions(
+    const vk::raii::Context& context,
+    const ISurfaceProvider* surfaceProvider,
+    [[maybe_unused]] const bool setupDebugUtils
+) {
     boost::container::flat_set<std::string_view> requestedExtensions {
         vk::EXTSwapchainColorSpaceExtensionName
     };
@@ -113,6 +117,12 @@ std::vector<const char*> CInstance::SetupExtensions(const vk::raii::Context& con
         requestedExtensions.emplace(vk::EXTDebugUtilsExtensionName);
     }
 #endif
+
+    if (surfaceProvider) {
+        for (auto& ext : surfaceProvider->RequiredInstanceExtensions()) {
+            requestedExtensions.emplace(ext);
+        }
+    }
 
     if (requestedExtensions.empty()) {
         return {};

@@ -21,7 +21,9 @@ CDevice::CDevice(
     #define VK_OPT_FEATURE(x, y) \
         do { \
             (x).y = vk::True; \
-            m_caps.m_ ##y = TryEnableFeatures(phys, x); /* PHYSX REFERENCE */ \
+            /* PhysX */ \
+            /* https://youtu.be/APyvgEaRIWQ */ \
+            m_caps.m_ ##y = TryEnableFeatures(phys, x); \
         } while(false)
 
     vk::PhysicalDeviceFeatures features10 {};

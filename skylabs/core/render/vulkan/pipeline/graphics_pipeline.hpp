@@ -25,7 +25,7 @@ public:
 
 
     explicit CGraphicsPipeline(std::nullptr_t) {}
-    explicit CGraphicsPipeline(const CContext& context, GraphicsPipelineCreateInfo options = {});
+    explicit CGraphicsPipeline(const vk::raii::Device& device, GraphicsPipelineCreateInfo options = {});
     CGraphicsPipeline(const CGraphicsPipeline&) = delete;
     CGraphicsPipeline(CGraphicsPipeline&&) noexcept = default;
     CGraphicsPipeline& operator=(const CGraphicsPipeline&) = delete;

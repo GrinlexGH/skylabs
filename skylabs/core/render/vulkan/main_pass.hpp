@@ -5,6 +5,7 @@
 #include <skylabs/core/render/vulkan/submesh.hpp>
 #include <skylabs/core/render/render_object.hpp>
 #include <skylabs/core/render/vulkan/resources/sampler.hpp>
+#include <skylabs/core/render/vulkan/resources/image.hpp>
 
 namespace Vulkan {
 struct CMVP {

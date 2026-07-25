@@ -1,5 +1,7 @@
 #pragma once
+#include <skylabs/core/render/vulkan/context/device.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
+#include <skylabs/public/window.hpp>
 
 namespace Vulkan {
 struct SwapchainRecreateInfo
@@ -12,7 +14,14 @@ class CSwapchain
 {
 public:
     explicit CSwapchain(std::nullptr_t) {}
-    explicit CSwapchain(const CContext& context, std::uint32_t imageCount, vk::PresentModeKHR presentMode);
+    explicit CSwapchain(
+        const vk::raii::PhysicalDevice& physicalDevice,
+        const CDevice& device,
+        const IWindow* window,
+        const vk::raii::SurfaceKHR& surface,
+        std::uint32_t imageCount,
+        vk::PresentModeKHR presentMode
+    );
     CSwapchain(const CSwapchain&) = delete;
     CSwapchain(CSwapchain&&) noexcept = default;
     CSwapchain& operator=(const CSwapchain&) = delete;
@@ -44,7 +53,10 @@ private:
     );
     void CreateImages();
 
-    const CContext* m_context = nullptr;
+    const vk::raii::PhysicalDevice* m_physicalDevice = nullptr;
+    const CDevice* m_device = nullptr;
+    const IWindow* m_window = nullptr;
+    const vk::raii::SurfaceKHR* m_surface = nullptr;
 
     vk::raii::SwapchainKHR m_handle = nullptr;
 

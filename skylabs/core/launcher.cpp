@@ -5,12 +5,13 @@
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
     m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
+    m_surfaceProvider = SDL::Vulkan::CSurfaceProvider { *m_window };
 
 #ifdef PLATFORM_ANDROID
     SDL_SetWindowFullscreen(*m_window, true);
 #endif
 
-    m_renderer = Vulkan::CRenderer::TryToCreate(&m_window);
+    m_renderer = Vulkan::CRenderer::TryToCreate(&m_window, &m_surfaceProvider);
 
     auto [v, i] = GenerateDisk();
     auto oi = m_renderer->UploadMesh(v, i);

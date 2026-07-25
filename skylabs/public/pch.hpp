@@ -28,6 +28,7 @@
 #include <chrono>
 #include <stdexcept>
 #include <source_location>
+#include <variant>
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>

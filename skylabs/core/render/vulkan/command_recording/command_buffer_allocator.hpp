@@ -6,7 +6,7 @@ class CCommandBufferAllocator
 {
 public:
     explicit CCommandBufferAllocator(std::nullptr_t) {}
-    explicit CCommandBufferAllocator(const CContext& context, std::uint32_t familyIndex);
+    explicit CCommandBufferAllocator(const vk::raii::Device& device, std::uint32_t familyIndex);
     CCommandBufferAllocator(const CCommandBufferAllocator&) = delete;
     CCommandBufferAllocator(CCommandBufferAllocator&&) noexcept = default;
     CCommandBufferAllocator& operator=(const CCommandBufferAllocator&) = delete;
@@ -16,7 +16,7 @@ public:
     std::vector<CCommandBuffer> Allocate(vk::CommandBufferLevel level, std::uint32_t count) const;
 
 private:
-    const CContext* m_context = nullptr;
+    const vk::raii::Device* m_device = nullptr;
     vk::raii::CommandPool m_pool { nullptr };
 };
 }

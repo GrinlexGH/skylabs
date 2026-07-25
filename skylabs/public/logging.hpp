@@ -12,11 +12,11 @@ enum class Level : std::int8_t {
     eTrace
 };
 
-extern std::atomic<Level> g_runtimeLevel;
+PUBLIC_GLOBAL std::atomic<Level> g_runtimeLevel;
 
 inline bool ShouldLog(const Level level) { return level <= g_runtimeLevel.load(std::memory_order_relaxed); }
 inline void SetRuntimeLevel(const Level level) { g_runtimeLevel.store(level, std::memory_order_relaxed); }
-void SubmitLog(Level level, const std::source_location& loc, const std::string& message);
+PUBLIC_CLASS void SubmitLog(Level level, const std::source_location& loc, const std::string& message);
 
 template <typename... Args>
 struct Format {

@@ -39,7 +39,8 @@ vk::ImageAspectFlags DetermineAspect(vk::Format format) {
 
 namespace Vulkan {
 CImage::CImage(
-    const CContext& context,
+    const vk::raii::Device& device,
+    const vma::raii::Allocator& allocator,
     const ImageCreateInfo& options
 ) : m_format(options.m_format), m_extent(options.m_extent),
     m_mipLevels(options.m_mipLevels), m_arrayLevels(options.m_arrayLevels), m_sampleCount(options.m_sampleCount),
@@ -64,14 +65,14 @@ CImage::CImage(
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.requiredFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-    m_handle = vma::raii::Image { *context.Allocator(), imageInfo, allocInfo };
+    m_handle = vma::raii::Image { allocator, imageInfo, allocInfo };
     m_rawHandle = *m_handle;
 
-    CreateView(*context.Device(), DetermineViewType(m_extent, m_arrayLevels));
+    CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
 }
 
 CImage::CImage(
-    const CContext& context,
+    const vk::raii::Device& device,
     vk::Image imported,
     vk::Extent3D extent, vk::Format format,
     std::uint32_t mipLevels, std::uint32_t arrayLevels,
@@ -81,7 +82,7 @@ CImage::CImage(
     m_mipLevels(mipLevels), m_arrayLevels(arrayLevels), m_sampleCount(sampleCount),
     m_aspectFlags(DetermineAspect(m_format))
 {
-    CreateView(*context.Device(), DetermineViewType(m_extent, m_arrayLevels));
+    CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
 }
 
 void CImage::CreateView(const vk::raii::Device& device, vk::ImageViewType viewType) {

@@ -15,14 +15,4 @@ PUBLIC_CLASS std::span<const bool> GetKeyboardState() {
     SDL_GetKeyboardState(&keyboardStateSize);
     return { SDL_GetKeyboardState(nullptr), static_cast<std::size_t>(keyboardStateSize) };
 }
-
-namespace Vulkan {
-PUBLIC_CLASS vk::SurfaceKHR CreateSurface(SDL_Window* window, const vk::Instance& instance) {
-    VkSurfaceKHR surface {};
-    if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface)) {
-        throw std::runtime_error(fmt::format("Failed to create vulkan surface via SDL: {}", SDL_GetError()));
-    }
-    return surface;
-}
-}
 }

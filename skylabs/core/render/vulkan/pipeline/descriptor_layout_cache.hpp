@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/core/pch.hpp>
 
 namespace Vulkan {
 struct DescriptorLayoutHash {
@@ -9,7 +9,7 @@ struct DescriptorLayoutHash {
 class CDescriptorLayoutCache {
 public:
     explicit CDescriptorLayoutCache(std::nullptr_t) {}
-    explicit CDescriptorLayoutCache(const CContext& context);
+    explicit CDescriptorLayoutCache(const vk::raii::Device& device);
 
     [[nodiscard]] const vk::raii::DescriptorSetLayout& GetLayout(std::vector<vk::DescriptorSetLayoutBinding> bindings);
     void Clear() { m_cache.clear(); }

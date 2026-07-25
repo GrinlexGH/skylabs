@@ -1,7 +1,7 @@
 # public
 set(CURRENT_TARGET_NAME public)
 
-add_library(${CURRENT_TARGET_NAME})
+add_library(${CURRENT_TARGET_NAME} SHARED)
 set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES DEFINE_SYMBOL "PUBLIC_EXPORTS")
 
 include(GenerateExportHeader)
@@ -13,19 +13,22 @@ target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
     FILE_SET SOURCES FILES
-        sdl/sdl.cpp
-        sdl/window.cpp
-        sdl/context.cpp
-        sdl/filestream.cpp
-        sdl/ttf/context.cpp
+        sdl/mixer/audio.cpp
         sdl/mixer/context.cpp
         sdl/mixer/mixer.cpp
         sdl/mixer/track.cpp
-        sdl/mixer/audio.cpp
+        sdl/ttf/context.cpp
+        sdl/context.cpp
+        sdl/filestream.cpp
+        sdl/sdl.cpp
+        sdl/window.cpp
         application.cpp
         filesystem.cpp
         logging.cpp
         os.cpp
+        sdl/vulkan/vulkan.cpp
+        sdl/vulkan/surface_provider.cpp
+        sdl/event_pump.cpp
     PUBLIC
     FILE_SET HEADERS FILES
         sdl/mixer/audio.hpp
@@ -45,6 +48,11 @@ target_sources(
         os.hpp
         utils.hpp
         window.hpp
+        vulkan/surface_provider.hpp
+        sdl/vulkan/vulkan.hpp
+        sdl/vulkan/surface_provider.hpp
+        event_pump.hpp
+        sdl/event_pump.hpp
     FILE_SET generated_headers
         TYPE HEADERS
         BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
@@ -69,9 +77,5 @@ target_link_libraries(${CURRENT_TARGET_NAME} PUBLIC
 
 skylabs_configure_target(${CURRENT_TARGET_NAME}
     RUNTIME_PLUGINS
-        SDL3_mixer::FLAC
-        SDL3_mixer::libmpg123
         SDL3_mixer::ogg
-        SDL3_mixer::vorbis
-        SDL3_mixer::vorbisfile
 )

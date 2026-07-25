@@ -16,8 +16,13 @@ class CImage
 {
 public:
     explicit CImage(std::nullptr_t) {}
-    explicit CImage(const CContext& context, const ImageCreateInfo& options = {});
-    explicit CImage(const CContext& context,
+    explicit CImage(
+        const vk::raii::Device& device,
+        const vma::raii::Allocator& allocator,
+        const ImageCreateInfo& options = {}
+    );
+    explicit CImage(
+        const vk::raii::Device& device,
         vk::Image imported,
         vk::Extent3D extent, vk::Format format,
         std::uint32_t mipLevels, std::uint32_t arrayLevels,

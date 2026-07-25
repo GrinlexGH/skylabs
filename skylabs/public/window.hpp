@@ -12,7 +12,4 @@ public:
     virtual ~IWindow() = default;
 
     [[nodiscard]] virtual Utils::Extent2D DrawableSize() const = 0;
-
-    // Vulkan
-    [[nodiscard]] virtual vk::SurfaceKHR CreateSurface(vk::Instance instance) const = 0;
 };

@@ -17,7 +17,7 @@ PUBLIC_CLASS std::string GetExecutableDirectory() {
         p = p.parent_path();
         return boost::nowide::narrow(p.wstring());
 #else
-        p = std::filesystem::canonical("/proc/self/exe").parent_path();
+        p = std::filesystem::canonical("/proc/self/exe").parent_path().parent_path();
         return p.string();
 #endif
     }();

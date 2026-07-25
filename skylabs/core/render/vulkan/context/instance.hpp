@@ -1,12 +1,13 @@
 #pragma once
 #include <skylabs/core/pch.hpp>
+#include <skylabs/public/vulkan/surface_provider.hpp>
 
 namespace Vulkan {
 class CInstance
 {
 public:
     explicit CInstance(std::nullptr_t) {}
-    explicit CInstance(bool setupDebugUtils = true);
+    explicit CInstance(const ISurfaceProvider* surfaceProvider = nullptr, bool setupDebugUtils = true);
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
     CInstance& operator=(CInstance&) = delete;
@@ -22,7 +23,11 @@ public:
     [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_vkbInstance.api_version; }
 
 private:
-    [[nodiscard]] std::vector<const char*> SetupExtensions(const vk::raii::Context& context, bool setupDebugUtils);
+    [[nodiscard]] std::vector<const char*> SetupExtensions(
+        const vk::raii::Context& context,
+        const ISurfaceProvider* surfaceProvider,
+        bool setupDebugUtils
+    );
 
     vk::raii::Instance m_handle { nullptr };
     vkb::Instance m_vkbInstance;

@@ -1,5 +1,5 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/core/pch.hpp>
 
 namespace Vulkan {
 struct PipelineLayoutInfo {
@@ -17,7 +17,7 @@ class CPipelineLayoutCache
 {
 public:
     explicit CPipelineLayoutCache(std::nullptr_t) {}
-    explicit CPipelineLayoutCache(const CContext& context);
+    explicit CPipelineLayoutCache(const vk::raii::Device& device);
 
     const vk::raii::PipelineLayout& GetLayout(PipelineLayoutInfo layoutInfo);
     void Clear() { m_cache.clear(); }

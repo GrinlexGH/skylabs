@@ -28,20 +28,25 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 }
 
 namespace Vulkan {
-CRenderer::CRenderer(const IWindow* const window) {
+CRenderer::CRenderer(const IWindow* const window, const ISurfaceProvider* const surfaceProvider) {
     assert(window);
 
-    m_context = CContext { window };
+    m_context = CContext { window, surfaceProvider };
+    const auto& device = m_context.Device();
 
-    m_swapchain = CSwapchain { m_context, 2, vk::PresentModeKHR::eFifo };
+    m_swapchain = CSwapchain {
+        *m_context.PhysicalDevice(), device,
+        m_context.Window(), *m_context.Surface(),
+        2, vk::PresentModeKHR::eFifo
+    };
     m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
 
-    m_pipelineLayoutCache = CPipelineLayoutCache { m_context };
-    m_descriptorLayoutCache = CDescriptorLayoutCache { m_context };
-    m_descriptorAllocator = CDescriptorAllocator { m_context };
+    m_pipelineLayoutCache = CPipelineLayoutCache { *device };
+    m_descriptorLayoutCache = CDescriptorLayoutCache { *device };
+    m_descriptorAllocator = CDescriptorAllocator { *device };
 
     m_commandBufferAllocator = CCommandBufferAllocator {
-        m_context, m_context.Device().GraphicsQueue().FamilyIndex()
+        *device, m_context.Device().GraphicsQueue().FamilyIndex()
     };
     m_graphicsCmd = InFlight { m_inFlightContext,
         m_commandBufferAllocator.Allocate(
@@ -94,9 +99,9 @@ CRenderer::~CRenderer() {
     }
 }
 
-std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window) {
+std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window, const ISurfaceProvider* const surfaceProvider) {
     try {
-        return std::make_unique<CRenderer>(window);
+        return std::make_unique<CRenderer>(window, surfaceProvider);
     } catch (const std::exception& e) {
         Log::Error("Cannot initialize vulkan renderer: {}", e.what());
         return nullptr;
@@ -250,7 +255,7 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
 }
 
 std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const std::vector<std::uint16_t>& indices) {
-    auto UploadToPool = [&]() {
+    auto UploadToPool = [&] {
         SubMesh mesh { };
 
         vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
@@ -275,8 +280,8 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const 
 
         m_graphicsCmd.Get().ImmediateSubmit(*m_context.Device().GraphicsQueue(),
             [&](const CCommandBuffer& cmd) {
-                cmd.Copy(m_vertexBuffer, m_stagingBuffer, vSize, { 0, mesh.VtxOffset() });
-                cmd.Copy(m_indexBuffer, m_stagingBuffer, iSize, { vSize, mesh.IdxOffset() } );
+                cmd.Copy(m_stagingBuffer, m_vertexBuffer, vSize, { 0, mesh.VtxOffset() });
+                cmd.Copy(m_stagingBuffer, m_indexBuffer, iSize, { vSize, mesh.IdxOffset() } );
             }
         );
 

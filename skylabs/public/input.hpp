@@ -7,5 +7,3 @@ enum class ActionType : std::uint8_t
     e1DAxis,
     e2DAxis,
 };
-
-

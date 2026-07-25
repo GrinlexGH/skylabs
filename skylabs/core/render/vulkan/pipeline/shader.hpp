@@ -1,12 +1,12 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/context.hpp>
+#include <skylabs/core/pch.hpp>
 
 namespace Vulkan {
 class CShader
 {
 public:
     explicit CShader(std::nullptr_t) {}
-    explicit CShader(const CContext& context, vk::ShaderStageFlagBits stage, std::string_view name);
+    explicit CShader(const vk::raii::Device& device, vk::ShaderStageFlagBits stage, std::string_view name);
     CShader(const CShader&) = delete;
     CShader(CShader&&) noexcept = default;
     CShader& operator=(const CShader&) = delete;

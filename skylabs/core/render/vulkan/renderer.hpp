@@ -10,20 +10,21 @@
 #include <skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp>
 #include <skylabs/core/render/vulkan/render_object.hpp>
 #include <skylabs/core/render/render_object.hpp>
+#include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/public/window.hpp>
 
 namespace Vulkan {
 class CRenderer final : public IRenderer
 {
 public:
-    explicit CRenderer(const IWindow* window);
+    explicit CRenderer(const IWindow* window, const ISurfaceProvider* surfaceProvider);
     CRenderer(const CRenderer&) = delete;
     CRenderer(CRenderer&&) = delete;
     CRenderer& operator=(const CRenderer&) = delete;
     CRenderer& operator=(CRenderer&&) = delete;
     ~CRenderer() override;
 
-    static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window);
+    static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window, const ISurfaceProvider* surfaceProvider);
     void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
 
     std::uint32_t UploadMesh(const std::vector<CVertex>& vertices, const std::vector<std::uint16_t>& indices);

@@ -25,3 +25,4 @@
 #endif
 
 #include <cassert>
+#include <deque>

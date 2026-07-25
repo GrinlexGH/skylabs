@@ -11,6 +11,7 @@ CPostProcessPass::CPostProcessPass(
 {
     auto& inFlightContext = creationTools.m_inFlightContext;
     auto& context = creationTools.m_context;
+    const auto& device = *context.Device();
     auto& descriptorLayoutCache = creationTools.m_descriptorLayoutCache;
     auto& descriptorAllocator = creationTools.m_descriptorAllocator;
     auto& pipelineLayoutCache = creationTools.m_pipelineLayoutCache;
@@ -27,7 +28,7 @@ CPostProcessPass::CPostProcessPass(
     };
 
     // Write descriptors
-    CDescriptorWriter descriptorWriter { context };
+    CDescriptorWriter descriptorWriter { device };
     for (const auto i : Utils::Range(inFlightContext.FrameCount())) {
         descriptorWriter.Clear();
         descriptorWriter
@@ -39,10 +40,10 @@ CPostProcessPass::CPostProcessPass(
 
     // Shaders
     const CShader vertexShaderSwapchain(
-        context, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv"
+        device, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv"
     );
     const CShader fragmentShaderSwapchain(
-        context, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderSwapchain.frag.spv"
+        device, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderSwapchain.frag.spv"
     );
 
     const vk::raii::PipelineLayout& swapchainPipelineLayout = pipelineLayoutCache.GetLayout({
@@ -51,7 +52,7 @@ CPostProcessPass::CPostProcessPass(
 
     // Pipeline
     std::array swapchainColorFormats { swapchainFormat };
-    m_pipelineSwapchain = CGraphicsPipeline { context, {
+    m_pipelineSwapchain = CGraphicsPipeline { device, {
         .m_layout = swapchainPipelineLayout,
         .m_shaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain },
         .m_renderingInfo = { {}, swapchainColorFormats }
@@ -94,7 +95,7 @@ void CPostProcessPass::Draw(const CCommandBuffer& cmd, const CImage& swapchainIm
 
 void CPostProcessPass::Resize(const InFlight<CImage>& inAttachment) {
     for (const auto i : Utils::Range(m_inFlightContext->FrameCount())) {
-        CDescriptorWriter descriptorWriter { *m_context };
+        CDescriptorWriter descriptorWriter { *m_context->Device() };
         descriptorWriter
             .WriteImage(0, inAttachment[i].View(), *m_sampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_swapchainDescriptorSet[i]);

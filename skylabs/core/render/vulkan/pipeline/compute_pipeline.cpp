@@ -1,7 +1,7 @@
 #include <skylabs/core/render/vulkan/pipeline/compute_pipeline.hpp>
 
 namespace Vulkan {
-CComputePipeline::CComputePipeline(const CContext& context, ComputePipelineCreateInfo options) {
+CComputePipeline::CComputePipeline(const vk::raii::Device& device, const ComputePipelineCreateInfo options) {
     vk::PipelineShaderStageCreateInfo shader {};
     shader.stage = options.m_shader->Stage();
     shader.module = **options.m_shader;
@@ -11,6 +11,6 @@ CComputePipeline::CComputePipeline(const CContext& context, ComputePipelineCreat
     pipelineInfo.layout = m_layout = options.m_layout;
     pipelineInfo.stage = shader;
 
-    m_handle = vk::raii::Pipeline { *context.Device(), nullptr, pipelineInfo };
+    m_handle = vk::raii::Pipeline { device, nullptr, pipelineInfo };
 }
 }
