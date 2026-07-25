@@ -1,44 +1,36 @@
----
 Checks: >
   -*,
   bugprone-*,
-  clang-analyzer-*,
-  performance-*,
-  portability-*,
-  cppcoreguidelines-*,
-  modernize-use-override,
-  modernize-loop-convert,
-  modernize-use-emplace,
-  readability-delete-null-pointer,
-  readability-redundant-*,
-  -modernize-use-nullptr,
-  -modernize-use-trailing-return-type,
-  -performance-no-int-to-ptr,
-  -performance-avoid-endl,
-  -portability-avoid-pragma-once,
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
   -bugprone-switch-missing-default-case,
-  -readability-magic-numbers,
-  -readability-identifier-length,
-  -readability-redundant-member-init,
-  -readability-implicit-bool-conversion,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-special-member-functions
-  -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-avoid-non-const-global-variables,
-  -cppcoreguidelines-pro-bounds-constant-array-index,
-  -cppcoreguidelines-pro-type-union-access,
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -cppcoreguidelines-pro-type-reinterpret-cast,
-  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
-  -cppcoreguidelines-pro-type-vararg,
-  -cppcoreguidelines-pro-type-member-init,
-  -cppcoreguidelines-init-variables,
-  -cppcoreguidelines-narrowing-conversions,
-  -cppcoreguidelines-avoid-const-or-ref-data-members,
-  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+  -bugprone-implicit-widening-of-multiplication-result,
+
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+
+  performance-*,
+  -performance-no-int-to-ptr,
+  -performance-avoid-endl,
+
+  portability-*,
+  -portability-avoid-pragma-once,
+
+  modernize-use-override,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-make-shared,
+  modernize-make-unique,
+
+  readability-redundant-*,
+  readability-delete-null-pointer,
+  readability-container-size-empty,
+  readability-simplify-boolean-expr,
+  readability-string-compare,
+
+  misc-definitions-in-headers,
+  misc-unused-parameters,
+  misc-unused-using-decls
 
 WarningsAsErrors: ''
 HeaderFilterRegex: 'skylabs/**/*.*'
@@ -46,5 +38,3 @@ FormatStyle: file
 
 CheckOptions:
   bugprone-multi-level-implicit-pointer-conversion.EnableInC: false
-  cppcoreguidelines-avoid-do-while.IgnoreMacros: true
-  cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true
