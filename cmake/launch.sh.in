@@ -1,4 +1,0 @@
-#!/bin/sh
-CUR_DIR="$(dirname "$0")"
-export LD_LIBRARY_PATH="$CUR_DIR:$CUR_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-exec "$CUR_DIR/launcher" "$@"

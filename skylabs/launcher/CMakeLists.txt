@@ -15,17 +15,4 @@ target_sources(
         main.c
 )
 
-skylabs_configure_target(${CURRENT_TARGET_NAME} RUNTIME_DESTINATION . VS_STARTUP)
-
-# https://github.com/baldurk/renderdoc/issues/3403
-if(UNIX)
-    configure_file(
-        "${SKYLABS_ROOT_DIR}/cmake/launch.sh.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/launch.sh"
-        @ONLY
-    )
-
-    install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/launch.sh" DESTINATION .)
-
-    set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN:\$ORIGIN/lib")
-endif()
+skylabs_configure_target(${CURRENT_TARGET_NAME} RUNTIME_DESTINATION $<IF:$<PLATFORM_ID:Windows>,.,bin> VS_STARTUP)

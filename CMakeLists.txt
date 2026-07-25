@@ -51,7 +51,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
-set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
@@ -122,9 +122,6 @@ function(skylabs_target_setup_install target_name)
     cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "RUNTIME_PLUGINS" ${ARGN})
 
     get_target_property(TARGET_TYPE ${target_name} TYPE)
-    if(UNIX AND "${TARGET_TYPE}" STREQUAL "EXECUTABLE")
-        set_target_properties(${target_name} PROPERTIES INSTALL_RPATH "\$ORIGIN:\$ORIGIN/../lib")
-    endif()
 
     set(runtime_dest "bin")
     if(WIN32 AND ("${TARGET_TYPE}" STREQUAL "MODULE_LIBRARY"))

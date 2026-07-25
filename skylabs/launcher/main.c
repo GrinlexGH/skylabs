@@ -159,22 +159,48 @@ int main() {
 
 #elifdef PLATFORM_LINUX
 #include <dlfcn.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
+#define PERROR_EXIT_CHECK(expr, msg) do { if (expr) { perror(msg); CLEANUP_AND_EXIT(); } } while(0)
 #define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { fprintf(stderr, msg, __VA_ARGS__); CLEANUP_AND_EXIT(); } } while(0)
 
-#define LOAD_PATH "core.so"
+#define LOAD_DIR "/lib/"
+#define LOAD_FILE "core.so"
 
 int main(int argc, char* argv[]) {
     int ret = 0;
+    char* exePath = NULL;
+    char* libPath = NULL;
     void* hCore = NULL;
 
-    hCore = dlopen(LOAD_PATH, RTLD_LAZY);
+    exePath = realpath("/proc/self/exe", NULL);
+    PERROR_EXIT_CHECK(!exePath, "Failed to get executable path");
+
+    // Got to root of the program file tree
+    char* lastSlash = strrchr(exePath, '/');
+    *lastSlash = '\0';
+    lastSlash = strrchr(exePath, '/');
+    *lastSlash = '\0';
+
+    size_t cap = (lastSlash - exePath) + (sizeof(LOAD_DIR) / sizeof(LOAD_DIR[0])) + (sizeof(LOAD_FILE) / sizeof(LOAD_FILE[0])) - 1;
+    libPath = malloc(cap * sizeof(char));
+    PERROR_EXIT_CHECK(!libPath, "Failed to allocate memory for library path");
+
+    // Generate full dll path
+    snprintf(libPath, cap, "%s" LOAD_DIR LOAD_FILE, exePath);
+    free(exePath);
+    exePath = NULL;
+
+    hCore = dlopen(libPath, RTLD_LAZY);
     const char* loadError = dlerror();
     PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", loadError ? loadError : "Unknown error");
+    free(libPath);
+    libPath = NULL;
 
     main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
     const char* dlsymError = dlerror();
@@ -184,6 +210,8 @@ int main(int argc, char* argv[]) {
 
 cleanup:
     if (hCore) dlclose(hCore);
+    free(libPath);
+    free(exePath);
     return ret;
 }
 
