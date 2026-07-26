@@ -17,6 +17,7 @@ if(ANDROID)
 endif()
 
 set(SKYLABS_INSTALL_SUBDIR $<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>)
+set(SKYLABS_BUILD_DIR ${CMAKE_BINARY_DIR}/builded/$<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>)
 
 set(SKYLABS_NAME ${PROJECT_NAME})
 set(SKYLABS_GAME_NAME ${PROJECT_NAME})
@@ -48,6 +49,12 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}bin")
+set(CMAKE_PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}lib")
+set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}lib")
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
@@ -121,14 +128,8 @@ endfunction()
 function(skylabs_target_setup_install target_name)
     cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "RUNTIME_PLUGINS" ${ARGN})
 
-    get_target_property(TARGET_TYPE ${target_name} TYPE)
-
     set(runtime_dest "bin")
-    if(WIN32 AND ("${TARGET_TYPE}" STREQUAL "MODULE_LIBRARY"))
-        set(library_dest "bin")
-    else()
-        set(library_dest "lib")
-    endif()
+    set(library_dest "lib")
 
     if(ARG_RUNTIME_DESTINATION)
         set(runtime_dest ${ARG_RUNTIME_DESTINATION})
@@ -144,6 +145,9 @@ function(skylabs_target_setup_install target_name)
             list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CXX_COMPILER_BIN_DIR}")
             cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_BIN_DIR)
             list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${C_COMPILER_BIN_DIR}")
+            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${SKYLABS_BUILD_DIR}")
+            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${SKYLABS_BUILD_DIR}bin")
+            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${SKYLABS_BUILD_DIR}lib")
         endif()
 
         set(RUNTIME_DEPENDENCIES_ARGS
@@ -159,6 +163,12 @@ function(skylabs_target_setup_install target_name)
                 "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
         )
     endif()
+
+    install(
+        FILES $<TARGET_PDB_FILE:${target_name}>
+        DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
+        OPTIONAL
+    )
 
     install(TARGETS ${target_name}
         ${RUNTIME_DEPENDENCIES_ARGS}

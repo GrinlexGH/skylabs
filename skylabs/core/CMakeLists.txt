@@ -86,4 +86,4 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
 )
 
-skylabs_configure_target(${CURRENT_TARGET_NAME})
+skylabs_configure_target(${CURRENT_TARGET_NAME} RUNTIME_DESTINATION $<IF:$<PLATFORM_ID:Windows>,bin,lib>)
