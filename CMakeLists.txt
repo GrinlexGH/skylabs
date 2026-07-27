@@ -119,6 +119,11 @@ function(skylabs_target_setup_ide target_name vs_startup runtime_destination)
             VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}
         )
 
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}" --config $<CONFIG>
+            COMMENT "Auto-installing binaries and custom files to ${CMAKE_INSTALL_PREFIX}..."
+        )
+
         if(vs_startup)
             set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${target_name})
         endif()
@@ -229,7 +234,12 @@ function(skylabs_configure_target target_name)
     set(multiValueArgs RUNTIME_PLUGINS CUSTOM_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    skylabs_target_setup_ide(${target_name} "${ARG_VS_STARTUP}" "${ARG_RUNTIME_DESTINATION}")
+    set(runtime_dest "bin")
+    if(ARG_RUNTIME_DESTINATION)
+        set(runtime_dest "${ARG_RUNTIME_DESTINATION}")
+    endif()
+
+    skylabs_target_setup_ide(${target_name} "${ARG_VS_STARTUP}" "${runtime_dest}")
 
     if(ARG_CUSTOM_FILES AND ARG_CUSTOM_FILES_DESTINATION)
         skylabs_target_setup_install_custom_files(${target_name}

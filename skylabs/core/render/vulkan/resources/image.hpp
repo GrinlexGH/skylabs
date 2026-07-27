@@ -9,7 +9,7 @@ struct ImageCreateInfo
     std::uint32_t m_mipLevels = 1;
     std::uint32_t m_arrayLevels = 1;
     vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
-    vk::ImageUsageFlags m_usageFlags {};
+    vk::ImageUsageFlags m_usageFlags;
 };
 
 class CImage
