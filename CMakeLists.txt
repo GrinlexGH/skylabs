@@ -60,6 +60,8 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
 set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
 
+set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR})
+
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
 endif()
@@ -116,7 +118,6 @@ function(skylabs_target_setup_ide target_name vs_startup runtime_destination)
     if("${TARGET_TYPE}" STREQUAL "EXECUTABLE")
         set_target_properties(${target_name} PROPERTIES
             VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${runtime_destination}/$<TARGET_FILE_NAME:${target_name}>
-            VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}
         )
 
         add_custom_command(TARGET ${target_name} POST_BUILD
