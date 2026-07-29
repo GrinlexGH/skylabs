@@ -421,10 +421,10 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
     }
 
     for (uint16_t i = 0; i < segments; ++i) {
-        uint16_t currentEdge = topCapEdgeStart + i;
-        uint16_t nextEdge = currentEdge + 1;
+        uint16_t currentEdge = static_cast<uint16_t>(topCapEdgeStart + i);
+        uint16_t nextEdge = static_cast<uint16_t>(currentEdge + 1);
 
-        indices.push_back(topCapCenterIndex);
+        indices.push_back(static_cast<uint16_t>(topCapCenterIndex));
         indices.push_back(nextEdge);
         indices.push_back(currentEdge);
     }

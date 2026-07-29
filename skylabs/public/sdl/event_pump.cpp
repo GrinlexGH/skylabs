@@ -8,6 +8,5 @@ std::optional<Event> CEventPump::PollEvent() {
         case SDL_EVENT_QUIT: return QuitEvent {};
         default: return std::nullopt;
     }
-    std::unreachable();
 }
 }

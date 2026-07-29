@@ -2,7 +2,7 @@
 #include <skylabs/public/pch.hpp>
 
 namespace Vulkan {
-class ISurfaceProvider
+class PUBLIC_CLASS ISurfaceProvider
 {
 public:
     virtual ~ISurfaceProvider() = default;

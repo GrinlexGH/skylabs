@@ -7,7 +7,7 @@ using Event = std::variant<
     QuitEvent
 >;
 
-class IEventPump
+class PUBLIC_CLASS IEventPump
 {
 public:
     virtual ~IEventPump() = default;

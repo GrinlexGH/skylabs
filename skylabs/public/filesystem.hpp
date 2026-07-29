@@ -8,7 +8,7 @@ enum class Whence : std::uint8_t
     eEnd,
 };
 
-class IFileStream {
+class PUBLIC_CLASS IFileStream {
 public:
     virtual ~IFileStream() = default;
     virtual std::size_t Read(void* ptr, std::size_t size) = 0;
