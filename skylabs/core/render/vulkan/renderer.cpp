@@ -28,7 +28,7 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 }
 
 namespace Vulkan {
-CRenderer::CRenderer(const IWindow* const window, const ISurfaceProvider* const surfaceProvider) {
+CRenderer::CRenderer(const IWindow* const window, const IOSConnector* const surfaceProvider) {
     assert(window);
 
     m_context = CContext { window, surfaceProvider };
@@ -99,7 +99,7 @@ CRenderer::~CRenderer() {
     }
 }
 
-std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window, const ISurfaceProvider* const surfaceProvider) {
+std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window, const IOSConnector* const surfaceProvider) {
     try {
         return std::make_unique<CRenderer>(window, surfaceProvider);
     } catch (const std::exception& e) {

@@ -1,7 +1,11 @@
-#include <skylabs/public/sdl/vulkan/surface_provider.hpp>
+#include <skylabs/public/sdl/vulkan/os_connector.hpp>
 #include <skylabs/public/sdl/vulkan/vulkan.hpp>
 
 namespace SDL::Vulkan {
+PFN_vkGetInstanceProcAddr CSurfaceProvider::GetVkGetInstanceProcAddr() const {
+    return reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
+}
+
 std::span<const char* const> CSurfaceProvider::RequiredInstanceExtensions() const {
     return GetInstanceExtensions();
 }

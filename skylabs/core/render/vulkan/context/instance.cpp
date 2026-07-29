@@ -47,10 +47,10 @@ auto GetAvailableExtensions(const vk::raii::Context& context) {
 }
 
 namespace Vulkan {
-CInstance::CInstance(const ISurfaceProvider* surfaceProvider, const bool setupDebugUtils) {
-    const vk::raii::Context context;
+CInstance::CInstance(const IOSConnector* osConnector, const bool setupDebugUtils) {
+    const vk::raii::Context context { osConnector->GetVkGetInstanceProcAddr() };
 
-    const std::vector<const char*> enabledExtensions = SetupExtensions(context, surfaceProvider, setupDebugUtils);
+    const std::vector<const char*> enabledExtensions = SetupExtensions(context, osConnector, setupDebugUtils);
     constexpr std::uint32_t appVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
     constexpr auto debugSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
@@ -105,7 +105,7 @@ CInstance::CInstance(const ISurfaceProvider* surfaceProvider, const bool setupDe
 
 std::vector<const char*> CInstance::SetupExtensions(
     const vk::raii::Context& context,
-    const ISurfaceProvider* surfaceProvider,
+    const IOSConnector* surfaceProvider,
     [[maybe_unused]] const bool setupDebugUtils
 ) {
     boost::container::flat_set<std::string_view> requestedExtensions {

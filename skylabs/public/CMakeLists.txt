@@ -27,7 +27,7 @@ target_sources(
         logging.cpp
         os.cpp
         sdl/vulkan/vulkan.cpp
-        sdl/vulkan/surface_provider.cpp
+        sdl/vulkan/os_connector.cpp
         sdl/event_pump.cpp
     PUBLIC
     FILE_SET HEADERS FILES
@@ -48,9 +48,9 @@ target_sources(
         os.hpp
         utils.hpp
         window.hpp
-        vulkan/surface_provider.hpp
+        vulkan/os_connector.hpp
         sdl/vulkan/vulkan.hpp
-        sdl/vulkan/surface_provider.hpp
+        sdl/vulkan/os_connector.hpp
         event_pump.hpp
         sdl/event_pump.hpp
     FILE_SET generated_headers

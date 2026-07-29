@@ -107,6 +107,7 @@ add_compile_definitions(
     "GLM_FORCE_DEPTH_ZERO_TO_ONE=1"
     "GLM_FORCE_RADIANS=1"
     "GLM_ENABLE_EXPERIMENTAL=1"
+    "VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL=0"
     "VULKAN_HPP_TYPESAFE_CONVERSION=1"
     "VULKAN_HPP_USE_STD_EXPECTED=1"
     "VK_NO_PROTOTYPES=1"
@@ -122,11 +123,6 @@ function(skylabs_target_setup_ide target_name vs_startup runtime_destination)
     if("${TARGET_TYPE}" STREQUAL "EXECUTABLE")
         set_target_properties(${target_name} PROPERTIES
             VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${runtime_destination}/$<TARGET_FILE_NAME:${target_name}>
-        )
-
-        add_custom_command(TARGET ${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}" --config $<CONFIG>
-            COMMENT "Auto-installing binaries and custom files to ${CMAKE_INSTALL_PREFIX}..."
         )
 
         if(vs_startup)

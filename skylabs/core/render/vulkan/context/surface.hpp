@@ -1,13 +1,13 @@
 #pragma once
 #include <skylabs/core/render/vulkan/context/instance.hpp>
-#include <skylabs/public/vulkan/surface_provider.hpp>
+#include <skylabs/public/vulkan/os_connector.hpp>
 
 namespace Vulkan {
 class CSurface
 {
 public:
     explicit CSurface(std::nullptr_t) {}
-    explicit CSurface(const CInstance& instance, const ISurfaceProvider* surfaceProvider) :
+    explicit CSurface(const CInstance& instance, const IOSConnector* surfaceProvider) :
         m_handle(*instance, surfaceProvider->CreateSurface(*instance)) {}
     CSurface(const CSurface&) = delete;
     CSurface(CSurface&& other) noexcept = default;

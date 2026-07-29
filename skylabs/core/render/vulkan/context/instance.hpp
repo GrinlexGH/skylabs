@@ -1,13 +1,13 @@
 #pragma once
 #include <skylabs/core/pch.hpp>
-#include <skylabs/public/vulkan/surface_provider.hpp>
+#include <skylabs/public/vulkan/os_connector.hpp>
 
 namespace Vulkan {
 class CInstance
 {
 public:
     explicit CInstance(std::nullptr_t) {}
-    explicit CInstance(const ISurfaceProvider* surfaceProvider = nullptr, bool setupDebugUtils = true);
+    explicit CInstance(const IOSConnector* osConnector = nullptr, bool setupDebugUtils = true);
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
     CInstance& operator=(CInstance&) = delete;
@@ -25,7 +25,7 @@ public:
 private:
     [[nodiscard]] std::vector<const char*> SetupExtensions(
         const vk::raii::Context& context,
-        const ISurfaceProvider* surfaceProvider,
+        const IOSConnector* surfaceProvider,
         bool setupDebugUtils
     );
 

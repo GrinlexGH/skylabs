@@ -1,5 +1,4 @@
 #pragma once
-#include <skylabs/public/sdl/event_pump.hpp>
 #include <skylabs/core/camera.hpp>
 #include <skylabs/core/render/renderer.hpp>
 #include <skylabs/core/render/vertex.hpp>
@@ -7,8 +6,9 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/application.hpp>
 #include <skylabs/public/sdl/context.hpp>
+#include <skylabs/public/sdl/event_pump.hpp>
 #include <skylabs/public/sdl/sdl.hpp>
-#include <skylabs/public/sdl/vulkan/surface_provider.hpp>
+#include <skylabs/public/sdl/vulkan/os_connector.hpp>
 #include <skylabs/public/sdl/window.hpp>
 
 struct Joystick

@@ -17,14 +17,14 @@ namespace Vulkan {
 class CRenderer final : public IRenderer
 {
 public:
-    explicit CRenderer(const IWindow* window, const ISurfaceProvider* surfaceProvider);
+    explicit CRenderer(const IWindow* window, const IOSConnector* surfaceProvider);
     CRenderer(const CRenderer&) = delete;
     CRenderer(CRenderer&&) = delete;
     CRenderer& operator=(const CRenderer&) = delete;
     CRenderer& operator=(CRenderer&&) = delete;
     ~CRenderer() override;
 
-    static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window, const ISurfaceProvider* surfaceProvider);
+    static std::unique_ptr<CRenderer> TryToCreate(const IWindow* window, const IOSConnector* surfaceProvider);
     void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
 
     std::uint32_t UploadMesh(const std::vector<CVertex>& vertices, const std::vector<std::uint16_t>& indices);
