@@ -17,7 +17,7 @@ class SkylabsRecipe(ConanFile):
     }
 
     def build_requirements(self):
-        self.tool_requires("slang/2026.14")
+        self.tool_requires("slang/2026.14.1")
 
     def requirements(self):
         self.requires("boost/1.92.0-beta.1")
