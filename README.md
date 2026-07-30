@@ -79,6 +79,12 @@ conan config install ./conan/conan-config/config
 # Use msvc:
 conan install . -pr msvc-18 -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing -c "&:tools.env.virtualenv:powershell=pwsh"
 
+# Use LLVM/clang from github:
+conan install . -pr clang-cl-llvm -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing -c "&:tools.env.virtualenv:powershell=pwsh"
+
+# Use clang from visual studio:
+conan install . -pr clang-cl-18 -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing -c "&:tools.env.virtualenv:powershell=pwsh"
+
 # Use mingw:
 conan install . -pr clang-clang64 -r skylabs -r conancenter -s build_type=Debug --build=missing -c "&:tools.env.virtualenv:powershell=pwsh"
 conan install . -pr gcc-ucrt64 -r skylabs -r conancenter -s build_type=Debug --build=missing -c "&:tools.env.virtualenv:powershell=pwsh"
