@@ -27,7 +27,7 @@ void CSwapchain::Recreate(const SwapchainRecreateInfo& recreateInfo) {
 }
 
 void CSwapchain::CreateSwapchain(
-    const vk::SurfaceKHR surface,
+    const vk::SurfaceKHR& surface,
     const std::uint32_t imageCount,
     const vk::PresentModeKHR presentMode,
     VkSwapchainKHR oldHandle
@@ -96,7 +96,7 @@ void CSwapchain::Clear() {
     m_images.clear();
 }
 
-std::pair<vk::Result, std::uint32_t> CSwapchain::AcquireImage(const vk::Semaphore semaphore, const vk::Fence fence) const {
+std::pair<vk::Result, std::uint32_t> CSwapchain::AcquireImage(const vk::Semaphore& semaphore, const vk::Fence& fence) const {
     std::uint32_t imageIndex = 0;
     const auto result = static_cast<vk::Result>(m_handle.getDispatcher()->vkAcquireNextImageKHR(
         static_cast<VkDevice>(m_handle.getDevice()),

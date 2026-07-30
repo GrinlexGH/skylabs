@@ -10,7 +10,7 @@ public:
 
     [[nodiscard]] PFN_vkGetInstanceProcAddr GetVkGetInstanceProcAddr() const override;
     [[nodiscard]] std::span<const char* const> RequiredInstanceExtensions() const override;
-    [[nodiscard]] vk::SurfaceKHR CreateSurface(vk::Instance instance) const override;
+    [[nodiscard]] vk::SurfaceKHR CreateSurface(const vk::Instance& instance) const override;
 
 private:
     SDL_Window* m_windowHandle = nullptr;

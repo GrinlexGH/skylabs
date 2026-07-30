@@ -24,7 +24,7 @@ struct Format {
     std::source_location loc;
 
     template <typename T>
-    consteval Format(const T& s, const std::source_location l = std::source_location::current()) noexcept
+    consteval Format(const T& s, const std::source_location& l = std::source_location::current()) noexcept
         : str(s), loc(l) {}
 };
 

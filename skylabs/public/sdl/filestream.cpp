@@ -75,7 +75,7 @@ std::int64_t CFileStream::Seek(std::int64_t offset, Whence whence) {
         std::unreachable();
     }();
 
-    return m_stream ? SDL_SeekIO(m_stream, offset, sdlWhence) : -1;
+    return SDL_SeekIO(m_stream, offset, sdlWhence);
 }
 
 std::int64_t CFileStream::Tell() {

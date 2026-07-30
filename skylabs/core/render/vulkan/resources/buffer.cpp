@@ -4,7 +4,7 @@ namespace Vulkan {
 CBuffer::CBuffer(
     const CContext& context,
     const vk::DeviceSize size,
-    const vk::BufferUsageFlags usage,
+    const vk::BufferUsageFlags& usage,
     const MemoryLocation location
 ) : m_size(size), m_usage(usage) {
     vk::BufferCreateInfo bufferInfo {};

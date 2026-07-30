@@ -37,7 +37,7 @@ CRenderer::CRenderer(const IWindow* const window, const IOSConnector* const surf
     m_swapchain = CSwapchain {
         *m_context.PhysicalDevice(), device,
         m_context.Window(), *m_context.Surface(),
-        2, vk::PresentModeKHR::eFifo
+        2, vk::PresentModeKHR::eMailbox
     };
     m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
 
@@ -302,7 +302,7 @@ const ::CRenderObject& CRenderer::GetObjectData(const std::uint32_t id) const {
     return m_objects[id];
 }
 
-CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, glm::mat4 matrix, std::uint16_t colorId) {
+CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, const glm::mat4& matrix, std::uint16_t colorId) {
     m_objects.emplace_back(meshId, colorId, matrix);
     return CRenderObject { this, static_cast<std::uint32_t>(m_objects.size() - 1) };
 }

@@ -71,7 +71,7 @@ public:
     void PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const;
 
     void Copy(const CBuffer& src, const CImage& dst) const;
-    void Copy(const CBuffer& src, const CBuffer& dst, vk::DeviceSize size, BufferCopyOffsets offsets = {}) const;
+    void Copy(const CBuffer& src, const CBuffer& dst, vk::DeviceSize size, const BufferCopyOffsets& offsets = {}) const;
 
     void GenerateMipmaps(const CImage& image, Usage srcUsage = Usage::eTransferWrite, Usage dstUsage = Usage::eSampledFragment) const;
 

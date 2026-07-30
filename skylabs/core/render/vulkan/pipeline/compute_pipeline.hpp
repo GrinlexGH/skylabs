@@ -12,7 +12,7 @@ class CComputePipeline
 {
 public:
     explicit CComputePipeline(std::nullptr_t) {}
-    explicit CComputePipeline(const vk::raii::Device& device, ComputePipelineCreateInfo options = {});
+    explicit CComputePipeline(const vk::raii::Device& device, const ComputePipelineCreateInfo& options = {});
     CComputePipeline(const CComputePipeline&) = delete;
     CComputePipeline(CComputePipeline&&) noexcept = default;
     CComputePipeline& operator=(const CComputePipeline&) = delete;

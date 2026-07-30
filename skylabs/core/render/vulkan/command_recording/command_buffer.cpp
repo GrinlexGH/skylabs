@@ -162,7 +162,7 @@ void CCommandBuffer::Copy(const CBuffer& src, const CImage& dst) const {
     m_handle.copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
-void CCommandBuffer::Copy(const CBuffer& src, const CBuffer& dst, const vk::DeviceSize size, const BufferCopyOffsets offsets) const {
+void CCommandBuffer::Copy(const CBuffer& src, const CBuffer& dst, const vk::DeviceSize size, const BufferCopyOffsets& offsets) const {
     vk::BufferCopy copyRegion {};
     copyRegion.srcOffset = offsets.m_srcOffset;
     copyRegion.dstOffset = offsets.m_dstOffset;

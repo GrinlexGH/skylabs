@@ -14,7 +14,7 @@ public:
     CBuffer(
         const CContext& context,
         vk::DeviceSize size,
-        vk::BufferUsageFlags usage,
+        const vk::BufferUsageFlags& usage,
         MemoryLocation location
     );
     CBuffer(const CBuffer&) = delete;
