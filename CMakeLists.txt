@@ -171,7 +171,7 @@ function(skylabs_target_setup_install target_name)
     endif()
 
     install(
-        FILES $<TARGET_PDB_FILE:${target_name}>
+        FILES $<$<BOOL:${MSVC}>:$<TARGET_PDB_FILE:${target_name}>>
         DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
         OPTIONAL
     )
