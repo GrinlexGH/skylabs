@@ -25,7 +25,7 @@ public:
 private:
     [[nodiscard]] std::vector<const char*> SetupExtensions(
         const vk::raii::Context& context,
-        const IOSConnector* surfaceProvider,
+        const IOSConnector* osConnector,
         bool setupDebugUtils
     );
 

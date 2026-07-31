@@ -36,9 +36,14 @@ auto GetAvailableExtensions(const vk::raii::Context& context) {
             continue;
         }
 
-        for (auto& ext : context.enumerateInstanceExtensionProperties(std::string { std::string_view { layer.layerName } })) {
-            globalExtensions.push_back(ext);
-        }
+        const std::vector<vk::ExtensionProperties> layerExtensions = context.enumerateInstanceExtensionProperties({ layer.layerName });
+        globalExtensions.insert(
+            globalExtensions.end(),
+            std::make_move_iterator(layerExtensions.begin()),
+            std::make_move_iterator(layerExtensions.end())
+        );
+
+        break;
     }
 #endif
 
@@ -105,7 +110,7 @@ CInstance::CInstance(const IOSConnector* osConnector, const bool setupDebugUtils
 
 std::vector<const char*> CInstance::SetupExtensions(
     const vk::raii::Context& context,
-    const IOSConnector* surfaceProvider,
+    const IOSConnector* osConnector,
     [[maybe_unused]] const bool setupDebugUtils
 ) {
     boost::container::flat_set<std::string_view> requestedExtensions {
@@ -118,10 +123,8 @@ std::vector<const char*> CInstance::SetupExtensions(
     }
 #endif
 
-    if (surfaceProvider) {
-        for (auto& ext : surfaceProvider->RequiredInstanceExtensions()) {
-            requestedExtensions.emplace(ext);
-        }
+    for (auto& ext : osConnector->RequiredInstanceExtensions()) {
+        requestedExtensions.emplace(ext);
     }
 
     if (requestedExtensions.empty()) {

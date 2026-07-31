@@ -42,6 +42,7 @@ void CSwapchain::CreateSwapchain(
     vkb::SwapchainBuilder builder { m_device->VkbDevice(), surface };
     auto swapchainResult = builder
         .set_old_swapchain(oldHandle)
+        .set_composite_alpha_flags(static_cast<VkCompositeAlphaFlagBitsKHR>(vk::CompositeAlphaFlagBitsKHR::ePreMultiplied))
         .use_default_format_selection()
         .set_desired_present_mode(static_cast<VkPresentModeKHR>(presentMode))
         .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))

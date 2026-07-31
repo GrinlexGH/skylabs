@@ -3,6 +3,7 @@
 .PVS-Studio/
 .vs/
 .idea/
+.run/
 .gradle/
 .venv/
 

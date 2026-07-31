@@ -118,7 +118,7 @@ void CMainPass::Draw(
     colorAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    colorAttachInfo.clearValue.color = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
+    colorAttachInfo.clearValue.color = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
     colorAttachInfo.resolveImageView = mainColor.View();
     colorAttachInfo.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     colorAttachInfo.resolveMode = vk::ResolveModeFlagBits::eAverage;
