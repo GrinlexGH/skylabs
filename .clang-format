@@ -1,12 +1,14 @@
 ---
+# For clang-format 22
 Language: Cpp
+Standard: Latest
 BasedOnStyle: LLVM
 
 # DisableFormat: true
 
 AccessModifierOffset: -4
-AlignAfterOpenBracket: BlockIndent
-AlignArrayOfStructures: None
+AlignAfterOpenBracket: false
+AlignArrayOfStructures: Left
 AlignConsecutiveAssignments:
   Enabled: false
 AlignConsecutiveBitFields:
@@ -14,17 +16,22 @@ AlignConsecutiveBitFields:
 AlignConsecutiveDeclarations:
   Enabled: false
 AlignConsecutiveMacros:
-  Enabled: false
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
 AlignConsecutiveShortCaseStatements:
-  Enabled: false
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCaseColons: false
 AlignEscapedNewlines: LeftWithLastLine
 AlignOperands: DontAlign
 AlignTrailingComments:
   Kind: Never
-AllowAllArgumentsOnNextLine: false
-AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false # Related to BinPackArguments
+AllowAllParametersOfDeclarationOnNextLine: false # Related to BinPackParameters
 AllowBreakBeforeNoexceptSpecifier: Always
-AllowShortBlocksOnASingleLine: Never
+AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseExpressionOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortCompoundRequirementOnASingleLine: true
@@ -32,12 +39,12 @@ AllowShortEnumsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLambdasOnASingleLine: All
-AllowShortLoopsOnASingleLine: true
+AllowShortLoopsOnASingleLine: false
 AllowShortNamespacesOnASingleLine: true
-AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakBeforeMultilineStrings: true
 BinPackArguments: true
-# BinPackLongBracedList: true # clang-format 21
-BinPackParameters: AlwaysOnePerLine
+BinPackLongBracedList: true
+BinPackParameters: OnePerLine
 BitFieldColonSpacing: Both
 BraceWrapping:
   AfterCaseLabel: false
@@ -58,14 +65,24 @@ BraceWrapping:
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
 BracedInitializerIndentWidth: 4
-BreakAdjacentStringLiterals: true
+BreakAdjacentStringLiterals: false
 BreakAfterAttributes: Leave
-BreakAfterReturnType: ExceptShortType
-BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Custom
+BreakAfterOpenBracketBracedList: true
+BreakAfterOpenBracketFunction: true
+BreakAfterOpenBracketIf: true
+BreakAfterOpenBracketLoop: true
+BreakAfterOpenBracketSwitch: true
+BreakAfterReturnType: Automatic # Related to PenaltyReturnTypeOnItsOwnLine
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom # Related to BraceWrapping
+BreakBeforeCloseBracketBracedList: true
+BreakBeforeCloseBracketFunction: true
+BreakBeforeCloseBracketIf: true
+BreakBeforeCloseBracketLoop: true
+BreakBeforeCloseBracketSwitch: true
 BreakBeforeConceptDeclarations: Always
 BreakBeforeInlineASMColon: OnlyMultiline
-#BreakBeforeTemplateCloser: false # clang-format 21
+BreakBeforeTemplateCloser: true
 BreakBeforeTernaryOperators: true
 BreakBinaryOperations: Never
 BreakConstructorInitializers: AfterColon
@@ -73,16 +90,16 @@ BreakConstructorInitializers: AfterColon
 BreakFunctionDefinitionParameters: false
 BreakInheritanceList: AfterColon
 BreakStringLiterals: false
-BreakTemplateDeclarations: Leave
-ColumnLimit: 180
+BreakTemplateDeclarations: Yes
+ColumnLimit: 120
 CompactNamespaces: false
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
-Cpp11BracedListStyle: false
+Cpp11BracedListStyle: Block
 DerivePointerAlignment: false
 EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: Always
-#EnumTrailingComma: Insert # clang-format 21
+EnumTrailingComma: Leave
 FixNamespaceComments: false
 IncludeBlocks: Preserve
 IncludeCategories:
@@ -92,45 +109,57 @@ IncludeCategories:
     Priority: 2
   - Regex: '.*'
     Priority: 3
-IncludeIsMainRegex: '([-_](test|unittest))?$'
 IndentAccessModifiers: false
 IndentCaseBlocks: false
 IndentCaseLabels: true
 IndentExportBlock: false
-IndentExternBlock: false
+IndentExternBlock: NoIndent
 IndentGotoLabels: false
-IndentPPDirectives: BeforeHash
-IndentRequiresClause: true
+IndentPPDirectives: None
+IndentRequiresClause: false
 IndentWidth: 4
 IndentWrappedFunctionNames: false
 InsertBraces: false
 InsertNewlineAtEOF: true
+InsertTrailingCommas: None
+IntegerLiteralSeparator:
+  Decimal: 3
+  DecimalMinDigitsInsert: 7
 KeepEmptyLines:
   AtEndOfFile: true
   AtStartOfBlock: false
   AtStartOfFile: false
 KeepFormFeed: false
 LambdaBodyIndentation: Signature
-MainIncludeChar: Quote
+MainIncludeChar: AngleBracket
 MaxEmptyLinesToKeep: 2
 NamespaceIndentation: None
-PackConstructorInitializers: CurrentLine
+NumericLiteralCase:
+  ExponentLetter: Lower
+  HexDigit: Upper
+  Prefix: Lower
+  Suffix: Lower
+PackConstructorInitializers: NextLine
 PointerAlignment: Left
 QualifierAlignment: Left
 ReferenceAlignment: Left
-ReflowComments: Never
+ReflowComments: IndentOnly
 RemoveBracesLLVM: false
-RemoveEmptyLinesInUnwrappedLines: false
+RemoveEmptyLinesInUnwrappedLines: true
 RemoveParentheses: Leave
 RemoveSemicolon: true
+RequiresClausePosition: OwnLineWithBrace
 RequiresExpressionIndentation: OuterScope
 SeparateDefinitionBlocks: Leave
-SortIncludes: CaseSensitive
+SortIncludes:
+  Enabled: true
+  IgnoreCase: false
+  IgnoreExtension: false
 SortUsingDeclarations: LexicographicNumeric
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
-#SpaceAfterOperatorKeyword: false # clang-format 21
-SpaceAfterTemplateKeyword: true
+SpaceAfterOperatorKeyword: false
+SpaceAfterTemplateKeyword: false
 SpaceAroundPointerQualifiers: Default
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCaseColon: false
@@ -140,10 +169,11 @@ SpaceBeforeInheritanceColon: true
 SpaceBeforeParens: Custom
 SpaceBeforeParensOptions:
   AfterControlStatements: true
-  AfterForeachMacros: true
+  AfterForeachMacros: false
   AfterFunctionDeclarationName: false
   AfterFunctionDefinitionName: false
-  AfterIfMacros: true
+  AfterIfMacros: false
+  AfterNot: false
   AfterOverloadedOperator: false
   AfterPlacementOperator: false
   AfterRequiresInClause: false
@@ -151,13 +181,13 @@ SpaceBeforeParensOptions:
   BeforeNonEmptyParentheses: false
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
-#SpaceInEmptyBraces: Always # clang-format 22
+SpaceInEmptyBraces: Always # clang-format 22
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: Never
 SpacesInContainerLiterals: true
 SpacesInLineCommentPrefix:
   Minimum: 1
-  Maximum: 999
+  Maximum: -1
 SpacesInParens: Custom
 SpacesInParensOptions:
   ExceptDoubleParentheses: false
