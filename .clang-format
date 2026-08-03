@@ -39,7 +39,7 @@ AllowShortEnumsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLambdasOnASingleLine: All
-AllowShortLoopsOnASingleLine: false
+AllowShortLoopsOnASingleLine: true
 AllowShortNamespacesOnASingleLine: true
 AlwaysBreakBeforeMultilineStrings: true
 BinPackArguments: true
@@ -103,12 +103,14 @@ EnumTrailingComma: Leave
 FixNamespaceComments: false
 IncludeBlocks: Preserve
 IncludeCategories:
-  - Regex: '^<.*'
+  - Regex: '^<[Ww]indows\.h>'
     Priority: 1
-  - Regex: '^".*'
+  - Regex: '^<.*'
     Priority: 2
-  - Regex: '.*'
+  - Regex: '^".*'
     Priority: 3
+  - Regex: '.*'
+    Priority: 4
 IndentAccessModifiers: false
 IndentCaseBlocks: false
 IndentCaseLabels: true
@@ -151,6 +153,7 @@ RemoveSemicolon: true
 RequiresClausePosition: OwnLineWithBrace
 RequiresExpressionIndentation: OuterScope
 SeparateDefinitionBlocks: Leave
+SkipMacroDefinitionBody: true
 SortIncludes:
   Enabled: true
   IgnoreCase: false
