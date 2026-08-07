@@ -61,11 +61,11 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
 set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
 
-set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR})
-
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
 endif()
+
+set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR})
 
 set(IS_LANG_CCXX $<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>)
 set(IS_GNU_LIKE $<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
@@ -120,14 +120,9 @@ function(skylabs_target_setup_ide target_name vs_startup runtime_destination)
 
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${TARGET_SOURCES})
 
-    if("${TARGET_TYPE}" STREQUAL "EXECUTABLE")
-        set_target_properties(${target_name} PROPERTIES
-            VS_DEBUGGER_COMMAND ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${runtime_destination}/$<TARGET_FILE_NAME:${target_name}>
-        )
-
-        if(vs_startup)
-            set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${target_name})
-        endif()
+    if(vs_startup AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE") AND (CMAKE_GENERATOR MATCHES "Visual Studio .*"))
+        set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${target_name})
+        set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_COMMAND "${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${runtime_destination}/$<TARGET_FILE_NAME:${target_name}>")
     endif()
 endfunction()
 
@@ -298,10 +293,6 @@ find_package(vk-bootstrap CONFIG REQUIRED)
 find_package(VulkanHeaders CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator-Hpp CONFIG REQUIRED)
-
-if(NOT ANDROID)
-    set_target_properties(SteamworksSDK::AppTicket PROPERTIES IMPORTED_NO_SONAME ON) # CMakeConfigDeps hack
-endif()
 
 # Skylabs
 include_directories("${PROJECT_SOURCE_DIR}")
