@@ -192,7 +192,7 @@ function(skylabs_target_setup_install target_name)
 
     install(TARGETS ${target_name}
         ${RUNTIME_DEPENDENCIES_ARGS}
-        ARCHIVE DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
+        ARCHIVE DESTINATION ${SKYLABS_INSTALL_SUBDIR}${archive_dest}
         LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
         RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
     )
