@@ -204,6 +204,17 @@ function(skylabs_target_setup_install target_name)
     )
 
     if(ARG_RUNTIME_PLUGINS)
+        set(runtime_artifacts "")
+        foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
+            list(APPEND runtime_artifacts "$<TARGET_FILE:${plugin_target}>")
+        endforeach()
+
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                -t $<TARGET_FILE_DIR:${target_name}> ${runtime_artifacts}
+            COMMAND_EXPAND_LISTS
+        )
+
         install(IMPORTED_RUNTIME_ARTIFACTS ${ARG_RUNTIME_PLUGINS}
             RUNTIME_DEPENDENCY_SET
             LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
@@ -212,15 +223,11 @@ function(skylabs_target_setup_install target_name)
 
         if(ANDROID)
             add_custom_command(TARGET ${target_name} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E
-                    make_directory "${SKYLABS_ANDROID_JNILIBS_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory
+                    "${SKYLABS_ANDROID_JNILIBS_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    -t "${SKYLABS_ANDROID_JNILIBS_DIR}" ${runtime_artifacts}
             )
-            foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
-                add_custom_command(TARGET ${target_name} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        $<TARGET_FILE:${plugin_target}> "${SKYLABS_ANDROID_JNILIBS_DIR}"
-                )
-            endforeach()
         endif()
     endif()
 endfunction()
