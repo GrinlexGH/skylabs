@@ -113,33 +113,46 @@ add_compile_definitions(
 )
 
 # Functions to setup targets
-function(skylabs_target_setup_ide target_name vs_startup runtime_destination)
+function(skylabs_target_setup_ide target_name)
+    set(options VS_STARTUP)
+    cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
+
     get_target_property(TARGET_TYPE ${target_name} TYPE)
     get_target_property(TARGET_SOURCES ${target_name} SOURCES)
 
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${TARGET_SOURCES})
 
-    if(vs_startup AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE") AND (CMAKE_GENERATOR MATCHES "Visual Studio .*"))
+    if(ARG_VS_STARTUP AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE") AND (CMAKE_GENERATOR MATCHES "Visual Studio .*"))
         set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${target_name})
     endif()
 endfunction()
 
 function(skylabs_target_setup_install target_name)
-    cmake_parse_arguments(ARG "" "RUNTIME_DESTINATION" "RUNTIME_PLUGINS" ${ARGN})
+    set(oneValueArgs RUNTIME_DESTINATION ARCHIVE_DESTINATION LIBRARY_DESTINATION)
+    set(multiValueArgs RUNTIME_PLUGINS)
+    cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set(runtime_dest "bin")
+    set(archive_dest "lib")
     set(library_dest "lib")
 
     if(ARG_RUNTIME_DESTINATION)
         set(runtime_dest ${ARG_RUNTIME_DESTINATION})
-        set(library_dest ${ARG_RUNTIME_DESTINATION})
+    endif()
+
+    if(ARG_ARCHIVE_DESTINATION)
+        set(archive_dest ${ARG_ARCHIVE_DESTINATION})
+    endif()
+
+    if(ARG_LIBRARY_DESTINATION)
+        set(library_dest ${ARG_LIBRARY_DESTINATION})
     endif()
 
     set_target_properties(${target_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${runtime_dest}"
         PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${runtime_dest}"
-        ARCHIVE_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
-        COMPILE_PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
+        ARCHIVE_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${archive_dest}"
+        COMPILE_PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${archive_dest}"
         LIBRARY_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
     )
 
@@ -213,7 +226,9 @@ endfunction()
 #   DIRECTORIES                 List of directories to install with target
 #   DESTINATION                 Subdirectory of install destination
 function(skylabs_install_directories target_name)
-    cmake_parse_arguments(ARG "" "DESTINATION" "DIRECTORIES" ${ARGN})
+    set(oneValueArgs DESTINATION)
+    set(multiValueArgs DIRECTORIES)
+    cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     install(DIRECTORY ${ARG_DIRECTORIES}
         DESTINATION ${SKYLABS_INSTALL_SUBDIR}${ARG_DESTINATION}
@@ -236,7 +251,9 @@ endfunction()
 #   FILES                       List of files to install with target
 #   DESTINATION                 Subdirectory of install destination
 function(skylabs_install_files target_name)
-    cmake_parse_arguments(ARG "" "DESTINATION" "FILES" ${ARGN})
+    set(oneValueArgs DESTINATION)
+    set(multiValueArgs FILES)
+    cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     install(FILES ${ARG_FILES}
         DESTINATION ${SKYLABS_INSTALL_SUBDIR}${ARG_DESTINATION}
@@ -262,20 +279,22 @@ endfunction()
 # Parameters:
 #   WIN32_IN_RELEASE            Set WIN32_EXECUTABLE target property in release mode
 #   VS_STARTUP                  Set target as Visual Studio default startup project
-#   RUNTIME_DESTINATION         Subdirectory of install destination
+#   RUNTIME_DESTINATION         Subdirectory of install destination for runtime artifacts
+#   ARCHIVE_DESTINATION         Subdirectory of install destination for linking artifacts
+#   LIBRARY_DESTINATION         Subdirectory of install destination for library artifacts
 #   RUNTIME_PLUGINS             Additional targets for install as IMPORTED_RUNTIME_ARTIFACTS
 function(skylabs_configure_target target_name)
     set(options WIN32_IN_RELEASE VS_STARTUP)
-    set(oneValueArgs RUNTIME_DESTINATION CUSTOM_FILES_DESTINATION)
-    set(multiValueArgs RUNTIME_PLUGINS CUSTOM_FILES)
+    set(oneValueArgs RUNTIME_DESTINATION ARCHIVE_DESTINATION LIBRARY_DESTINATION)
+    set(multiValueArgs RUNTIME_PLUGINS)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-    set(runtime_dest "bin")
-    if(ARG_RUNTIME_DESTINATION)
-        set(runtime_dest "${ARG_RUNTIME_DESTINATION}")
+    set(function_args "")
+    if(ARG_VS_STARTUP)
+        list(APPEND function_args VS_STARTUP)
     endif()
 
-    skylabs_target_setup_ide(${target_name} "${ARG_VS_STARTUP}" "${runtime_dest}")
+    skylabs_target_setup_ide(${target_name} ${function_args})
 
     get_target_property(TARGET_TYPE ${target_name} TYPE)
     if(NOT("${TARGET_TYPE}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|EXECUTABLE"))
@@ -286,16 +305,24 @@ function(skylabs_configure_target target_name)
         set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)
     endif()
 
-    set(install_args "")
+    set(function_args "")
     if(ARG_RUNTIME_DESTINATION)
-        list(APPEND install_args RUNTIME_DESTINATION "${ARG_RUNTIME_DESTINATION}")
+        list(APPEND function_args RUNTIME_DESTINATION "${ARG_RUNTIME_DESTINATION}")
+    endif()
+
+    if(ARG_ARCHIVE_DESTINATION)
+        list(APPEND function_args ARCHIVE_DESTINATION "${ARG_ARCHIVE_DESTINATION}")
+    endif()
+
+    if(ARG_LIBRARY_DESTINATION)
+        list(APPEND function_args LIBRARY_DESTINATION "${ARG_LIBRARY_DESTINATION}")
     endif()
 
     if(ARG_RUNTIME_PLUGINS)
-        list(APPEND install_args RUNTIME_PLUGINS ${ARG_RUNTIME_PLUGINS})
+        list(APPEND function_args RUNTIME_PLUGINS ${ARG_RUNTIME_PLUGINS})
     endif()
 
-    skylabs_target_setup_install(${target_name} ${install_args})
+    skylabs_target_setup_install(${target_name} ${function_args})
 endfunction()
 
 # Install assets
