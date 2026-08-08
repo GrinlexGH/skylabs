@@ -4,11 +4,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
-project(Skylabs HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 0.0.0 LANGUAGES CXX C)
+project(Skylabs HOMEPAGE_URL "https://grinlexstudios.ru" VERSION 2026.0.0 LANGUAGES CXX C)
 
 # Global settings
 set(SKYLABS_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(SKYLABS_ASSETS_DIR ${SKYLABS_ROOT_DIR}/assets)
 
 if(ANDROID)
     set(SKYLABS_ANDROID_ROOT ${SKYLABS_ROOT_DIR}/android)
@@ -61,11 +60,11 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH OFF)
 set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
 
+set(CMAKE_DEBUGGER_WORKING_DIRECTORY ${SKYLABS_BUILD_DIR})
+
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
 endif()
-
-set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR})
 
 set(IS_LANG_CCXX $<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>)
 set(IS_GNU_LIKE $<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
@@ -122,7 +121,6 @@ function(skylabs_target_setup_ide target_name vs_startup runtime_destination)
 
     if(vs_startup AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE") AND (CMAKE_GENERATOR MATCHES "Visual Studio .*"))
         set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${target_name})
-        set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_COMMAND "${CMAKE_INSTALL_PREFIX}/${SKYLABS_INSTALL_SUBDIR}/${runtime_destination}/$<TARGET_FILE_NAME:${target_name}>")
     endif()
 endfunction()
 
@@ -136,6 +134,14 @@ function(skylabs_target_setup_install target_name)
         set(runtime_dest ${ARG_RUNTIME_DESTINATION})
         set(library_dest ${ARG_RUNTIME_DESTINATION})
     endif()
+
+    set_target_properties(${target_name} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${runtime_dest}"
+        PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${runtime_dest}"
+        ARCHIVE_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
+        COMPILE_PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
+        LIBRARY_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
+    )
 
     set(RUNTIME_DEPENDENCIES_ARGS "")
     if(NOT CMAKE_CROSSCOMPILING)
@@ -200,7 +206,36 @@ function(skylabs_target_setup_install target_name)
     endif()
 endfunction()
 
-function(skylabs_target_setup_install_custom_files target_name)
+# skylabs_install_directory(<target>
+#     DIRECTORIES <directories>... DESTINATION <path>
+# )
+# Parameters:
+#   DIRECTORIES                 List of directories to install with target
+#   DESTINATION                 Subdirectory of install destination
+function(skylabs_install_directories target_name)
+    cmake_parse_arguments(ARG "" "DESTINATION" "DIRECTORIES" ${ARGN})
+
+    install(DIRECTORY ${ARG_DIRECTORIES}
+        DESTINATION ${SKYLABS_INSTALL_SUBDIR}${ARG_DESTINATION}
+    )
+
+    if(ANDROID)
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+                "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+                ${ARG_DIRECTORIES} "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
+        )
+    endif()
+endfunction()
+
+# skylabs_install_files(<target>
+#     FILES <files>... DESTINATION <path>
+# )
+# Parameters:
+#   FILES                       List of files to install with target
+#   DESTINATION                 Subdirectory of install destination
+function(skylabs_install_files target_name)
     cmake_parse_arguments(ARG "" "DESTINATION" "FILES" ${ARGN})
 
     install(FILES ${ARG_FILES}
@@ -217,13 +252,18 @@ function(skylabs_target_setup_install_custom_files target_name)
     endif()
 endfunction()
 
+# skylabs_configure_target(<target>
+#     [WIN32_IN_RELEASE] [VS_STARTUP]
+#     [RUNTIME_DESTINATION <path>]
+#     [RUNTIME_PLUGINS <targets>...]
+#     [CUSTOM_FILES <files>...]
+#     [CUSTOM_FILES_DESTINATION <path>]
+# )
 # Parameters:
 #   WIN32_IN_RELEASE            Set WIN32_EXECUTABLE target property in release mode
 #   VS_STARTUP                  Set target as Visual Studio default startup project
-#   RUNTIME_DESTINATION         Subdir of install destination
+#   RUNTIME_DESTINATION         Subdirectory of install destination
 #   RUNTIME_PLUGINS             Additional targets for install as IMPORTED_RUNTIME_ARTIFACTS
-#   CUSTOM_FILES                List of custom files to install with target
-#   CUSTOM_FILES_DESTINATION    Subdir of install destination
 function(skylabs_configure_target target_name)
     set(options WIN32_IN_RELEASE VS_STARTUP)
     set(oneValueArgs RUNTIME_DESTINATION CUSTOM_FILES_DESTINATION)
@@ -236,13 +276,6 @@ function(skylabs_configure_target target_name)
     endif()
 
     skylabs_target_setup_ide(${target_name} "${ARG_VS_STARTUP}" "${runtime_dest}")
-
-    if(ARG_CUSTOM_FILES AND ARG_CUSTOM_FILES_DESTINATION)
-        skylabs_target_setup_install_custom_files(${target_name}
-            FILES ${ARG_CUSTOM_FILES}
-            DESTINATION "${ARG_CUSTOM_FILES_DESTINATION}"
-        )
-    endif()
 
     get_target_property(TARGET_TYPE ${target_name} TYPE)
     if(NOT("${TARGET_TYPE}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|EXECUTABLE"))
@@ -265,7 +298,8 @@ function(skylabs_configure_target target_name)
     skylabs_target_setup_install(${target_name} ${install_args})
 endfunction()
 
-install(DIRECTORY ${SKYLABS_ASSETS_DIR} DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
+# Install assets
+install(DIRECTORY ${SKYLABS_ROOT_DIR}/assets DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
 
 # Third party libraries
 if(ANDROID)
