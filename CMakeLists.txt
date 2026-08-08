@@ -156,6 +156,12 @@ function(skylabs_target_setup_install target_name)
         LIBRARY_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
     )
 
+    add_custom_command(TARGET ${target_name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            -t $<TARGET_FILE_DIR:${target_name}> $<TARGET_RUNTIME_DLLS:${target_name}>
+        COMMAND_EXPAND_LISTS
+    )
+
     set(RUNTIME_DEPENDENCIES_ARGS "")
     if(NOT CMAKE_CROSSCOMPILING)
         set(RUNTIME_LOOKUP_DIRECTORIES "")
