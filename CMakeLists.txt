@@ -77,7 +77,7 @@ add_compile_options(
     "$<$<AND:${IS_LANG_CCXX},${IS_GNU_LIKE}>:-Wall;-Wextra;-Wpedantic>"
     "$<$<AND:${IS_LANG_CCXX},$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes>"
     "$<$<AND:${IS_LANG_CCXX},${IS_MSVC_LIKE}>:/utf-8;/Zc:__cplusplus;/Zc:inline;/W4;/wd4251;/wd4324>"
-    "$<$<AND:${IS_LANG_CCXX},${IS_MSVC_LIKE},${IS_LTO_ENABLED}>:/Gy;/Gw>"
+    "$<$<AND:${IS_LANG_CCXX},${IS_LTO_ENABLED},${IS_MSVC_LIKE}>:/Gy;/Gw>"
     "$<$<AND:${IS_LANG_CCXX},${IS_LTO_ENABLED},$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:${CMAKE_CXX_COMPILER_VERSION},19.35>>:/Zc:checkGwOdr>"
 )
 

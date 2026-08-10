@@ -3,83 +3,192 @@
 typedef int (*main_t)(int argc, char* argv[]);
 
 #ifdef PLATFORM_WINDOWS
-#include <windows.h>
-#include <shellapi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-static void PresentErrorMessage(const wchar_t* msg) {
-    MessageBoxW(NULL, msg, L"Launcher error", MB_OK | MB_ICONERROR);
+#include <windows.h>
+#include <commctrl.h>
+#include <shellapi.h>
+
+static void PresentError(const wchar_t* msg) {
+    TASKDIALOGCONFIG tdc = { };
+    tdc.cbSize = sizeof(TASKDIALOGCONFIG);
+    tdc.hwndParent = NULL;
+    tdc.hInstance = NULL;
+    tdc.pszWindowTitle = L"Skylabs launcher notifier";
+    tdc.pszContent = msg;
+    tdc.dwCommonButtons = TDCBF_CLOSE_BUTTON;
+    tdc.pszMainIcon = TD_ERROR_ICON;
+    tdc.dwFlags = TDF_SIZE_TO_CONTENT;
+
+    TaskDialogIndirect(&tdc, NULL, NULL, NULL);
 }
 
-static void ShowError(const wchar_t* msg, const wchar_t* detail) {
-    size_t len = wcslen(msg) + (detail ? wcslen(detail) : 0) + 10;
-    wchar_t* buf = malloc(len * sizeof(wchar_t));
-    if (buf) {
-        _snwprintf_s(buf, len, _TRUNCATE, L"%s:\n%s", msg, detail ? detail : L"");
-        PresentErrorMessage(buf);
-        free(buf);
-    } else {
-        MessageBoxW(NULL, detail, msg, MB_OK | MB_ICONERROR);
-    }
-}
+// Max user message size is 864 (or 1024 - 128 - 32)
+static void PresentCError(const wchar_t* format, ...) {
+    wchar_t systemMessage[128];
+    _wcserror_s(systemMessage, _countof(systemMessage), errno);
 
-static void ShowSystemError(const wchar_t* msg) {
-    wchar_t* errorMsg = NULL;
-    FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPWSTR)&errorMsg, 0, NULL
+    wchar_t contextMessage[1024 - 128 - 32];
+    va_list args;
+    va_start(args, format);
+    _vsnwprintf_s(contextMessage, _countof(contextMessage), _TRUNCATE, format, args);
+    va_end(args);
+
+    wchar_t finalMessage[1024];
+    _snwprintf_s(
+        finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nSystem reason: %ls", contextMessage, systemMessage
     );
-    ShowError(msg, errorMsg);
-    LocalFree(errorMsg);
+
+    PresentError(finalMessage);
 }
 
-#define MESSAGE_CLEANUP_CHECK(expr, msg) do { if (expr) { PresentErrorMessage(msg); goto cleanup; } } while(0)
-#define SYSTEM_CLEANUP_CHECK(expr, msg) do { if (expr) { ShowSystemError(msg); goto cleanup; } } while(0)
+// Max user message size is 736 (or 1024 - 256 - 32)
+static void PresentSystemError(const wchar_t* format, ...) {
+    DWORD errorCode = GetLastError();
 
-#define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
-#define EXIT_CHECK(expr) do { if (expr) { CLEANUP_AND_EXIT(); } } while(0)
-#define MESSAGE_EXIT_CHECK(expr, msg) do { if (expr) { PresentErrorMessage(msg); CLEANUP_AND_EXIT(); } } while(0)
-#define SYSTEM_EXIT_CHECK(expr, msg) do { if (expr) { ShowSystemError(msg); CLEANUP_AND_EXIT(); } } while(0)
-#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { wchar_t msgBuf[128]; _snwprintf_s(msgBuf, _countof(msgBuf), _TRUNCATE, msg, __VA_ARGS__); ShowSystemError(msgBuf); CLEANUP_AND_EXIT(); } } while(0)
+    wchar_t systemMessage[256];
+    DWORD msgLen = FormatMessageW(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, errorCode,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), systemMessage, _countof(systemMessage), NULL
+    );
+
+    if (msgLen == 0) {
+        _snwprintf_s(systemMessage, _countof(systemMessage), _TRUNCATE, L"Unknown Win32 Error (0x%08X)", errorCode);
+    } else {
+        while (msgLen > 0 && (systemMessage[msgLen - 1] == L'\r' || systemMessage[msgLen - 1] == L'\n')) {
+            systemMessage[--msgLen] = L'\0';
+        }
+    }
+
+    wchar_t contextMessage[1024 - 256 - 32];
+    va_list args;
+    va_start(args, format);
+    _vsnwprintf_s(contextMessage, _countof(contextMessage), _TRUNCATE, format, args);
+    va_end(args);
+
+    wchar_t finalMessage[1024];
+    _snwprintf_s(
+        finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nSystem reason: %ls", contextMessage, systemMessage
+    );
+
+    PresentError(finalMessage);
+}
+
+static void* SkMalloc(const size_t size) {
+    void* p = malloc(size);
+    if (!p) {
+        PresentCError(L"Failed to allocate %zu bytes, wtf with your system bro💀", size);
+        abort();
+    }
+    return p;
+}
+
+static void* SkRealloc(void* ptr, const size_t newSize) {
+    void* p = realloc(ptr, newSize);
+    if (!p) {
+        PresentCError(L"Failed to reallocate %zu bytes, wtf with your system bro💀", newSize);
+        abort();
+    }
+    return p;
+}
+
+static void* SkCalloc(const size_t num, const size_t size) {
+    void* p = calloc(num, size);
+    if (!p) {
+        PresentCError(L"Failed to callocate %zu bytes, wtf with your system bro💀", num * size);
+        abort();
+    }
+    return p;
+}
 
 #define LOAD_DIR L"\\bin\\"
 #define LOAD_FILE L"core.dll"
 
-wchar_t* GetProgramPath(void) {
+static wchar_t* GetProgramPath(void) {
+    wchar_t* result = NULL;
     wchar_t* exePath = NULL;
 
     DWORD cap = MAX_PATH;
-    exePath = malloc(cap * sizeof(wchar_t));
-    MESSAGE_CLEANUP_CHECK(!exePath, L"Failed to allocate memory to get executable path");
+    exePath = SkMalloc(cap * sizeof(wchar_t));
 
-    while (1) {
+    for (;;) {
         DWORD size = GetModuleFileNameW(NULL, exePath, cap);
-        SYSTEM_CLEANUP_CHECK(size == 0, L"Failed to get program path");
 
-        if (size == cap - 1) {
-            cap += 100;
-            wchar_t* tmp = realloc(exePath, cap * sizeof(wchar_t));
-            MESSAGE_CLEANUP_CHECK(!tmp, L"Failed to reallocate memory to get executable path");
-            exePath = tmp;
+        if (size == 0) {
+            PresentSystemError(L"Failed to get program path!");
+            goto cleanup;
+        }
+
+        if (size == cap) {
+            cap += MAX_PATH;
+            exePath = SkRealloc(exePath, cap * sizeof(wchar_t));
         } else {
-            exePath[size] = '\0';
+            exePath[size] = L'\0';
+
+            result = exePath;
+            exePath = NULL;
             break;
         }
     }
 
-    return exePath;
-
 cleanup:
     free(exePath);
-    return NULL;
+    return result;
+}
+
+static void GetCommandLineArguments(char*** argv, int* argc) {
+    wchar_t** argvW = NULL;
+    char** argvTemp = NULL;
+    int argcTemp = 0;
+
+    argvW = CommandLineToArgvW(GetCommandLineW(), &argcTemp);
+    if (!argvW) {
+        PresentSystemError(L"Failed to get command line arguments!");
+        goto cleanup;
+    }
+
+    argvTemp = SkCalloc(argcTemp, sizeof(char*));
+
+    for (int i = 0; i < argcTemp; ++i) {
+        int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, NULL, 0, NULL, NULL);
+        if (!len) {
+            PresentSystemError(L"Failed to get length of converted command line argument №%d!", i);
+            goto cleanup;
+        }
+
+        argvTemp[i] = SkMalloc(len);
+
+        len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argvTemp[i], len, NULL, NULL);
+        if (!len) {
+            PresentSystemError(L"Failed to convert command line argument №%d to UTF-8!", i);
+            goto cleanup;
+        }
+    }
+
+    *argv = argvTemp;
+    argvTemp = NULL;
+    *argc = argcTemp;
+    argcTemp = 0;
+
+cleanup:
+    if (argvTemp) {
+        for (int i = 0; i < argcTemp; ++i) {
+            free(argvTemp[i]);
+        }
+        free(argvTemp);
+    }
+    LocalFree(argvW);
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
-    (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nShowCmd;
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nShowCmd;
 
-    int ret = 0;
+    int ret = 1;
     wchar_t* exePath = NULL;
     wchar_t* libPath = NULL;
     HMODULE hCore = NULL;
@@ -88,19 +197,27 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     char** argv = NULL;
 
     exePath = GetProgramPath();
-    EXIT_CHECK(!exePath);
+    if (!exePath) {
+        goto cleanup;
+    }
 
     // Remove filename
     wchar_t* lastSlash = wcsrchr(exePath, L'\\');
+    if (!lastSlash) {
+        PresentError(L"Invalid path format!");
+        goto cleanup;
+    }
+
     *lastSlash = L'\0';
 
     DWORD cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_DIR) + _countof(LOAD_FILE) - 1;
-    libPath = malloc(cap * sizeof(wchar_t));
-    MESSAGE_EXIT_CHECK(!libPath, L"Failed to allocate memory for library path");
+    libPath = SkMalloc(cap * sizeof(wchar_t));
 
     // Generate path to bin
     swprintf(libPath, cap, L"%ls" LOAD_DIR, exePath);
-    SYSTEM_EXIT_CHECK(!SetDllDirectoryW(libPath), L"Failed to set DLL directory");
+    if (!SetDllDirectoryW(libPath)) {
+        PresentSystemError(L"Failed to set DLL search path!");
+    }
 
     // Generate full dll path
     swprintf(libPath, cap, L"%ls" LOAD_DIR LOAD_FILE, exePath);
@@ -108,32 +225,24 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     exePath = NULL;
 
     hCore = LoadLibraryExW(libPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-    SYSTEM_EXIT_CHECK(!hCore, L"Failed to load library");
+    if (!hCore) {
+        PresentSystemError(L"Failed to load library:\n%ls", libPath);
+        goto cleanup;
+    }
     free(libPath);
     libPath = NULL;
 
     main_t coreMain = (main_t)(uintptr_t)GetProcAddress(hCore, "CoreMain");
-    SYSTEM_EXIT_CHECK(!coreMain, L"Failed to load library function");
+    if (!coreMain) {
+        PresentSystemError(L"Failed to get \"CoreMain\" function address!");
+        goto cleanup;
+    }
 
     // Convert utf16 argv to utf8
-    argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
-    SYSTEM_EXIT_CHECK(!argvW, L"Failed to get command line");
-
-    argv = calloc(argc, sizeof(char*));
-    MESSAGE_EXIT_CHECK(!argv, L"Failed to allocate memory for command line arguments");
-
-    for (int i = 0; i < argc; ++i) {
-        int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, NULL, 0, NULL, NULL);
-        PRINTF_EXIT_CHECK(!len, L"Failed to get length of converted command line argument %d", i);
-
-        argv[i] = malloc(len);
-        PRINTF_EXIT_CHECK(!argv[i], L"Failed to allocate memory for command line argument %d", i);
-
-        len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, NULL, NULL);
-        PRINTF_EXIT_CHECK(!len, L"Failed to convert command line argument %d to UTF-8", i);
+    GetCommandLineArguments(&argv, &argc);
+    if (!argv) {
+        goto cleanup;
     }
-    LocalFree(argvW);
-    argvW = NULL;
 
     ret = coreMain(argc, argv);
 

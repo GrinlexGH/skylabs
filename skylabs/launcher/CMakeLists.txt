@@ -15,4 +15,14 @@ target_sources(
         main.c
 )
 
+if(WIN32)
+    target_sources(
+        ${CURRENT_TARGET_NAME}
+        PRIVATE
+            launcher.manifest
+    )
+
+    target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE comctl32)
+endif()
+
 skylabs_configure_target(${CURRENT_TARGET_NAME} RUNTIME_DESTINATION $<IF:$<PLATFORM_ID:Windows>,.,bin> VS_STARTUP)
