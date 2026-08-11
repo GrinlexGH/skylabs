@@ -8,6 +8,7 @@ target_sources(
     ${CURRENT_TARGET_NAME}
     PRIVATE
     FILE_SET HEADERS FILES
+        pch.hpp
         camera.hpp
         render/vulkan/command_recording/command_buffer_allocator.hpp
         render/vulkan/command_recording/command_buffer.hpp

@@ -31,6 +31,7 @@ target_sources(
         sdl/event_pump.cpp
     PUBLIC
     FILE_SET HEADERS FILES
+        pch.hpp
         sdl/mixer/audio.hpp
         sdl/mixer/context.hpp
         sdl/mixer/mixer.hpp
