@@ -66,6 +66,8 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
 endif()
 
+set(IS_LANG_C $<COMPILE_LANGUAGE:C>)
+set(IS_LANG_CXX $<COMPILE_LANGUAGE:CXX>)
 set(IS_LANG_CCXX $<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>)
 set(IS_GNU_LIKE $<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
 set(IS_MSVC_LIKE $<OR:$<CXX_COMPILER_ID:MSVC>,$<STREQUAL:${CMAKE_CXX_COMPILER_FRONTEND_VARIANT},MSVC>>)
@@ -73,10 +75,14 @@ set(IS_LTO_ENABLED $<AND:$<NOT:$<CONFIG:Debug>>,$<BOOL:${LTO_AVAILABLE}>>)
 
 # Disable C4251 because this project is using one runtime
 # Disable C4324 because I know what alignas is doing
+# Set /std:clatest and /std:c++latest manually because cmake doesn't set them with clang-cl,
+#   so Visual Studio doesn't setup Intellisense properly
 add_compile_options(
     "$<$<AND:${IS_LANG_CCXX},${IS_GNU_LIKE}>:-Wall;-Wextra;-Wpedantic>"
     "$<$<AND:${IS_LANG_CCXX},$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes>"
     "$<$<AND:${IS_LANG_CCXX},${IS_MSVC_LIKE}>:/utf-8;/Zc:__cplusplus;/Zc:inline;/W4;/wd4251;/wd4324>"
+    "$<$<AND:${IS_LANG_C},${IS_MSVC_LIKE}>:/std:clatest>"
+    "$<$<AND:${IS_LANG_CXX},${IS_MSVC_LIKE}>:/std:c++latest>"
     "$<$<AND:${IS_LANG_CCXX},${IS_LTO_ENABLED},${IS_MSVC_LIKE}>:/Gy;/Gw>"
     "$<$<AND:${IS_LANG_CCXX},${IS_LTO_ENABLED},$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:${CMAKE_CXX_COMPILER_VERSION},19.35>>:/Zc:checkGwOdr>"
 )
