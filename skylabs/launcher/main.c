@@ -192,7 +192,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     wchar_t* exePath = NULL;
     wchar_t* libPath = NULL;
     HMODULE hCore = NULL;
-    LPWSTR* argvW = NULL;
     int argc = 0;
     char** argv = NULL;
 
@@ -253,7 +252,6 @@ cleanup:
         }
         free(argv);
     }
-    LocalFree(argvW);
     if (hCore) FreeLibrary(hCore);
     free(libPath);
     free(exePath);
