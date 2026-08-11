@@ -113,16 +113,51 @@ add_compile_definitions(
 )
 
 # Functions to setup targets
+# IDE filter setup rules:
+# SOURCES & FILESET SOURCES & FILESET HEADERS -> Sources (with saved tree)
+# FILESET generated -> Generated
 function(skylabs_target_setup_ide target_name)
     set(options VS_STARTUP)
     cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
 
-    get_target_property(TARGET_TYPE ${target_name} TYPE)
-    get_target_property(TARGET_SOURCES ${target_name} SOURCES)
+    set(all_files "")
+    get_target_property(legacy_sources ${target_name} SOURCES)
+    if(legacy_sources)
+        list(APPEND all_files ${legacy_sources})
+    endif()
 
-    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${TARGET_SOURCES})
+    get_target_property(header_files ${target_name} HEADER_SET)
+    if(header_files)
+        list(APPEND all_files ${header_files})
+    endif()
 
-    if(ARG_VS_STARTUP AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE") AND (CMAKE_GENERATOR MATCHES "Visual Studio .*"))
+    get_target_property(source_files ${target_name} SOURCE_SET)
+    if(source_files)
+        list(APPEND all_files ${source_files})
+    endif()
+
+    if(all_files)
+        list(REMOVE_DUPLICATES all_files)
+    endif()
+
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Sources" FILES ${all_files})
+
+    get_target_property(header_sets ${target_name} HEADER_SETS)
+    if("generated" IN_LIST header_sets)
+        get_target_property(generated_files ${target_name} HEADER_SET_generated)
+        source_group("Generated" FILES ${generated_files})
+    endif()
+
+    get_target_property(source_sets ${target_name} SOURCE_SETS)
+    if("generated" IN_LIST source_sets)
+        get_target_property(generated_files ${target_name} SOURCE_SET_generated)
+        source_group("Generated" FILES ${generated_files})
+    endif()
+
+    source_group("Generated" REGULAR_EXPRESSION "cmake_pch.*")
+
+    get_target_property(target_type ${target_name} TYPE)
+    if(ARG_VS_STARTUP AND ("${target_type}" STREQUAL "EXECUTABLE") AND (CMAKE_GENERATOR MATCHES "Visual Studio .*"))
         set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${target_name})
     endif()
 endfunction()
@@ -162,23 +197,23 @@ function(skylabs_target_setup_install target_name)
         COMMAND_EXPAND_LISTS
     )
 
-    set(RUNTIME_DEPENDENCIES_ARGS "")
+    set(runtime_dependencies_args "")
     if(NOT CMAKE_CROSSCOMPILING)
-        set(RUNTIME_LOOKUP_DIRECTORIES "")
+        set(runtime_lookup_directories "")
         if(WIN32)
-            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}")
+            list(APPEND runtime_lookup_directories "${CONAN_RUNTIME_LIB_DIRS}")
             cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_BIN_DIR)
-            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${CXX_COMPILER_BIN_DIR}")
+            list(APPEND runtime_lookup_directories "${CXX_COMPILER_BIN_DIR}")
             cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_BIN_DIR)
-            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${C_COMPILER_BIN_DIR}")
-            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${SKYLABS_BUILD_DIR}")
-            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${SKYLABS_BUILD_DIR}bin")
-            list(APPEND RUNTIME_LOOKUP_DIRECTORIES "${SKYLABS_BUILD_DIR}lib")
+            list(APPEND runtime_lookup_directories "${C_COMPILER_BIN_DIR}")
+            list(APPEND runtime_lookup_directories "${SKYLABS_BUILD_DIR}")
+            list(APPEND runtime_lookup_directories "${SKYLABS_BUILD_DIR}bin")
+            list(APPEND runtime_lookup_directories "${SKYLABS_BUILD_DIR}lib")
         endif()
 
-        set(RUNTIME_DEPENDENCIES_ARGS
+        set(runtime_dependencies_args
             RUNTIME_DEPENDENCIES
-            DIRECTORIES ${RUNTIME_LOOKUP_DIRECTORIES}
+            DIRECTORIES ${runtime_lookup_directories}
             PRE_EXCLUDE_REGEXES
                 "api-ms-win-.*" "ext-ms-.*"
                 "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
@@ -197,7 +232,7 @@ function(skylabs_target_setup_install target_name)
     )
 
     install(TARGETS ${target_name}
-        ${RUNTIME_DEPENDENCIES_ARGS}
+        ${runtime_dependencies_args}
         ARCHIVE DESTINATION ${SKYLABS_INSTALL_SUBDIR}${archive_dest}
         LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
         RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
@@ -309,12 +344,12 @@ function(skylabs_configure_target target_name)
 
     skylabs_target_setup_ide(${target_name} ${function_args})
 
-    get_target_property(TARGET_TYPE ${target_name} TYPE)
-    if(NOT("${TARGET_TYPE}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|EXECUTABLE"))
+    get_target_property(target_type ${target_name} TYPE)
+    if(NOT("${target_type}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|EXECUTABLE"))
         return()
     endif()
 
-    if(${ARG_WIN32_IN_RELEASE} AND ("${TARGET_TYPE}" STREQUAL "EXECUTABLE"))
+    if(${ARG_WIN32_IN_RELEASE} AND ("${target_type}" STREQUAL "EXECUTABLE"))
         set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)
     endif()
 

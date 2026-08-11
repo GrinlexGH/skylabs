@@ -53,9 +53,9 @@ target_sources(
         sdl/vulkan/os_connector.hpp
         event_pump.hpp
         sdl/event_pump.hpp
-    FILE_SET generated_headers
+    FILE_SET generated
         TYPE HEADERS
-        BASE_DIRS $<TARGET_PROPERTY:${CURRENT_TARGET_NAME},BINARY_DIR>
+        BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
         FILES
             ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET_NAME}_export.h
             ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
