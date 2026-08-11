@@ -36,7 +36,7 @@ auto GetAvailableExtensions(const vk::raii::Context& context) {
             continue;
         }
 
-        const std::vector<vk::ExtensionProperties> layerExtensions = context.enumerateInstanceExtensionProperties({ layer.layerName });
+        const std::vector<vk::ExtensionProperties> layerExtensions = context.enumerateInstanceExtensionProperties({ layer.layerName.data() });
         globalExtensions.insert(
             globalExtensions.end(),
             std::make_move_iterator(layerExtensions.begin()),
