@@ -73,8 +73,6 @@ set(IS_LTO_ENABLED $<AND:$<NOT:$<CONFIG:Debug>>,$<BOOL:${LTO_AVAILABLE}>>)
 
 # Disable C4251 because this project is using one runtime
 # Disable C4324 because I know what alignas is doing
-# Set /std:clatest and /std:c++latest manually because cmake doesn't set them with clang-cl,
-#   so Visual Studio doesn't setup Intellisense properly
 add_compile_options(
     "$<$<AND:${IS_LANG_CCXX},${IS_GNU_LIKE}>:-Wall;-Wextra;-Wpedantic>"
     "$<$<AND:${IS_LANG_CCXX},$<PLATFORM_ID:Windows>,$<CXX_COMPILER_ID:Clang>>:-fansi-escape-codes>"
