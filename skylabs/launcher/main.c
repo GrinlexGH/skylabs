@@ -293,12 +293,39 @@ int main() {
 }
 
 #elifdef PLATFORM_LINUX
-#include <dlfcn.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <stdarg.h>
+
+#include <dlfcn.h>
+#include <unistd.h>
+
+#define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+static void PresentCError(const char* format, ...) {
+    char systemMessage[128];
+    strerror_r(errno, systemMessage, countof(systemMessage));
+
+    char contextMessage[1024];
+    va_list args;
+    va_start(args, format);
+    snprintf(contextMessage, countof(contextMessage), format, args);
+    va_end(args);
+
+    fprintf(stderr, "%s\nSystem error description: %s\n", contextMessage, systemMessage);
+}
+
+static void* SkMalloc(const size_t size) {
+    void* p = malloc(size);
+    if (!p) {
+        PresentCError("Failed to allocate %zu bytes, wtf with your system bro💀", size);
+        abort();
+    }
+    return p;
+}
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
 #define PERROR_EXIT_CHECK(expr, msg) do { if (expr) { perror(msg); CLEANUP_AND_EXIT(); } } while(0)
@@ -308,13 +335,16 @@ int main() {
 #define LOAD_FILE "core.so"
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
+    int ret = 1;
     char* exePath = NULL;
     char* libPath = NULL;
     void* hCore = NULL;
 
     exePath = realpath("/proc/self/exe", NULL);
-    PERROR_EXIT_CHECK(!exePath, "Failed to get executable path");
+    if (!exePath) {
+        PresentCError("Failed to get executable path!");
+        goto cleanup;
+    }
 
     // Got to root of the program file tree
     char* lastSlash = strrchr(exePath, '/');
@@ -323,8 +353,7 @@ int main(int argc, char* argv[]) {
     *lastSlash = '\0';
 
     size_t cap = (lastSlash - exePath) + (sizeof(LOAD_DIR) / sizeof(LOAD_DIR[0])) + (sizeof(LOAD_FILE) / sizeof(LOAD_FILE[0])) - 1;
-    libPath = malloc(cap * sizeof(char));
-    PERROR_EXIT_CHECK(!libPath, "Failed to allocate memory for library path");
+    libPath = SkMalloc(cap * sizeof(char));
 
     // Generate full dll path
     snprintf(libPath, cap, "%s" LOAD_DIR LOAD_FILE, exePath);
@@ -333,13 +362,19 @@ int main(int argc, char* argv[]) {
 
     hCore = dlopen(libPath, RTLD_LAZY);
     const char* loadError = dlerror();
-    PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", loadError ? loadError : "Unknown error");
+    if (!hCore) {
+        fprintf(stderr, "Failed to load library:\n%s\n", loadError ? loadError : "Unknown error");
+        goto cleanup;
+    }
     free(libPath);
     libPath = NULL;
 
     main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
     const char* dlsymError = dlerror();
-    PRINTF_EXIT_CHECK(dlsymError, "Failed to load library function:\n%s\n", dlsymError);
+    if (!coreMain) {
+        fprintf(stderr, "Failed to load library function:\n%s\n", dlsymError);
+        goto cleanup;
+    }
 
     ret = coreMain(argc, argv);
 
@@ -361,14 +396,19 @@ cleanup:
 #define LOAD_PATH "core.so"
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
+    int ret = 1;
     SDL_SharedObject* hCore = NULL;
 
     hCore = SDL_LoadObject(LOAD_PATH);
-    PRINTF_EXIT_CHECK(!hCore, "Failed to load library:\n%s\n", SDL_GetError());
+    if (!hCore) {
+        SDL_Log("Failed to load library:\n%s\n", SDL_GetError());
+        goto cleanup;
+    }
 
     main_t coreMain = (main_t)(uintptr_t)SDL_LoadFunction(hCore, "CoreMain");
-    PRINTF_EXIT_CHECK(!coreMain, "Failed to load library function:\n%s\n", SDL_GetError());
+    if (!coreMain) {
+        SDL_Log("Failed to load library function:\n%s\n", SDL_GetError());
+    }
 
     ret = coreMain(argc, argv);
 
