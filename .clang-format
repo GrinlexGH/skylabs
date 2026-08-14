@@ -1,8 +1,6 @@
 ---
 # For clang-format 22
 Language: Cpp
-Standard: Latest
-BasedOnStyle: LLVM
 
 # DisableFormat: true
 
@@ -152,7 +150,7 @@ RemoveParentheses: Leave
 RemoveSemicolon: true
 RequiresClausePosition: OwnLineWithBrace
 RequiresExpressionIndentation: OuterScope
-SeparateDefinitionBlocks: Leave
+SeparateDefinitionBlocks: Always
 SkipMacroDefinitionBody: true
 SortIncludes:
   Enabled: true

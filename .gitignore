@@ -16,6 +16,7 @@ CMakeUserPresets.json
 
 # Gradle
 /android/local.properties
+/android/app/proguard-rules.pro
 /android/**/.cxx
 /android/**/assets
 /android/**/libsdl

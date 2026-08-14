@@ -11,9 +11,7 @@ std::vector<T> LoadAsGenericVector(std::string_view uri) {
     const std::size_t totalBytes = stream->Size();
     if (totalBytes == 0) return {};
 
-    const std::size_t count = totalBytes / sizeof(T);
-
-    std::vector<T> result(count);
+    std::vector<T> result(totalBytes / sizeof(T));
     stream->Read(result.data(), totalBytes);
 
     return result;

@@ -283,12 +283,20 @@ function(skylabs_install_directories target_name)
     )
 
     if(ANDROID)
-        add_custom_command(TARGET ${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory
-                "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-                ${ARG_DIRECTORIES} "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
-        )
+        foreach(dir ${ARG_DIRECTORIES})
+            string(REGEX MATCH "/$" has_trailing_slash "${dir}")
+            if(has_trailing_slash)
+                set(dst "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}")
+            else()
+                cmake_path(GET dir FILENAME dir_name)
+                set(dst "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}/${dir_name}")
+            endif()
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${dst}"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+                -t "${dst}" "${dir}"
+            )
+        endforeach()
     endif()
 endfunction()
 

@@ -89,19 +89,15 @@ android {
     defaultConfig {
         applicationId = "ru.grinlexstudios.skylabs"
 
-        minSdk = 30
+        minSdk = 33
         targetSdk = 37
 
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2026
+        versionName = "2026.0.0"
 
         externalNativeBuild {
             cmake {
-                arguments += listOf(
-                    "-DCMAKE_TOOLCHAIN_FILE=${toolchainFile.absolutePath}",
-                    "-DANDROID_STL=c++_static"
-                )
-
+                arguments += listOf("-DCMAKE_TOOLCHAIN_FILE=${toolchainFile.absolutePath}")
                 abiFilters += listOf("arm64-v8a")
             }
         }
@@ -110,7 +106,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("../../CMakeLists.txt")
-            version = "4.1.0+"
+            version = "4.4.0+"
         }
     }
 
@@ -118,10 +114,6 @@ android {
         java.directories += "src/main/java"
         assets.directories += "src/main/assets"
         assets.directories += "../../assets"
-    }
-
-    lint {
-        lintConfig = file("lint.xml") // Disable some warnings from SDL shitty code
     }
 
     buildTypes {

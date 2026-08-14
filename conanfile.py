@@ -35,7 +35,7 @@ class SkylabsRecipe(ConanFile):
         self.requires("steamworks_sdk/1.65")
         self.requires("tinyobjloader/2.0.0rc13")
         self.requires("vk-bootstrap/1.4.357")
-        self.requires("vulkan-headers/1.4.359")
+        self.requires("vulkan-headers/1.4.360")
         self.requires("vulkan-memory-allocator/3.4.0")
         self.requires("vulkan-memory-allocator-hpp/3.4.0+1")
 
@@ -59,6 +59,9 @@ class SkylabsRecipe(ConanFile):
         src = sdl_pkg / "android-project" / "app" / "src" / "main" / "java" / "org" / "libsdl"
         dst = Path(self.recipe_path) / "android" / "app" / "src" / "main" / "java" / "org" / "libsdl"
         self._link_or_copy(src, dst, is_dir=True)
+        src = sdl_pkg / "android-project" / "app" / "proguard-rules.pro"
+        dst = Path(self.recipe_path) / "android" / "app" / "proguard-rules.pro"
+        self._link_or_copy(src, dst, is_dir=False)
 
     def create_vulkan_validation_symlink(self):
         arch_map = {
