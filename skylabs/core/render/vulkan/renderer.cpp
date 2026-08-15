@@ -37,7 +37,7 @@ CRenderer::CRenderer(const IWindow* const window, const IOSConnector* const surf
     m_swapchain = CSwapchain {
         *m_context.PhysicalDevice(), device,
         m_context.Window(), *m_context.Surface(),
-        2, vk::PresentModeKHR::eImmediate
+        2, vk::PresentModeKHR::eMailbox
     };
     m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
 
