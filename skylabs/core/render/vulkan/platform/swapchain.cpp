@@ -66,7 +66,7 @@ void CSwapchain::CreateSwapchain(
         );
     }
 
-    auto sw = swapchainResult.value();
+    vkb::Swapchain sw = swapchainResult.value();
     m_handle = vk::raii::SwapchainKHR { **m_device, sw.swapchain };
     m_extent = sw.extent;
     m_presentMode = static_cast<vk::PresentModeKHR>(sw.present_mode);

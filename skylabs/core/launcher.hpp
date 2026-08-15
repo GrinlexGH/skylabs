@@ -78,7 +78,7 @@ private:
     SDL::CContext m_sdlContext { nullptr };
 
     SDL::CWindow m_window { nullptr };
-    SDL::Vulkan::CSurfaceProvider m_surfaceProvider { nullptr };
+    SDL::Vulkan::COSConnector m_surfaceProvider { nullptr };
     SDL::CEventPump m_eventPump;
     std::unique_ptr<Vulkan::CRenderer> m_renderer { nullptr };
 
