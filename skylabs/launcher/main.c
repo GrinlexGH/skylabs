@@ -39,7 +39,8 @@ static void PresentCError(const wchar_t* format, ...) {
 
     wchar_t finalMessage[_countof(systemMessage) + _countof(contextMessage) + 32];
     _snwprintf_s(
-        finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nCRT error description: %ls", contextMessage, systemMessage
+        finalMessage, _countof(finalMessage),
+        _TRUNCATE, L"%ls\n\nCRT error description: %ls", contextMessage, systemMessage
     );
 
     PresentError(finalMessage);
@@ -47,8 +48,11 @@ static void PresentCError(const wchar_t* format, ...) {
 
 static void GetSystemErrorMessage(wchar_t* message, const DWORD size, const DWORD errorCode) {
     DWORD msgLen = FormatMessageW(
-        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, errorCode,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message, size, NULL
+        FORMAT_MESSAGE_FROM_SYSTEM
+        | FORMAT_MESSAGE_IGNORE_INSERTS
+        | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+        NULL, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        message, size, NULL
     );
 
     if (msgLen == 0) {
@@ -65,14 +69,15 @@ static void PresentSystemError(const wchar_t* format, ...) {
     GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
 
     wchar_t contextMessage[1024];
-    va_list args;
+    va_list args = { 0 };
     va_start(args, format);
     _vsnwprintf_s(contextMessage, _countof(contextMessage), _TRUNCATE, format, args);
     va_end(args);
 
     wchar_t finalMessage[_countof(systemMessage) + _countof(contextMessage) + 32];
     _snwprintf_s(
-        finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nSystem reason: %ls", contextMessage, systemMessage
+        finalMessage, _countof(finalMessage),
+        _TRUNCATE, L"%ls\n\nSystem reason: %ls", contextMessage, systemMessage
     );
 
     PresentError(finalMessage);
@@ -251,7 +256,6 @@ cleanup:
     }
     if (hCore) FreeLibrary(hCore);
     free(libPath);
-    free(exePath);
 
     return ret;
 }
@@ -265,8 +269,6 @@ static void EnableVTP() {
         return;
     }
 
-    const DWORD vtpFlags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
-
     DWORD originalMode = 0;
     if (!GetConsoleMode(handle, &originalMode)) {
         wchar_t systemMessage[256];
@@ -275,6 +277,7 @@ static void EnableVTP() {
         return;
     }
 
+    const DWORD vtpFlags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
     if (!SetConsoleMode(handle, originalMode | vtpFlags)) {
         wchar_t systemMessage[256];
         GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
@@ -293,12 +296,12 @@ int main() {
 }
 
 #elifdef PLATFORM_LINUX
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -352,7 +355,10 @@ int main(int argc, char* argv[]) {
     lastSlash = strrchr(exePath, '/');
     *lastSlash = '\0';
 
-    size_t cap = (lastSlash - exePath) + (sizeof(LOAD_DIR) / sizeof(LOAD_DIR[0])) + (sizeof(LOAD_FILE) / sizeof(LOAD_FILE[0])) - 1;
+    size_t cap = (lastSlash - exePath)
+        + (sizeof(LOAD_DIR) / sizeof(LOAD_DIR[0]))
+        + (sizeof(LOAD_FILE) / sizeof(LOAD_FILE[0]))
+        - 1;
     libPath = SkMalloc(cap * sizeof(char));
 
     // Generate full dll path
@@ -386,9 +392,9 @@ cleanup:
 }
 
 #elifdef PLATFORM_ANDROID
-#include <SDL3/SDL_main.h>
 #include <SDL3/SDL_loadso.h>
 #include <SDL3/SDL_log.h>
+#include <SDL3/SDL_main.h>
 
 #define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
 #define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { SDL_Log(msg, __VA_ARGS__); CLEANUP_AND_EXIT(); } } while(0)
