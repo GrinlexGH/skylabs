@@ -36,12 +36,13 @@ auto GetAvailableExtensions(const vk::raii::Context& context) {
             continue;
         }
 
-        const std::vector<vk::ExtensionProperties> layerExtensions = context.enumerateInstanceExtensionProperties({ layer.layerName.data() });
-        globalExtensions.insert(
-            globalExtensions.end(),
-            std::make_move_iterator(layerExtensions.begin()),
-            std::make_move_iterator(layerExtensions.end())
-        );
+        const std::vector<vk::ExtensionProperties> layerExtensions =
+            context.enumerateInstanceExtensionProperties({ layer.layerName.data() });
+
+        globalExtensions.reserve(globalExtensions.size() + layerExtensions.size());
+        for (auto& ext : layerExtensions) {
+            globalExtensions.emplace_back(ext.extensionName);
+        }
 
         break;
     }
@@ -56,20 +57,21 @@ CInstance::CInstance(const IOSConnector* osConnector, const bool setupDebugUtils
     const vk::raii::Context context { osConnector->GetVkGetInstanceProcAddr() };
 
     const std::vector<const char*> enabledExtensions = SetupExtensions(context, osConnector, setupDebugUtils);
-    constexpr std::uint32_t appVersion = vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
-    constexpr auto debugSeverity =
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    constexpr auto debugTypes =
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+    constexpr std::uint32_t appVersion =
+        vk::makeApiVersion(0, Skylabs::VERSION_MAJOR, Skylabs::VERSION_MINOR, Skylabs::VERSION_PATCH);
+
+#ifdef DEBUG
+    constexpr auto debugSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
+        | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo
+        | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+        | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+    constexpr auto debugTypes = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
+        | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
+        | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+#endif
 
     vkb::InstanceBuilder instanceBuilder;
-    instanceBuilder
-        .set_app_name(Skylabs::GAME_NAME)
+    instanceBuilder.set_app_name(Skylabs::GAME_NAME)
         .set_app_version(appVersion)
         .set_engine_name(Skylabs::NAME)
         .set_engine_version(appVersion)
@@ -80,20 +82,22 @@ CInstance::CInstance(const IOSConnector* osConnector, const bool setupDebugUtils
     if (setupDebugUtils && m_enabledExtensions.contains(vk::EXTDebugUtilsExtensionName)) {
         instanceBuilder
 #if !defined(ARCH_32)
-        .request_validation_layers()
+            .request_validation_layers()
 #endif
-        .set_debug_callback(reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(reinterpret_cast<std::uintptr_t>(DebugCallback)))
-        .set_debug_messenger_severity(static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(debugSeverity))
-        .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(debugTypes));
+            .set_debug_callback(
+                reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(reinterpret_cast<std::uintptr_t>(DebugCallback))
+            )
+            .set_debug_messenger_severity(static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(debugSeverity))
+            .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(debugTypes));
     }
 #endif
 
     auto instanceResult = instanceBuilder.build();
     if (!instanceResult) {
         throw std::runtime_error(
-            fmt::format("Failed to create vulkan instance ({}): {}, {}",
-                vk::to_string(vk::Result { instanceResult.vk_result() }),
-                instanceResult.error().message(),
+            fmt::format(
+                "Failed to create vulkan instance ({}): {}, {}",
+                vk::to_string(vk::Result { instanceResult.vk_result() }), instanceResult.error().message(),
                 instanceResult.detailed_failure_reasons()
             )
         );
@@ -113,9 +117,7 @@ std::vector<const char*> CInstance::SetupExtensions(
     const IOSConnector* osConnector,
     [[maybe_unused]] const bool setupDebugUtils
 ) {
-    boost::container::flat_set<std::string_view> requestedExtensions {
-        vk::EXTSwapchainColorSpaceExtensionName
-    };
+    boost::container::flat_set<std::string_view> requestedExtensions { vk::EXTSwapchainColorSpaceExtensionName };
 
 #ifdef DEBUG
     if (setupDebugUtils) {
@@ -128,7 +130,7 @@ std::vector<const char*> CInstance::SetupExtensions(
     }
 
     if (requestedExtensions.empty()) {
-        return {};
+        return { };
     }
 
     // Find these extensions
@@ -140,7 +142,7 @@ std::vector<const char*> CInstance::SetupExtensions(
     }
 
     // Raw extension names
-    std::vector<const char*> enabledExtensions {};
+    std::vector<const char*> enabledExtensions { };
     enabledExtensions.reserve(m_enabledExtensions.size());
     for (const auto& ext : m_enabledExtensions) {
         enabledExtensions.push_back(ext.c_str());

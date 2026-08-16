@@ -115,14 +115,8 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
         device->waitIdle();
         m_swapchain.Clear();
         m_context.RepairSurface();
-        m_needSwapchainRecreation = true;
         m_needSurfaceRecreation = false;
-    }
-
-    if (m_needSwapchainRecreation) {
-        device->waitIdle();
         RecreateSwapchain();
-        m_needSwapchainRecreation = false;
     }
 
     const auto& cmd = m_graphicsCmd.Get();
@@ -139,13 +133,20 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     auto [acquireResult, imageIndex] = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (acquireResult != vk::Result::eSuccess) {
         Log::Debug("Acquire result: {}", vk::to_string(acquireResult));
-        if (vk::Result::eErrorOutOfDateKHR == acquireResult) {
-            device->waitIdle();
+        if (acquireResult == vk::Result::eErrorOutOfDateKHR) {
             RecreateSwapchain();
-            m_needSwapchainRecreation = false;
-            return;
+            std::tie(acquireResult, imageIndex) = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
         }
-        if (vk::Result::eErrorSurfaceLostKHR == acquireResult) {
+
+#ifdef PLATFORM_WINDOWS
+        if (acquireResult == vk::Result::eSuboptimalKHR && !m_context.Window()->Minimized()) {
+            RecreateSwapchain();
+            m_imageAvailableSemaphore.Get() = vk::raii::Semaphore { *m_context.Device(), vk::SemaphoreCreateInfo { } };
+            std::tie(acquireResult, imageIndex) = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
+        }
+#endif
+
+        if (acquireResult == vk::Result::eErrorSurfaceLostKHR) {
             return;
         }
     }
@@ -215,6 +216,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
 }
 
 void CRenderer::RecreateSwapchain() {
+    m_context.Device()->waitIdle();
     const auto [oldWidth, oldHeight] = m_swapchain.Extent();
     m_swapchain.Recreate({ });
 

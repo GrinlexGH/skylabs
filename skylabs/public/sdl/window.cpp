@@ -29,4 +29,8 @@ CWindow::~CWindow() {
 Utils::Extent2D CWindow::DrawableSize() const {
     return GetWindowSizeInPixels(m_handle);
 }
+
+bool CWindow::Minimized() const {
+    return SDL_GetWindowFlags(m_handle) & SDL_WINDOW_MINIMIZED;
+}
 }

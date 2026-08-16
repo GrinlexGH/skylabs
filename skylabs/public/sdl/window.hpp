@@ -17,6 +17,7 @@ public:
     [[nodiscard]] SDL_Window* operator*() const noexcept { return m_handle; }
 
     [[nodiscard]] Utils::Extent2D DrawableSize() const override;
+    [[nodiscard]] bool Minimized() const override;
 private:
     SDL_Window* m_handle = nullptr;
 };

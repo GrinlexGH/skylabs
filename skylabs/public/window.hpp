@@ -12,4 +12,5 @@ public:
     virtual ~IWindow() = default;
 
     [[nodiscard]] virtual Utils::Extent2D DrawableSize() const = 0;
+    [[nodiscard]] virtual bool Minimized() const = 0;
 };

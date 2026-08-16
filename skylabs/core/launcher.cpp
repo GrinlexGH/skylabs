@@ -2,9 +2,19 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
 
+bool CLauncher::Watcher(void* userdata, SDL_Event* event) {
+    auto self = static_cast<CLauncher*>(userdata);
+    if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+        self->m_renderer->Draw(self->m_camera.ViewMatrix(), self->m_camera.Fov(), 0);
+        return false;
+    }
+
+    return true;
+}
+
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
-    m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_TRANSPARENT | SDL_WINDOW_BORDERLESS };
+    m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
     m_surfaceProvider = SDL::Vulkan::COSConnector { *m_window };
 
 #ifdef PLATFORM_ANDROID
@@ -12,6 +22,8 @@ void CLauncher::Create() {
 #endif
 
     m_renderer = Vulkan::CRenderer::TryToCreate(&m_window, &m_surfaceProvider);
+
+    SDL_SetEventFilter(Watcher, this);
 
     auto [v, i] = GenerateDisk();
     auto oi = m_renderer->UploadMesh(v, i);
@@ -68,7 +80,7 @@ void CLauncher::Main() {
 
         ProcessEvents();
 
-        if (!m_minimized) {
+        if (!m_window.Minimized()) {
             Update(deltaTimeMs);
             UpdateVisuals(deltaTimeMs);
             Render(deltaTimeMs);
@@ -169,60 +181,32 @@ void CLauncher::Render(float deltaTime) {
 }
 
 void CLauncher::ProcessEvents() {
-    Uint64 flags = SDL_GetWindowFlags(*m_window);
-    bool isMinimized = (flags & SDL_WINDOW_MINIMIZED) != 0;
-
-    if (m_minimized != isMinimized) {
-        m_minimized = isMinimized;
-        m_renderer->m_needSwapchainRecreation = true;
-    }
-
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-        switch (e.type) {
-            case SDL_EVENT_QUIT:
-                m_quit = true;
-                break;
-
-            case SDL_EVENT_RENDER_DEVICE_RESET:
-                m_renderer->m_needSurfaceRecreation = true;
-                break;
-
-            case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
-            case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
-            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-                m_renderer->m_needSwapchainRecreation = true;
-                break;
-
-            case SDL_EVENT_FINGER_DOWN:
-            case SDL_EVENT_FINGER_UP:
-            case SDL_EVENT_FINGER_MOTION:
-                HandleTouchEvent(e);
-                break;
-
-            case SDL_EVENT_KEY_DOWN:
+    while(auto event = m_eventPump.PollEvent()) {
+        if (std::holds_alternative<QuitEvent>(*event)) {
+            m_quit = true;
+        } else if (std::holds_alternative<KeyEvent>(*event)) {
+            auto e = std::get<KeyEvent>(*event);
+            if (e.down) {
                 HandleKeyDownEvent(e.key);
-                break;
-
-            case SDL_EVENT_KEY_UP:
+            } else {
                 HandleKeyUpEvent(e.key);
-                break;
-
-            case SDL_EVENT_MOUSE_MOTION:
-                m_camera.ProcessMouseMovement(e.motion.xrel, -e.motion.yrel);
-                break;
-
-            case SDL_EVENT_MOUSE_WHEEL:
-                m_camera.ProcessMouseScroll(e.wheel.y);
-                break;
-
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            }
+        } else if (std::holds_alternative<DeviceResetEvent>(*event)) {
+            m_renderer->m_needSurfaceRecreation = true;
+        } else if (std::holds_alternative<MouseMotionEvent>(*event)) {
+            auto e = std::get<MouseMotionEvent>(*event);
+            m_camera.ProcessMouseMovement(e.dx, -e.dy);
+        } else if (std::holds_alternative<MouseWheelEvent>(*event)) {
+            auto e = std::get<MouseWheelEvent>(*event);
+            m_camera.ProcessMouseScroll(e.y);
+        } else if (std::holds_alternative<MouseButtonEvent>(*event)) {
+            auto e = std::get<MouseButtonEvent>(*event);
+            if (e.down) {
                 Click();
-                break;
-
-            case SDL_EVENT_TEXT_INPUT:
-                HandleTextInput(e.text);
-                break;
+            }
+        } else if (std::holds_alternative<FingerTouchEvent>(*event)) {
+            auto e = std::get<FingerTouchEvent>(*event);
+            HandleTouchEvent(e);
         }
     }
 }
@@ -285,49 +269,26 @@ void CLauncher::Click() {
     }
 }
 
-void CLauncher::HandleTouchEvent(const SDL_Event& e) {
-    if (e.type == SDL_EVENT_FINGER_DOWN) {
+void CLauncher::HandleTouchEvent(const FingerTouchEvent& e) {
+    if (e.down) {
         // Open keyboard
-        if (m_chatButton.IsInside(e.tfinger.x, e.tfinger.y)) {
+        if (m_chatButton.IsInside(e.x, e.y)) {
             m_textInputActive = !m_textInputActive;
             m_textInputActive ? SDL_StartTextInput(*m_window) : SDL_StopTextInput(*m_window);
             return;
         }
 
         // Activate joystick
-        if (e.tfinger.x < 0.5f && !m_leftJoystick.active) {
+        if (e.x < 0.5f && !m_leftJoystick.active) {
             m_leftJoystick.active = true;
-            m_leftJoystick.fingerId = e.tfinger.fingerID;
-            m_leftJoystick.centerX = e.tfinger.x;
-            m_leftJoystick.centerY = e.tfinger.y;
+            m_leftJoystick.fingerId = e.fingerID;
+            m_leftJoystick.centerX = e.x;
+            m_leftJoystick.centerY = e.y;
             return;
         }
-    }
-
-    if (e.type == SDL_EVENT_FINGER_MOTION) {
-        // Joystick movement
-        if (m_leftJoystick.active && e.tfinger.fingerID == m_leftJoystick.fingerId) {
-            float dx = e.tfinger.x - m_leftJoystick.centerX;
-            float dy = e.tfinger.y - m_leftJoystick.centerY;
-
-            float dist = std::sqrt(dx * dx + dy * dy);
-            if (dist > 0.001f) {
-                float scale = (dist > m_leftJoystick.radius) ? (m_leftJoystick.radius / dist) : 1.0f;
-                m_leftJoystick.dirX = (dx * scale) / m_leftJoystick.radius;
-                m_leftJoystick.dirY = (dy * scale) / m_leftJoystick.radius;
-            }
-
-            return;
-        }
-
-        // If not joystick finger, then its camera movement
-        const auto [width, height] = m_window.DrawableSize();
-        m_camera.ProcessMouseMovement(e.tfinger.dx * width, -e.tfinger.dy * height);
-    }
-
-    if (e.type == SDL_EVENT_FINGER_UP) {
+    } else {
         // Disable joystick
-        if (m_leftJoystick.active && e.tfinger.fingerID == m_leftJoystick.fingerId) {
+        if (m_leftJoystick.active && e.fingerID == m_leftJoystick.fingerId) {
             m_leftJoystick.active = false;
             m_leftJoystick.dirX = 0.0f;
             m_leftJoystick.dirY = 0.0f;
@@ -335,13 +296,34 @@ void CLauncher::HandleTouchEvent(const SDL_Event& e) {
     }
 }
 
-void CLauncher::HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent) {
-    switch (keyEvent.key) {
-        case SDLK_ESCAPE: {
+void CLauncher::HandleFingerMotionEvent(const FingerMotionEvent& e) {
+    // Joystick movement
+    if (m_leftJoystick.active && e.fingerID == m_leftJoystick.fingerId) {
+        float dx = e.x - m_leftJoystick.centerX;
+        float dy = e.y - m_leftJoystick.centerY;
+
+        float dist = std::sqrt(dx * dx + dy * dy);
+        if (dist > 0.001f) {
+            float scale = (dist > m_leftJoystick.radius) ? (m_leftJoystick.radius / dist) : 1.0f;
+            m_leftJoystick.dirX = (dx * scale) / m_leftJoystick.radius;
+            m_leftJoystick.dirY = (dy * scale) / m_leftJoystick.radius;
+        }
+
+        return;
+    }
+
+    // If not joystick finger, then its camera movement
+    const auto [width, height] = m_window.DrawableSize();
+    m_camera.ProcessMouseMovement(e.dx * width, -e.dy * height);
+}
+
+void CLauncher::HandleKeyDownEvent(const Keys& key) {
+    switch (key) {
+        case Keys::eEscape: {
             m_quit = true;
         } break;
 
-        case SDLK_RETURN: {
+        case Keys::eEnter: {
             if (!m_textInputActive)
                 break;
             m_textInputActive = false;
@@ -350,29 +332,33 @@ void CLauncher::HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent) {
             m_inputBuffer.clear();
         } break;
 
-        case SDLK_Z: {
+        case Keys::eZ: {
             static bool mouseModeSwitch = true;
             SDL_SetWindowRelativeMouseMode(*m_window, mouseModeSwitch);
             mouseModeSwitch = !mouseModeSwitch;
         } break;
 
-        case SDLK_F11: {
+        case Keys::eF11: {
             static bool fullscreenSwitch = true;
             SDL_SetWindowFullscreen(*m_window, fullscreenSwitch);
             fullscreenSwitch = !fullscreenSwitch;
         } break;
 
-        case SDLK_LSHIFT: {
+        case Keys::eLeftShift: {
             m_camera.MoveFaster();
         } break;
+
+        default:
+            break;
     }
 }
 
-void CLauncher::HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent) {
-    switch (keyEvent.key) {
-        case SDLK_LSHIFT: {
+void CLauncher::HandleKeyUpEvent(const Keys& key) {
+    switch (key) {
+        case Keys::eLeftShift: {
             m_camera.ResetSpeed();
         } break;
+        default: break;
     }
 }
 

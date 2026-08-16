@@ -58,14 +58,16 @@ private:
     void UpdateVisuals(float deltaTime);
     void Click();
 
-    void HandleTouchEvent(const SDL_Event& e);
-    void HandleKeyDownEvent(const SDL_KeyboardEvent& keyEvent);
-    void HandleKeyUpEvent(const SDL_KeyboardEvent& keyEvent);
+    void HandleTouchEvent(const FingerTouchEvent& e);
+    void HandleFingerMotionEvent(const FingerMotionEvent& e);
+    void HandleKeyDownEvent(const Keys& key);
+    void HandleKeyUpEvent(const Keys& key);
     void HandleTextInput(const SDL_TextInputEvent& textEvent);
+
+    static bool Watcher(void* userdata, SDL_Event* event);
 
     std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> GenerateDisk();
 
-    bool m_minimized = false;
     bool m_quit = false;
 
     bool m_textInputActive = false;

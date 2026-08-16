@@ -65,7 +65,7 @@ void CPostProcessPass::Draw(const CCommandBuffer& cmd, const CImage& swapchainIm
     swapchainAttachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     swapchainAttachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     swapchainAttachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    swapchainAttachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 1.0f };
+    swapchainAttachInfo.clearValue.color = std::array { 0.005f, 0.005f, 0.005f, 1.0f };
 
     vk::RenderingInfo swapchainRenderInfo {};
     swapchainRenderInfo.renderArea = vk::Rect2D { { 0, 0 }, swapchainImage.Extent2D() };
