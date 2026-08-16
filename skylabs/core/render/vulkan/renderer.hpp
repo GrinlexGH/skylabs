@@ -6,7 +6,7 @@
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
-#include <skylabs/core/render/vulkan/platform/swapchain.hpp>
+#include <skylabs/core/render/vulkan/swapchain.hpp>
 #include <skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp>
 #include <skylabs/core/render/vulkan/render_object.hpp>
 #include <skylabs/core/render/render_object.hpp>

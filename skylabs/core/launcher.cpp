@@ -26,6 +26,15 @@ void CLauncher::Create() {
 
     SDL_SetEventFilter(Watcher, this);
 
+    m_eventDispatcher.sink<QuitEvent>().connect<&CLauncher::OnQuit>(*this);
+    m_eventDispatcher.sink<KeyEvent>().connect<&CLauncher::OnKeyEvent>(*this);
+    m_eventDispatcher.sink<DeviceResetEvent>().connect<&CLauncher::OnDeviceResetEvent>(*this);
+    m_eventDispatcher.sink<MouseMotionEvent>().connect<&CLauncher::OnMouseMotionEvent>(*this);
+    m_eventDispatcher.sink<MouseWheelEvent>().connect<&CLauncher::OnMouseWheelEvent>(*this);
+    m_eventDispatcher.sink<MouseButtonEvent>().connect<&CLauncher::OnMouseButtonEvent>(*this);
+    m_eventDispatcher.sink<FingerTouchEvent>().connect<&CLauncher::OnFingerTouchEvent>(*this);
+    m_eventDispatcher.sink<FingerMotionEvent>().connect<&CLauncher::OnFingerMotionEvent>(*this);
+
     auto [v, i] = GenerateDisk();
     auto oi = m_renderer->UploadMesh(v, i);
     m_towers.emplace_back(glm::vec3(-1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1), std::vector <SDisk> {
@@ -183,32 +192,9 @@ void CLauncher::Render(float deltaTime) {
 
 void CLauncher::ProcessEvents() {
     while(auto event = m_eventPump.PollEvent()) {
-        if (std::holds_alternative<QuitEvent>(*event)) {
-            m_quit = true;
-        } else if (std::holds_alternative<KeyEvent>(*event)) {
-            auto e = std::get<KeyEvent>(*event);
-            if (e.down) {
-                HandleKeyDownEvent(e.key);
-            } else {
-                HandleKeyUpEvent(e.key);
-            }
-        } else if (std::holds_alternative<DeviceResetEvent>(*event)) {
-            m_renderer->OnDeviceLost();
-        } else if (std::holds_alternative<MouseMotionEvent>(*event)) {
-            auto e = std::get<MouseMotionEvent>(*event);
-            m_camera.ProcessMouseMovement(e.dx, -e.dy);
-        } else if (std::holds_alternative<MouseWheelEvent>(*event)) {
-            auto e = std::get<MouseWheelEvent>(*event);
-            m_camera.ProcessMouseScroll(e.y);
-        } else if (std::holds_alternative<MouseButtonEvent>(*event)) {
-            auto e = std::get<MouseButtonEvent>(*event);
-            if (e.down) {
-                Click();
-            }
-        } else if (std::holds_alternative<FingerTouchEvent>(*event)) {
-            auto e = std::get<FingerTouchEvent>(*event);
-            HandleTouchEvent(e);
-        }
+        std::visit([this](auto&& e) {
+            m_eventDispatcher.trigger(std::forward<decltype(e)>(e));
+        }, *event);
     }
 }
 
@@ -270,7 +256,7 @@ void CLauncher::Click() {
     }
 }
 
-void CLauncher::HandleTouchEvent(const FingerTouchEvent& e) {
+void CLauncher::OnFingerTouchEvent(const FingerTouchEvent& e) {
     if (e.down) {
         // Open keyboard
         if (m_chatButton.IsInside(e.x, e.y)) {
@@ -297,7 +283,7 @@ void CLauncher::HandleTouchEvent(const FingerTouchEvent& e) {
     }
 }
 
-void CLauncher::HandleFingerMotionEvent(const FingerMotionEvent& e) {
+void CLauncher::OnFingerMotionEvent(const FingerMotionEvent& e) {
     // Joystick movement
     if (m_leftJoystick.active && e.fingerID == m_leftJoystick.fingerId) {
         float dx = e.x - m_leftJoystick.centerX;

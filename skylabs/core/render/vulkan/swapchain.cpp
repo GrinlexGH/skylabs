@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/platform/swapchain.hpp>
+#include <skylabs/core/render/vulkan/swapchain.hpp>
 #include <skylabs/public/logging.hpp>
 
 namespace Vulkan {

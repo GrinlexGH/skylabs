@@ -26,7 +26,7 @@ target_sources(
         render/vulkan/pipeline/graphics_pipeline.hpp
         render/vulkan/pipeline/pipeline_layout_cache.hpp
         render/vulkan/pipeline/shader.hpp
-        render/vulkan/platform/swapchain.hpp
+        render/vulkan/swapchain.hpp
         render/vulkan/resources/buffer.hpp
         render/vulkan/resources/image.hpp
         render/vulkan/resources/sampler.hpp
@@ -58,7 +58,7 @@ target_sources(
         render/vulkan/pipeline/graphics_pipeline.cpp
         render/vulkan/pipeline/pipeline_layout_cache.cpp
         render/vulkan/pipeline/shader.cpp
-        render/vulkan/platform/swapchain.cpp
+        render/vulkan/swapchain.cpp
         render/vulkan/resources/buffer.cpp
         render/vulkan/resources/image.cpp
         render/vulkan/resources/sampler.cpp

@@ -58,17 +58,26 @@ private:
     void UpdateVisuals(float deltaTime);
     void Click();
 
-    void HandleTouchEvent(const FingerTouchEvent& e);
-    void HandleFingerMotionEvent(const FingerMotionEvent& e);
     void HandleKeyDownEvent(const Keys& key);
     void HandleKeyUpEvent(const Keys& key);
     void HandleTextInput(const SDL_TextInputEvent& textEvent);
+
+    void OnQuit(QuitEvent) { m_quit = true; }
+    void OnKeyEvent(KeyEvent e) { if (e.down) HandleKeyDownEvent(e.key); else HandleKeyUpEvent(e.key); }
+    void OnDeviceResetEvent(DeviceResetEvent) { m_renderer->OnDeviceLost(); }
+    void OnMouseMotionEvent(MouseMotionEvent e) { m_camera.ProcessMouseMovement(e.dx, -e.dy); }
+    void OnMouseWheelEvent(MouseWheelEvent e) { m_camera.ProcessMouseScroll(e.y); }
+    void OnMouseButtonEvent(MouseButtonEvent e) { if (e.down) Click(); }
+    void OnFingerTouchEvent(const FingerTouchEvent& e);
+    void OnFingerMotionEvent(const FingerMotionEvent& e);
 
     static bool Watcher(void* userdata, SDL_Event* event);
 
     std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> GenerateDisk();
 
     bool m_quit = false;
+
+    entt::dispatcher m_eventDispatcher;
 
     bool m_textInputActive = false;
     std::string m_inputBuffer;
