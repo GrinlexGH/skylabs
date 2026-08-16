@@ -5,6 +5,7 @@
 bool CLauncher::Watcher(void* userdata, SDL_Event* event) {
     auto self = static_cast<CLauncher*>(userdata);
     if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+        self->m_renderer->OnPossiblyWindowSizeChange();
         self->m_renderer->Draw(self->m_camera.ViewMatrix(), self->m_camera.Fov(), 0);
         return false;
     }
@@ -192,7 +193,7 @@ void CLauncher::ProcessEvents() {
                 HandleKeyUpEvent(e.key);
             }
         } else if (std::holds_alternative<DeviceResetEvent>(*event)) {
-            m_renderer->m_needSurfaceRecreation = true;
+            m_renderer->OnDeviceLost();
         } else if (std::holds_alternative<MouseMotionEvent>(*event)) {
             auto e = std::get<MouseMotionEvent>(*event);
             m_camera.ProcessMouseMovement(e.dx, -e.dy);

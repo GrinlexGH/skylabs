@@ -33,7 +33,8 @@ public:
     const ::CRenderObject& GetObjectData(std::uint32_t id) const;
     CRenderObject UploadGameObject(std::uint32_t meshId, const glm::mat4& matrix, std::uint16_t colorID);
 
-    CCommandBufferAllocator& CommandBufferAllocator() { return m_commandBufferAllocator; }
+    void OnDeviceLost();
+    void OnPossiblyWindowSizeChange();
 
 private:
     static constexpr auto FRAMES_IN_FLIGHT_COUNT = 3;

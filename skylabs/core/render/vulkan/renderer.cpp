@@ -110,15 +110,6 @@ std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window, c
 
 void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
     const auto& device = m_context.Device();
-
-    if (m_needSurfaceRecreation) {
-        device->waitIdle();
-        m_swapchain.Clear();
-        m_context.RepairSurface();
-        m_needSurfaceRecreation = false;
-        RecreateSwapchain();
-    }
-
     const auto& cmd = m_graphicsCmd.Get();
 
     UpdateMVP(view, fov);
@@ -213,6 +204,21 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     }
 
     m_inFlightContext.NextFrame();
+}
+
+void CRenderer::OnDeviceLost() {
+    m_context.Device()->waitIdle();
+    m_swapchain.Clear();
+    m_context.RepairSurface();
+    RecreateSwapchain();
+}
+
+void CRenderer::OnPossiblyWindowSizeChange() {
+    if (const auto [width, height] = m_context.Window()->DrawableSize();
+        vk::Extent2D { width, height } != m_swapchain.Extent()
+    ) {
+        RecreateSwapchain();
+    }
 }
 
 void CRenderer::RecreateSwapchain() {
