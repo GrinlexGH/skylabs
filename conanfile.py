@@ -47,21 +47,11 @@ class SkylabsRecipe(ConanFile):
         deps.generate()
         tc = CMakeToolchain(self)
         if self.settings.os == "Android":
-            self.create_sdl_android_sources_symlink()
             self.create_vulkan_validation_symlink()
         tc.generate()
 
     def layout(self):
         cmake_layout(self)
-
-    def create_sdl_android_sources_symlink(self):
-        sdl_pkg = Path(self.dependencies["sdl"].package_path)
-        src = sdl_pkg / "android-project" / "app" / "src" / "main" / "java" / "org" / "libsdl"
-        dst = Path(self.recipe_path) / "android" / "app" / "src" / "main" / "java" / "org" / "libsdl"
-        self._link_or_copy(src, dst, is_dir=True)
-        src = sdl_pkg / "android-project" / "app" / "proguard-rules.pro"
-        dst = Path(self.recipe_path) / "android" / "app" / "proguard-rules.pro"
-        self._link_or_copy(src, dst, is_dir=False)
 
     def create_vulkan_validation_symlink(self):
         arch_map = {
@@ -79,9 +69,9 @@ class SkylabsRecipe(ConanFile):
         src = vvl_pkg / abi / "libVkLayer_khronos_validation.so"
         dst = Path(self.source_folder) / "android" / "app" / "src" / "main" / "jniLibs" / abi / "libVkLayer_khronos_validation.so"
 
-        self._link_or_copy(src, dst, is_dir=False)
+        self._copy(src, dst)
 
-    def _link_or_copy(self, src: Path, dst: Path, is_dir: bool):
+    def _copy(self, src: Path, dst: Path):
         if dst.exists() or dst.is_symlink():
             if dst.is_dir() and not dst.is_symlink():
                 shutil.rmtree(dst)
@@ -89,12 +79,7 @@ class SkylabsRecipe(ConanFile):
                 dst.unlink()
 
         dst.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            os.symlink(src, dst, target_is_directory=is_dir)
-            self.output.info(f"Symlink created: {dst} -> {src}")
-        except OSError as e:
-            self.output.warning(f"Symlink failed: {e}. Falling back to copying: {dst}")
-            if is_dir:
-                shutil.copytree(src, dst)
-            else:
-                shutil.copy2(src, dst)
+
+        shutil.copy2(src, dst)
+
+        self.output.info(f"Copied: {src} -> {dst}")

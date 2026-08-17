@@ -4,7 +4,6 @@
 .vs/
 .idea/
 .run/
-.gradle/
 .venv/
 
 *PVS-Studio*
@@ -15,14 +14,6 @@ out/
 
 # CMake user presets
 CMakeUserPresets.json
-
-# Gradle
-/android/local.properties
-/android/app/proguard-rules.pro
-/android/**/.cxx
-/android/**/assets
-/android/**/libsdl
-/android/**/jniLibs
 
 # Renderdoc
 skylabs.cap
