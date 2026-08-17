@@ -4,3 +4,6 @@
 [submodule "conan/conan-config"]
 	path = conan/conan-config
 	url = https://github.com/GrinlexGH/conan-config
+[submodule "android"]
+	path = android
+	url = https://github.com/GrinlexGH/skylabs-android
