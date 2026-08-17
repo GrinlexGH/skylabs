@@ -313,7 +313,7 @@ static void PresentCError(const char* format, ...) {
     strerror_r(errno, systemMessage, countof(systemMessage));
 
     char contextMessage[1024];
-    va_list args;
+    va_list args = { 0 };
     va_start(args, format);
     snprintf(contextMessage, countof(contextMessage), format, args);
     va_end(args);
@@ -329,10 +329,6 @@ static void* SkMalloc(const size_t size) {
     }
     return p;
 }
-
-#define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
-#define PERROR_EXIT_CHECK(expr, msg) do { if (expr) { perror(msg); CLEANUP_AND_EXIT(); } } while(0)
-#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { fprintf(stderr, msg, __VA_ARGS__); CLEANUP_AND_EXIT(); } } while(0)
 
 #define LOAD_DIR "/lib/"
 #define LOAD_FILE "core.so"
@@ -367,18 +363,18 @@ int main(int argc, char* argv[]) {
     exePath = NULL;
 
     hCore = dlopen(libPath, RTLD_LAZY);
-    const char* loadError = dlerror();
+    const char* dlErrorDesc = dlerror();
     if (!hCore) {
-        fprintf(stderr, "Failed to load library:\n%s\n", loadError ? loadError : "Unknown error");
+        fprintf(stderr, "Failed to load library:\n%s\n", dlErrorDesc ? dlErrorDesc : "Unknown error");
         goto cleanup;
     }
     free(libPath);
     libPath = NULL;
 
     main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
-    const char* dlsymError = dlerror();
+    dlErrorDesc = dlerror();
     if (!coreMain) {
-        fprintf(stderr, "Failed to load library function:\n%s\n", dlsymError);
+        fprintf(stderr, "Failed to load library function:\n%s\n", dlErrorDesc ? dlErrorDesc : "Unknown error!");
         goto cleanup;
     }
 
@@ -387,7 +383,6 @@ int main(int argc, char* argv[]) {
 cleanup:
     if (hCore) dlclose(hCore);
     free(libPath);
-    free(exePath);
     return ret;
 }
 
@@ -395,9 +390,6 @@ cleanup:
 #include <SDL3/SDL_loadso.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_main.h>
-
-#define CLEANUP_AND_EXIT() do { ret = 1; goto cleanup; } while(0)
-#define PRINTF_EXIT_CHECK(expr, msg, ...) do { if (expr) { SDL_Log(msg, __VA_ARGS__); CLEANUP_AND_EXIT(); } } while(0)
 
 #define LOAD_PATH "core.so"
 
