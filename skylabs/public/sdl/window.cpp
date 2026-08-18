@@ -27,7 +27,7 @@ CWindow::~CWindow() {
 }
 
 SDL_Window* CWindow::Create(const char* title, int w, int h, SDL_WindowFlags flags) {
-#ifndef PLATFORM_ANDROID
+#ifdef PLATFORM_ANDROID
     flags |= SDL_WINDOW_FULLSCREEN;
 #endif
 

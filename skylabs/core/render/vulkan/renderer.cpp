@@ -201,6 +201,11 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     vk::Result presentResult = m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
     if (presentResult != vk::Result::eSuccess) {
         Log::Debug("Present result: {}", vk::to_string(presentResult));
+#ifdef PLATFORM_ANDROID
+        if (presentResult == vk::Result::eSuboptimalKHR) {
+            RecreateSwapchain();
+        }
+#endif
     }
 
     m_inFlightContext.NextFrame();
