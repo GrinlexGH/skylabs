@@ -9,7 +9,6 @@ std::atomic<Level> g_runtimeLevel { Level::eTrace };
 
 void SubmitLog(const Level level, const std::source_location& /*loc*/, const std::string& message) {
 #ifdef PLATFORM_ANDROID
-    SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_TRACE);
     const char* msg = message.c_str();
     switch (level) {
         case Log::Level::eFatal: SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION, "SKYLABS: %s", msg); break;

@@ -1,5 +1,4 @@
 #include <skylabs/public/sdl/event_pump.hpp>
-#include <skylabs/public/logging.hpp>
 
 namespace {
 constexpr frozen::unordered_map<SDL_Keycode, Keys, 6> g_keyMap {
@@ -53,7 +52,5 @@ std::optional<Event> CEventPump::PollEvent() {
         default:
             return UnknownEvent { };
     }
-
-    return std::nullopt;
 }
 }

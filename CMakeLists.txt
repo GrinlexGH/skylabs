@@ -52,7 +52,7 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
 
-set(CMAKE_DEBUGGER_WORKING_DIRECTORY ${SKYLABS_BUILD_DIR})
+set(CMAKE_DEBUGGER_WORKING_DIRECTORY ${SKYLABS_ROOT_DIR})
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_BINARY_DIR}/.install")
@@ -229,17 +229,17 @@ function(skylabs_target_setup_install target_name)
         )
     endif()
 
-    install(
-        FILES $<$<BOOL:${MSVC}>:$<TARGET_PDB_FILE:${target_name}>>
-        DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
-        OPTIONAL
-    )
-
     install(TARGETS ${target_name}
         ${runtime_dependencies_args}
         ARCHIVE DESTINATION ${SKYLABS_INSTALL_SUBDIR}${archive_dest}
         LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
         RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
+    )
+
+    install(
+        FILES $<$<BOOL:${MSVC}>:$<TARGET_PDB_FILE:${target_name}>>
+        DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
+        OPTIONAL
     )
 
     if(ARG_RUNTIME_PLUGINS)

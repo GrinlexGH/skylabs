@@ -182,7 +182,7 @@ SpaceBeforeParensOptions:
   BeforeNonEmptyParentheses: false
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
-SpaceInEmptyBraces: Always # clang-format 22
+SpaceInEmptyBraces: Always
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: Never
 SpacesInContainerLiterals: true
