@@ -127,10 +127,13 @@ function(skylabs_target_setup_ide target_name)
         list(REMOVE_DUPLICATES all_files)
     endif()
 
+    get_target_property(target_source_dir ${target_name} SOURCE_DIR)
+
     set(in_tree_files "")
     set(external_files "")
     foreach(file ${all_files})
-        cmake_path(IS_PREFIX CMAKE_CURRENT_SOURCE_DIR "${file}" NORMALIZE is_in_tree)
+        cmake_path(ABSOLUTE_PATH file BASE_DIRECTORY "${target_source_dir}" NORMALIZE OUTPUT_VARIABLE abs_file)
+        cmake_path(IS_PREFIX target_source_dir "${abs_file}" NORMALIZE is_in_tree)
         if(is_in_tree)
             list(APPEND in_tree_files "${file}")
         else()
@@ -139,7 +142,7 @@ function(skylabs_target_setup_ide target_name)
     endforeach()
 
     if(in_tree_files)
-        source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Sources" FILES ${in_tree_files})
+        source_group(TREE ${target_source_dir} PREFIX "Sources" FILES ${in_tree_files})
     endif()
 
     if(external_files)

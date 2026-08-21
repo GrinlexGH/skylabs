@@ -21,8 +21,9 @@
     - [CMAKE_FIND_ROOT_PATH_MODE_XXXXXXX](#cmake_find_root_path_mode_xxxxxxx)
 7. [Skylabs](#skylabs)
     - [Clang-Format](#clang-format)
-    - [Pre-Commit hooks](#pre-commit-hooks)
+    - [Pre-Commit Hooks](#pre-commit-hooks)
     - [Project Structure](#project-structure)
+    - [Include Rules](#include-rules)
 
 ## Introduction
 
@@ -410,7 +411,7 @@ Finally, we can move on to describing the project's content.
 
 There's no need to use `clang-format` in Skylabs. The configuration file is only needed for default settings for the IDE, so that it doesn't put an indent after the namespace block by default, for example.
 
-### Pre-Commit hooks
+### Pre-Commit Hooks
 
 Pre-commit hooks are very useful for removing unnecessary ugly whitespaces at the end of lines and other minor problems.
 
@@ -433,3 +434,17 @@ uv pip install -U -r ./requirements.txt
 The `launcher` simply loads `core.dll` plugin. It's only needed to keep the root directory clean, so it's written in C to avoid pulling in unnecessary DLLs.
 
 The `core` contains the main logic of the program, and `public` is an auxiliary library with common things.
+
+### Include Rules
+
+I was inspired by [this](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1204r0.html) proposal.
+
+All the code is located in a folder with the project name (not ), and all includes have a path relative to this folder and look like this:
+
+```cpp
+#include <skylabs/public/sdl/context.hpp>
+```
+
+There are two reasons why this is so:
+1. When moving or renaming a header file, you can easily change all includes using the standard find and replace feature in VS Code.
+2. The triangular brackets look nicer than the quotation marks (but this is not necessary, I can decide tomorrow that this is not the case and change everything to quotation marks).

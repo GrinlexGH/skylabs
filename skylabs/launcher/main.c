@@ -12,13 +12,12 @@ typedef int (*main_t)(int argc, char* argv[]);
 #include <shellapi.h>
 
 static void PresentError(const wchar_t* msg) {
-    TASKDIALOGCONFIG tdc;
-    ZeroMemory(&tdc, sizeof(TASKDIALOGCONFIG));
+    TASKDIALOGCONFIG tdc = { 0 };
 
     tdc.cbSize = sizeof(TASKDIALOGCONFIG);
     tdc.hwndParent = NULL;
     tdc.hInstance = NULL;
-    tdc.pszWindowTitle = L"Skylabs launcher notifier";
+    tdc.pszWindowTitle = L"Skylabs";
     tdc.pszContent = msg;
     tdc.dwCommonButtons = TDCBF_CLOSE_BUTTON;
     tdc.pszMainIcon = TD_ERROR_ICON;
@@ -69,7 +68,7 @@ static void PresentSystemError(const wchar_t* format, ...) {
     GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
 
     wchar_t contextMessage[1024];
-    va_list args = { 0 };
+    va_list args;
     va_start(args, format);
     _vsnwprintf_s(contextMessage, _countof(contextMessage), _TRUNCATE, format, args);
     va_end(args);
@@ -211,7 +210,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     wchar_t* lastSlash = wcsrchr(exePath, L'\\');
     *lastSlash = L'\0';
 
-    DWORD cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_DIR) + _countof(LOAD_FILE) - 1;
+    const DWORD cap = (DWORD)(lastSlash - exePath) + _countof(LOAD_DIR) + _countof(LOAD_FILE) - 1;
     libPath = SkMalloc(cap * sizeof(wchar_t));
 
     // Generate path to bin
@@ -233,7 +232,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     free(libPath);
     libPath = NULL;
 
-    main_t coreMain = (main_t)(uintptr_t)GetProcAddress(hCore, "CoreMain");
+    const main_t coreMain = (main_t)GetProcAddress(hCore, "CoreMain");
     if (!coreMain) {
         PresentSystemError(L"Failed to get \"CoreMain\" function address!");
         goto cleanup;
@@ -277,8 +276,7 @@ static void EnableVTP() {
         return;
     }
 
-    const DWORD vtpFlags = ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
-    if (!SetConsoleMode(handle, originalMode | vtpFlags)) {
+    if (!SetConsoleMode(handle, originalMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT)) {
         wchar_t systemMessage[256];
         GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
         printf("Failed to set virtual terminal processing flags:\n%ls", systemMessage);
