@@ -2,27 +2,27 @@
 1. [Introduction](#introduction)
 2. [Build Configurations](#build-configurations)
 3. [Third-Party Libraries](#third-party-libraries)
-   - [Git Submodules](#git-submodules)
-   - [Pre-Building](#pre-building)
+    - [Git Submodules](#git-submodules)
+      - [Pre-Building](#pre-building)
 4. [Conan](#conan)
-   - [Building From Scratch](#building-from-scratch)
-   - [Missing `.pdb` Files](#missing-pdb-files)
-   - [ConanCenter](#conancenter)
-   - [Local Recipe Index](#local-recipe-index)
-   - [Artifactory Server](#artifactory-server)
+    - [Building From Scratch](#building-from-scratch)
+    - [Missing `.pdb` Files](#missing-pdb-files)
+    - [ConanCenter](#conancenter)
+    - [Local Recipe Index](#local-recipe-index)
+    - [Artifactory Server](#artifactory-server)
 5. [Debugging And Runtime Dependencies](#debugging-and-runtime-dependencies)
-   - [The Local Debugging Solution](#the-local-debugging-solution)
-   - [Configuring CMake Install](#configuring-cmake-install)
+    - [The Local Debugging Solution](#the-local-debugging-solution)
+    - [Configuring CMake Install](#configuring-cmake-install)
 6. [Android](#android)
-   - [SDL Android Project](#sdl-android-project)
-   - [Android Studio Project Detection](#android-studio-project-detection)
-   - [Custom Conan Gradle Task](#custom-conan-gradle-task)
-   - [Copying Runtime Plugins And Custom Files](#copying-runtime-plugins-and-custom-files)
-   - [CMAKE_FIND_ROOT_PATH_MODE_XXXXXXX](#cmake_find_root_path_mode_xxxxxxx)
+    - [SDL Android Project](#sdl-android-project)
+    - [Android Studio Project Detection](#android-studio-project-detection)
+    - [Custom Conan Gradle Task](#custom-conan-gradle-task)
+    - [Copying Runtime Plugins And Custom Files](#copying-runtime-plugins-and-custom-files)
+    - [CMAKE_FIND_ROOT_PATH_MODE_XXXXXXX](#cmake_find_root_path_mode_xxxxxxx)
 7. [Skylabs](#skylabs)
-   - [Clang-Format](#clang-format)
-   - [Pre-Commit hooks](#pre-commit-hooks)
-   - [Project Structure](#project-structure)
+    - [Clang-Format](#clang-format)
+    - [Pre-Commit hooks](#pre-commit-hooks)
+    - [Project Structure](#project-structure)
 
 ## Introduction
 
@@ -89,13 +89,13 @@ So I found the solution in a **local recipe index**.
 
 ### Local Recipe Index
 
-I decided to host my own [local recipe index](https://docs.conan.io/2/devops/devops_local_recipes_index.html). It contains [recipes](../conan/conan-recipes/recipes/) that have been rewritten and updated immediately when a new version of the library is released.
+I decided to host my own [local recipe index](https://docs.conan.io/2/devops/devops_local_recipes_index.html). It contains [recipes](../conan/conan-recipes/recipes) that have been rewritten and updated immediately when a new version of the library is released.
 
 I even wrote a custom Telegram bot which automatically monitors releases for these libraries. (The bot is currently sitting in a private repository as the code is still a bit too raw).
 
 ### Artifactory Server
 
-To avoid recompiling on my laptop and PC every time, I set up my own Artifactory server. It's configured like a regular Docker server.
+To avoid recompiling on my laptop and PC every time, I set up my own [Artifactory server](https://docs.conan.io/2/tutorial/conan_repositories/setting_up_conan_remotes/artifactory/artifactory_ce_cpp.html). It's configured like a regular Docker server.
 
 It works very poorly on NTFS, and the built-in Derby database sometimes prevents it from starting correctly when the server is suddenly shut down.
 
@@ -118,7 +118,7 @@ First, I forced CMake to output all binaries to a dedicated folder (e.g., `CMAKE
 ```cmake
 set(SKYLABS_BUILD_DIR ${CMAKE_BINARY_DIR}/built/$<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>)
 
-...
+# ...
 
 set(runtime_dest "bin")
 set(archive_dest "lib")
@@ -163,7 +163,7 @@ To ensure the debugger finds game assets without copying gigabytes of data, I si
 set(CMAKE_DEBUGGER_WORKING_DIRECTORY ${SKYLABS_ROOT_DIR})
 ```
 
-There was one remaining issue: dynamically loaded plugins. I manually copy them via `add_custom_command`:
+There was one remaining issue: dynamically loaded DLL plugins. I manually copy them via `add_custom_command`:
 
 ```cmake
 if(ARG_RUNTIME_PLUGINS)
