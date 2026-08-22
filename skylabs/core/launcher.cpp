@@ -1,6 +1,7 @@
 #include <skylabs/core/launcher.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
+#include <skylabs/public/sdl/log_sink.hpp>
 
 bool CLauncher::Watcher(void* userdata, SDL_Event* event) {
     auto self = static_cast<CLauncher*>(userdata);
@@ -11,6 +12,14 @@ bool CLauncher::Watcher(void* userdata, SDL_Event* event) {
     }
 
     return true;
+}
+
+void CLauncher::PreCreate() {
+#ifdef PLATFORM_ANDROID
+    Log::AddSink(std::make_unique<SDL::CLogSink>());
+#else
+    Log::AddSink(std::make_unique<Log::CConsoleSink>());
+#endif
 }
 
 void CLauncher::Create() {

@@ -47,6 +47,7 @@ struct STower {
 class CLauncher final : public CBaseApplication
 {
 public:
+    void PreCreate() override;
     void Create() override;
     void Main() override;
     void Destroy() override;

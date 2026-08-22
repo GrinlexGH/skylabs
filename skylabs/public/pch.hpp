@@ -1,4 +1,19 @@
 #pragma once
+#include <iostream>
+#include <mutex>
+#include <array>
+#include <atomic>
+#include <tuple>
+#include <string_view>
+#include <string>
+#include <unordered_set>
+#include <unordered_map>
+#include <filesystem>
+#include <chrono>
+#include <stdexcept>
+#include <source_location>
+#include <variant>
+
 #include <vulkan/vulkan.hpp>
 
 #include <SDL3/SDL.h>
@@ -25,21 +40,6 @@
 #endif
 
 #include <frozen/unordered_map.h>
-
-#include <iostream>
-#include <mutex>
-#include <array>
-#include <atomic>
-#include <tuple>
-#include <string_view>
-#include <string>
-#include <unordered_set>
-#include <unordered_map>
-#include <filesystem>
-#include <chrono>
-#include <stdexcept>
-#include <source_location>
-#include <variant>
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>

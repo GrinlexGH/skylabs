@@ -13,13 +13,13 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     switch (messageSeverity) {
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-            Log::Info("{}", pCallbackData->pMessage);
+            Log::Info(Log::Category::eVulkan, "{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-            Log::Warning("{}", pCallbackData->pMessage);
+            Log::Warning(Log::Category::eVulkan, "{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-            Log::Error("{}\n", pCallbackData->pMessage);
+            Log::Error(Log::Category::eVulkan, "{}\n", pCallbackData->pMessage);
             break;
     }
 

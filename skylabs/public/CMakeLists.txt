@@ -29,6 +29,7 @@ target_sources(
         sdl/vulkan/vulkan.cpp
         sdl/vulkan/os_connector.cpp
         sdl/event_pump.cpp
+    sdl/log_sink.cpp
     PUBLIC
     FILE_SET HEADERS FILES
         pch.hpp
@@ -54,6 +55,7 @@ target_sources(
         sdl/vulkan/os_connector.hpp
         event_pump.hpp
         sdl/event_pump.hpp
+    sdl/log_sink.hpp
     FILE_SET generated
         TYPE HEADERS
         BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
