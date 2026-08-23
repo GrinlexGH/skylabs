@@ -19,7 +19,7 @@ target_sources(
         sdl/mixer/track.cpp
         sdl/ttf/context.cpp
         sdl/context.cpp
-        sdl/filestream.cpp
+        sdl/filesystem.cpp
         sdl/sdl.cpp
         sdl/window.cpp
         application.cpp
@@ -29,7 +29,7 @@ target_sources(
         sdl/vulkan/vulkan.cpp
         sdl/vulkan/os_connector.cpp
         sdl/event_pump.cpp
-    sdl/log_sink.cpp
+        sdl/log_sink.cpp
     PUBLIC
     FILE_SET HEADERS FILES
         pch.hpp
@@ -39,7 +39,7 @@ target_sources(
         sdl/mixer/track.hpp
         sdl/ttf/context.hpp
         sdl/context.hpp
-        sdl/filestream.hpp
+        sdl/filesystem.hpp
         sdl/sdl.hpp
         sdl/window.hpp
         application.hpp
@@ -55,7 +55,7 @@ target_sources(
         sdl/vulkan/os_connector.hpp
         event_pump.hpp
         sdl/event_pump.hpp
-    sdl/log_sink.hpp
+        sdl/log_sink.hpp
     FILE_SET generated
         TYPE HEADERS
         BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}

@@ -1,4 +1,4 @@
-#include <skylabs/public/sdl/filestream.hpp>
+#include <skylabs/public/sdl/filesystem.hpp>
 
 namespace {
 Sint64 SDLCALL StreamSizeBridge(void* userdata) {
@@ -108,5 +108,16 @@ SDL_IOStream* CreateIOStreamFromResource(IFileStream* stream) {
     iface.close = StreamCloseBridge;
 
     return SDL_OpenIO(&iface, stream);
+}
+
+bool CFilesystemBackend::Exists(const std::string& path) const {
+    SDL_PathInfo info;
+    return SDL_GetPathInfo(path.c_str(), &info);
+}
+
+std::unique_ptr<IFileStream> CFilesystemBackend::OpenRead(const std::string& path) const {
+    auto* handle = SDL_IOFromFile(path.c_str(), "rb");
+    if (!handle) return nullptr;
+    return std::make_unique<CFileStream>(handle);
 }
 }

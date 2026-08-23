@@ -19,26 +19,27 @@ public:
     virtual bool Flush() = 0;
 };
 
-class PUBLIC_CLASS Filesystem {
+class PUBLIC_CLASS IFilesystemBackend {
 public:
-    static Filesystem& Instance();
+    virtual ~IFilesystemBackend() = default;
+    [[nodiscard]] virtual bool Exists(const std::string& path) const = 0;
+    [[nodiscard]] virtual std::unique_ptr<IFileStream> OpenRead(const std::string& path) const = 0;
+};
 
-    [[nodiscard]] static std::string LoadAsString(std::string_view uri);
-    [[nodiscard]] static std::unique_ptr<IFileStream> LoadAsIO(std::string_view uri);
-    [[nodiscard]] static std::vector<std::byte> LoadAsVectorByte(std::string_view uri);
-    [[nodiscard]] static std::vector<std::uint8_t> LoadAsVector8(std::string_view uri);
-    [[nodiscard]] static std::vector<std::uint32_t> LoadAsVector32(std::string_view uri);
+class PUBLIC_CLASS CFilesystem {
+public:
+    explicit CFilesystem(std::unique_ptr<IFilesystemBackend> backend);
 
-    std::string ResolvePath(std::string_view uri) const;
     void Mount(std::string_view scheme, std::string_view physicalPath);
+    [[nodiscard]] std::string ResolvePath(std::string_view uri) const;
+
+    [[nodiscard]] std::string LoadAsString(std::string_view uri) const;
+    [[nodiscard]] std::unique_ptr<IFileStream> LoadAsIO(std::string_view uri) const;
+    [[nodiscard]] std::vector<std::byte> LoadAsVectorByte(std::string_view uri) const;
+    [[nodiscard]] std::vector<std::uint8_t> LoadAsVector8(std::string_view uri) const;
+    [[nodiscard]] std::vector<std::uint32_t> LoadAsVector32(std::string_view uri) const;
 
 private:
-    Filesystem();
-    Filesystem(Filesystem&) = default;
-    Filesystem(Filesystem&&) = default;
-    Filesystem& operator=(Filesystem&) = default;
-    Filesystem& operator=(Filesystem&&) = default;
-    ~Filesystem() = default;
-
+    std::unique_ptr<IFilesystemBackend> m_backend;
     std::unordered_map<std::string, std::vector<std::string>> m_mountPoints;
 };

@@ -1,12 +1,13 @@
 #pragma once
 #include <skylabs/public/sdl/mixer/mixer.hpp>
+#include <skylabs/public/filesystem.hpp>
 
 namespace SDL::Mixer {
 class CAudio
 {
 public:
     explicit CAudio(std::nullptr_t) {}
-    explicit CAudio(CMixer& mixer, std::string_view uri);
+    explicit CAudio(CFilesystem& filesystem, CMixer& mixer, std::string_view uri);
     CAudio(const CAudio&) = delete;
     CAudio(CAudio&&) noexcept;
     CAudio& operator=(const CAudio&) = delete;

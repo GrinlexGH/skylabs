@@ -25,4 +25,13 @@ private:
 };
 
 [[nodiscard]] PUBLIC_CLASS SDL_IOStream* CreateIOStreamFromResource(IFileStream* stream);
+
+class PUBLIC_CLASS CFilesystemBackend final : public IFilesystemBackend
+{
+public:
+    ~CFilesystemBackend() = default;
+
+    [[nodiscard]] bool Exists(const std::string& path) const override;
+    [[nodiscard]] std::unique_ptr<IFileStream> OpenRead(const std::string& path) const override;
+};
 }
