@@ -18,6 +18,7 @@ CMainPass::CMainPass(const CreationTools& creationTools, Utils::Extent2D renderE
     auto& descriptorLayoutCache = creationTools.m_descriptorLayoutCache;
     auto& descriptorAllocator = creationTools.m_descriptorAllocator;
     auto& pipelineLayoutCache = creationTools.m_pipelineLayoutCache;
+    auto& filesystem = creationTools.m_filesystem;
     auto [width, height] = renderExtent;
 
     m_nearestSampler = CSampler { context, { .m_filtering = vk::Filter::eNearest } };
@@ -64,8 +65,8 @@ CMainPass::CMainPass(const CreationTools& creationTools, Utils::Extent2D renderE
     }
 
     // Shaders
-    const CShader vertexShader(device, vk::ShaderStageFlagBits::eVertex, "res://shaders/shader.vert.spv");
-    const CShader fragmentShader(device, vk::ShaderStageFlagBits::eFragment, "res://shaders/shader.frag.spv");
+    const CShader vertexShader(device, vk::ShaderStageFlagBits::eVertex, filesystem.LoadAsVector32("res://shaders/shader.vert.spv"));
+    const CShader fragmentShader(device, vk::ShaderStageFlagBits::eFragment, filesystem.LoadAsVector32("res://shaders/shader.frag.spv"));
 
     // Pipeline
     const vk::raii::PipelineLayout& mainPipelineLayout = pipelineLayoutCache.GetLayout({

@@ -7,7 +7,7 @@ class CAudio
 {
 public:
     explicit CAudio(std::nullptr_t) {}
-    explicit CAudio(CFilesystem& filesystem, CMixer& mixer, std::string_view uri);
+    explicit CAudio(const CFilesystem& filesystem, CMixer& mixer, std::string_view uri);
     CAudio(const CAudio&) = delete;
     CAudio(CAudio&&) noexcept;
     CAudio& operator=(const CAudio&) = delete;

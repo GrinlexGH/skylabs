@@ -3,6 +3,7 @@
 #include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
 #include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
+#include <skylabs/public/filesystem.hpp>
 
 namespace Vulkan {
 struct CreationTools
@@ -12,5 +13,6 @@ struct CreationTools
     CPipelineLayoutCache& m_pipelineLayoutCache;
     CDescriptorLayoutCache& m_descriptorLayoutCache;
     CDescriptorAllocator& m_descriptorAllocator;
+    const CFilesystem& m_filesystem;
 };
 }

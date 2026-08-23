@@ -28,6 +28,7 @@ public:
 
 class PUBLIC_CLASS CFilesystem {
 public:
+    explicit CFilesystem(std::nullptr_t) { }
     explicit CFilesystem(std::unique_ptr<IFilesystemBackend> backend);
 
     void Mount(std::string_view scheme, std::string_view physicalPath);

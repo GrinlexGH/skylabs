@@ -15,6 +15,7 @@ CPostProcessPass::CPostProcessPass(
     auto& descriptorLayoutCache = creationTools.m_descriptorLayoutCache;
     auto& descriptorAllocator = creationTools.m_descriptorAllocator;
     auto& pipelineLayoutCache = creationTools.m_pipelineLayoutCache;
+    auto& filesystem = creationTools.m_filesystem;
 
     m_sampler = CSampler { context, { .m_filtering = vk::Filter::eNearest } };
 
@@ -40,10 +41,10 @@ CPostProcessPass::CPostProcessPass(
 
     // Shaders
     const CShader vertexShaderSwapchain(
-        device, vk::ShaderStageFlagBits::eVertex, "res://shaders/shaderSwapchain.vert.spv"
+        device, vk::ShaderStageFlagBits::eVertex, filesystem.LoadAsVector32("res://shaders/shaderSwapchain.vert.spv")
     );
     const CShader fragmentShaderSwapchain(
-        device, vk::ShaderStageFlagBits::eFragment, "res://shaders/shaderSwapchain.frag.spv"
+        device, vk::ShaderStageFlagBits::eFragment, filesystem.LoadAsVector32("res://shaders/shaderSwapchain.frag.spv")
     );
 
     const vk::raii::PipelineLayout& swapchainPipelineLayout = pipelineLayoutCache.GetLayout({

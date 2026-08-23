@@ -10,6 +10,7 @@
 #include <skylabs/public/sdl/sdl.hpp>
 #include <skylabs/public/sdl/vulkan/os_connector.hpp>
 #include <skylabs/public/sdl/window.hpp>
+#include <skylabs/public/sdl/filesystem.hpp>
 
 struct Joystick
 {
@@ -87,10 +88,12 @@ private:
     UIButton m_chatButton = { 0.8f, 0.05f, 0.15f, 0.1f };
     CCamera m_camera { glm::vec3(0.0f, 0.0f, 0.0f) };
 
+    CFilesystem m_filesystem { nullptr };
+
     SDL::CContext m_sdlContext { nullptr };
 
     SDL::CWindow m_window { nullptr };
-    SDL::Vulkan::COSConnector m_surfaceProvider { nullptr };
+    SDL::Vulkan::COSConnector m_osConnector { nullptr };
     SDL::CEventPump m_eventPump;
     std::unique_ptr<Vulkan::CRenderer> m_renderer { nullptr };
 

@@ -2,6 +2,7 @@
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
 #include <skylabs/public/sdl/log_sink.hpp>
+#include <skylabs/public/os.hpp>
 
 bool CLauncher::Watcher(void* userdata, SDL_Event* event) {
     auto self = static_cast<CLauncher*>(userdata);
@@ -25,8 +26,20 @@ void CLauncher::PreCreate() {
 void CLauncher::Create() {
     m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
     m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
-    m_surfaceProvider = SDL::Vulkan::COSConnector { *m_window };
-    m_renderer = Vulkan::CRenderer::TryToCreate(&m_window, &m_surfaceProvider);
+    m_osConnector = SDL::Vulkan::COSConnector { *m_window };
+    m_filesystem = CFilesystem { std::make_unique<SDL::CFilesystemBackend>() };
+
+#ifdef PLATFORM_ANDROID
+    m_filesystem.Mount("assets", "");
+    m_filesystem.Mount("assets", "assets:/");
+    m_filesystem.Mount("res", "");
+#else
+    m_filesystem.Mount("assets", OS::PathJoin(OS::GetExecutableDirectory(), "assets"));
+    m_filesystem.Mount("assets", OS::GetExecutableDirectory());
+    m_filesystem.Mount("res", OS::GetExecutableDirectory());
+#endif
+
+    m_renderer = Vulkan::CRenderer::TryToCreate(&m_window, &m_osConnector, m_filesystem);
 
     SDL_SetEventFilter(Watcher, this);
 

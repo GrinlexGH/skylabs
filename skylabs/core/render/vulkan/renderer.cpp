@@ -28,10 +28,14 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 }
 
 namespace Vulkan {
-CRenderer::CRenderer(const IWindow* const window, const IOSConnector* const surfaceProvider) {
+CRenderer::CRenderer(
+    const IWindow* const window,
+    const IOSConnector* const osConnector,
+    const CFilesystem& filesystem
+) : m_filesystem(&filesystem) {
     assert(window);
 
-    m_context = CContext { window, surfaceProvider };
+    m_context = CContext { window, osConnector };
     const auto& device = m_context.Device();
 
     m_swapchain = CSwapchain {
@@ -99,9 +103,13 @@ CRenderer::~CRenderer() {
     }
 }
 
-std::unique_ptr<CRenderer> CRenderer::TryToCreate(const IWindow* const window, const IOSConnector* const surfaceProvider) {
+std::unique_ptr<CRenderer> CRenderer::TryToCreate(
+    const IWindow* const window,
+    const IOSConnector* const osConnector,
+    const CFilesystem& filesystem
+) {
     try {
-        return std::make_unique<CRenderer>(window, surfaceProvider);
+        return std::make_unique<CRenderer>(window, osConnector, filesystem);
     } catch (const std::exception& e) {
         Log::Error("Cannot initialize vulkan renderer: {}", e.what());
         return nullptr;
