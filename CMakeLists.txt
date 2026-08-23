@@ -73,6 +73,11 @@ add_compile_options(
     "$<$<AND:${IS_LANG_CCXX},${IS_LTO_ENABLED},$<CXX_COMPILER_ID:MSVC>,$<VERSION_GREATER_EQUAL:${CMAKE_CXX_COMPILER_VERSION},19.35>>:/Zc:checkGwOdr>"
 )
 
+# Disable missing .pdb file warning
+add_link_options(
+    "$<$<AND:${IS_LANG_CCXX},$<CXX_COMPILER_ID:MSVC>>:/ignore:4099>"
+)
+
 add_compile_definitions(
     "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DEBUG>"
 
