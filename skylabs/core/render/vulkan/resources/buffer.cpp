@@ -2,7 +2,7 @@
 
 namespace Vulkan {
 CBuffer::CBuffer(
-    const CContext& context,
+    const vma::raii::Allocator& allocator,
     const vk::DeviceSize size,
     const vk::BufferUsageFlags& usage,
     const MemoryLocation location
@@ -26,7 +26,7 @@ CBuffer::CBuffer(
 
     vma::AllocationInfo allocationInfo;
     m_handle = vma::raii::Buffer {
-        *context.Allocator(),
+        allocator,
         bufferInfo,
         allocCreateInfo,
         vk::Optional { allocationInfo }
@@ -38,7 +38,7 @@ CBuffer::CBuffer(
         m_data = nullptr;
     }
 
-    vma::VirtualBlockCreateInfo virtualBlockInfo { size };
+    const vma::VirtualBlockCreateInfo virtualBlockInfo { size };
     m_memoryBlock = vma::raii::VirtualBlock { virtualBlockInfo };
 }
 }

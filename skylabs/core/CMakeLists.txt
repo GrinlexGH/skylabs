@@ -34,7 +34,6 @@ target_sources(
         render/vulkan/main_pass.hpp
         render/vulkan/post_process_pass.hpp
         render/vulkan/render_object.hpp
-        render/vulkan/render_pass.hpp
         render/vulkan/renderer.hpp
         render/vulkan/submesh.hpp
         render/render_object.hpp

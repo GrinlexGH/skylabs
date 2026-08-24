@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <source_location>
 #include <variant>
+#include <concepts>
 
 #include <vulkan/vulkan.hpp>
 

@@ -1,6 +1,10 @@
 #pragma once
 #include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
-#include <skylabs/core/render/vulkan/render_pass.hpp>
+#include <skylabs/core/render/vulkan/in_flight.hpp>
+#include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
+#include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
+#include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
+#include <skylabs/public/filesystem.hpp>
 #include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
 #include <skylabs/core/render/vulkan/submesh.hpp>
 #include <skylabs/core/render/render_object.hpp>
@@ -17,7 +21,16 @@ class CMainPass
 {
 public:
     explicit CMainPass(std::nullptr_t) {}
-    explicit CMainPass(const CreationTools& context, Utils::Extent2D renderExtent);
+    explicit CMainPass(
+        const CDevice& device,
+        const CInFlightContext& inFlightContext,
+        const CAllocator& allocator,
+        CPipelineLayoutCache& pipelineLayoutCache,
+        CDescriptorLayoutCache& descriptorLayoutCache,
+        CDescriptorAllocator& descriptorAllocator,
+        const CFilesystem& filesystem,
+        Utils::Extent2D renderExtent
+    );
     CMainPass(const CMainPass&) = delete;
     CMainPass(CMainPass&&) noexcept = default;
     CMainPass& operator=(const CMainPass&) = delete;
@@ -40,7 +53,8 @@ public:
     InFlight<CBuffer>& MVP() { return m_mvp; }
 
 private:
-    const CContext* m_context = nullptr;
+    const CDevice* m_device = nullptr;
+    const CAllocator* m_allocator = nullptr;
     const CInFlightContext* m_inFlightContext = nullptr;
 
     CSampler m_nearestSampler { nullptr };

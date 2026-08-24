@@ -34,7 +34,7 @@ class CSampler
 {
 public:
     explicit CSampler(std::nullptr_t) {}
-    explicit CSampler(const CContext& context, SamplerCreateInfo options = {});
+    explicit CSampler(const CDevice& device, const SamplerCreateInfo& options = {});
     CSampler(const CSampler&) = delete;
     CSampler(CSampler&&) noexcept = default;
     CSampler& operator=(const CSampler&) = delete;

@@ -55,18 +55,19 @@ PUBLIC_CLASS void SubmitLog(
 template<typename... Args>
 struct Format
 {
-    fmt::format_string<Args...> str;
-    std::source_location loc;
+    fmt::format_string<Args...> m_format;
+    std::source_location m_sourceLocation;
 
-    template<typename T>
-        requires std::convertible_to<const T&, fmt::format_string<Args...>>
-    consteval Format(const T& s, const std::source_location& l = std::source_location::current()) noexcept :
-        str(s), loc(l) { }
+    template<std::convertible_to<fmt::format_string<Args...>> T>
+    consteval Format(
+        const T& format,
+        const std::source_location& sourceLocation = std::source_location::current()
+    ) noexcept : m_format(format), m_sourceLocation(sourceLocation) { }
 };
 
 template<typename... Args>
 void DoLog(const Category category, const Level level, Format<std::type_identity_t<Args>...> fmt, Args&&... args) {
-    SubmitLog(category, level, fmt.loc, fmt::format(fmt.str, std::forward<Args>(args)...));
+    SubmitLog(category, level, fmt.m_sourceLocation, fmt::format(fmt.m_format, std::forward<Args>(args)...));
 }
 
 template<typename... Args>

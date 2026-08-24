@@ -1,24 +1,10 @@
 #include <skylabs/public/logging.hpp>
 
-namespace {
-std::vector<std::unique_ptr<Log::ISink>> g_sinks;
-}
+namespace { std::vector<std::unique_ptr<Log::ISink>> g_sinks; }
 
 namespace Log {
-void AddSink(std::unique_ptr<ISink> sink) {
+PUBLIC_CLASS void AddSink(std::unique_ptr<ISink> sink) {
     g_sinks.push_back(std::move(sink));
-}
-
-void SubmitLog(const Category category, const Level level, const std::source_location& loc, const std::string& message) {
-    for (const auto& sink : g_sinks) {
-        sink->Write(category, level, loc, message);
-    }
-
-    if (level == Level::eFatal) {
-        std::fflush(stdout);
-        std::fflush(stderr);
-        std::abort();
-    }
 }
 
 void CConsoleSink::Write(
@@ -45,5 +31,17 @@ void CConsoleSink::Write(
     fmt::print(categoryStyles.at(category), "[{}] ", Utils::ToString(category));
     fmt::print(levelStyles.at(level), "[{}]: ", Utils::ToString(level));
     fmt::println("{}", message);
+}
+
+PUBLIC_CLASS void SubmitLog(
+    const Category category, const Level level, const std::source_location& loc, const std::string& message) {
+    for (const auto& sink : g_sinks) {
+        sink->Write(category, level, loc, message);
+    }
+
+    if (level == Level::eFatal) {
+        std::fflush(stdout);
+        std::fflush(stderr);
+    }
 }
 }

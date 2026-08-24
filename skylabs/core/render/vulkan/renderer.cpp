@@ -73,20 +73,24 @@ CRenderer::CRenderer(
     }
 
     m_mainPass = CMainPass {
-        GetCreationTools(), { m_swapchain.Extent().width, m_swapchain.Extent().height }
+        m_context.Device(), m_inFlightContext, m_context.Allocator(), m_pipelineLayoutCache, m_descriptorLayoutCache,
+        m_descriptorAllocator, filesystem,
+        { m_swapchain.Extent().width, m_swapchain.Extent().height }
     };
     m_postProcessPass = CPostProcessPass {
-        GetCreationTools(), m_mainPass.MainAttachment(), m_swapchain.SurfaceFormat().format
+        m_context.Device(), m_inFlightContext, m_pipelineLayoutCache, m_descriptorLayoutCache, m_descriptorAllocator,
+        filesystem,
+        m_mainPass.MainAttachment(), m_swapchain.SurfaceFormat().format
     };
 
     m_vertexBuffer = CBuffer {
-        m_context, GEOMETRY_POOL_SIZE,
+        *m_context.Allocator(), GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
         MemoryLocation::eDeviceOnly
     };
 
     m_indexBuffer = CBuffer {
-        m_context, GEOMETRY_POOL_SIZE,
+        *m_context.Allocator(), GEOMETRY_POOL_SIZE,
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
         MemoryLocation::eDeviceOnly
     };
@@ -291,7 +295,7 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices, const 
 
         vk::DeviceSize totalSize = vSize + iSize;
         if (m_stagingBuffer.Size() < totalSize) {
-            m_stagingBuffer = CBuffer { m_context, totalSize,
+            m_stagingBuffer = CBuffer { *m_context.Allocator(), totalSize,
                 vk::BufferUsageFlagBits::eTransferSrc, MemoryLocation::eHostVisible
             };
         }

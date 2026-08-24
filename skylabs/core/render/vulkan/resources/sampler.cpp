@@ -2,8 +2,8 @@
 
 namespace Vulkan {
 CSampler::CSampler(
-    const CContext& context,
-    SamplerCreateInfo options
+    const CDevice& device,
+    const SamplerCreateInfo& options
 ) {
     vk::SamplerCreateInfo createInfo {};
 
@@ -18,7 +18,7 @@ CSampler::CSampler(
     }
 
     if (options.m_anisotropy.has_value()) {
-        assert(context.Device().Caps().m_samplerAnisotropy);
+        assert(device.Caps().m_samplerAnisotropy);
         createInfo.anisotropyEnable = vk::True;
         createInfo.maxAnisotropy = static_cast<float>(*options.m_anisotropy);
     }
@@ -48,6 +48,6 @@ CSampler::CSampler(
     createInfo.minLod = options.m_mipMapLevels.m_min;
     createInfo.maxLod = options.m_mipMapLevels.m_max;
 
-    m_handle = vk::raii::Sampler { *context.Device(), createInfo };
+    m_handle = vk::raii::Sampler { *device, createInfo };
 }
 }

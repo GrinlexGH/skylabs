@@ -4,20 +4,17 @@
 
 namespace Vulkan {
 CPostProcessPass::CPostProcessPass(
-    const CreationTools& creationTools,
+    const CDevice& device,
+    const CInFlightContext& inFlightContext,
+    CPipelineLayoutCache& pipelineLayoutCache,
+    CDescriptorLayoutCache& descriptorLayoutCache,
+    CDescriptorAllocator& descriptorAllocator,
+    const CFilesystem& filesystem,
     const InFlight<CImage>& inAttachment,
-    vk::Format swapchainFormat
-) : m_context(&creationTools.m_context), m_inFlightContext(&creationTools.m_inFlightContext)
+    const vk::Format swapchainFormat
+) : m_device(&*device), m_inFlightContext(&inFlightContext)
 {
-    auto& inFlightContext = creationTools.m_inFlightContext;
-    auto& context = creationTools.m_context;
-    const auto& device = *context.Device();
-    auto& descriptorLayoutCache = creationTools.m_descriptorLayoutCache;
-    auto& descriptorAllocator = creationTools.m_descriptorAllocator;
-    auto& pipelineLayoutCache = creationTools.m_pipelineLayoutCache;
-    auto& filesystem = creationTools.m_filesystem;
-
-    m_sampler = CSampler { context, { .m_filtering = vk::Filter::eNearest } };
+    m_sampler = CSampler { device, { .m_filtering = vk::Filter::eNearest } };
 
     // Descriptor sets
     const vk::raii::DescriptorSetLayout& swapchainSetLayout = descriptorLayoutCache.GetLayout({
@@ -29,7 +26,7 @@ CPostProcessPass::CPostProcessPass(
     };
 
     // Write descriptors
-    CDescriptorWriter descriptorWriter { device };
+    CDescriptorWriter descriptorWriter { *device };
     for (const auto i : Utils::Range(inFlightContext.FrameCount())) {
         descriptorWriter.Clear();
         descriptorWriter
@@ -41,10 +38,10 @@ CPostProcessPass::CPostProcessPass(
 
     // Shaders
     const CShader vertexShaderSwapchain(
-        device, vk::ShaderStageFlagBits::eVertex, filesystem.LoadAsVector32("res://shaders/shaderSwapchain.vert.spv")
+        *device, vk::ShaderStageFlagBits::eVertex, filesystem.LoadAsVector32("res://shaders/shaderSwapchain.vert.spv")
     );
     const CShader fragmentShaderSwapchain(
-        device, vk::ShaderStageFlagBits::eFragment, filesystem.LoadAsVector32("res://shaders/shaderSwapchain.frag.spv")
+        *device, vk::ShaderStageFlagBits::eFragment, filesystem.LoadAsVector32("res://shaders/shaderSwapchain.frag.spv")
     );
 
     const vk::raii::PipelineLayout& swapchainPipelineLayout = pipelineLayoutCache.GetLayout({
@@ -53,7 +50,7 @@ CPostProcessPass::CPostProcessPass(
 
     // Pipeline
     std::array swapchainColorFormats { swapchainFormat };
-    m_pipelineSwapchain = CGraphicsPipeline { device, {
+    m_pipelineSwapchain = CGraphicsPipeline { *device, {
         .m_layout = swapchainPipelineLayout,
         .m_shaders = { &vertexShaderSwapchain, &fragmentShaderSwapchain },
         .m_renderingInfo = { {}, swapchainColorFormats }
@@ -96,7 +93,7 @@ void CPostProcessPass::Draw(const CCommandBuffer& cmd, const CImage& swapchainIm
 
 void CPostProcessPass::Resize(const InFlight<CImage>& inAttachment) {
     for (const auto i : Utils::Range(m_inFlightContext->FrameCount())) {
-        CDescriptorWriter descriptorWriter { *m_context->Device() };
+        CDescriptorWriter descriptorWriter { *m_device };
         descriptorWriter
             .WriteImage(0, inAttachment[i].View(), *m_sampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler)
             .UpdateSet(*m_swapchainDescriptorSet[i]);

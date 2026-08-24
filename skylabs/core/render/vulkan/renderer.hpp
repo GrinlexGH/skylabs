@@ -9,7 +9,6 @@
 #include <skylabs/core/render/vulkan/swapchain.hpp>
 #include <skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp>
 #include <skylabs/core/render/vulkan/render_object.hpp>
-#include <skylabs/core/render/render_object.hpp>
 #include <skylabs/core/render/vulkan/resources/image.hpp>
 #include <skylabs/public/window.hpp>
 
@@ -52,17 +51,6 @@ private:
     void LoadObjects();
 
     void UpdateMVP(const glm::mat4& view, float fov);
-
-    CreationTools GetCreationTools() {
-        return {
-            m_context,
-            m_inFlightContext,
-            m_pipelineLayoutCache,
-            m_descriptorLayoutCache,
-            m_descriptorAllocator,
-            *m_filesystem
-        };
-    }
 
     const CFilesystem* m_filesystem = nullptr;
 
