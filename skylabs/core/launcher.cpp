@@ -103,7 +103,7 @@ void CLauncher::Main() {
         auto frameStart = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float, std::milli> diff = frameStart - lastTick;
         lastTick = frameStart;
-        float deltaTimeMs = diff.count();
+        const float deltaTimeMs = diff.count();
 
         ProcessEvents();
 
@@ -113,7 +113,7 @@ void CLauncher::Main() {
             Render(deltaTimeMs);
         } else {
             auto frameEnd = std::chrono::high_resolution_clock::now();
-            float busyTime = std::chrono::duration<float, std::milli>(frameEnd - frameStart).count();
+            const float busyTime = std::chrono::duration<float, std::milli>(frameEnd - frameStart).count();
             if (busyTime < FRAME_DELAY) {
                 SDL_Delay(static_cast<Uint32>(FRAME_DELAY - busyTime));
             }
@@ -122,7 +122,9 @@ void CLauncher::Main() {
         frameCount++;
         elapsedTime += deltaTimeMs;
         if (elapsedTime >= 1000.0f) {
-            std::string title = "Skylabs | FPS: " + std::to_string(frameCount) + " | DT: " + std::to_string(deltaTimeMs).substr(0, 4) + "ms";
+            float avgFps = frameCount * (1000.0f / elapsedTime);
+            float avgDt = elapsedTime / static_cast<float>(frameCount);
+            std::string title = fmt::format("Skylabs | FPS: {:.0f} | DT: {:.2f}ms", avgFps, avgDt);
             SDL_SetWindowTitle(*m_window, title.c_str());
             Log::Debug("{}", title);
             elapsedTime -= 1000.0f;
@@ -209,8 +211,8 @@ void CLauncher::Render(float deltaTime) {
 
 void CLauncher::ProcessEvents() {
     while(auto event = m_eventPump.PollEvent()) {
-        std::visit([this](auto&& e) {
-            m_eventDispatcher.trigger(std::forward<decltype(e)>(e));
+        std::visit([this]<typename T>(T&& e) {
+            m_eventDispatcher.trigger(std::forward<T>(e));
         }, *event);
     }
 }

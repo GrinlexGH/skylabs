@@ -1,21 +1,13 @@
 struct VOut {
     float4 pos : SV_Position;
-    [[vk::location(0)]] float2 uv;
+    [[vk::location(0)]] float2 uv : TEXCOORD0;
 };
 
 [shader("vertex")]
 VOut vertexMain(uint vertexIndex : SV_VertexID) {
     VOut output;
-
-    const float2 positions[3] = {
-        float2(-1.0, -1.0),
-        float2( 3.0, -1.0),
-        float2(-1.0,  3.0)
-    };
-
-    output.pos = float4(positions[vertexIndex], 0.0, 1.0);
-    output.uv = output.pos.xy * 0.5 + 0.5;
-
+    output.uv = float2((vertexIndex << 1) & 2, vertexIndex & 2);
+    output.pos = float4(output.uv * float2(2.0, 2.0) + float2(-1.0, -1.0), 0.0, 1.0);
     return output;
 }
 
@@ -28,15 +20,11 @@ float4 fragmentMain(VOut input, [[vk::binding(0)]] Sampler2D uOut) : SV_Target {
 
     float2 pixelPos = input.uv * float2(width, height);
     float2 centerPixel = float2(width, height) * 0.5;
-
     float dist = distance(pixelPos, centerPixel);
-
     float radius = 3.0;
-
     if (dist <= radius) {
         return float4(0.0, 1.0, 0.0, 1.0);
-    }
-    else if (dist <= radius + 1.0) {
+    } else if (dist <= radius + 1.0) {
         return float4(0.0, 0.0, 0.0, 1.0);
     }
 
