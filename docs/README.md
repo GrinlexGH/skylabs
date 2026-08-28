@@ -100,7 +100,7 @@ To avoid recompiling on my laptop and PC every time, I set up my own [Artifactor
 
 It works very poorly on NTFS, and the built-in Derby database sometimes prevents it from starting correctly when the server is suddenly shut down.
 
-To fix all this, I use PostgreSQL as a separate Docker service, install the server on a BTRFS partition, and use [`winbtrfs`](https://github.com/maharmstone/btrfs).
+To fix all this, I use PostgreSQL as a separate Docker service, install the server on a BTRFS partition on my laptop with CachyOS.
 
 ## Debugging And Runtime Dependencies
 
