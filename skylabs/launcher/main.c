@@ -286,8 +286,6 @@ static void EnableVTP() {
 /* Dummy main for console in debug */
 int main() {
     // Setup windows console
-    SetConsoleCP(CP_UTF8);
-    SetConsoleOutputCP(CP_UTF8);
     EnableVTP();
 
     return wWinMain(GetModuleHandleW(NULL), NULL, GetCommandLineW(), SW_SHOWNORMAL);

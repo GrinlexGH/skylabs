@@ -23,10 +23,7 @@ void CLauncher::PreCreate() {
 #endif
 }
 
-void CLauncher::Create() {
-    m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
-    m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
-    m_osConnector = SDL::Vulkan::COSConnector { *m_window };
+void CLauncher::InitFilesystem() {
     m_filesystem = CFilesystem { std::make_unique<SDL::CFilesystemBackend>() };
 
 #ifdef PLATFORM_ANDROID
@@ -38,7 +35,15 @@ void CLauncher::Create() {
     m_filesystem.Mount("assets", OS::GetExecutableDirectory());
     m_filesystem.Mount("res", OS::GetExecutableDirectory());
 #endif
+}
 
+void CLauncher::Create() {
+    m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
+    m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
+
+    InitFilesystem();
+
+    m_osConnector = SDL::Vulkan::COSConnector { *m_window };
     m_renderer = Vulkan::CRenderer::TryToCreate(&m_window, &m_osConnector, m_filesystem);
 
     SDL_SetEventFilter(Watcher, this);

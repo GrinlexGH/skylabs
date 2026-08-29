@@ -75,6 +75,8 @@ private:
 
     static bool Watcher(void* userdata, SDL_Event* event);
 
+    void InitFilesystem();
+
     std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> GenerateDisk();
 
     bool m_quit = false;
