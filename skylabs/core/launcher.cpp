@@ -4,17 +4,6 @@
 #include <skylabs/public/sdl/log_sink.hpp>
 #include <skylabs/public/os.hpp>
 
-bool CLauncher::Watcher(void* userdata, SDL_Event* event) {
-    auto self = static_cast<CLauncher*>(userdata);
-    if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-        self->m_renderer->OnPossiblyWindowSizeChange();
-        self->m_renderer->Draw(self->m_camera.ViewMatrix(), self->m_camera.Fov(), 0);
-        return false;
-    }
-
-    return true;
-}
-
 void CLauncher::PreCreate() {
 #ifdef PLATFORM_ANDROID
     Log::AddSink(std::make_unique<SDL::CLogSink>());
@@ -38,15 +27,27 @@ void CLauncher::InitFilesystem() {
 }
 
 void CLauncher::Create() {
-    m_sdlContext = SDL::CContext { SDL_INIT_VIDEO | SDL_INIT_AUDIO };
+    m_sdlContext = SDL::CContext { SDL_INIT_VIDEO };
     m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
 
     InitFilesystem();
 
     m_osConnector = SDL::Vulkan::COSConnector { *m_window };
-    m_renderer = Vulkan::CRenderer::TryToCreate(&m_window, &m_osConnector, m_filesystem);
+    m_renderer.emplace(&m_window, &m_osConnector, m_filesystem);
 
-    SDL_SetEventFilter(Watcher, this);
+#ifdef PLATFORM_WINDOWS
+    m_eventPump.SetEventFilter(
+        [](const Event& event, void* userData) {
+            const auto self = static_cast<CLauncher*>(userData);
+            if (std::holds_alternative<WindowResizeEvent>(event)) {
+                self->m_renderer->OnPossiblyWindowSizeChange();
+                self->m_renderer->Draw(self->m_camera.ViewMatrix(), self->m_camera.Fov(), 0);
+                return false;
+            }
+            return true;
+        }, this
+    );
+#endif
 
     m_eventDispatcher.sink<QuitEvent>().connect<&CLauncher::OnQuit>(*this);
     m_eventDispatcher.sink<KeyEvent>().connect<&CLauncher::OnKeyEvent>(*this);
@@ -225,7 +226,7 @@ void CLauncher::ProcessEvents() {
 void CLauncher::Click() {
     if (m_hoveredTowerIdx == -1)
         return;
-    auto [tt, dd] = m_towerDiskselecte;
+    auto [tt, dd] = m_selectedTowerAndDisk;
     if (tt == -1) {
         if (m_towers[m_hoveredTowerIdx].disks.empty()) {
             return;
@@ -241,7 +242,7 @@ void CLauncher::Click() {
         }
 
         m_towers[m_hoveredTowerIdx].disks[mindiskIndex].isselected = true;
-        auto& [t, d] = m_towerDiskselecte;
+        auto& [t, d] = m_selectedTowerAndDisk;
         t = m_hoveredTowerIdx;
         d = mindiskIndex;
     } else {
@@ -264,7 +265,7 @@ void CLauncher::Click() {
                 }
                 m_towers[tt].disks[dd].isselected = false;
                 m_towers[m_hoveredTowerIdx].disks[mindiskIndex].isselected = true;
-                auto& [t, d] = m_towerDiskselecte;
+                auto& [t, d] = m_selectedTowerAndDisk;
                 t = m_hoveredTowerIdx;
                 d = mindiskIndex;
                 return;
@@ -274,7 +275,7 @@ void CLauncher::Click() {
         m_towers[tt].disks[dd].isselected = false;
         m_towers[m_hoveredTowerIdx].disks.push_back(m_towers[tt].disks[dd]);
         m_towers[tt].disks.erase(m_towers[tt].disks.begin() + dd);
-        auto& [t, d] = m_towerDiskselecte;
+        auto& [t, d] = m_selectedTowerAndDisk;
         t = -1;
         d = -1;
     }

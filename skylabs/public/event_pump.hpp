@@ -37,10 +37,13 @@ using Event = std::variant<
     FingerMotionEvent
 >;
 
+using EventFilter = bool(*)(const Event& event, void* userData);
+
 class PUBLIC_CLASS IEventPump
 {
 public:
     virtual ~IEventPump() = default;
 
+    virtual void SetEventFilter(EventFilter filter, void* userData) = 0;
     [[nodiscard]] virtual std::optional<Event> PollEvent() = 0;
 };

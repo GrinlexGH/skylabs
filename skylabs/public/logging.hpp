@@ -58,7 +58,12 @@ struct Format
     fmt::format_string<Args...> m_format;
     std::source_location m_sourceLocation;
 
+    // Intellisense doesn't understand concepts correctly... (29.08.2026)
+#ifdef __INTELLISENSE__
+    template<typename T, std::enable_if_t<std::is_constructible_v<fmt::format_string<Args...>, const T&>, int> = 0>
+#else
     template<std::convertible_to<fmt::format_string<Args...>> T>
+#endif
     consteval Format(
         const T& format,
         const std::source_location& sourceLocation = std::source_location::current()

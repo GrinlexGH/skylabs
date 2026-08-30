@@ -12,12 +12,21 @@ constexpr frozen::unordered_map<SDL_Keycode, Keys, 6> g_keyMap {
 }
 
 namespace SDL {
+void CEventPump::SetEventFilter(const EventFilter filter, void* userData) {
+    m_filterUserData = userData;
+    m_filter = filter;
+    SDL_SetEventFilter(EventFilterWrap, this);
+}
+
 std::optional<Event> CEventPump::PollEvent() {
     SDL_Event event;
     if (!SDL_PollEvent(&event)) {
         return std::nullopt;
     }
+    return TranslateEvent(event);
+}
 
+Event CEventPump::TranslateEvent(const SDL_Event& event) {
     switch (event.type) {
         case SDL_EVENT_QUIT:
             return QuitEvent { };
@@ -27,7 +36,7 @@ std::optional<Event> CEventPump::PollEvent() {
             return WindowResizeEvent { event.window.data1, event.window.data2 };
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
-            if (!g_keyMap.contains(event.key.key)) { return std::nullopt; }
+            if (!g_keyMap.contains(event.key.key)) { return UnknownEvent { }; }
             return KeyEvent { g_keyMap.at(event.key.key), event.type == SDL_EVENT_KEY_DOWN };
         case SDL_EVENT_MOUSE_MOTION:
             return MouseMotionEvent { event.motion.xrel, event.motion.yrel };
@@ -52,5 +61,10 @@ std::optional<Event> CEventPump::PollEvent() {
         default:
             return UnknownEvent { };
     }
+}
+
+bool CEventPump::EventFilterWrap(void* userData, SDL_Event* const event) {
+    const auto eventPump = static_cast<CEventPump*>(userData);
+    return eventPump->m_filter(TranslateEvent(*event), eventPump->m_filterUserData);
 }
 }

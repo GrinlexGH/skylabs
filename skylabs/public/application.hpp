@@ -5,10 +5,6 @@ class PUBLIC_CLASS IApplication
 {
 public:
     IApplication() = default;
-    IApplication(const IApplication&) = delete;
-    IApplication(IApplication&&) = delete;
-    IApplication& operator=(const IApplication&) = delete;
-    IApplication& operator=(IApplication&&) = delete;
     virtual ~IApplication() = default;
 
     virtual void Create() = 0;

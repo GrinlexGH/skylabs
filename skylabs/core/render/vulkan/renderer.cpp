@@ -33,8 +33,6 @@ CRenderer::CRenderer(
     const IOSConnector* const osConnector,
     const CFilesystem& filesystem
 ) : m_filesystem(&filesystem) {
-    assert(window);
-
     m_context = CContext { window, osConnector };
     const auto& device = m_context.Device();
 
@@ -104,19 +102,6 @@ CRenderer::~CRenderer() {
         catch (const vk::SystemError& e) {
             Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
         }
-    }
-}
-
-std::unique_ptr<CRenderer> CRenderer::TryToCreate(
-    const IWindow* const window,
-    const IOSConnector* const osConnector,
-    const CFilesystem& filesystem
-) {
-    try {
-        return std::make_unique<CRenderer>(window, osConnector, filesystem);
-    } catch (const std::exception& e) {
-        Log::Error("Cannot initialize vulkan renderer: {}", e.what());
-        return nullptr;
     }
 }
 

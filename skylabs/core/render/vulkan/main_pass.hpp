@@ -43,7 +43,7 @@ public:
         const CBuffer& vertexBuffer,
         const CBuffer& indexBuffer,
         std::span<const SubMesh> meshes,
-        const std::vector<CRenderObject>& objects
+        const std::vector<::CRenderObject>& objects
     );
     void Resize(Utils::Extent2D newExtent);
 

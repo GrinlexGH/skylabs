@@ -23,12 +23,6 @@ public:
     CRenderer& operator=(CRenderer&&) = delete;
     ~CRenderer() override;
 
-    static std::unique_ptr<CRenderer> TryToCreate(
-        const IWindow* window,
-        const IOSConnector* osConnector,
-        const CFilesystem& filesystem
-    );
-
     void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
 
     std::uint32_t UploadMesh(const std::vector<CVertex>& vertices, const std::vector<std::uint16_t>& indices);

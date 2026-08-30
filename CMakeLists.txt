@@ -108,6 +108,7 @@ add_compile_definitions(
 # IDE filter setup rules:
 # SOURCES & FILESET SOURCES & FILESET HEADERS -> Sources (with saved tree)
 # FILESET generated -> Generated
+# other -> External
 function(skylabs_target_setup_ide target_name)
     set(options VS_STARTUP)
     cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})

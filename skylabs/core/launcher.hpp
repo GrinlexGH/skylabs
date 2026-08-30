@@ -93,13 +93,12 @@ private:
     CFilesystem m_filesystem { nullptr };
 
     SDL::CContext m_sdlContext { nullptr };
-
     SDL::CWindow m_window { nullptr };
-    SDL::Vulkan::COSConnector m_osConnector { nullptr };
     SDL::CEventPump m_eventPump;
-    std::unique_ptr<Vulkan::CRenderer> m_renderer { nullptr };
+    SDL::Vulkan::COSConnector m_osConnector { nullptr };
+    std::optional<Vulkan::CRenderer> m_renderer;
 
     std::vector<STower> m_towers;
     int m_hoveredTowerIdx = -1;
-    std::tuple<int, int> m_towerDiskselecte { -1, -1 };
+    std::tuple<int, int> m_selectedTowerAndDisk { -1, -1 };
 };
