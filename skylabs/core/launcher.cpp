@@ -226,7 +226,7 @@ void CLauncher::ProcessEvents() {
 void CLauncher::Click() {
     if (m_hoveredTowerIdx == -1)
         return;
-    auto [tt, dd] = m_selectedTowerAndDisk;
+    auto& [tt, dd] = m_selectedTowerAndDisk;
     if (tt == -1) {
         if (m_towers[m_hoveredTowerIdx].disks.empty()) {
             return;
@@ -281,7 +281,7 @@ void CLauncher::Click() {
     }
 }
 
-void CLauncher::OnFingerTouchEvent(const FingerTouchEvent& e) {
+void CLauncher::OnFingerTouchEvent(const FingerTouchEvent e) {
     if (e.down) {
         // Open keyboard
         if (m_chatButton.IsInside(e.x, e.y)) {
@@ -329,7 +329,7 @@ void CLauncher::OnFingerMotionEvent(const FingerMotionEvent& e) {
     m_camera.ProcessMouseMovement(e.dx * width, -e.dy * height);
 }
 
-void CLauncher::HandleKeyDownEvent(const Keys& key) {
+void CLauncher::HandleKeyDownEvent(const Keys key) {
     switch (key) {
         case Keys::eEscape: {
             m_quit = true;
@@ -365,7 +365,7 @@ void CLauncher::HandleKeyDownEvent(const Keys& key) {
     }
 }
 
-void CLauncher::HandleKeyUpEvent(const Keys& key) {
+void CLauncher::HandleKeyUpEvent(const Keys key) {
     switch (key) {
         case Keys::eLeftShift: {
             m_camera.ResetSpeed();

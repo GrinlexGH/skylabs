@@ -79,9 +79,9 @@ CInstance::CInstance(const IOSConnector* osConnector, const bool setupDebugUtils
         .enable_extensions(enabledExtensions);
 
 #ifdef DEBUG
-    if (setupDebugUtils && m_enabledExtensions.contains(vk::EXTDebugUtilsExtensionName)) {
+    if (setupDebugUtils && std::ranges::contains(m_enabledExtensions, vk::EXTDebugUtilsExtensionName)) {
         instanceBuilder
-#if !defined(ARCH_32)
+#ifndef ARCH_32
             .request_validation_layers()
 #endif
             .set_debug_callback(
@@ -117,16 +117,18 @@ std::vector<const char*> CInstance::SetupExtensions(
     const IOSConnector* osConnector,
     [[maybe_unused]] const bool setupDebugUtils
 ) {
-    boost::container::flat_set<std::string_view> requestedExtensions { vk::EXTSwapchainColorSpaceExtensionName };
+    std::unordered_map<std::string_view, bool> requestedExtensions {
+        { vk::EXTSwapchainColorSpaceExtensionName, false }
+    };
 
 #ifdef DEBUG
     if (setupDebugUtils) {
-        requestedExtensions.emplace(vk::EXTDebugUtilsExtensionName);
+        requestedExtensions.emplace(vk::EXTDebugUtilsExtensionName, false);
     }
 #endif
 
     for (auto& ext : osConnector->RequiredInstanceExtensions()) {
-        requestedExtensions.emplace(ext);
+        requestedExtensions.emplace(ext, true);
     }
 
     if (requestedExtensions.empty()) {
@@ -134,11 +136,23 @@ std::vector<const char*> CInstance::SetupExtensions(
     }
 
     // Find these extensions
+    std::vector<std::string_view> missingExtensions;
     m_enabledExtensions.reserve(requestedExtensions.size());
     for (const auto& extension : GetAvailableExtensions(context)) {
-        if (requestedExtensions.contains(std::string_view { extension.extensionName })) {
-            m_enabledExtensions.emplace(extension.extensionName.data());
+        if (const std::string_view name { extension.extensionName }; requestedExtensions.contains(name)) {
+            m_enabledExtensions.emplace_back(name);
+        } else if (requestedExtensions[name]) {
+            missingExtensions.push_back(name);
         }
+    }
+
+    if (!missingExtensions.empty()) {
+        throw std::runtime_error(
+            fmt::format(
+                "Missing required vulkan instancce extensions",
+                fmt::join(missingExtensions.begin(), missingExtensions.end(), ", ")
+            )
+        );
     }
 
     // Raw extension names

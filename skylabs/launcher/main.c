@@ -189,10 +189,7 @@ cleanup:
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
-    (void)hInstance;
-    (void)hPrevInstance;
-    (void)lpCmdLine;
-    (void)nShowCmd;
+    (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nShowCmd;
 
     int ret = 1;
     wchar_t* exePath = NULL;

@@ -7,6 +7,7 @@ class CInstance
 {
 public:
     explicit CInstance(std::nullptr_t) {}
+    explicit CInstance(vk::Instance instance, std::vector<std::string>) {}
     explicit CInstance(const IOSConnector* osConnector = nullptr, bool setupDebugUtils = true);
     CInstance(CInstance&) = delete;
     CInstance(CInstance&&) = default;
@@ -19,8 +20,8 @@ public:
     [[nodiscard]] const vkb::Instance& VkbInstance() const noexcept { return m_vkbInstance; }
     [[nodiscard]] vkb::Instance& VkbInstance() noexcept { return m_vkbInstance; }
 
-    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return m_enabledExtensions.contains(name); }
-    [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return m_vkbInstance.api_version; }
+    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return std::ranges::contains(m_enabledExtensions, name); }
+    [[nodiscard]] std::uint32_t ApiVersion() const noexcept { return vk::ApiVersion10; }
 
 private:
     [[nodiscard]] std::vector<const char*> SetupExtensions(
@@ -31,11 +32,10 @@ private:
 
     vk::raii::Instance m_handle { nullptr };
     vkb::Instance m_vkbInstance;
-
-    boost::container::flat_set<std::string, std::less<>> m_enabledExtensions;
-
 #ifdef DEBUG
     vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger { nullptr };
 #endif
+
+    std::vector<std::string> m_enabledExtensions;
 };
 }

@@ -60,8 +60,8 @@ private:
     void UpdateVisuals(float deltaTime);
     void Click();
 
-    void HandleKeyDownEvent(const Keys& key);
-    void HandleKeyUpEvent(const Keys& key);
+    void HandleKeyDownEvent(Keys key);
+    void HandleKeyUpEvent(Keys key);
     void HandleTextInput(const SDL_TextInputEvent& textEvent);
 
     void OnQuit(QuitEvent) { m_quit = true; }
@@ -70,7 +70,7 @@ private:
     void OnMouseMotionEvent(MouseMotionEvent e) { m_camera.ProcessMouseMovement(e.dx, -e.dy); }
     void OnMouseWheelEvent(MouseWheelEvent e) { m_camera.ProcessMouseScroll(e.y); }
     void OnMouseButtonEvent(MouseButtonEvent e) { if (e.down) Click(); }
-    void OnFingerTouchEvent(const FingerTouchEvent& e);
+    void OnFingerTouchEvent(const FingerTouchEvent e);
     void OnFingerMotionEvent(const FingerMotionEvent& e);
 
     static bool Watcher(void* userdata, SDL_Event* event);
