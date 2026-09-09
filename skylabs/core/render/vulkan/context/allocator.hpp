@@ -2,15 +2,10 @@
 #include <skylabs/core/render/vulkan/context/device.hpp>
 
 namespace Vulkan {
-class CAllocator
-{
+class CAllocator {
 public:
-    explicit CAllocator(std::nullptr_t) {}
-    explicit CAllocator(
-        const CInstance& instance,
-        const vk::raii::PhysicalDevice& physicalDevice,
-        const CDevice& device
-    );
+    explicit CAllocator(std::nullptr_t) { }
+    explicit CAllocator(const vk::raii::Instance& instance, const CDevice& device);
     CAllocator(const CAllocator&) = delete;
     CAllocator(CAllocator&& other) noexcept = default;
     CAllocator& operator=(const CAllocator&) = delete;

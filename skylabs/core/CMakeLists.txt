@@ -47,9 +47,6 @@ target_sources(
         render/vulkan/command_recording/sync_state.cpp
         render/vulkan/context/allocator.cpp
         render/vulkan/context/context.cpp
-        render/vulkan/context/device.cpp
-        render/vulkan/context/instance.cpp
-        render/vulkan/context/physical_device.cpp
         render/vulkan/pipeline/compute_pipeline.cpp
         render/vulkan/pipeline/descriptor_allocator.cpp
         render/vulkan/pipeline/descriptor_layout_cache.cpp

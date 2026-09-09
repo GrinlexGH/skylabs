@@ -2,15 +2,12 @@
 #include <skylabs/core/render/vulkan/context/physical_device.hpp>
 
 namespace Vulkan {
-class CQueue
-{
+class CQueue {
 public:
-    explicit CQueue(std::nullptr_t) {}
-    explicit CQueue(
-        const vk::raii::Device& device,
-        const VkQueue queue,
-        const std::uint32_t familyIndex
-    ) : m_handle(device, queue), m_familyIndex(familyIndex) {}
+    explicit CQueue(std::nullptr_t) { }
+    explicit CQueue(const vk::raii::Device& device, const vk::Queue& queue,
+                    const std::uint32_t familyIndex)
+        : m_handle(device, queue), m_familyIndex(familyIndex) { }
     CQueue(CQueue&) = delete;
     CQueue(CQueue&&) = default;
     CQueue& operator=(CQueue&) = delete;
@@ -27,17 +24,24 @@ private:
     std::uint32_t m_familyIndex = 0;
 };
 
-struct DeviceCaps
-{
-    bool m_maintenance5 = false;
-    bool m_samplerAnisotropy = false;
+struct DeviceCaps {
+    bool maintenance5 = false;
+    bool samplerAnisotropy = false;
 };
 
-class CDevice
-{
+class CDevice {
 public:
-    explicit CDevice(std::nullptr_t) {}
-    explicit CDevice(const CInstance& instance, CPhysicalDevice& physicalDevice);
+    explicit CDevice(std::nullptr_t) { }
+    explicit CDevice(vk::raii::Device&& device, CPhysicalDevice&& physicalDevice,
+                     std::vector<std::string>&& enabledExtensions, const DeviceCaps& caps,
+                     CQueue&& graphicsQueue, CQueue&& presentQueue, CQueue&& computeQueue)
+        : m_handle(std::move(device)),
+          m_physicalDevice(std::move(physicalDevice)),
+          m_enabledExtensions(std::move(enabledExtensions)),
+          m_caps(caps),
+          m_graphicsQueue(std::move(graphicsQueue)),
+          m_presentQueue(std::move(presentQueue)),
+          m_computeQueue(std::move(computeQueue)) { }
     CDevice(CDevice&) = delete;
     CDevice(CDevice&&) = default;
     CDevice& operator=(CDevice&) = delete;
@@ -46,21 +50,23 @@ public:
 
     [[nodiscard]] const vk::raii::Device& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Device* operator->() const noexcept { return &m_handle; }
-    [[nodiscard]] const vkb::Device& VkbDevice() const noexcept { return m_vkbDevice; }
-    [[nodiscard]] vkb::Device& VkbDevice() noexcept { return m_vkbDevice; }
+
+    [[nodiscard]] const CPhysicalDevice& PhysicalDevice() const noexcept { return m_physicalDevice; }
 
     [[nodiscard]] const CQueue& GraphicsQueue() const noexcept { return m_graphicsQueue; }
     [[nodiscard]] const CQueue& PresentQueue() const noexcept { return m_presentQueue; }
     [[nodiscard]] const CQueue& ComputeQueue() const noexcept { return m_computeQueue; }
 
-    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const { return m_enabledExtensions.contains(name); }
     [[nodiscard]] DeviceCaps Caps() const noexcept { return m_caps; }
+    [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const {
+        return std::ranges::contains(m_enabledExtensions, name);
+    }
 
 private:
     vk::raii::Device m_handle { nullptr };
-    vkb::Device m_vkbDevice;
+    CPhysicalDevice m_physicalDevice { nullptr };
 
-    boost::container::flat_set<std::string, std::less<>> m_enabledExtensions;
+    std::vector<std::string> m_enabledExtensions;
     DeviceCaps m_caps;
 
     CQueue m_graphicsQueue { nullptr };

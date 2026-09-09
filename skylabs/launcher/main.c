@@ -37,22 +37,16 @@ static void PresentCError(const wchar_t* format, ...) {
     va_end(args);
 
     wchar_t finalMessage[_countof(systemMessage) + _countof(contextMessage) + 32];
-    _snwprintf_s(
-        finalMessage, _countof(finalMessage),
-        _TRUNCATE, L"%ls\n\nCRT error description: %ls", contextMessage, systemMessage
-    );
+    _snwprintf_s(finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nCRT error description: %ls",
+                 contextMessage, systemMessage);
 
     PresentError(finalMessage);
 }
 
 static void GetSystemErrorMessage(wchar_t* message, const DWORD size, const DWORD errorCode) {
     DWORD msgLen = FormatMessageW(
-        FORMAT_MESSAGE_FROM_SYSTEM
-        | FORMAT_MESSAGE_IGNORE_INSERTS
-        | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-        NULL, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        message, size, NULL
-    );
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL,
+        errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message, size, NULL);
 
     if (msgLen == 0) {
         _snwprintf_s(message, size, _TRUNCATE, L"Unknown Win32 Error (0x%08X)", errorCode);
@@ -74,10 +68,8 @@ static void PresentSystemError(const wchar_t* format, ...) {
     va_end(args);
 
     wchar_t finalMessage[_countof(systemMessage) + _countof(contextMessage) + 32];
-    _snwprintf_s(
-        finalMessage, _countof(finalMessage),
-        _TRUNCATE, L"%ls\n\nSystem reason: %ls", contextMessage, systemMessage
-    );
+    _snwprintf_s(finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nSystem reason: %ls",
+                 contextMessage, systemMessage);
 
     PresentError(finalMessage);
 }
@@ -189,7 +181,10 @@ cleanup:
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
-    (void)hInstance; (void)hPrevInstance; (void)lpCmdLine; (void)nShowCmd;
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nShowCmd;
 
     int ret = 1;
     wchar_t* exePath = NULL;
@@ -273,7 +268,8 @@ static void EnableVTP() {
         return;
     }
 
-    if (!SetConsoleMode(handle, originalMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT)) {
+    if (!SetConsoleMode(handle,
+                        originalMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT)) {
         wchar_t systemMessage[256];
         GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
         printf("Failed to set virtual terminal processing flags:\n%ls", systemMessage);
@@ -299,22 +295,22 @@ int main() {
 #include <dlfcn.h>
 #include <unistd.h>
 
-#define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define COUNT_OF(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static void PresentCError(const char* format, ...) {
     char systemMessage[128];
-    strerror_r(errno, systemMessage, countof(systemMessage));
+    strerror_r(errno, systemMessage, COUNT_OF(systemMessage));
 
     char contextMessage[1024];
-    va_list args = { 0 };
+    va_list args = { 0 };  // NOLINT
     va_start(args, format);
-    snprintf(contextMessage, countof(contextMessage), format, args);
+    snprintf(contextMessage, COUNT_OF(contextMessage), format, args);
     va_end(args);
 
     fprintf(stderr, "%s\nSystem error description: %s\n", contextMessage, systemMessage);
 }
 
-static void* SkMalloc(const size_t size) {
+static void* Malloc(const size_t size) {
     void* p = malloc(size);
     if (!p) {
         PresentCError("Failed to allocate %zu bytes, wtf with your system bro💀", size);
@@ -326,7 +322,7 @@ static void* SkMalloc(const size_t size) {
 #define LOAD_DIR "/lib/"
 #define LOAD_FILE "core.so"
 
-int main(int argc, char* argv[]) {
+int main(const int argc, char* argv[]) {
     int ret = 1;
     char* exePath = NULL;
     char* libPath = NULL;
@@ -344,11 +340,8 @@ int main(int argc, char* argv[]) {
     lastSlash = strrchr(exePath, '/');
     *lastSlash = '\0';
 
-    size_t cap = (lastSlash - exePath)
-        + (sizeof(LOAD_DIR) / sizeof(LOAD_DIR[0]))
-        + (sizeof(LOAD_FILE) / sizeof(LOAD_FILE[0]))
-        - 1;
-    libPath = SkMalloc(cap * sizeof(char));
+    const size_t cap = (lastSlash - exePath) + COUNT_OF(LOAD_DIR) + COUNT_OF(LOAD_FILE) - 1;
+    libPath = Malloc(cap * sizeof(char));
 
     // Generate full dll path
     snprintf(libPath, cap, "%s" LOAD_DIR LOAD_FILE, exePath);
@@ -364,10 +357,11 @@ int main(int argc, char* argv[]) {
     free(libPath);
     libPath = NULL;
 
-    main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
+    const main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
     dlErrorDesc = dlerror();
     if (!coreMain) {
-        fprintf(stderr, "Failed to load library function:\n%s\n", dlErrorDesc ? dlErrorDesc : "Unknown error!");
+        fprintf(stderr, "Failed to load library function:\n%s\n",
+                dlErrorDesc ? dlErrorDesc : "Unknown error!");
         goto cleanup;
     }
 

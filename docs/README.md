@@ -407,10 +407,6 @@ endif()
 
 Finally, we can move on to describing the project's content.
 
-### Clang-Format
-
-There's no need to use `clang-format` in Skylabs. The configuration file is only needed for default settings for the IDE, so that it doesn't put an indent after the namespace block by default, for example.
-
 ### Pre-Commit Hooks
 
 Pre-commit hooks are very useful for removing unnecessary ugly whitespaces at the end of lines and other minor problems.

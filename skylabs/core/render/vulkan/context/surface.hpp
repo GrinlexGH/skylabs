@@ -3,12 +3,11 @@
 #include <skylabs/public/vulkan/os_connector.hpp>
 
 namespace Vulkan {
-class CSurface
-{
+class CSurface {
 public:
-    explicit CSurface(std::nullptr_t) {}
-    explicit CSurface(const CInstance& instance, const IOSConnector* osConnector) :
-        m_handle(*instance, osConnector->CreateSurface(*instance)) {}
+    explicit CSurface(std::nullptr_t) { }
+    explicit CSurface(const CInstance& instance, const IOSConnector* osConnector)
+        : m_handle(*instance, osConnector->CreateSurface(*instance)) { }
     CSurface(const CSurface&) = delete;
     CSurface(CSurface&& other) noexcept = default;
     CSurface& operator=(const CSurface&) = delete;

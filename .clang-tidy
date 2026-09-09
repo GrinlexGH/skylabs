@@ -1,40 +1,77 @@
 Checks: >
   -*,
+
   bugprone-*,
   -bugprone-easily-swappable-parameters,
-  -bugprone-narrowing-conversions,
   -bugprone-switch-missing-default-case,
   -bugprone-implicit-widening-of-multiplication-result,
 
-  clang-analyzer-*,
-  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
-
   performance-*,
-  -performance-no-int-to-ptr,
   -performance-avoid-endl,
+  -performance-no-int-to-ptr,
 
   portability-*,
   -portability-avoid-pragma-once,
 
-  modernize-use-override,
   modernize-use-emplace,
   modernize-use-equals-default,
+  modernize-use-override,
+  modernize-use-using,
   modernize-make-shared,
   modernize-make-unique,
+  modernize-deprecated-headers,
+  modernize-concat-nested-namespaces,
 
   readability-redundant-*,
   readability-delete-null-pointer,
   readability-container-size-empty,
   readability-simplify-boolean-expr,
   readability-string-compare,
+  readability-identifier-naming,
+  readability-make-member-function-const,
+  readability-convert-member-functions-to-static,
+  readability-inconsistent-declaration-parameter-name,
 
-  misc-definitions-in-headers,
-  misc-unused-parameters,
-  misc-unused-using-decls
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+
+CheckOptions:
+  - key: bugprone-multi-level-implicit-pointer-conversion.EnableInC
+    value: false
+
+  - key: readability-identifier-naming.DefaultCase
+    value: camelBack
+
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.ClassPrefix
+    value: 'C'
+  - key: readability-identifier-naming.StructPrefix
+    value: ''
+  - key: readability-identifier-naming.AbstractClassPrefix
+    value: 'I'
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: 'm_'
+
+  - key: readability-identifier-naming.FunctionCase
+    value: CamelCase
+  - key: readability-identifier-naming.NamespaceCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: 'g_'
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: 'k'
+
+  - key: readability-identifier-naming.TypedefCase
+    value: camelBack
+  - key: readability-identifier-naming.TypedefSuffix
+    value: _t
 
 WarningsAsErrors: ''
 HeaderFilterRegex: 'skylabs/**/*.*'
 FormatStyle: file
-
-CheckOptions:
-  bugprone-multi-level-implicit-pointer-conversion.EnableInC: false

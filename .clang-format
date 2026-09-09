@@ -1,104 +1,23 @@
 ---
-# For clang-format 22
 Language: Cpp
+BasedOnStyle: Google
 
-# DisableFormat: true
+# Imo 80 is too small
+ColumnLimit: 105
 
+# Indentation
+IndentWidth: 4
 AccessModifierOffset: -4
-AlignAfterOpenBracket: false
-AlignArrayOfStructures: Left
-AlignConsecutiveAssignments:
-  Enabled: false
-AlignConsecutiveBitFields:
-  Enabled: false
-AlignConsecutiveDeclarations:
-  Enabled: false
-AlignConsecutiveMacros:
-  Enabled: true
-  AcrossEmptyLines: false
-  AcrossComments: false
-AlignConsecutiveShortCaseStatements:
-  Enabled: true
-  AcrossEmptyLines: false
-  AcrossComments: false
-  AlignCaseColons: false
-AlignEscapedNewlines: LeftWithLastLine
-AlignOperands: DontAlign
-AlignTrailingComments:
-  Kind: Never
-AllowAllArgumentsOnNextLine: false # Related to BinPackArguments
-AllowAllParametersOfDeclarationOnNextLine: false # Related to BinPackParameters
-AllowBreakBeforeNoexceptSpecifier: Always
-AllowShortBlocksOnASingleLine: Empty
-AllowShortCaseExpressionOnASingleLine: true
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortCompoundRequirementOnASingleLine: true
-AllowShortEnumsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: Inline
-AllowShortIfStatementsOnASingleLine: WithoutElse
-AllowShortLambdasOnASingleLine: All
-AllowShortLoopsOnASingleLine: true
-AllowShortNamespacesOnASingleLine: true
-AlwaysBreakBeforeMultilineStrings: true
-BinPackArguments: true
-BinPackLongBracedList: true
-BinPackParameters: OnePerLine
-BitFieldColonSpacing: Both
-BraceWrapping:
-  AfterCaseLabel: false
-  AfterClass: true
-  AfterControlStatement: Never
-  AfterEnum: true
-  AfterFunction: false
-  AfterNamespace: false
-  AfterStruct: true
-  AfterUnion: true
-  AfterExternBlock: false
-  BeforeCatch: false
-  BeforeElse: false
-  BeforeLambdaBody: false
-  BeforeWhile: false
-  IndentBraces: false
-  SplitEmptyFunction: false
-  SplitEmptyRecord: false
-  SplitEmptyNamespace: false
-BracedInitializerIndentWidth: 4
-BreakAdjacentStringLiterals: false
-BreakAfterAttributes: Leave
-BreakAfterOpenBracketBracedList: true
-BreakAfterOpenBracketFunction: true
-BreakAfterOpenBracketIf: true
-BreakAfterOpenBracketLoop: true
-BreakAfterOpenBracketSwitch: true
-BreakAfterReturnType: Automatic # Related to PenaltyReturnTypeOnItsOwnLine
-BreakBeforeBinaryOperators: NonAssignment
-BreakBeforeBraces: Custom # Related to BraceWrapping
-BreakBeforeCloseBracketBracedList: true
-BreakBeforeCloseBracketFunction: true
-BreakBeforeCloseBracketIf: true
-BreakBeforeCloseBracketLoop: true
-BreakBeforeCloseBracketSwitch: true
-BreakBeforeConceptDeclarations: Always
-BreakBeforeInlineASMColon: OnlyMultiline
-BreakBeforeTemplateCloser: true
-BreakBeforeTernaryOperators: true
-BreakBinaryOperations: Never
-BreakConstructorInitializers: AfterColon
-##BreakBeforeBraceAfterConstructorInitializerLists: true # https://github.com/llvm/llvm-project/issues/79132
-BreakFunctionDefinitionParameters: false
-BreakInheritanceList: AfterColon
-BreakStringLiterals: false
-BreakTemplateDeclarations: Yes
-ColumnLimit: 120
-CompactNamespaces: false
-ConstructorInitializerIndentWidth: 4
-ContinuationIndentWidth: 4
-Cpp11BracedListStyle: Block
-DerivePointerAlignment: false
-EmptyLineAfterAccessModifier: Never
-EmptyLineBeforeAccessModifier: Always
-EnumTrailingComma: Leave
+
+# I don't want comments
 FixNamespaceComments: false
+
+# Brace style
+SpaceBeforeCpp11BracedList: true
+Cpp11BracedListStyle: Block
+SpaceInEmptyBraces: Always
+
+# Include sorting
 IncludeBlocks: Preserve
 IncludeCategories:
   - Regex: '^<[Ww]indows\.h>'
@@ -109,94 +28,4 @@ IncludeCategories:
     Priority: 3
   - Regex: '.*'
     Priority: 4
-IndentAccessModifiers: false
-IndentCaseBlocks: false
-IndentCaseLabels: true
-IndentExportBlock: false
-IndentExternBlock: NoIndent
-IndentGotoLabels: false
-IndentPPDirectives: None
-IndentRequiresClause: false
-IndentWidth: 4
-IndentWrappedFunctionNames: false
-InsertBraces: false
-InsertNewlineAtEOF: true
-InsertTrailingCommas: None
-IntegerLiteralSeparator:
-  Decimal: 3
-  DecimalMinDigitsInsert: 7
-KeepEmptyLines:
-  AtEndOfFile: true
-  AtStartOfBlock: false
-  AtStartOfFile: false
-KeepFormFeed: false
-LambdaBodyIndentation: Signature
-MainIncludeChar: AngleBracket
-MaxEmptyLinesToKeep: 2
-NamespaceIndentation: None
-NumericLiteralCase:
-  ExponentLetter: Lower
-  HexDigit: Upper
-  Prefix: Lower
-  Suffix: Lower
-PackConstructorInitializers: NextLine
-PointerAlignment: Left
-QualifierAlignment: Left
-ReferenceAlignment: Left
-ReflowComments: IndentOnly
-RemoveBracesLLVM: false
-RemoveEmptyLinesInUnwrappedLines: true
-RemoveParentheses: Leave
-RemoveSemicolon: true
-RequiresClausePosition: OwnLineWithBrace
-RequiresExpressionIndentation: OuterScope
-SeparateDefinitionBlocks: Always
-SkipMacroDefinitionBody: true
-SortIncludes:
-  Enabled: true
-  IgnoreCase: false
-  IgnoreExtension: false
-SortUsingDeclarations: LexicographicNumeric
-SpaceAfterCStyleCast: false
-SpaceAfterLogicalNot: false
-SpaceAfterOperatorKeyword: false
-SpaceAfterTemplateKeyword: false
-SpaceAroundPointerQualifiers: Default
-SpaceBeforeAssignmentOperators: true
-SpaceBeforeCaseColon: false
-SpaceBeforeCpp11BracedList: true
-SpaceBeforeCtorInitializerColon: true
-SpaceBeforeInheritanceColon: true
-SpaceBeforeParens: Custom
-SpaceBeforeParensOptions:
-  AfterControlStatements: true
-  AfterForeachMacros: false
-  AfterFunctionDeclarationName: false
-  AfterFunctionDefinitionName: false
-  AfterIfMacros: false
-  AfterNot: false
-  AfterOverloadedOperator: false
-  AfterPlacementOperator: false
-  AfterRequiresInClause: false
-  AfterRequiresInExpression: false
-  BeforeNonEmptyParentheses: false
-SpaceBeforeRangeBasedForLoopColon: true
-SpaceBeforeSquareBrackets: false
-SpaceInEmptyBraces: Always
-SpacesBeforeTrailingComments: 1
-SpacesInAngles: Never
-SpacesInContainerLiterals: true
-SpacesInLineCommentPrefix:
-  Minimum: 1
-  Maximum: -1
-SpacesInParens: Custom
-SpacesInParensOptions:
-  ExceptDoubleParentheses: false
-  InConditionalStatements: false
-  InCStyleCasts: false
-  InEmptyParentheses: false
-  Other: false
-SpacesInSquareBrackets: false
-TabWidth: 4
-UseTab: Never
 ...
