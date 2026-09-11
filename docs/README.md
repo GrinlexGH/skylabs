@@ -20,7 +20,6 @@
     - [Copying Runtime Plugins And Custom Files](#copying-runtime-plugins-and-custom-files)
     - [CMAKE_FIND_ROOT_PATH_MODE_XXXXXXX](#cmake_find_root_path_mode_xxxxxxx)
 7. [Skylabs](#skylabs)
-    - [Clang-Format](#clang-format)
     - [Pre-Commit Hooks](#pre-commit-hooks)
     - [Project Structure](#project-structure)
     - [Include Rules](#include-rules)
@@ -417,7 +416,7 @@ To install them use this command:
 pre-commit install
 ```
 
-First, of course, you need to set up the Python environment:
+First, of course, you need to set up the Python environment (or install it to the system using your package manager):
 
 ```bash
 uv venv
