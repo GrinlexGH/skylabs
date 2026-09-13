@@ -73,6 +73,9 @@ CheckOptions:
   - key: readability-identifier-naming.TypedefSuffix
     value: _t
 
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+
 WarningsAsErrors: ''
 HeaderFilterRegex: 'skylabs/**/*.*'
 FormatStyle: file
