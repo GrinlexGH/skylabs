@@ -7,13 +7,12 @@
 #include <skylabs/public/application.hpp>
 #include <skylabs/public/sdl/context.hpp>
 #include <skylabs/public/sdl/event_pump.hpp>
+#include <skylabs/public/sdl/filesystem.hpp>
 #include <skylabs/public/sdl/sdl.hpp>
 #include <skylabs/public/sdl/vulkan/os_connector.hpp>
 #include <skylabs/public/sdl/window.hpp>
-#include <skylabs/public/sdl/filesystem.hpp>
 
-struct Joystick
-{
+struct Joystick {
     bool active = false;
     SDL_FingerID fingerId = 0;
     float centerX = 0.0f;
@@ -23,8 +22,7 @@ struct Joystick
     static constexpr float radius = 0.15f;
 };
 
-struct UIButton
-{
+struct UIButton {
     float x, y, w, h;
 
     bool IsInside(float touchX, float touchY) {
@@ -45,8 +43,7 @@ struct STower {
     std::uint16_t baseColorId;
 };
 
-class CLauncher final : public CBaseApplication
-{
+class CLauncher final : public CBaseApplication {
 public:
     void PreCreate() override;
     void Create() override;
@@ -55,6 +52,7 @@ public:
 
 private:
     void ProcessEvents();
+    void LoopIteration();
     void Update(float deltaTime);
     void Render(float deltaTime);
     void UpdateVisuals(float deltaTime);
@@ -65,11 +63,18 @@ private:
     void HandleTextInput(const SDL_TextInputEvent& textEvent);
 
     void OnQuit(QuitEvent) { m_quit = true; }
-    void OnKeyEvent(KeyEvent e) { if (e.down) HandleKeyDownEvent(e.key); else HandleKeyUpEvent(e.key); }
+    void OnKeyEvent(KeyEvent e) {
+        if (e.down)
+            HandleKeyDownEvent(e.key);
+        else
+            HandleKeyUpEvent(e.key);
+    }
     void OnDeviceResetEvent(DeviceResetEvent) { m_renderer->OnDeviceLost(); }
     void OnMouseMotionEvent(MouseMotionEvent e) { m_camera.ProcessMouseMovement(e.dx, -e.dy); }
     void OnMouseWheelEvent(MouseWheelEvent e) { m_camera.ProcessMouseScroll(e.y); }
-    void OnMouseButtonEvent(MouseButtonEvent e) { if (e.down) Click(); }
+    void OnMouseButtonEvent(MouseButtonEvent e) {
+        if (e.down) Click();
+    }
     void OnFingerTouchEvent(const FingerTouchEvent e);
     void OnFingerMotionEvent(const FingerMotionEvent& e);
 
@@ -79,7 +84,14 @@ private:
 
     std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> GenerateDisk();
 
+    constexpr static int kTargetFps = 60;
+    constexpr static int kFrameDelay = 1000 / kTargetFps;
+
     bool m_quit = false;
+    int m_frameCount = 0;
+    float m_elapsedTime = 0.0f;
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_lastTick =
+        std::chrono::high_resolution_clock::now();
 
     entt::dispatcher m_eventDispatcher;
 

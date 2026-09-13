@@ -15,6 +15,7 @@ struct UnknownEvent { };
 struct QuitEvent { };
 struct DeviceResetEvent { }; // Important on Android, when user reopen an app
 struct WindowResizeEvent { int width, height; };
+struct WindowExposeEvent { };
 struct KeyEvent { Keys key; bool down; };
 struct MouseMotionEvent { float dx, dy; };
 struct MouseWheelEvent { float y; };
@@ -28,6 +29,7 @@ using Event = std::variant<
     QuitEvent,
     DeviceResetEvent,
     WindowResizeEvent,
+    WindowExposeEvent,
     KeyEvent,
     MouseMotionEvent,
     MouseWheelEvent,

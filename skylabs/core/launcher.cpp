@@ -1,8 +1,8 @@
 #include <skylabs/core/launcher.hpp>
 #include <skylabs/core/render/vulkan/renderer.hpp>
 #include <skylabs/public/logging.hpp>
-#include <skylabs/public/sdl/log_sink.hpp>
 #include <skylabs/public/os.hpp>
+#include <skylabs/public/sdl/log_sink.hpp>
 
 void CLauncher::PreCreate() {
 #ifdef PLATFORM_ANDROID
@@ -35,19 +35,18 @@ void CLauncher::Create() {
     m_osConnector = SDL::Vulkan::COSConnector { *m_window };
     m_renderer.emplace(&m_window, &m_osConnector, m_filesystem);
 
-#ifdef PLATFORM_WINDOWS
     m_eventPump.SetEventFilter(
         [](const Event& event, void* userData) {
             const auto self = static_cast<CLauncher*>(userData);
-            if (std::holds_alternative<WindowResizeEvent>(event)) {
+            if (std::holds_alternative<WindowExposeEvent>(event)) {
+                Log::Debug("Window exposed!");
                 self->m_renderer->OnPossiblyWindowSizeChange();
-                self->m_renderer->Draw(self->m_camera.ViewMatrix(), self->m_camera.Fov(), 0);
+                self->LoopIteration();
                 return false;
             }
             return true;
-        }, this
-    );
-#endif
+        },
+        this);
 
     m_eventDispatcher.sink<QuitEvent>().connect<&CLauncher::OnQuit>(*this);
     m_eventDispatcher.sink<KeyEvent>().connect<&CLauncher::OnKeyEvent>(*this);
@@ -60,16 +59,26 @@ void CLauncher::Create() {
 
     auto [v, i] = GenerateDisk();
     auto oi = m_renderer->UploadMesh(v, i);
-    m_towers.emplace_back(glm::vec3(-1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1), std::vector <SDisk> {
-        { 3, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3) },
-        { 2, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2) },
-        { 1, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1) },
-    }, 1);
-    m_towers.emplace_back(glm::vec3(0.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector <SDisk> {}, 2);
-    m_towers.emplace_back(glm::vec3(1.0f, -0.5f, -1.0f), m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector <SDisk> {}, 3);
+    m_towers.emplace_back(glm::vec3(-1.0f, -0.5f, -1.0f),
+                          m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1),
+                          std::vector<SDisk> {
+                              { 3, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3) },
+                              { 2, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2) },
+                              { 1, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1) },
+                          },
+                          1);
+    m_towers.emplace_back(glm::vec3(0.0f, -0.5f, -1.0f),
+                          m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector<SDisk> { },
+                          2);
+    m_towers.emplace_back(glm::vec3(1.0f, -0.5f, -1.0f),
+                          m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector<SDisk> { },
+                          3);
 }
 
-void CLauncher::UpdateVisuals(float /*deltaTime*/) {
+void CLauncher::UpdateVisuals(float deltaTime) {
+    static float time = 0.0f;
+    time += deltaTime / 1000.0f;
+
     const float DISK_HEIGHT = 0.15f;
     const float BASE_RADIUS = 0.10f;
 
@@ -82,9 +91,8 @@ void CLauncher::UpdateVisuals(float /*deltaTime*/) {
         for (std::size_t i = 0; i < tower.disks.size(); ++i) {
             auto& disk = tower.disks[i];
 
-            glm::vec3 diskPos = tower.basePosition + glm::vec3(0.0f, i * DISK_HEIGHT, 0.0f);
-            if (disk.isselected)
-                diskPos.y += 0.25f;
+            glm::vec3 diskPos =
+                tower.basePosition + glm::vec3(0.0f, i * DISK_HEIGHT + 0.2f * std::sin(time), 0.0f);
 
             float currentRadius = BASE_RADIUS * disk.size;
 
@@ -97,68 +105,70 @@ void CLauncher::UpdateVisuals(float /*deltaTime*/) {
     }
 }
 
-void CLauncher::Main() {
-    constexpr int TARGET_FPS = 60;
-    constexpr int FRAME_DELAY = 1000 / TARGET_FPS;
+void CLauncher::LoopIteration() {
+    auto frameStart = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float, std::milli> diff = frameStart - m_lastTick;
+    m_lastTick = frameStart;
+    const float deltaTimeMs = diff.count();
 
-    auto lastTick = std::chrono::high_resolution_clock::now();
-    int frameCount = 0;
-    float elapsedTime = 0.0f;
-
-    while (!m_quit) {
-        auto frameStart = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float, std::milli> diff = frameStart - lastTick;
-        lastTick = frameStart;
-        const float deltaTimeMs = diff.count();
-
-        ProcessEvents();
-
-        if (!m_window.Minimized()) {
-            Update(deltaTimeMs);
-            UpdateVisuals(deltaTimeMs);
-            Render(deltaTimeMs);
-        } else {
-            auto frameEnd = std::chrono::high_resolution_clock::now();
-            const float busyTime = std::chrono::duration<float, std::milli>(frameEnd - frameStart).count();
-            if (busyTime < FRAME_DELAY) {
-                SDL_Delay(static_cast<Uint32>(FRAME_DELAY - busyTime));
-            }
+    if (!m_window.Minimized()) {
+        Update(deltaTimeMs);
+        UpdateVisuals(deltaTimeMs);
+        Render(deltaTimeMs);
+    } else {
+        auto frameEnd = std::chrono::high_resolution_clock::now();
+        const float busyTime = std::chrono::duration<float, std::milli>(frameEnd - frameStart).count();
+        if (busyTime < kFrameDelay) {
+            SDL_Delay(static_cast<Uint32>(kFrameDelay - busyTime));
         }
+    }
 
-        frameCount++;
-        elapsedTime += deltaTimeMs;
-        if (elapsedTime >= 1000.0f) {
-            float avgFps = frameCount * (1000.0f / elapsedTime);
-            float avgDt = elapsedTime / static_cast<float>(frameCount);
-            std::string title = fmt::format("Skylabs | FPS: {:.0f} | DT: {:.2f}ms", avgFps, avgDt);
-            SDL_SetWindowTitle(*m_window, title.c_str());
-            Log::Debug("{}", title);
-            elapsedTime -= 1000.0f;
-            frameCount = 0;
-        }
+    m_frameCount++;
+    m_elapsedTime += deltaTimeMs;
+    if (m_elapsedTime >= 1000.0f) {
+        float avgFps = m_frameCount * (1000.0f / m_elapsedTime);
+        float avgDt = m_elapsedTime / static_cast<float>(m_frameCount);
+        std::string title = fmt::format("Skylabs | FPS: {:.0f} | DT: {:.2f}ms", avgFps, avgDt);
+        SDL_SetWindowTitle(*m_window, title.c_str());
+        Log::Debug("{}", title);
+        m_elapsedTime -= 1000.0f;
+        m_frameCount = 0;
     }
 }
 
-void CLauncher::Destroy() {}
+void CLauncher::Main() {
+    while (!m_quit) {
+        ProcessEvents();
+        LoopIteration();
+    }
+}
+
+void CLauncher::Destroy() { }
 
 void CLauncher::Update(float deltaTime) {
     if (m_leftJoystick.active) {
         if (std::abs(m_leftJoystick.dirY) > 0.1f) {
-            auto direction = (m_leftJoystick.dirY < 0) ? CCamera::MoveDirection::eForward : CCamera::MoveDirection::eBackward;
+            auto direction = (m_leftJoystick.dirY < 0) ? CCamera::MoveDirection::eForward
+                                                       : CCamera::MoveDirection::eBackward;
             m_camera.ProcessKeyboard(direction, deltaTime * std::abs(m_leftJoystick.dirY));
         }
 
         if (std::abs(m_leftJoystick.dirX) > 0.1f) {
-            auto direction = (m_leftJoystick.dirX < 0) ? CCamera::MoveDirection::eLeft : CCamera::MoveDirection::eRight;
+            auto direction = (m_leftJoystick.dirX < 0) ? CCamera::MoveDirection::eLeft
+                                                       : CCamera::MoveDirection::eRight;
             m_camera.ProcessKeyboard(direction, deltaTime * std::abs(m_leftJoystick.dirX));
         }
     } else {
         const std::span keyboardState = SDL::GetKeyboardState();
 
-        if (keyboardState[SDL_SCANCODE_W]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eForward, deltaTime);
-        if (keyboardState[SDL_SCANCODE_S]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eBackward, deltaTime);
-        if (keyboardState[SDL_SCANCODE_A]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
-        if (keyboardState[SDL_SCANCODE_D]) m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
+        if (keyboardState[SDL_SCANCODE_W])
+            m_camera.ProcessKeyboard(CCamera::MoveDirection::eForward, deltaTime);
+        if (keyboardState[SDL_SCANCODE_S])
+            m_camera.ProcessKeyboard(CCamera::MoveDirection::eBackward, deltaTime);
+        if (keyboardState[SDL_SCANCODE_A])
+            m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
+        if (keyboardState[SDL_SCANCODE_D])
+            m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
     }
 
     glm::mat4 invView = glm::inverse(m_camera.ViewMatrix());
@@ -200,7 +210,8 @@ void CLauncher::Update(float deltaTime) {
 
     if (closestTowerIdx != m_hoveredTowerIdx) {
         if (m_hoveredTowerIdx != -1) {
-            m_towers[m_hoveredTowerIdx].stemRenderObject.SetColor(m_towers[m_hoveredTowerIdx].baseColorId);
+            m_towers[m_hoveredTowerIdx].stemRenderObject.SetColor(
+                m_towers[m_hoveredTowerIdx].baseColorId);
         }
 
         m_hoveredTowerIdx = closestTowerIdx;
@@ -216,16 +227,13 @@ void CLauncher::Render(float deltaTime) {
 }
 
 void CLauncher::ProcessEvents() {
-    while(auto event = m_eventPump.PollEvent()) {
-        std::visit([this]<typename T>(T&& e) {
-            m_eventDispatcher.trigger(std::forward<T>(e));
-        }, *event);
+    while (auto event = m_eventPump.PollEvent()) {
+        std::visit([this]<typename T>(T&& e) { m_eventDispatcher.trigger(std::forward<T>(e)); }, *event);
     }
 }
 
 void CLauncher::Click() {
-    if (m_hoveredTowerIdx == -1)
-        return;
+    if (m_hoveredTowerIdx == -1) return;
     auto& [tt, dd] = m_selectedTowerAndDisk;
     if (tt == -1) {
         if (m_towers[m_hoveredTowerIdx].disks.empty()) {
@@ -336,8 +344,7 @@ void CLauncher::HandleKeyDownEvent(const Keys key) {
         } break;
 
         case Keys::eEnter: {
-            if (!m_textInputActive)
-                break;
+            if (!m_textInputActive) break;
             m_textInputActive = false;
             SDL_StopTextInput(*m_window);
             Log::Debug("Keyboard Closed. Final text: {}", m_inputBuffer);
@@ -370,7 +377,8 @@ void CLauncher::HandleKeyUpEvent(const Keys key) {
         case Keys::eLeftShift: {
             m_camera.ResetSpeed();
         } break;
-        default: break;
+        default:
+            break;
     }
 }
 
@@ -391,8 +399,8 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
         float z = std::sin(angle);
 
         glm::vec3 sideNormal = glm::normalize(glm::vec3(x, 0.0f, z));
-        vertices.emplace_back(glm::vec3(x, 0.0f, z), glm::vec2 {}, sideNormal);
-        vertices.emplace_back(glm::vec3(x, 1.0f, z), glm::vec2 {}, sideNormal);
+        vertices.emplace_back(glm::vec3(x, 0.0f, z), glm::vec2 { }, sideNormal);
+        vertices.emplace_back(glm::vec3(x, 1.0f, z), glm::vec2 { }, sideNormal);
     }
 
     for (uint16_t i = 0; i < segments; ++i) {
@@ -401,12 +409,16 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
         uint16_t b1 = (i + 1) * 2;
         uint16_t t1 = b1 + 1;
 
-        indices.push_back(b0); indices.push_back(b1); indices.push_back(t1);
-        indices.push_back(b0); indices.push_back(t1); indices.push_back(t0);
+        indices.push_back(b0);
+        indices.push_back(b1);
+        indices.push_back(t1);
+        indices.push_back(b0);
+        indices.push_back(t1);
+        indices.push_back(t0);
     }
 
     std::size_t topCapCenterIndex = vertices.size();
-    vertices.emplace_back(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2 {}, glm::vec3(0.0f, 1.0f, 0.0f));
+    vertices.emplace_back(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2 { }, glm::vec3(0.0f, 1.0f, 0.0f));
 
     std::size_t topCapEdgeStart = vertices.size();
 
@@ -415,7 +427,7 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
         float x = std::cos(angle);
         float z = std::sin(angle);
 
-        vertices.emplace_back(glm::vec3(x, 1.0f, z), glm::vec2 {}, glm::vec3(0.0f, 1.0f, 0.0f));
+        vertices.emplace_back(glm::vec3(x, 1.0f, z), glm::vec2 { }, glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     for (uint16_t i = 0; i < segments; ++i) {

@@ -2,12 +2,9 @@
 
 namespace {
 constexpr frozen::unordered_map<SDL_Keycode, Keys, 6> g_keyMap {
-    { SDLK_UNKNOWN, Keys::eUnknown },
-    { SDLK_ESCAPE, Keys::eEscape },
-    { SDLK_LSHIFT, Keys::eLeftShift },
-    { SDLK_Z, Keys::eZ },
-    { SDLK_RETURN, Keys::eEnter },
-    { SDLK_F11, Keys::eF11 },
+    { SDLK_UNKNOWN, Keys::eUnknown },  { SDLK_ESCAPE, Keys::eEscape },
+    { SDLK_LSHIFT, Keys::eLeftShift }, { SDLK_Z, Keys::eZ },
+    { SDLK_RETURN, Keys::eEnter },     { SDLK_F11, Keys::eF11 },
 };
 }
 
@@ -33,13 +30,16 @@ Event CEventPump::TranslateEvent(const SDL_Event& event) {
         case SDL_EVENT_RENDER_DEVICE_RESET:
             return DeviceResetEvent { };
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            return WindowResizeEvent { event.window.data1, event.window.data2 };
+            return WindowResizeEvent { .width = event.window.data1, .height = event.window.data2 };
+        case SDL_EVENT_WINDOW_EXPOSED:
+            return WindowExposeEvent { };
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
-            if (!g_keyMap.contains(event.key.key)) { return UnknownEvent { }; }
-            return KeyEvent { g_keyMap.at(event.key.key), event.type == SDL_EVENT_KEY_DOWN };
+            if (!g_keyMap.contains(event.key.key)) return UnknownEvent { };
+            return KeyEvent { .key = g_keyMap.at(event.key.key),
+                              .down = event.type == SDL_EVENT_KEY_DOWN };
         case SDL_EVENT_MOUSE_MOTION:
-            return MouseMotionEvent { event.motion.xrel, event.motion.yrel };
+            return MouseMotionEvent { .dx = event.motion.xrel, .dy = event.motion.yrel };
         case SDL_EVENT_MOUSE_WHEEL:
             return MouseWheelEvent { event.wheel.y };
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -47,17 +47,16 @@ Event CEventPump::TranslateEvent(const SDL_Event& event) {
             return MouseButtonEvent { event.type == SDL_EVENT_MOUSE_BUTTON_DOWN };
         case SDL_EVENT_FINGER_DOWN:
         case SDL_EVENT_FINGER_UP:
-            return FingerTouchEvent {
-                event.type == SDL_EVENT_FINGER_DOWN,
-                event.tfinger.x, event.tfinger.y,
-                static_cast<unsigned int>(event.tfinger.fingerID)
-            };
+            return FingerTouchEvent { .down = event.type == SDL_EVENT_FINGER_DOWN,
+                                      .x = event.tfinger.x,
+                                      .y = event.tfinger.y,
+                                      .fingerID = static_cast<unsigned int>(event.tfinger.fingerID) };
         case SDL_EVENT_FINGER_MOTION:
-            return FingerMotionEvent {
-                event.tfinger.x, event.tfinger.y,
-                event.tfinger.dx, event.tfinger.dy,
-                static_cast<unsigned int>(event.tfinger.fingerID)
-            };
+            return FingerMotionEvent { .x = event.tfinger.x,
+                                       .y = event.tfinger.y,
+                                       .dx = event.tfinger.dx,
+                                       .dy = event.tfinger.dy,
+                                       .fingerID = static_cast<unsigned int>(event.tfinger.fingerID) };
         default:
             return UnknownEvent { };
     }
