@@ -3,7 +3,7 @@
 2. [Build Configurations](#build-configurations)
 3. [Third-Party Libraries](#third-party-libraries)
     - [Git Submodules](#git-submodules)
-      - [Pre-Building](#pre-building)
+    - [Pre-Building](#pre-building)
 4. [Conan](#conan)
     - [Building From Scratch](#building-from-scratch)
     - [Missing `.pdb` Files](#missing-pdb-files)
@@ -61,7 +61,7 @@ To automate this pipeline, I built a custom tool called [Deps](https://github.co
 
 ## Conan
 
-Conan neatly solves both problems discussed in this article:
+Conan neatly solves both problems discussed above:
 1. **Dependency Management:** It fetches or builds binaries once, caches them globally, and generates CMake target integration automatically.
 2. **Clean Build Profiles:** Conan profiles replace bloated `CMakePresets.json` setup with clean, declarative TOML configuration files specifying compiler versions, standard libraries, architectures, and build types.
 
@@ -155,7 +155,7 @@ add_custom_command(TARGET ${target_name} POST_BUILD
 )
 ```
 
-On Linux, copying is unnecessary, because CMake can specify paths to `.so`'s via [RPATH](https://cmake.org/cmake/help/latest/prop_tgt/BUILD_RPATH.html#prop_tgt:BUILD_RPATH).
+On Linux, copying is unnecessary, because CMake can specify paths to `.so`'s via [`RPATH`](https://cmake.org/cmake/help/latest/prop_tgt/BUILD_RPATH.html#prop_tgt:BUILD_RPATH).
 
 To ensure the debugger finds game assets without copying gigabytes of data, I simply hardcoded the IDE's working directory to the repository root:
 
@@ -259,7 +259,7 @@ install(
 )
 ```
 
-And don't forget about assets:
+And don't forget about the assets:
 
 ```cmake
 install(DIRECTORY ${SKYLABS_ROOT_DIR}/assets DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
@@ -420,7 +420,12 @@ First, of course, you need to set up the Python environment (or install it to th
 
 ```bash
 uv venv
+
+# Linux
 source .venv/bin/activate
+# Windows
+.venv\Scripts\activate
+
 uv pip install -U -r ./requirements.txt
 ```
 

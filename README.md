@@ -37,11 +37,32 @@ Ensure you have the following tools installed before compiling:
 | Tool             | Requirement               |
 |------------------|---------------------------|
 | **CMake**        | Latest version            |
+| **Ninja**        | Latest version            |
 | **C++ Compiler** | Latest MSVC / GCC / Clang |
 | **Conan**        | Latest version            |
-| **Android SDK**  | Latest SDK (optional)     |
 
 ## ⚙️ Configuration & Building
+
+### 🦐 0. Install requirements
+
+> [!TIP]
+> It is highly recommended to check out [Scoop](https://scoop.sh/), an incredibly convenient package manager for Windows.
+
+You can use your package manager to install [CMake](https://cmake.org/download/) and [Ninja](https://github.com/ninja-build/ninja/releases).
+
+On Windows, it is recommended to use [Visual Studio](https://visualstudio.microsoft.com/) with [LLVM/Clang](https://github.com/llvm/llvm-project/releases).
+
+Conan is a pip package, so you need to install it either in a Python `venv` environment or globally using a package manager, if the latest version is available:
+```bash
+uv venv
+
+# For Windows
+.venv\Scripts\activate
+# For Linux
+source .venv/bin/activate
+
+uv pip install -U -r ./requirements.txt
+```
 
 ### 🔧 1. Configure Conan
 
@@ -71,30 +92,21 @@ conan config install ./conan/conan-config/config
 
 ### 💻 2. Desktop Build
 
-> [!WARNING]
-> This project is using C++ 20 modules, so you need to set `CMAKE_EXPERIMENTAL_CXX_IMPORT_STD` to uuid which your version of cmake uses. You can see it in cmake [sources](https://github.com/Kitware/CMake/blob/master/Help/dev/experimental.rst#c-import-std-support).
+```bash
+# Create default build profile
+conan profile detect
+```
 
 ```bash
 # Install dependencies
-# Use msvc:
-conan install . -pr msvc-18 -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing
-
-# Use LLVM/clang from github:
+# For Windows
 conan install . -pr clang-cl-llvm -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing
 
-# Use clang from visual studio:
-conan install . -pr clang-cl-18 -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing
-
-# Use mingw:
-conan install . -pr clang-clang64 -r skylabs -r conancenter -s build_type=Debug --build=missing
-conan install . -pr gcc-ucrt64 -r skylabs -r conancenter -s build_type=Debug --build=missing
-
-# Linux:
+# For Linux
 conan install . -pr clang-linux -r skylabs -r conancenter -s build_type=Debug --build=missing
-conan install . -pr gcc-linux -r skylabs -r conancenter -s build_type=Debug --build=missing
 
 # Configure project
-cmake --preset conan-default
+cmake --preset conan-debug
 
 # Build
 cmake --build build
