@@ -93,7 +93,7 @@ conan config install ./conan/conan-config/config
 ### 💻 2. Desktop Build
 
 ```bash
-# Create default build profile
+# Create default profile
 conan profile detect
 ```
 
