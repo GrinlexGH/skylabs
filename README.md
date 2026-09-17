@@ -30,6 +30,31 @@ If the folder is already on your disk but submodule folders are empty, run this 
 git submodule update --init --recursive
 ```
 
+## 🪝 Pre-commit Hooks
+
+> [!IMPORTANT]
+> Using **pre-commit** is required before contributing.
+> It trims trailing whitespace, fixes line endings, and prevents committing merge conflicts or invalid filenames.
+
+### 📥 Installation & Setup
+
+1. **Install pre-commit:**
+    * **For CLI users (within Python venv):**
+      ```bash
+      uv pip install pre-commit
+      ```
+    * **For GitHub Desktop / GUI clients:** Install `pre-commit` **globally** (e.g., via `scoop install pre-commit` or system Python). GUI apps cannot access tools isolated inside a virtual environment.
+
+2. **Register the git hooks:**
+   ```bash
+   pre-commit install
+
+Hooks will run automatically before every git commit. To run checks manually on all files:
+
+```bash
+pre-commit run --all-files
+```
+
 ## 🛠️ Build Requirements
 
 Ensure you have the following tools installed before compiling:
@@ -43,16 +68,17 @@ Ensure you have the following tools installed before compiling:
 
 ## ⚙️ Configuration & Building
 
+See detailed guide in [BUILD.md](docs/BUILD.md)
+
 ### 🦐 0. Install requirements
 
 > [!TIP]
 > It is highly recommended to check out [Scoop](https://scoop.sh/), an incredibly convenient package manager for Windows.
 
-You can use your package manager to install [CMake](https://cmake.org/download/) and [Ninja](https://github.com/ninja-build/ninja/releases).
-
 On Windows, it is recommended to use [Visual Studio](https://visualstudio.microsoft.com/) with [LLVM/Clang](https://github.com/llvm/llvm-project/releases).
 
-Conan is a pip package, so you need to install it either in a Python `venv` environment or globally using a package manager, if the latest version is available:
+Latest version of Conan is available in pip:
+
 ```bash
 uv venv
 
@@ -66,20 +92,25 @@ uv pip install -U -r ./requirements.txt
 
 ### 🔧 1. Configure Conan
 
-This project uses a custom Conan recipe index.
+**Create default profile:**
+
+```bash
+conan profile detect --force
+```
+
+---
 
 **Add the local remote:**
+
+This project uses a custom Conan recipe index.
 
 ```bash
 conan remote add skylabs ./conan/conan-recipes -t local-recipes-index -f
 ```
 
-> [!TIP]
-> The `skylabs` remote is required to resolve internal packages used by the project.
-
 ---
 
-### 🌍 Install Global Conan Config
+**Install global conan config:**
 
 > [!CAUTION]
 > This will **overwrite your global Conan configuration**.
@@ -90,17 +121,12 @@ conan config install ./conan/conan-config/config
 
 ---
 
-### 💻 2. Desktop Build
-
-```bash
-# Create default profile
-conan profile detect
-```
+### 🏗️ 2. Build
 
 ```bash
 # Install dependencies
 # For Windows
-conan install . -pr clang-cl-llvm -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing
+conan install . -pr clang-llvm -r skylabs -r conancenter -s build_type=Debug -s compiler.runtime_type=Debug --build=missing
 
 # For Linux
 conan install . -pr clang-linux -r skylabs -r conancenter -s build_type=Debug --build=missing

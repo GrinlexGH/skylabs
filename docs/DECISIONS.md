@@ -1,5 +1,5 @@
 # Decisions
-In this file, I'll be describing the issues and topics I encountered while writing this project, as well as the reasoning behind the current build system.
+In this file, I'll be describing the issues and topics I encountered while writing this project.
 
 ## Table of Contents
 1. [Build Configurations](#build-configurations)
@@ -12,6 +12,16 @@ In this file, I'll be describing the issues and topics I encountered while writi
    - [ConanCenter](#conancenter)
    - [Local Recipe Index](#local-recipe-index)
    - [Artifactory Server](#artifactory-server)
+4. [Debugging And Launching](#debugging-and-launching)
+   - [Local Debugging](#local-debugging)
+   - [CMake Install](#cmake-install)
+5. [CMake Structure](#cmake-structure)
+6. [Android](#android)
+   - [SDL Android Project](#sdl-android-project)
+   - [Custom Conan Gradle Task](#custom-conan-gradle-task)
+   - [Copying Runtime Plugins And Custom Files](#copying-runtime-plugins-and-custom-files)
+   - [CMAKE_FIND_ROOT_PATH_MODE_XXXXXXX](#cmake_find_root_path_mode_xxxxxxx)
+   - [Android Studio Project Detection](#android-studio-project-detection)
 
 
 ## Build Configurations
@@ -60,7 +70,7 @@ As I studied Conan, I realized that **it's best to compile libraries from scratc
 
 ### Missing `.pdb` Files
 
-Another important debugging detail is handling MSVC `.pdb` files. By default, some libraries do not install their `.pdb` files into the package, causing MSVC to generate annoying warnings. To fix this, I set up a hook in the Conan config that automatically finds and copies the missing `.pdb` files into the final package folder — see [`BUILD.md`](./BUILD.md#missing-pdb-files) for the exact hook and how it's wired in.
+Another important debugging detail is handling MSVC `.pdb` files. By default, some libraries do not install their `.pdb` files into the package, causing MSVC to generate annoying warnings. To fix this, I set up a hook in the Conan config that automatically finds and copies the missing `.pdb` files into the final package folder (see [`BUILD.md`](./BUILD.md#missing-pdb-files))
 
 ### ConanCenter
 
@@ -89,3 +99,318 @@ To avoid recompiling on my laptop and PC every time, I set up my own [Artifactor
 It works very poorly on NTFS, and the built-in Derby database sometimes prevents it from starting correctly when the server is suddenly shut down.
 
 To fix all this, I use PostgreSQL as a separate Docker service, install the server on a BTRFS partition on my laptop with CachyOS.
+
+# Debugging And Launching
+
+Once the project compiles successfully, you need to run and debug it. The operating system needs to locate all shared libraries, and the executable needs to find its assets.
+
+## Local Debugging
+
+Initially, I tried various hacky workarounds to handle DLLs: manually copying them via `add_custom_command`, writing custom scripts with `file(GET_RUNTIME_DEPENDENCIES)`, using [`cmake --install`](https://stackoverflow.com/a/75065206/16793487), and so on.
+
+Eventually, I realized that the best approach was to configure the build directory properly.
+
+I wrapped target configuration in a separate convenient function `skylabs_configure_target`, which should be called once target configuration is complete, to minimize the boilerplate.
+
+First, I forced CMake to output all binaries to a dedicated folder (e.g., `CMAKE_BINARY_DIR/built`):
+
+```cmake
+set(SKYLABS_BUILD_DIR ${CMAKE_BINARY_DIR}/built/$<$<BOOL:${IS_MULTI_CONFIG}>:$<CONFIG>/>)
+
+# ...
+
+function(skylabs_configure_target ...)
+    # ...
+
+    set(runtime_dest "bin")
+    set(archive_dest "lib")
+    set(library_dest "lib")
+
+    if(ARG_RUNTIME_DESTINATION)
+       set(runtime_dest ${ARG_RUNTIME_DESTINATION})
+    endif()
+
+    if(ARG_ARCHIVE_DESTINATION)
+       set(archive_dest ${ARG_ARCHIVE_DESTINATION})
+    endif()
+
+    if(ARG_LIBRARY_DESTINATION)
+       set(library_dest ${ARG_LIBRARY_DESTINATION})
+    endif()
+
+    set_target_properties(${target_name} PROPERTIES
+       RUNTIME_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${runtime_dest}"
+       PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${runtime_dest}"
+       ARCHIVE_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${archive_dest}"
+       COMPILE_PDB_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${archive_dest}"
+       LIBRARY_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
+    )
+
+    # ...
+endfunction()
+```
+
+On Windows, shared libraries must sit next to the executable. CMake 3.21 introduced the [`$<TARGET_RUNTIME_DLLS>`](https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:TARGET_RUNTIME_DLLS) generator expression (which created specially for this case), so I can copy DLLs after build:
+
+```cmake
+    add_custom_command(TARGET ${target_name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            -t $<TARGET_FILE_DIR:${target_name}> $<TARGET_RUNTIME_DLLS:${target_name}>
+        COMMAND_EXPAND_LISTS
+    )
+```
+
+On Linux, copying is unnecessary, because CMake specifies paths to `.so`'s via [`RPATH`](https://cmake.org/cmake/help/latest/prop_tgt/BUILD_RPATH.html#prop_tgt:BUILD_RPATH).
+
+To ensure the debugger finds game assets without copying gigabytes of data, I simply set the IDE's working directory to the repository root:
+
+```cmake
+set(CMAKE_DEBUGGER_WORKING_DIRECTORY ${SKYLABS_ROOT_DIR})
+```
+
+There was one remaining issue: dynamically loaded DLL plugins (like with `dlopen` or `LoadLibrary`).
+I manually copy them via `add_custom_command`:
+
+```cmake
+    if(ARG_RUNTIME_PLUGINS)
+       set(runtime_artifacts "")
+       foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
+          list(APPEND runtime_artifacts "$<TARGET_FILE:${plugin_target}>")
+       endforeach()
+    
+       add_custom_command(TARGET ${target_name} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                -t $<TARGET_FILE_DIR:${target_name}> ${runtime_artifacts}
+          COMMAND_EXPAND_LISTS
+       )
+    endif()
+```
+
+## CMake Install
+
+You can configure a complete installation of the entire project into a single folder, because why not? It's convenient to have a portable project folder for quickly sharing with a friend or a VM.
+
+CMake 3.21 provides a very convenient feature that allows you to copy all dependencies to the output folder, both on Windows and Linux:
+
+```cmake
+    set(runtime_dependencies_args "")
+    if(NOT CMAKE_CROSSCOMPILING)
+       set(runtime_lookup_directories "")
+       if(WIN32)
+          list(APPEND runtime_lookup_directories "${CONAN_RUNTIME_LIB_DIRS}")
+          cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CXX_COMPILER_BIN_DIR)
+          list(APPEND runtime_lookup_directories "${CXX_COMPILER_BIN_DIR}")
+          cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_BIN_DIR)
+          list(APPEND runtime_lookup_directories "${C_COMPILER_BIN_DIR}")
+          list(APPEND runtime_lookup_directories "${SKYLABS_BUILD_DIR}")
+          list(APPEND runtime_lookup_directories "${SKYLABS_BUILD_DIR}bin")
+          list(APPEND runtime_lookup_directories "${SKYLABS_BUILD_DIR}lib")
+       endif()
+
+       set(runtime_dependencies_args
+          RUNTIME_DEPENDENCIES
+          DIRECTORIES ${runtime_lookup_directories}
+          PRE_EXCLUDE_REGEXES
+                "api-ms-win-.*" "ext-ms-.*"
+                "libc\.so\..*" "libgcc_s\.so\..*" "libm\.so\..*" "libstdc\\+\\+\.so\..*"
+          POST_EXCLUDE_REGEXES
+                "^\/lib.*" "^\/usr\/lib.*"
+                "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
+          POST_INCLUDE_REGEXES
+                "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
+       )
+    endif()
+
+    install(TARGETS ${target_name}
+       ${runtime_dependencies_args}
+       ARCHIVE DESTINATION ${SKYLABS_INSTALL_SUBDIR}${archive_dest}
+       LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
+       RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
+    )
+```
+
+To find necessary DLLs, CMake uses `DIRECTORY` folders on Windows and `RPATH` on Linux.
+
+On Linux you also need to rewrite `RPATH` to use relative search paths in installing `elf`s:
+
+```cmake
+set(CMAKE_INSTALL_RPATH "\$ORIGIN/../lib")
+```
+
+For DLL plugins, I manually do `install(IMPORTED_RUNTIME_ARTIFACTS)`:
+
+```cmake
+    if(ARG_RUNTIME_PLUGINS)
+       set(runtime_artifacts "")
+       foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
+          list(APPEND runtime_artifacts "$<TARGET_FILE:${plugin_target}>")
+       endforeach()
+
+       # ...
+
+       install(IMPORTED_RUNTIME_ARTIFACTS ${ARG_RUNTIME_PLUGINS}
+          RUNTIME_DEPENDENCY_SET
+          LIBRARY DESTINATION ${SKYLABS_INSTALL_SUBDIR}${library_dest}
+          RUNTIME DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
+       )
+    endif()
+```
+
+And don't forget about `.pdb`'s:
+```cmake
+    install(
+       FILES $<$<BOOL:${MSVC}>:$<TARGET_PDB_FILE:${target_name}>>
+       DESTINATION ${SKYLABS_INSTALL_SUBDIR}${runtime_dest}
+       OPTIONAL
+    )
+```
+
+And don't forget about the assets:
+
+```cmake
+install(DIRECTORY ${SKYLABS_ROOT_DIR}/assets DESTINATION ${SKYLABS_INSTALL_SUBDIR}.)
+```
+
+# CMake Structure
+
+Experience shows that it is best to keep the entire project configuration within `CMakeLists.txt`. This way, you can simply open any `CMakeLists.txt` file on GitHub (especially the root one) and see exactly how the project is built.
+Splitting the configuration into modules is undesirable.
+
+# Android
+
+I wasn't originally planning on supporting Android, but I had nothing better to do at my grandma's, so I decided to do it.
+
+## SDL Android Project
+
+Since I use Conan with my custom recipes, I initially created a symlink to the Java source code in my Android project. This turned out to be ineffective, as there are files like `AndroidManifest.xml` that the user must override, but they are also updated by the library.
+
+So I decided to simply move the Android project to a submodule and manually update SDL.
+
+## Custom Conan Gradle Task
+
+The Gradle task written [here](https://docs.conan.io/2/examples/cross_build/android/android_studio.html#build-gradle) is complete naive crap.
+
+I [wrote](../android/app/build.gradle.kts) my own and _slightly_ tweaked the build dependencies so that Conan would build the libraries before syncing with Android Studio.
+
+## Copying Runtime Plugins And Custom Files
+
+I just copy plugins to `jniLib` directory:
+
+```cmake
+    if(ARG_RUNTIME_PLUGINS)
+       set(runtime_artifacts "")
+       foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
+          list(APPEND runtime_artifacts "$<TARGET_FILE:${plugin_target}>")
+       endforeach()
+
+       # ...
+
+       if(ANDROID)
+          add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory
+                   "${SKYLABS_ANDROID_JNILIBS_DIR}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                   -t "${SKYLABS_ANDROID_JNILIBS_DIR}" ${runtime_artifacts}
+          )
+       endif()
+    endif()
+```
+
+For custom files like shader outputs I use these functions:
+
+```cmake
+# skylabs_install_directory(<target>
+#     DIRECTORIES <directories>... DESTINATION <path>
+# )
+# Parameters:
+#   DIRECTORIES                 List of directories to install with target
+#   DESTINATION                 Subdirectory of install destination
+function(skylabs_install_directories target_name)
+    set(oneValueArgs DESTINATION)
+    set(multiValueArgs DIRECTORIES)
+    cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    install(DIRECTORY ${ARG_DIRECTORIES}
+        DESTINATION ${SKYLABS_INSTALL_SUBDIR}${ARG_DESTINATION}
+    )
+
+    if(ANDROID)
+        foreach(dir ${ARG_DIRECTORIES})
+            string(REGEX MATCH "/$" has_trailing_slash "${dir}")
+            if(has_trailing_slash)
+                set(dst "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}")
+            else()
+                cmake_path(GET dir FILENAME dir_name)
+                set(dst "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}/${dir_name}")
+            endif()
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${dst}"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+                -t "${dst}" "${dir}"
+            )
+        endforeach()
+    endif()
+endfunction()
+
+# skylabs_install_files(<target>
+#     FILES <files>... DESTINATION <path>
+# )
+# Parameters:
+#   FILES                       List of files to install with target
+#   DESTINATION                 Subdirectory of install destination
+function(skylabs_install_files target_name)
+    set(oneValueArgs DESTINATION)
+    set(multiValueArgs FILES)
+    cmake_parse_arguments(ARG "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    install(FILES ${ARG_FILES}
+        DESTINATION ${SKYLABS_INSTALL_SUBDIR}${ARG_DESTINATION}
+    )
+
+    if(ANDROID)
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+                "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${ARG_FILES} "${SKYLABS_ANDROID_ASSETS_DIR}/${ARG_DESTINATION}"
+        )
+    endif()
+endfunction()
+
+# ...
+
+# Shader target
+skylabs_install_directories(${CURRENT_TARGET_NAME}
+    DIRECTORIES ${SKYLABS_BUILD_DIR}/shaders
+    DESTINATION .
+)
+```
+
+## CMAKE_FIND_ROOT_PATH_MODE_XXXXXXX
+
+By default, the Android toolchain searches for all libraries only in the NDK.
+To override this, you need to do something like this:
+
+```cmake
+if(ANDROID)
+    set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+    set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
+    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+endif()
+```
+
+## Android Studio Project Detection
+
+There's a bug in Android Studio that prevents a project from loading correctly. You just need to make sure the **package** field is present in `AndroidManifest.xml`:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.grinlexstudios.skylabs"
+    android:versionCode="1"
+    android:versionName="1.0"
+    android:installLocation="auto">
+```
+
+I spent several days fixing this...
+
