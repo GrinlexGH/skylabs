@@ -22,6 +22,7 @@ In this file, I'll be describing the issues and topics I encountered while writi
    - [Copying Runtime Plugins And Custom Files](#copying-runtime-plugins-and-custom-files)
    - [CMAKE_FIND_ROOT_PATH_MODE_XXXXXXX](#cmake_find_root_path_mode_xxxxxxx)
    - [Android Studio Project Detection](#android-studio-project-detection)
+7. [Why C17](#)
 
 
 ## Build Configurations
@@ -414,3 +415,6 @@ There's a bug in Android Studio that prevents a project from loading correctly. 
 
 I spent several days fixing this...
 
+# Why C17
+
+C23 support is very weak, especially for MSVC. Moreover, features like `auto` or `nullptr` can very easily trigger false positives in Clang-Tidy.

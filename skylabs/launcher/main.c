@@ -2,7 +2,7 @@
 
 typedef int (*main_t)(int argc, char* argv[]);
 
-#ifdef PLATFORM_WINDOWS
+#if defined(PLATFORM_WINDOWS)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +11,7 @@ typedef int (*main_t)(int argc, char* argv[]);
 #include <commctrl.h>
 #include <shellapi.h>
 
-static void PresentError(const wchar_t* msg) {
+static void SkPresentError(const wchar_t* msg) {
     TASKDIALOGCONFIG tdc = { 0 };
 
     tdc.cbSize = sizeof(TASKDIALOGCONFIG);
@@ -26,7 +26,7 @@ static void PresentError(const wchar_t* msg) {
     TaskDialogIndirect(&tdc, NULL, NULL, NULL);
 }
 
-static void PresentCError(const wchar_t* format, ...) {
+static void SkPresentCError(const wchar_t* format, ...) {
     wchar_t systemMessage[64];
     _wcserror_s(systemMessage, _countof(systemMessage), errno);
 
@@ -40,10 +40,10 @@ static void PresentCError(const wchar_t* format, ...) {
     _snwprintf_s(finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nCRT error description: %ls",
                  contextMessage, systemMessage);
 
-    PresentError(finalMessage);
+    SkPresentError(finalMessage);
 }
 
-static void GetSystemErrorMessage(wchar_t* message, const DWORD size, const DWORD errorCode) {
+static void SkGetSystemErrorMessage(wchar_t* message, const DWORD size, const DWORD errorCode) {
     DWORD msgLen = FormatMessageW(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL,
         errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message, size, NULL);
@@ -57,9 +57,9 @@ static void GetSystemErrorMessage(wchar_t* message, const DWORD size, const DWOR
     }
 }
 
-static void PresentSystemError(const wchar_t* format, ...) {
+static void SkPresentSystemError(const wchar_t* format, ...) {
     wchar_t systemMessage[256];
-    GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
+    SkGetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
 
     wchar_t contextMessage[1024];
     va_list args;
@@ -71,13 +71,13 @@ static void PresentSystemError(const wchar_t* format, ...) {
     _snwprintf_s(finalMessage, _countof(finalMessage), _TRUNCATE, L"%ls\n\nSystem reason: %ls",
                  contextMessage, systemMessage);
 
-    PresentError(finalMessage);
+    SkPresentError(finalMessage);
 }
 
 static void* SkMalloc(const size_t size) {
     void* p = malloc(size);
     if (!p) {
-        PresentCError(L"Failed to allocate %zu bytes, wtf with your system bro💀", size);
+        SkPresentCError(L"Failed to allocate %zu bytes, wtf with your system bro💀", size);
         abort();
     }
     return p;
@@ -86,7 +86,7 @@ static void* SkMalloc(const size_t size) {
 static void* SkRealloc(void* ptr, const size_t newSize) {
     void* p = realloc(ptr, newSize);
     if (!p) {
-        PresentCError(L"Failed to reallocate %zu bytes, wtf with your system bro💀", newSize);
+        SkPresentCError(L"Failed to reallocate %zu bytes, wtf with your system bro💀", newSize);
         abort();
     }
     return p;
@@ -95,7 +95,7 @@ static void* SkRealloc(void* ptr, const size_t newSize) {
 static void* SkCalloc(const size_t num, const size_t size) {
     void* p = calloc(num, size);
     if (!p) {
-        PresentCError(L"Failed to callocate %zu bytes, wtf with your system bro💀", num * size);
+        SkPresentCError(L"Failed to callocate %zu bytes, wtf with your system bro💀", num * size);
         abort();
     }
     return p;
@@ -104,7 +104,7 @@ static void* SkCalloc(const size_t num, const size_t size) {
 #define LOAD_DIR L"\\bin\\"
 #define LOAD_FILE L"core.dll"
 
-static wchar_t* GetProgramPath(void) {
+static wchar_t* SkGetProgramPath(void) {
     wchar_t* result = NULL;
     wchar_t* exePath = NULL;
 
@@ -115,7 +115,7 @@ static wchar_t* GetProgramPath(void) {
         const DWORD size = GetModuleFileNameW(NULL, exePath, cap);
 
         if (size == 0) {
-            PresentSystemError(L"Failed to get program path!");
+            SkPresentSystemError(L"Failed to get program path!");
             goto cleanup;
         }
 
@@ -136,14 +136,14 @@ cleanup:
     return result;
 }
 
-static void GetCommandLineArguments(char*** argv, int* argc) {
+static void SkGetCommandLineArguments(char*** argv, int* argc) {
     wchar_t** argvW = NULL;
     char** argvTemp = NULL;
     int argcTemp = 0;
 
     argvW = CommandLineToArgvW(GetCommandLineW(), &argcTemp);
     if (!argvW) {
-        PresentSystemError(L"Failed to get command line arguments!");
+        SkPresentSystemError(L"Failed to get command line arguments!");
         goto cleanup;
     }
 
@@ -152,7 +152,7 @@ static void GetCommandLineArguments(char*** argv, int* argc) {
     for (int i = 0; i < argcTemp; ++i) {
         int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, NULL, 0, NULL, NULL);
         if (!len) {
-            PresentSystemError(L"Failed to get length of converted command line argument №%d!", i);
+            SkPresentSystemError(L"Failed to get length of converted command line argument №%d!", i);
             goto cleanup;
         }
 
@@ -160,7 +160,7 @@ static void GetCommandLineArguments(char*** argv, int* argc) {
 
         len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argvTemp[i], len, NULL, NULL);
         if (!len) {
-            PresentSystemError(L"Failed to convert command line argument №%d to UTF-8!", i);
+            SkPresentSystemError(L"Failed to convert command line argument №%d to UTF-8!", i);
             goto cleanup;
         }
     }
@@ -189,11 +189,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     int ret = 1;
     wchar_t* exePath = NULL;
     wchar_t* libPath = NULL;
-    HMODULE hCore = NULL;
+    HMODULE libHandle = NULL;
     int argc = 0;
     char** argv = NULL;
 
-    exePath = GetProgramPath();
+    exePath = SkGetProgramPath();
     if (!exePath) {
         goto cleanup;
     }
@@ -216,17 +216,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     free(exePath);
     exePath = NULL;
 
-    hCore = LoadLibraryExW(libPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-    if (!hCore) {
+    libHandle = LoadLibraryExW(libPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    if (!libHandle) {
         PresentSystemError(L"Failed to load library:\n%ls", libPath);
         goto cleanup;
     }
     free(libPath);
     libPath = NULL;
 
-    const main_t coreMain = (main_t)GetProcAddress(hCore, "CoreMain");
-    if (!coreMain) {
-        PresentSystemError(L"Failed to get \"CoreMain\" function address!");
+    const main_t mainFunc = (main_t)GetProcAddress(libHandle, "SkMain");
+    if (!mainFunc) {
+        PresentSystemError(L"Failed to get \"SkMain\" function address!");
         goto cleanup;
     }
 
@@ -236,7 +236,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         goto cleanup;
     }
 
-    ret = coreMain(argc, argv);
+    ret = mainFunc(argc, argv);
 
 cleanup:
     if (argv) {
@@ -245,13 +245,13 @@ cleanup:
         }
         free(argv);
     }
-    if (hCore) FreeLibrary(hCore);
+    if (libHandle) FreeLibrary(libHandle);
     free(libPath);
 
     return ret;
 }
 
-static void EnableVTP() {
+static void SkEnableVTP() {
     const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (handle == INVALID_HANDLE_VALUE) {
         wchar_t systemMessage[256];
@@ -279,12 +279,12 @@ static void EnableVTP() {
 /* Dummy main for console in debug */
 int main() {
     // Setup windows console
-    EnableVTP();
+    SkEnableVTP();
 
     return wWinMain(GetModuleHandleW(NULL), NULL, GetCommandLineW(), SW_SHOWNORMAL);
 }
 
-#elifdef PLATFORM_LINUX
+#elif defined(PLATFORM_LINUX)
 #include <errno.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -297,12 +297,12 @@ int main() {
 
 #define COUNT_OF(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-static void PresentCError(const char* format, ...) {
+static void SkPresentCError(const char* format, ...) {
     char systemMessage[128];
     strerror_r(errno, systemMessage, COUNT_OF(systemMessage));
 
     char contextMessage[1024];
-    va_list args = { 0 };  // NOLINT
+    va_list args = { 0 };
     va_start(args, format);
     snprintf(contextMessage, COUNT_OF(contextMessage), format, args);
     va_end(args);
@@ -310,10 +310,10 @@ static void PresentCError(const char* format, ...) {
     fprintf(stderr, "%s\nSystem error description: %s\n", contextMessage, systemMessage);
 }
 
-static void* Malloc(const size_t size) {
+static void* SkMalloc(const size_t size) {
     void* p = malloc(size);
     if (!p) {
-        PresentCError("Failed to allocate %zu bytes, wtf with your system bro💀", size);
+        SkPresentCError("Failed to allocate %zu bytes, wtf with your system bro💀", size);
         abort();
     }
     return p;
@@ -326,11 +326,11 @@ int main(const int argc, char* argv[]) {
     int ret = 1;
     char* exePath = NULL;
     char* libPath = NULL;
-    void* hCore = NULL;
+    void* libHandle = NULL;
 
     exePath = realpath("/proc/self/exe", NULL);
     if (!exePath) {
-        PresentCError("Failed to get executable path!");
+        SkPresentCError("Failed to get executable path!");
         goto cleanup;
     }
 
@@ -341,39 +341,39 @@ int main(const int argc, char* argv[]) {
     *lastSlash = '\0';
 
     const size_t cap = (lastSlash - exePath) + COUNT_OF(LOAD_DIR) + COUNT_OF(LOAD_FILE) - 1;
-    libPath = Malloc(cap * sizeof(char));
+    libPath = SkMalloc(cap * sizeof(char));
 
     // Generate full dll path
     snprintf(libPath, cap, "%s" LOAD_DIR LOAD_FILE, exePath);
     free(exePath);
     exePath = NULL;
 
-    hCore = dlopen(libPath, RTLD_LAZY);
+    libHandle = dlopen(libPath, RTLD_LAZY);
     const char* dlErrorDesc = dlerror();
-    if (!hCore) {
+    if (!libHandle) {
         fprintf(stderr, "Failed to load library:\n%s\n", dlErrorDesc ? dlErrorDesc : "Unknown error");
         goto cleanup;
     }
     free(libPath);
     libPath = NULL;
 
-    const main_t coreMain = (main_t)(uintptr_t)dlsym(hCore, "CoreMain");
+    const main_t mainFunc = (main_t)(uintptr_t)dlsym(libHandle, "SkMain");
     dlErrorDesc = dlerror();
-    if (!coreMain) {
+    if (!mainFunc) {
         fprintf(stderr, "Failed to load library function:\n%s\n",
                 dlErrorDesc ? dlErrorDesc : "Unknown error!");
         goto cleanup;
     }
 
-    ret = coreMain(argc, argv);
+    ret = mainFunc(argc, argv);
 
 cleanup:
-    if (hCore) dlclose(hCore);
+    if (libHandle) dlclose(libHandle);
     free(libPath);
     return ret;
 }
 
-#elifdef PLATFORM_ANDROID
+#elif defined(PLATFORM_ANDROID)
 #include <SDL3/SDL_loadso.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_main.h>
@@ -382,23 +382,23 @@ cleanup:
 
 int main(int argc, char* argv[]) {
     int ret = 1;
-    SDL_SharedObject* hCore = NULL;
+    SDL_SharedObject* libHandle = NULL;
 
-    hCore = SDL_LoadObject(LOAD_PATH);
-    if (!hCore) {
+    libHandle = SDL_LoadObject(LOAD_PATH);
+    if (!libHandle) {
         SDL_Log("Failed to load library:\n%s\n", SDL_GetError());
         goto cleanup;
     }
 
-    main_t coreMain = (main_t)(uintptr_t)SDL_LoadFunction(hCore, "CoreMain");
-    if (!coreMain) {
+    main_t mainFunc = (main_t)(uintptr_t)SDL_LoadFunction(libHandle, "SkMain");
+    if (!mainFunc) {
         SDL_Log("Failed to load library function:\n%s\n", SDL_GetError());
     }
 
-    ret = coreMain(argc, argv);
+    ret = mainFunc(argc, argv);
 
 cleanup:
-    if (hCore) SDL_UnloadObject(hCore);
+    if (libHandle) SDL_UnloadObject(libHandle);
     return ret;
 }
 
