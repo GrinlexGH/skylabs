@@ -18,6 +18,7 @@ Checks: >
   modernize-use-equals-default,
   modernize-use-override,
   modernize-use-using,
+  modernize-use-nullptr,
   modernize-make-shared,
   modernize-make-unique,
   modernize-deprecated-headers,
@@ -43,40 +44,39 @@ CheckOptions:
   - key: readability-identifier-naming.DefaultCase
     value: camelBack
 
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
   - key: readability-identifier-naming.ClassCase
     value: CamelCase
-  - key: readability-identifier-naming.ClassPrefix
-    value: 'C'
-  - key: readability-identifier-naming.StructPrefix
-    value: ''
-  - key: readability-identifier-naming.AbstractClassPrefix
-    value: 'I'
-  - key: readability-identifier-naming.PrivateMemberPrefix
-    value: 'm_'
-
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.AbstractClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConceptCase
+    value: CamelCase
   - key: readability-identifier-naming.FunctionCase
     value: CamelCase
   - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.TypeAliasCase
     value: CamelCase
-
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
   - key: readability-identifier-naming.MacroDefinitionCase
     value: UPPER_CASE
   - key: readability-identifier-naming.GlobalConstantCase
     value: CamelCase
-  - key: readability-identifier-naming.GlobalVariablePrefix
-    value: 'g_'
+
+  - key: readability-identifier-naming.TypedefSuffix
+    value: '_t'
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: 'm_'
   - key: readability-identifier-naming.GlobalConstantPrefix
     value: 'k'
-
-  - key: readability-identifier-naming.TypeAliasCase
-    value: CamelCase
-  - key: readability-identifier-naming.TypedefCase
-    value: camelBack
-  - key: readability-identifier-naming.TypedefSuffix
-    value: _t
-
-  - key: readability-identifier-naming.EnumCase
-    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: 'e'
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: 'g_'
 
 WarningsAsErrors: ''
 HeaderFilterRegex: 'skylabs/**/*.*'
