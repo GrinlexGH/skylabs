@@ -35,7 +35,7 @@ void ConsoleSink::Write(const Category category, const Level level, const std::s
     fmt::println("{}", message);
 }
 
-SK_BASE_PUBLIC_CLASS void SubmitLog(const Category category, const Level level,
+void SubmitLog(const Category category, const Level level,
                                     const std::source_location& loc, const std::string& message) {
     for (const auto& sink : g_sinks) {
         sink->Write(category, level, loc, message);

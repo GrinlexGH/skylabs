@@ -208,7 +208,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     // Generate path to bin
     swprintf(libPath, cap, L"%ls" LOAD_DIR, exePath);
     if (!SetDllDirectoryW(libPath)) {
-        PresentSystemError(L"Failed to set DLL search path!");
+        SkPresentSystemError(L"Failed to set DLL search path!");
     }
 
     // Generate full dll path
@@ -218,7 +218,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
     libHandle = LoadLibraryExW(libPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
     if (!libHandle) {
-        PresentSystemError(L"Failed to load library:\n%ls", libPath);
+        SkPresentSystemError(L"Failed to load library:\n%ls", libPath);
         goto cleanup;
     }
     free(libPath);
@@ -226,12 +226,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 
     const main_t mainFunc = (main_t)GetProcAddress(libHandle, "SkMain");
     if (!mainFunc) {
-        PresentSystemError(L"Failed to get \"SkMain\" function address!");
+        SkPresentSystemError(L"Failed to get \"SkMain\" function address!");
         goto cleanup;
     }
 
     // Convert utf16 argv to utf8
-    GetCommandLineArguments(&argv, &argc);
+    SkGetCommandLineArguments(&argv, &argc);
     if (!argv) {
         goto cleanup;
     }
@@ -251,11 +251,11 @@ cleanup:
     return ret;
 }
 
-static void SkEnableVTP() {
+static void SkEnableVTP(void) {
     const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (handle == INVALID_HANDLE_VALUE) {
         wchar_t systemMessage[256];
-        GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
+        SkGetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
         printf("Failed to get stdout handle:\n%ls", systemMessage);
         return;
     }
@@ -263,7 +263,7 @@ static void SkEnableVTP() {
     DWORD originalMode = 0;
     if (!GetConsoleMode(handle, &originalMode)) {
         wchar_t systemMessage[256];
-        GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
+        SkGetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
         printf("Failed to get console mode:\n%ls", systemMessage);
         return;
     }
@@ -271,13 +271,13 @@ static void SkEnableVTP() {
     if (!SetConsoleMode(handle,
                         originalMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT)) {
         wchar_t systemMessage[256];
-        GetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
+        SkGetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
         printf("Failed to set virtual terminal processing flags:\n%ls", systemMessage);
     }
 }
 
 /* Dummy main for console in debug */
-int main() {
+int main(void) {
     // Setup windows console
     SkEnableVTP();
 
