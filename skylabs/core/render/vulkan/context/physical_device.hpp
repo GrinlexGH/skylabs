@@ -1,19 +1,18 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/surface.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
-namespace Vulkan {
-class CPhysicalDevice {
+namespace sk::render::vulkan {
+class PhysicalDevice {
 public:
-    explicit CPhysicalDevice(std::nullptr_t) { }
-    explicit CPhysicalDevice(const vk::raii::Instance& instance,
-                             const vk::PhysicalDevice& physicalDevice, std::string&& name,
-                             const std::uint32_t apiVersion)
+    explicit PhysicalDevice(std::nullptr_t) { }
+    explicit PhysicalDevice(const vk::raii::Instance& instance, const vk::PhysicalDevice& physicalDevice,
+                            std::string&& name, const std::uint32_t apiVersion)
         : m_handle(instance, physicalDevice), m_name(std::move(name)), m_apiVersion(apiVersion) { }
-    CPhysicalDevice(CPhysicalDevice&) = delete;
-    CPhysicalDevice(CPhysicalDevice&&) = default;
-    CPhysicalDevice& operator=(CPhysicalDevice&) = delete;
-    CPhysicalDevice& operator=(CPhysicalDevice&&) = default;
-    ~CPhysicalDevice() = default;
+    PhysicalDevice(PhysicalDevice&) = delete;
+    PhysicalDevice(PhysicalDevice&&) = default;
+    PhysicalDevice& operator=(PhysicalDevice&) = delete;
+    PhysicalDevice& operator=(PhysicalDevice&&) = default;
+    ~PhysicalDevice() = default;
 
     [[nodiscard]] const vk::raii::PhysicalDevice& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::PhysicalDevice* operator->() const noexcept { return &m_handle; }

@@ -1,7 +1,8 @@
-#include <skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp>
+#include "skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp"
 
-namespace Vulkan {
-std::size_t DescriptorLayoutHash::operator()(const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const {
+namespace sk::render::vulkan {
+std::size_t DescriptorLayoutHash::operator()(
+    const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const {
     std::size_t seed = 0;
     for (const auto& b : bindings) {
         boost::hash_combine(seed, b.binding);
@@ -12,24 +13,22 @@ std::size_t DescriptorLayoutHash::operator()(const std::vector<vk::DescriptorSet
     return seed;
 }
 
-CDescriptorLayoutCache::CDescriptorLayoutCache(const vk::raii::Device& device) : m_device(&device) {}
+DescriptorLayoutCache::DescriptorLayoutCache(const vk::raii::Device& device) : m_device(&device) { }
 
-const vk::raii::DescriptorSetLayout& CDescriptorLayoutCache::GetLayout(std::vector<vk::DescriptorSetLayoutBinding> bindings) {
-    std::ranges::sort(bindings, [](const auto& a, const auto& b) {
-        return a.binding < b.binding;
-    });
+const vk::raii::DescriptorSetLayout& DescriptorLayoutCache::GetLayout(
+    std::vector<vk::DescriptorSetLayoutBinding> bindings) {
+    std::ranges::sort(bindings, [](const auto& a, const auto& b) { return a.binding < b.binding; });
 
     auto it = m_cache.find(bindings);
     if (it != m_cache.end()) {
         return it->second;
     }
 
-    vk::DescriptorSetLayoutCreateInfo createInfo {};
+    vk::DescriptorSetLayoutCreateInfo createInfo { };
     createInfo.setBindings(bindings);
 
     auto [insertedIt, success] = m_cache.try_emplace(
-        std::move(bindings), vk::raii::DescriptorSetLayout { *m_device, createInfo }
-    );
+        std::move(bindings), vk::raii::DescriptorSetLayout { *m_device, createInfo });
 
     return insertedIt->second;
 }

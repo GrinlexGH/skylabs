@@ -1,18 +1,18 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/instance.hpp>
-#include <skylabs/public/vulkan/os_connector.hpp>
+#include "skylabs/base/vulkan/os_connector.hpp"
+#include "skylabs/core/render/vulkan/context/instance.hpp"
 
-namespace Vulkan {
-class CSurface {
+namespace sk::render::vulkan {
+class Surface {
 public:
-    explicit CSurface(std::nullptr_t) { }
-    explicit CSurface(const CInstance& instance, const IOSConnector* osConnector)
+    explicit Surface(std::nullptr_t) { }
+    explicit Surface(const Instance& instance, const sk::vulkan::IOSConnector* osConnector)
         : m_handle(*instance, osConnector->CreateSurface(*instance)) { }
-    CSurface(const CSurface&) = delete;
-    CSurface(CSurface&& other) noexcept = default;
-    CSurface& operator=(const CSurface&) = delete;
-    CSurface& operator=(CSurface&& rhs) noexcept = default;
-    ~CSurface() = default;
+    Surface(const Surface&) = delete;
+    Surface(Surface&& other) noexcept = default;
+    Surface& operator=(const Surface&) = delete;
+    Surface& operator=(Surface&& rhs) noexcept = default;
+    ~Surface() = default;
 
     [[nodiscard]] const vk::raii::SurfaceKHR& operator*() const noexcept { return m_handle; }
 

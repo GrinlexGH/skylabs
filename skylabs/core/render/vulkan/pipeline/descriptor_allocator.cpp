@@ -1,7 +1,7 @@
-#include <skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp>
+#include "skylabs/core/render/vulkan/pipeline/descriptor_allocator.hpp"
 
 namespace {
-constexpr std::array g_types {
+constexpr std::array kTypes {
     vk::DescriptorType::eSampler,
     vk::DescriptorType::eCombinedImageSampler,
     vk::DescriptorType::eSampledImage,
@@ -14,18 +14,18 @@ constexpr std::array g_types {
 };
 }
 
-namespace Vulkan {
-CDescriptorAllocator::CDescriptorAllocator(const vk::raii::Device& device) : m_device(&device) { }
+namespace sk::render::vulkan {
+DescriptorAllocator::DescriptorAllocator(const vk::raii::Device& device) : m_device(&device) { }
 
-vk::raii::DescriptorPool CDescriptorAllocator::CreatePool(std::uint32_t count) {
+vk::raii::DescriptorPool DescriptorAllocator::CreatePool(std::uint32_t count) {
     std::vector<vk::DescriptorPoolSize> sizes;
-    sizes.reserve(g_types.size());
+    sizes.reserve(kTypes.size());
 
-    for (const auto& type : g_types) {
+    for (const auto& type : kTypes) {
         sizes.emplace_back(type, count);
     }
 
-    vk::DescriptorPoolCreateInfo poolInfo {};
+    vk::DescriptorPoolCreateInfo poolInfo { };
     poolInfo.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
     poolInfo.setMaxSets(count);
     poolInfo.setPoolSizes(sizes);
@@ -33,7 +33,7 @@ vk::raii::DescriptorPool CDescriptorAllocator::CreatePool(std::uint32_t count) {
     return { *m_device, poolInfo };
 }
 
-vk::raii::DescriptorPool CDescriptorAllocator::GrabPool() {
+vk::raii::DescriptorPool DescriptorAllocator::GrabPool() {
     if (!m_freePools.empty()) {
         vk::raii::DescriptorPool pool = std::move(m_freePools.back());
         m_freePools.pop_back();
@@ -43,13 +43,13 @@ vk::raii::DescriptorPool CDescriptorAllocator::GrabPool() {
     return CreatePool(1024);
 }
 
-std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> CDescriptorAllocator::Allocate(const vk::DescriptorSetAllocateInfo& allocInfo) const {
+std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> DescriptorAllocator::Allocate(
+    const vk::DescriptorSetAllocateInfo& allocInfo) const {
     std::vector<vk::DescriptorSet> descriptorSets(allocInfo.descriptorSetCount);
     vk::Result result = static_cast<vk::Result>(m_device->getDispatcher()->vkAllocateDescriptorSets(
         static_cast<VkDevice>(**m_device),
         reinterpret_cast<VkDescriptorSetAllocateInfo const*>(&allocInfo),
-        reinterpret_cast<VkDescriptorSet*>(descriptorSets.data()))
-    );
+        reinterpret_cast<VkDescriptorSet*>(descriptorSets.data())));
 
     if (result != vk::Result::eSuccess) {
         return std::unexpected(result);
@@ -58,26 +58,27 @@ std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> CDescriptorAlloc
     std::vector<vk::raii::DescriptorSet> descriptorSetsRAII;
     descriptorSetsRAII.reserve(descriptorSets.size());
     for (auto& descriptorSet : descriptorSets) {
-        descriptorSetsRAII.emplace_back(
-            *m_device, *reinterpret_cast<VkDescriptorSet*>(&descriptorSet), static_cast<VkDescriptorPool>(allocInfo.descriptorPool)
-        );
+        descriptorSetsRAII.emplace_back(*m_device, *reinterpret_cast<VkDescriptorSet*>(&descriptorSet),
+                                        static_cast<VkDescriptorPool>(allocInfo.descriptorPool));
     }
 
     return descriptorSetsRAII;
 }
 
-std::vector<vk::raii::DescriptorSet> CDescriptorAllocator::Allocate(const vk::ArrayProxy<const vk::DescriptorSetLayout>& layouts) {
+std::vector<vk::raii::DescriptorSet> DescriptorAllocator::Allocate(
+    const vk::ArrayProxy<const vk::DescriptorSetLayout>& layouts) {
     if (m_currentPool == nullptr) {
         m_currentPool = GrabPool();
     }
 
-    vk::DescriptorSetAllocateInfo allocInfo {};
+    vk::DescriptorSetAllocateInfo allocInfo { };
     allocInfo.setDescriptorPool(m_currentPool);
     allocInfo.setSetLayouts(layouts);
 
     auto result = Allocate(allocInfo);
     if (!result) {
-        if (result.error() != vk::Result::eErrorOutOfPoolMemory && result.error() != vk::Result::eErrorFragmentedPool) {
+        if (result.error() != vk::Result::eErrorOutOfPoolMemory &&
+            result.error() != vk::Result::eErrorFragmentedPool) {
             throw std::runtime_error("Failed to allocate descriptor set");
         }
 
@@ -95,7 +96,7 @@ std::vector<vk::raii::DescriptorSet> CDescriptorAllocator::Allocate(const vk::Ar
     return std::move(result.value());
 }
 
-void CDescriptorAllocator::ResetPools() {
+void DescriptorAllocator::ResetPools() {
     for (auto& pool : m_usedPools) {
         pool.reset();
         m_freePools.emplace_back(std::move(pool));

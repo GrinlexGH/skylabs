@@ -1,19 +1,18 @@
 #pragma once
-#include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
+#include "skylabs/core/render/vulkan/command_recording/command_buffer.hpp"
 
-namespace Vulkan {
-class CCommandBufferAllocator
-{
+namespace sk::render::vulkan {
+class CommandBufferAllocator {
 public:
-    explicit CCommandBufferAllocator(std::nullptr_t) {}
-    explicit CCommandBufferAllocator(const vk::raii::Device& device, std::uint32_t familyIndex);
-    CCommandBufferAllocator(const CCommandBufferAllocator&) = delete;
-    CCommandBufferAllocator(CCommandBufferAllocator&&) noexcept = default;
-    CCommandBufferAllocator& operator=(const CCommandBufferAllocator&) = delete;
-    CCommandBufferAllocator& operator=(CCommandBufferAllocator&&) noexcept = default;
-    ~CCommandBufferAllocator() = default;
+    explicit CommandBufferAllocator(std::nullptr_t) { }
+    explicit CommandBufferAllocator(const vk::raii::Device& device, std::uint32_t familyIndex);
+    CommandBufferAllocator(const CommandBufferAllocator&) = delete;
+    CommandBufferAllocator(CommandBufferAllocator&&) noexcept = default;
+    CommandBufferAllocator& operator=(const CommandBufferAllocator&) = delete;
+    CommandBufferAllocator& operator=(CommandBufferAllocator&&) noexcept = default;
+    ~CommandBufferAllocator() = default;
 
-    std::vector<CCommandBuffer> Allocate(vk::CommandBufferLevel level, std::uint32_t count) const;
+    std::vector<CommandBuffer> Allocate(vk::CommandBufferLevel level, std::uint32_t count) const;
 
 private:
     const vk::raii::Device* m_device = nullptr;

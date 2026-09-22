@@ -1,25 +1,24 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/device.hpp>
-#include <skylabs/core/render/vulkan/resources/image.hpp>
-#include <skylabs/public/window.hpp>
+#include "skylabs/base/window.hpp"
+#include "skylabs/core/render/vulkan/context/device.hpp"
+#include "skylabs/core/render/vulkan/resources/image.hpp"
 
-namespace Vulkan {
+namespace sk::render::vulkan {
 struct SwapchainRecreateInfo {
     std::optional<std::uint32_t> imageCount = std::nullopt;
     std::optional<vk::PresentModeKHR> presentMode = std::nullopt;
 };
 
-class CSwapchain {
+class Swapchain {
 public:
-    explicit CSwapchain(std::nullptr_t) { }
-    explicit CSwapchain(const CDevice& device, const IWindow* window,
-                        const vk::raii::SurfaceKHR& surface, std::uint32_t imageCount,
-                        vk::PresentModeKHR presentMode);
-    CSwapchain(const CSwapchain&) = delete;
-    CSwapchain(CSwapchain&&) noexcept = default;
-    CSwapchain& operator=(const CSwapchain&) = delete;
-    CSwapchain& operator=(CSwapchain&&) noexcept = default;
-    ~CSwapchain() = default;
+    explicit Swapchain(std::nullptr_t) { }
+    explicit Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
+                       std::uint32_t imageCount, vk::PresentModeKHR presentMode);
+    Swapchain(const Swapchain&) = delete;
+    Swapchain(Swapchain&&) noexcept = default;
+    Swapchain& operator=(const Swapchain&) = delete;
+    Swapchain& operator=(Swapchain&&) noexcept = default;
+    ~Swapchain() = default;
 
     [[nodiscard]] const vk::raii::SwapchainKHR& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::SwapchainKHR* operator->() const noexcept { return &m_handle; }
@@ -37,14 +36,14 @@ public:
     [[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
 
-    [[nodiscard]] std::span<CImage> Images() { return m_images; }
+    [[nodiscard]] std::span<Image> Images() { return m_images; }
 
 private:
     void CreateSwapchain(const vk::SurfaceKHR& surface, std::uint32_t imageCount,
                          vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle = nullptr);
     void CreateImages();
 
-    const CDevice* m_device = nullptr;
+    const Device* m_device = nullptr;
     const IWindow* m_window = nullptr;
     const vk::raii::SurfaceKHR* m_surface = nullptr;
 
@@ -55,6 +54,6 @@ private:
     vk::Extent2D m_extent;
     vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eFifo;
 
-    std::vector<CImage> m_images;
+    std::vector<Image> m_images;
 };
 }

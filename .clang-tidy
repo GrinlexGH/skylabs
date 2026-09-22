@@ -41,7 +41,11 @@ CheckOptions:
   - key: bugprone-multi-level-implicit-pointer-conversion.EnableInC
     value: false
 
-  - key: readability-identifier-naming.DefaultCase
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberCase
     value: camelBack
 
   - key: readability-identifier-naming.StructCase
@@ -67,6 +71,15 @@ CheckOptions:
   - key: readability-identifier-naming.GlobalConstantCase
     value: CamelCase
 
+  - key: readability-identifier-naming.FunctionIgnoredRegexp
+    value: '^(begin|end|cbegin|cend|rbegin|rend|crbegin|crend|size|empty|data|parse|format)$'
+  - key: readability-identifier-naming.TypeAliasIgnoredRegexp
+    value: '^(iterator_category|value_type|difference_type|pointer|reference|iterator_concept)$'
+  - key: readability-identifier-naming.GlobalConstantIgnoredRegexp
+    value: '^(enable_borrowed_range)$'
+
+  - key: readability-identifier-naming.AbstractClassPrefix
+    value: 'I'
   - key: readability-identifier-naming.TypedefSuffix
     value: '_t'
   - key: readability-identifier-naming.PrivateMemberPrefix

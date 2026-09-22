@@ -1,18 +1,18 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/physical_device.hpp>
+#include "skylabs/core/render/vulkan/context/physical_device.hpp"
 
-namespace Vulkan {
-class CQueue {
+namespace sk::render::vulkan {
+class Queue {
 public:
-    explicit CQueue(std::nullptr_t) { }
-    explicit CQueue(const vk::raii::Device& device, const vk::Queue& queue,
-                    const std::uint32_t familyIndex)
+    explicit Queue(std::nullptr_t) { }
+    explicit Queue(const vk::raii::Device& device, const vk::Queue& queue,
+                   const std::uint32_t familyIndex)
         : m_handle(device, queue), m_familyIndex(familyIndex) { }
-    CQueue(CQueue&) = delete;
-    CQueue(CQueue&&) = default;
-    CQueue& operator=(CQueue&) = delete;
-    CQueue& operator=(CQueue&&) = default;
-    ~CQueue() = default;
+    Queue(Queue&) = delete;
+    Queue(Queue&&) = default;
+    Queue& operator=(Queue&) = delete;
+    Queue& operator=(Queue&&) = default;
+    ~Queue() = default;
 
     [[nodiscard]] const vk::raii::Queue& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Queue* operator->() const noexcept { return &m_handle; }
@@ -29,12 +29,12 @@ struct DeviceCaps {
     bool samplerAnisotropy = false;
 };
 
-class CDevice {
+class Device {
 public:
-    explicit CDevice(std::nullptr_t) { }
-    explicit CDevice(vk::raii::Device&& device, CPhysicalDevice&& physicalDevice,
-                     std::vector<std::string>&& enabledExtensions, const DeviceCaps& caps,
-                     CQueue&& graphicsQueue, CQueue&& presentQueue, CQueue&& computeQueue)
+    explicit Device(std::nullptr_t) { }
+    explicit Device(vk::raii::Device&& device, PhysicalDevice&& physicalDevice,
+                    std::vector<std::string>&& enabledExtensions, const DeviceCaps& caps,
+                    Queue&& graphicsQueue, Queue&& presentQueue, Queue&& computeQueue)
         : m_handle(std::move(device)),
           m_physicalDevice(std::move(physicalDevice)),
           m_enabledExtensions(std::move(enabledExtensions)),
@@ -42,20 +42,20 @@ public:
           m_graphicsQueue(std::move(graphicsQueue)),
           m_presentQueue(std::move(presentQueue)),
           m_computeQueue(std::move(computeQueue)) { }
-    CDevice(CDevice&) = delete;
-    CDevice(CDevice&&) = default;
-    CDevice& operator=(CDevice&) = delete;
-    CDevice& operator=(CDevice&&) = default;
-    ~CDevice() = default;
+    Device(Device&) = delete;
+    Device(Device&&) = default;
+    Device& operator=(Device&) = delete;
+    Device& operator=(Device&&) = default;
+    ~Device() = default;
 
     [[nodiscard]] const vk::raii::Device& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Device* operator->() const noexcept { return &m_handle; }
 
-    [[nodiscard]] const CPhysicalDevice& PhysicalDevice() const noexcept { return m_physicalDevice; }
+    [[nodiscard]] const PhysicalDevice& GetPhysicalDevice() const noexcept { return m_physicalDevice; }
 
-    [[nodiscard]] const CQueue& GraphicsQueue() const noexcept { return m_graphicsQueue; }
-    [[nodiscard]] const CQueue& PresentQueue() const noexcept { return m_presentQueue; }
-    [[nodiscard]] const CQueue& ComputeQueue() const noexcept { return m_computeQueue; }
+    [[nodiscard]] const Queue& GraphicsQueue() const noexcept { return m_graphicsQueue; }
+    [[nodiscard]] const Queue& PresentQueue() const noexcept { return m_presentQueue; }
+    [[nodiscard]] const Queue& ComputeQueue() const noexcept { return m_computeQueue; }
 
     [[nodiscard]] DeviceCaps Caps() const noexcept { return m_caps; }
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const {
@@ -64,13 +64,13 @@ public:
 
 private:
     vk::raii::Device m_handle { nullptr };
-    CPhysicalDevice m_physicalDevice { nullptr };
+    PhysicalDevice m_physicalDevice { nullptr };
 
     std::vector<std::string> m_enabledExtensions;
     DeviceCaps m_caps;
 
-    CQueue m_graphicsQueue { nullptr };
-    CQueue m_presentQueue { nullptr };
-    CQueue m_computeQueue { nullptr };
+    Queue m_graphicsQueue { nullptr };
+    Queue m_presentQueue { nullptr };
+    Queue m_computeQueue { nullptr };
 };
 }

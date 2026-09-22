@@ -1,6 +1,12 @@
-#include <skylabs/core/render/vulkan/context/context.hpp>
-#include <skylabs/public/logging.hpp>
+#include <unordered_map>
+
+#include <VkBootstrap.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include "project_info.hpp"
+#include "skylabs/base/logging.hpp"
+#include "skylabs/core/render/vulkan/context/context.hpp"
 
 namespace {
 #ifdef DEBUG
@@ -9,16 +15,18 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
     const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* /*pUserData*/
 ) {
+    namespace sk_log = sk::log;
+
     switch (messageSeverity) {
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-            Log::Info(Log::Category::eVulkan, "{}", pCallbackData->pMessage);
+            sk_log::Info(sk_log::Category::eVulkan, "{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-            Log::Warning(Log::Category::eVulkan, "{}", pCallbackData->pMessage);
+            sk_log::Warning(sk_log::Category::eVulkan, "{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-            Log::Error(Log::Category::eVulkan, "{}\n", pCallbackData->pMessage);
+            sk_log::Error(sk_log::Category::eVulkan, "{}\n", pCallbackData->pMessage);
             break;
     }
 
@@ -52,7 +60,7 @@ std::vector<vk::ExtensionProperties> GetAvailableExtensions(const vk::raii::Cont
 }
 
 std::vector<std::string> SetupInstanceExtensions(const vk::raii::Context& context,
-                                                 const Vulkan::IOSConnector* osConnector,
+                                                 const sk::vulkan::IOSConnector* osConnector,
                                                  [[maybe_unused]] const bool setupDebugUtils) {
     std::unordered_map<std::string_view, bool> requestedExtensions {
         { vk::EXTSwapchainColorSpaceExtensionName, false }
@@ -100,7 +108,7 @@ struct InstanceCreationResult {
     std::vector<std::string> enabledExtensions;
 };
 
-InstanceCreationResult CreateInstance(const Vulkan::IOSConnector* osConnector,
+InstanceCreationResult CreateInstance(const sk::vulkan::IOSConnector* osConnector,
                                       const bool setupDebugUtils = true) {
     vk::raii::Context context { osConnector->GetVkGetInstanceProcAddr() };
 
@@ -211,10 +219,10 @@ bool TryEnableFeatures(vkb::PhysicalDevice& physicalDevice, const T& f) {
     return physicalDevice.enable_extension_features_if_present(f);
 }
 
-Vulkan::CDevice CreateDevice(vkb::PhysicalDevice& physicalDevice,
-                             Vulkan::CPhysicalDevice&& raiiPhysicalDevice) {
+sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
+                                        sk::render::vulkan::PhysicalDevice&& raiiPhysicalDevice) {
     // !!! Optional vulkan features
-    Vulkan::DeviceCaps caps;
+    sk::render::vulkan::DeviceCaps caps;
 
 #define VK_OPT_FEATURE(x, y)                           \
     do {                                               \
@@ -247,7 +255,7 @@ Vulkan::CDevice CreateDevice(vkb::PhysicalDevice& physicalDevice,
 
     vk::raii::Device device { *raiiPhysicalDevice, deviceResult->device };
 
-    auto getQueue = [&](Vulkan::CQueue& queue, const vkb::QueueType type) {
+    auto getQueue = [&](sk::render::vulkan::Queue& queue, const vkb::QueueType type) {
         auto result = deviceResult.value().get_queue_and_index(type);
         if (!result) {
             throw std::runtime_error(fmt::format(fmt::runtime("Failed to get {} queue ({}): {}, {}"),
@@ -257,48 +265,47 @@ Vulkan::CDevice CreateDevice(vkb::PhysicalDevice& physicalDevice,
         }
 
         auto [vkQueue, index] = *result;
-        queue = Vulkan::CQueue { device, vkQueue, index };
+        queue = sk::render::vulkan::Queue { device, vkQueue, index };
     };
 
-    Vulkan::CQueue graphicsQueue { nullptr };
+    sk::render::vulkan::Queue graphicsQueue { nullptr };
     getQueue(graphicsQueue, vkb::QueueType::graphics);
 
-    Vulkan::CQueue presentQueue { nullptr };
+    sk::render::vulkan::Queue presentQueue { nullptr };
     getQueue(presentQueue, vkb::QueueType::present);
 
-    Vulkan::CQueue computeQueue { nullptr };
+    sk::render::vulkan::Queue computeQueue { nullptr };
     getQueue(computeQueue, vkb::QueueType::compute);
 
-    return Vulkan::CDevice {
+    return sk::render::vulkan::Device {
         std::move(device),        std::move(raiiPhysicalDevice), physicalDevice.get_extensions(), caps,
         std::move(graphicsQueue), std::move(presentQueue),       std::move(computeQueue)
     };
 }
 }
 
-namespace Vulkan {
-CContext::CContext(const IWindow* window, const IOSConnector* osConnector)
+namespace sk::render::vulkan {
+Context::Context(const IWindow* window, const sk::vulkan::IOSConnector* osConnector)
     : m_window(window), m_osConnector(osConnector) {
     // Build instance
     auto [context, vkbInstance, enabledExtensions] = CreateInstance(osConnector);
-    m_instance = CInstance { context, vkbInstance.instance, vkbInstance.debug_messenger,
-                             std::move(enabledExtensions) };
+    m_instance = Instance { context, vkbInstance.instance, vkbInstance.debug_messenger,
+                            std::move(enabledExtensions) };
 
     // Build surface
-    m_surface = CSurface { m_instance, osConnector };
+    m_surface = Surface { m_instance, osConnector };
 
     // Choose physical device
     vkb::PhysicalDevice physicalDevice = ChoosePhysicalDevice(vkbInstance, *m_surface);
 
     // Build device
-    m_device =
-        CreateDevice(physicalDevice, CPhysicalDevice { *m_instance, physicalDevice.physical_device,
-                                                       physicalDevice.properties.deviceName,
-                                                       physicalDevice.properties.apiVersion });
+    m_device = CreateDevice(physicalDevice, PhysicalDevice { *m_instance, physicalDevice.physical_device,
+                                                             physicalDevice.properties.deviceName,
+                                                             physicalDevice.properties.apiVersion });
 
     // Build allocator
-    m_allocator = CAllocator { *m_instance, m_device };
+    m_allocator = Allocator { *m_instance, m_device };
 }
 
-void CContext::RepairSurface() { m_surface = CSurface { m_instance, m_osConnector }; }
+void Context::RepairSurface() { m_surface = Surface { m_instance, m_osConnector }; }
 }

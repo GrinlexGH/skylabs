@@ -1,29 +1,32 @@
-#include <skylabs/core/render/vulkan/swapchain.hpp>
-#include <skylabs/public/logging.hpp>
+#include <VkBootstrap.h>
+#include <fmt/ranges.h>
 
-namespace Vulkan {
-CSwapchain::CSwapchain(const CDevice& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                       const std::uint32_t imageCount, const vk::PresentModeKHR presentMode)
+#include "skylabs/base/logging.hpp"
+#include "skylabs/core/render/vulkan/swapchain.hpp"
+
+namespace sk::render::vulkan {
+Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
+                     const std::uint32_t imageCount, const vk::PresentModeKHR presentMode)
     : m_device(&device), m_window(window), m_surface(&surface) {
     CreateSwapchain(surface, imageCount, presentMode);
 }
 
-void CSwapchain::Recreate(const SwapchainRecreateInfo& recreateInfo) {
+void Swapchain::Recreate(const SwapchainRecreateInfo& recreateInfo) {
     CreateSwapchain(*m_surface, recreateInfo.imageCount.value_or(m_images.size()),
                     recreateInfo.presentMode.value_or(m_presentMode), *m_handle);
 }
 
-void CSwapchain::CreateSwapchain(const vk::SurfaceKHR& surface, const std::uint32_t imageCount,
-                                 const vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle) {
+void Swapchain::CreateSwapchain(const vk::SurfaceKHR& surface, const std::uint32_t imageCount,
+                                const vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle) {
     assert(m_device->IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
     const vk::SurfaceCapabilitiesKHR caps =
-        m_device->PhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
+        m_device->GetPhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
     m_surfaceTransform = caps.currentTransform;
 
     const auto [width, height] = m_window->DrawableSize();
 
-    vkb::SwapchainBuilder builder { **m_device->PhysicalDevice(), ***m_device, surface,
+    vkb::SwapchainBuilder builder { **m_device->GetPhysicalDevice(), ***m_device, surface,
                                     m_device->GraphicsQueue().FamilyIndex(),
                                     m_device->PresentQueue().FamilyIndex() };
     auto swapchainResult =
@@ -53,13 +56,13 @@ void CSwapchain::CreateSwapchain(const vk::SurfaceKHR& surface, const std::uint3
     m_presentMode = static_cast<vk::PresentModeKHR>(sw.present_mode);
     m_surfaceFormat = { .format = sw.image_format, .colorSpace = sw.color_space };
 
-    Log::Debug("Swapchain format: {} x {}", vk::to_string(static_cast<vk::Format>(sw.image_format)),
+    log::Debug("Swapchain format: {} x {}", vk::to_string(static_cast<vk::Format>(sw.image_format)),
                vk::to_string(static_cast<vk::ColorSpaceKHR>(sw.color_space)));
 
     CreateImages();
 }
 
-void CSwapchain::CreateImages() {
+void Swapchain::CreateImages() {
     m_images.clear();
     for (auto& image : m_handle.getImages()) {
         m_images.emplace_back(**m_device, image, vk::Extent3D { m_extent, 1 }, m_surfaceFormat.format, 1,
@@ -67,13 +70,13 @@ void CSwapchain::CreateImages() {
     }
 }
 
-void CSwapchain::Clear() {
+void Swapchain::Clear() {
     m_handle.clear();
     m_images.clear();
 }
 
-std::pair<vk::Result, std::uint32_t> CSwapchain::AcquireImage(const vk::Semaphore& semaphore,
-                                                              const vk::Fence& fence) const {
+std::pair<vk::Result, std::uint32_t> Swapchain::AcquireImage(const vk::Semaphore& semaphore,
+                                                             const vk::Fence& fence) const {
     std::uint32_t imageIndex = 0;
     const auto result = static_cast<vk::Result>(m_handle.getDispatcher()->vkAcquireNextImageKHR(
         static_cast<VkDevice>(m_handle.getDevice()), static_cast<VkSwapchainKHR>(*m_handle), UINT64_MAX,
@@ -82,8 +85,8 @@ std::pair<vk::Result, std::uint32_t> CSwapchain::AcquireImage(const vk::Semaphor
     return { result, imageIndex };
 }
 
-vk::Result CSwapchain::PresentImage(std::uint32_t imageIndex,
-                                    const vk::ArrayProxy<const vk::Semaphore>& semaphores) const {
+vk::Result Swapchain::PresentImage(std::uint32_t imageIndex,
+                                   const vk::ArrayProxy<const vk::Semaphore>& semaphores) const {
     vk::PresentInfoKHR presentInfo { };
     presentInfo.setWaitSemaphores(semaphores);
     presentInfo.setSwapchains({ *m_handle });

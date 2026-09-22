@@ -1,20 +1,21 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
-namespace Vulkan {
-class CDescriptorAllocator {
+namespace sk::render::vulkan {
+class DescriptorAllocator {
 public:
-    explicit CDescriptorAllocator(std::nullptr_t) {}
-    explicit CDescriptorAllocator(const vk::raii::Device& device);
-    CDescriptorAllocator(const CDescriptorAllocator&) = delete;
-    CDescriptorAllocator(CDescriptorAllocator&&) noexcept = default;
-    CDescriptorAllocator& operator=(const CDescriptorAllocator&) = delete;
-    CDescriptorAllocator& operator=(CDescriptorAllocator&&) noexcept = default;
-    ~CDescriptorAllocator() = default;
+    explicit DescriptorAllocator(std::nullptr_t) { }
+    explicit DescriptorAllocator(const vk::raii::Device& device);
+    DescriptorAllocator(const DescriptorAllocator&) = delete;
+    DescriptorAllocator(DescriptorAllocator&&) noexcept = default;
+    DescriptorAllocator& operator=(const DescriptorAllocator&) = delete;
+    DescriptorAllocator& operator=(DescriptorAllocator&&) noexcept = default;
+    ~DescriptorAllocator() = default;
 
     void ResetPools();
 
-    std::vector<vk::raii::DescriptorSet> Allocate(const vk::ArrayProxy<const vk::DescriptorSetLayout>& layouts);
+    std::vector<vk::raii::DescriptorSet> Allocate(
+        const vk::ArrayProxy<const vk::DescriptorSetLayout>& layouts);
 
 private:
     const vk::raii::Device* m_device = nullptr;
@@ -25,6 +26,7 @@ private:
 
     vk::raii::DescriptorPool GrabPool();
     vk::raii::DescriptorPool CreatePool(std::uint32_t count);
-    std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> Allocate(const vk::DescriptorSetAllocateInfo& allocInfo) const;
+    std::expected<std::vector<vk::raii::DescriptorSet>, vk::Result> Allocate(
+        const vk::DescriptorSetAllocateInfo& allocInfo) const;
 };
 }

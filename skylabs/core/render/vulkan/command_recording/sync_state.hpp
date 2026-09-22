@@ -1,9 +1,8 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
+#include <vulkan/vulkan.hpp>
 
-namespace Vulkan {
-enum class Usage : std::uint8_t
-{
+namespace sk::render::vulkan {
+enum class Usage : std::uint8_t {
     eNone,
     eColorAttachment,
     eDepthWrite,
@@ -18,9 +17,8 @@ enum class Usage : std::uint8_t
 
 std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2, vk::ImageLayout> MapUsageToVulkan(Usage usage);
 
-struct ResourceSyncState
-{
-    Usage m_usage = Usage::eNone;
-    std::uint32_t m_queue = vk::QueueFamilyIgnored;
+struct ResourceSyncState {
+    Usage usage = Usage::eNone;
+    std::uint32_t queue = vk::QueueFamilyIgnored;
 };
 }

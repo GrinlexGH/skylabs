@@ -1,45 +1,51 @@
-#include <skylabs/core/launcher.hpp>
-#include <skylabs/core/render/vulkan/renderer.hpp>
-#include <skylabs/public/logging.hpp>
-#include <skylabs/public/os.hpp>
-#include <skylabs/public/sdl/log_sink.hpp>
+#include "skylabs/core/launcher.hpp"
+#include "skylabs/base/logging.hpp"
+#include "skylabs/base/os.hpp"
+#include "skylabs/base/sdl/filesystem.hpp"
+#include "skylabs/base/sdl/sdl.hpp"
+#include "skylabs/core/render/vulkan/renderer.hpp"
 
-void CLauncher::PreCreate() {
 #ifdef PLATFORM_ANDROID
-    Log::AddSink(std::make_unique<SDL::CLogSink>());
+#include "skylabs/base/sdl/log_sink.hpp"
+#endif
+
+namespace sk {
+void Launcher::PreCreate() {
+#ifdef PLATFORM_ANDROID
+    log::AddSink(std::make_unique<SDL::CLogSink>());
 #else
-    Log::AddSink(std::make_unique<Log::CConsoleSink>());
+    log::AddSink(std::make_unique<log::ConsoleSink>());
 #endif
 }
 
-void CLauncher::InitFilesystem() {
-    m_filesystem = CFilesystem { std::make_unique<SDL::CFilesystemBackend>() };
+void Launcher::InitFilesystem() {
+    m_filesystem = filesystem::Filesystem { std::make_unique<sdl::FilesystemBackend>() };
 
 #ifdef PLATFORM_ANDROID
     m_filesystem.Mount("assets", "");
     m_filesystem.Mount("assets", "assets:/");
     m_filesystem.Mount("res", "");
 #else
-    m_filesystem.Mount("assets", OS::PathJoin(OS::GetExecutableDirectory(), "assets"));
-    m_filesystem.Mount("assets", OS::GetExecutableDirectory());
-    m_filesystem.Mount("res", OS::GetExecutableDirectory());
+    m_filesystem.Mount("assets", os::JoinPath(os::GetExecutableDirectory(), "assets"));
+    m_filesystem.Mount("assets", os::GetExecutableDirectory());
+    m_filesystem.Mount("res", os::GetExecutableDirectory());
 #endif
 }
 
-void CLauncher::Create() {
-    m_sdlContext = SDL::CContext { SDL_INIT_VIDEO };
-    m_window = SDL::CWindow { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
+void Launcher::Create() {
+    m_sdlContext = sdl::Context { SDL_INIT_VIDEO };
+    m_window = sdl::Window { "Skylabs", 640, 480, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN };
 
     InitFilesystem();
 
-    m_osConnector = SDL::Vulkan::COSConnector { *m_window };
+    m_osConnector = sdl::vulkan::OSConnector { *m_window };
     m_renderer.emplace(&m_window, &m_osConnector, m_filesystem);
 
     m_eventPump.SetEventFilter(
-        [](const Event& event, void* userData) {
-            const auto self = static_cast<CLauncher*>(userData);
-            if (std::holds_alternative<WindowExposeEvent>(event)) {
-                Log::Debug("Window exposed!");
+        [](const input::Event& event, void* userData) {
+            const auto self = static_cast<Launcher*>(userData);
+            if (std::holds_alternative<input::WindowExposeEvent>(event)) {
+                log::Debug("Window exposed!");
                 self->m_renderer->OnPossiblyWindowSizeChange();
                 self->LoopIteration();
                 return false;
@@ -48,41 +54,46 @@ void CLauncher::Create() {
         },
         this);
 
-    m_eventDispatcher.sink<QuitEvent>().connect<&CLauncher::OnQuit>(*this);
-    m_eventDispatcher.sink<KeyEvent>().connect<&CLauncher::OnKeyEvent>(*this);
-    m_eventDispatcher.sink<DeviceResetEvent>().connect<&CLauncher::OnDeviceResetEvent>(*this);
-    m_eventDispatcher.sink<MouseMotionEvent>().connect<&CLauncher::OnMouseMotionEvent>(*this);
-    m_eventDispatcher.sink<MouseWheelEvent>().connect<&CLauncher::OnMouseWheelEvent>(*this);
-    m_eventDispatcher.sink<MouseButtonEvent>().connect<&CLauncher::OnMouseButtonEvent>(*this);
-    m_eventDispatcher.sink<FingerTouchEvent>().connect<&CLauncher::OnFingerTouchEvent>(*this);
-    m_eventDispatcher.sink<FingerMotionEvent>().connect<&CLauncher::OnFingerMotionEvent>(*this);
+    m_eventDispatcher.sink<input::QuitEvent>().connect<&Launcher::OnQuit>(*this);
+    m_eventDispatcher.sink<input::KeyEvent>().connect<&Launcher::OnKeyEvent>(*this);
+    m_eventDispatcher.sink<input::DeviceResetEvent>().connect<&Launcher::OnDeviceResetEvent>(
+        *this);
+    m_eventDispatcher.sink<input::MouseMotionEvent>().connect<&Launcher::OnMouseMotionEvent>(
+        *this);
+    m_eventDispatcher.sink<input::MouseWheelEvent>().connect<&Launcher::OnMouseWheelEvent>(*this);
+    m_eventDispatcher.sink<input::MouseButtonEvent>().connect<&Launcher::OnMouseButtonEvent>(
+        *this);
+    m_eventDispatcher.sink<input::FingerTouchEvent>().connect<&Launcher::OnFingerTouchEvent>(
+        *this);
+    m_eventDispatcher.sink<input::FingerMotionEvent>().connect<&Launcher::OnFingerMotionEvent>(
+        *this);
 
     auto [v, i] = GenerateDisk();
     auto oi = m_renderer->UploadMesh(v, i);
     m_towers.emplace_back(glm::vec3(-1.0f, -0.5f, -1.0f),
                           m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1),
-                          std::vector<SDisk> {
+                          std::vector<Disk> {
                               { 3, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3) },
                               { 2, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2) },
                               { 1, false, m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 1) },
                           },
                           1);
     m_towers.emplace_back(glm::vec3(0.0f, -0.5f, -1.0f),
-                          m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector<SDisk> { },
+                          m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 2), std::vector<Disk> { },
                           2);
     m_towers.emplace_back(glm::vec3(1.0f, -0.5f, -1.0f),
-                          m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector<SDisk> { },
+                          m_renderer->UploadGameObject(oi, glm::mat4(1.0f), 3), std::vector<Disk> { },
                           3);
 }
 
-void CLauncher::UpdateVisuals(float deltaTime) {
+void Launcher::UpdateVisuals(float deltaTime) {
     static float time = 0.0f;
     time += deltaTime / 1000.0f;
 
-    const float DISK_HEIGHT = 0.15f;
-    const float BASE_RADIUS = 0.10f;
-
     for (auto& tower : m_towers) {
+        constexpr float kDiskHeight = 0.15f;
+        constexpr float kBaseRadius = 0.10f;
+
         glm::mat4 stemModel = glm::mat4(1.0f);
         stemModel = glm::translate(stemModel, tower.basePosition);
         stemModel = glm::scale(stemModel, glm::vec3(0.02f, 1.2f, 0.02f));
@@ -92,26 +103,26 @@ void CLauncher::UpdateVisuals(float deltaTime) {
             auto& disk = tower.disks[i];
 
             glm::vec3 diskPos =
-                tower.basePosition + glm::vec3(0.0f, i * DISK_HEIGHT + 0.2f * std::sin(time), 0.0f);
+                tower.basePosition + glm::vec3(0.0f, i * kDiskHeight + 0.2f * std::sin(time), 0.0f);
 
-            float currentRadius = BASE_RADIUS * disk.size;
+            float currentRadius = kBaseRadius * disk.size;
 
             glm::mat4 diskModel = glm::mat4(1.0f);
             diskModel = glm::translate(diskModel, diskPos);
-            diskModel = glm::scale(diskModel, glm::vec3(currentRadius, DISK_HEIGHT, currentRadius));
+            diskModel = glm::scale(diskModel, glm::vec3(currentRadius, kDiskHeight, currentRadius));
 
             disk.renderObject.SetMatrix(diskModel);
         }
     }
 }
 
-void CLauncher::LoopIteration() {
+void Launcher::LoopIteration() {
     auto frameStart = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float, std::milli> diff = frameStart - m_lastTick;
     m_lastTick = frameStart;
     const float deltaTimeMs = diff.count();
 
-    if (!m_window.Minimized()) {
+    if (!m_window.IsMinimized()) {
         Update(deltaTimeMs);
         UpdateVisuals(deltaTimeMs);
         Render(deltaTimeMs);
@@ -130,45 +141,45 @@ void CLauncher::LoopIteration() {
         float avgDt = m_elapsedTime / static_cast<float>(m_frameCount);
         std::string title = fmt::format("Skylabs | FPS: {:.0f} | DT: {:.2f}ms", avgFps, avgDt);
         SDL_SetWindowTitle(*m_window, title.c_str());
-        Log::Debug("{}", title);
+        log::Debug("{}", title);
         m_elapsedTime -= 1000.0f;
         m_frameCount = 0;
     }
 }
 
-void CLauncher::Main() {
+void Launcher::Main() {
     while (!m_quit) {
         ProcessEvents();
         LoopIteration();
     }
 }
 
-void CLauncher::Destroy() { }
+void Launcher::Destroy() { }
 
-void CLauncher::Update(float deltaTime) {
+void Launcher::Update(float deltaTime) {
     if (m_leftJoystick.active) {
         if (std::abs(m_leftJoystick.dirY) > 0.1f) {
-            auto direction = (m_leftJoystick.dirY < 0) ? CCamera::MoveDirection::eForward
-                                                       : CCamera::MoveDirection::eBackward;
+            auto direction = (m_leftJoystick.dirY < 0) ? Camera::MoveDirection::eForward
+                                                       : Camera::MoveDirection::eBackward;
             m_camera.ProcessKeyboard(direction, deltaTime * std::abs(m_leftJoystick.dirY));
         }
 
         if (std::abs(m_leftJoystick.dirX) > 0.1f) {
-            auto direction = (m_leftJoystick.dirX < 0) ? CCamera::MoveDirection::eLeft
-                                                       : CCamera::MoveDirection::eRight;
+            auto direction =
+                (m_leftJoystick.dirX < 0) ? Camera::MoveDirection::eLeft : Camera::MoveDirection::eRight;
             m_camera.ProcessKeyboard(direction, deltaTime * std::abs(m_leftJoystick.dirX));
         }
     } else {
-        const std::span keyboardState = SDL::GetKeyboardState();
+        const std::span keyboardState = sdl::GetKeyboardState();
 
         if (keyboardState[SDL_SCANCODE_W])
-            m_camera.ProcessKeyboard(CCamera::MoveDirection::eForward, deltaTime);
+            m_camera.ProcessKeyboard(Camera::MoveDirection::eForward, deltaTime);
         if (keyboardState[SDL_SCANCODE_S])
-            m_camera.ProcessKeyboard(CCamera::MoveDirection::eBackward, deltaTime);
+            m_camera.ProcessKeyboard(Camera::MoveDirection::eBackward, deltaTime);
         if (keyboardState[SDL_SCANCODE_A])
-            m_camera.ProcessKeyboard(CCamera::MoveDirection::eLeft, deltaTime);
+            m_camera.ProcessKeyboard(Camera::MoveDirection::eLeft, deltaTime);
         if (keyboardState[SDL_SCANCODE_D])
-            m_camera.ProcessKeyboard(CCamera::MoveDirection::eRight, deltaTime);
+            m_camera.ProcessKeyboard(Camera::MoveDirection::eRight, deltaTime);
     }
 
     glm::mat4 invView = glm::inverse(m_camera.ViewMatrix());
@@ -222,17 +233,17 @@ void CLauncher::Update(float deltaTime) {
     }
 }
 
-void CLauncher::Render(float deltaTime) {
+void Launcher::Render(float deltaTime) {
     m_renderer->Draw(m_camera.ViewMatrix(), m_camera.Fov(), deltaTime);
 }
 
-void CLauncher::ProcessEvents() {
+void Launcher::ProcessEvents() {
     while (auto event = m_eventPump.PollEvent()) {
         std::visit([this]<typename T>(T&& e) { m_eventDispatcher.trigger(std::forward<T>(e)); }, *event);
     }
 }
 
-void CLauncher::Click() {
+void Launcher::Click() {
     if (m_hoveredTowerIdx == -1) return;
     auto& [tt, dd] = m_selectedTowerAndDisk;
     if (tt == -1) {
@@ -289,7 +300,7 @@ void CLauncher::Click() {
     }
 }
 
-void CLauncher::OnFingerTouchEvent(const FingerTouchEvent e) {
+void Launcher::OnFingerTouchEvent(const input::FingerTouchEvent e) {
     if (e.down) {
         // Open keyboard
         if (m_chatButton.IsInside(e.x, e.y)) {
@@ -316,7 +327,7 @@ void CLauncher::OnFingerTouchEvent(const FingerTouchEvent e) {
     }
 }
 
-void CLauncher::OnFingerMotionEvent(const FingerMotionEvent& e) {
+void Launcher::OnFingerMotionEvent(const input::FingerMotionEvent& e) {
     // Joystick movement
     if (m_leftJoystick.active && e.fingerID == m_leftJoystick.fingerId) {
         float dx = e.x - m_leftJoystick.centerX;
@@ -324,9 +335,9 @@ void CLauncher::OnFingerMotionEvent(const FingerMotionEvent& e) {
 
         float dist = std::sqrt(dx * dx + dy * dy);
         if (dist > 0.001f) {
-            float scale = (dist > m_leftJoystick.radius) ? (m_leftJoystick.radius / dist) : 1.0f;
-            m_leftJoystick.dirX = (dx * scale) / m_leftJoystick.radius;
-            m_leftJoystick.dirY = (dy * scale) / m_leftJoystick.radius;
+            float scale = (dist > m_leftJoystick.kRadius) ? (m_leftJoystick.kRadius / dist) : 1.0f;
+            m_leftJoystick.dirX = (dx * scale) / m_leftJoystick.kRadius;
+            m_leftJoystick.dirY = (dy * scale) / m_leftJoystick.kRadius;
         }
 
         return;
@@ -337,33 +348,33 @@ void CLauncher::OnFingerMotionEvent(const FingerMotionEvent& e) {
     m_camera.ProcessMouseMovement(e.dx * width, -e.dy * height);
 }
 
-void CLauncher::HandleKeyDownEvent(const Keys key) {
+void Launcher::HandleKeyDownEvent(const input::Keys key) {
     switch (key) {
-        case Keys::eEscape: {
+        case input::Keys::eEscape: {
             m_quit = true;
         } break;
 
-        case Keys::eEnter: {
+        case input::Keys::eEnter: {
             if (!m_textInputActive) break;
             m_textInputActive = false;
             SDL_StopTextInput(*m_window);
-            Log::Debug("Keyboard Closed. Final text: {}", m_inputBuffer);
+            log::Debug("Keyboard Closed. Final text: {}", m_inputBuffer);
             m_inputBuffer.clear();
         } break;
 
-        case Keys::eZ: {
+        case input::Keys::eZ: {
             static bool mouseModeSwitch = true;
             SDL_SetWindowRelativeMouseMode(*m_window, mouseModeSwitch);
             mouseModeSwitch = !mouseModeSwitch;
         } break;
 
-        case Keys::eF11: {
+        case input::Keys::eF11: {
             static bool fullscreenSwitch = true;
             SDL_SetWindowFullscreen(*m_window, fullscreenSwitch);
             fullscreenSwitch = !fullscreenSwitch;
         } break;
 
-        case Keys::eLeftShift: {
+        case input::Keys::eLeftShift: {
             m_camera.MoveFaster();
         } break;
 
@@ -372,9 +383,9 @@ void CLauncher::HandleKeyDownEvent(const Keys key) {
     }
 }
 
-void CLauncher::HandleKeyUpEvent(const Keys key) {
+void Launcher::HandleKeyUpEvent(const input::Keys key) {
     switch (key) {
-        case Keys::eLeftShift: {
+        case input::Keys::eLeftShift: {
             m_camera.ResetSpeed();
         } break;
         default:
@@ -382,13 +393,13 @@ void CLauncher::HandleKeyUpEvent(const Keys key) {
     }
 }
 
-void CLauncher::HandleTextInput(const SDL_TextInputEvent& textEvent) {
+void Launcher::HandleTextInput(const SDL_TextInputEvent& textEvent) {
     m_inputBuffer += textEvent.text;
-    Log::Info("[Input] Current buffer: {}", m_inputBuffer);
+    log::Info("[Input] Current buffer: {}", m_inputBuffer);
 }
 
-std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::GenerateDisk() {
-    std::vector<CVertex> vertices;
+std::tuple<std::vector<Vertex>, std::vector<std::uint16_t>> Launcher::GenerateDisk() {
+    std::vector<Vertex> vertices;
     std::vector<std::uint16_t> indices;
 
     const uint32_t segments = 32;
@@ -440,4 +451,5 @@ std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> CLauncher::Generate
     }
 
     return { vertices, indices };
+}
 }

@@ -1,36 +1,32 @@
 #pragma once
-#include <skylabs/core/render/vulkan/pipeline/shader.hpp>
-#include <skylabs/core/render/vertex.hpp>
+#include "skylabs/core/render/vertex.hpp"
+#include "skylabs/core/render/vulkan/pipeline/shader.hpp"
 
-namespace Vulkan {
-struct VertexBufferBinding
-{
-    vk::VertexInputBindingDescription m_description = {};
-    std::vector<CVertexAttribute> m_attributes = {};
+namespace sk::render::vulkan {
+struct VertexBufferBinding {
+    vk::VertexInputBindingDescription description { };
+    std::vector<VertexAttribute> attributes;
 };
 
-struct GraphicsPipelineCreateInfo
-{
-    vk::PipelineLayout m_layout = {};
-    std::vector<const CShader*> m_shaders = {};
-    std::vector<VertexBufferBinding> m_vertexBindings = {};
-    vk::PipelineRenderingCreateInfo m_renderingInfo = {}; // TODO: attachment info with blending
-    vk::PrimitiveTopology m_primitiveTopology = vk::PrimitiveTopology::eTriangleList;
-    vk::SampleCountFlagBits m_sampling = vk::SampleCountFlagBits::e1;
+struct GraphicsPipelineCreateInfo {
+    vk::PipelineLayout layout { };
+    std::vector<const Shader*> shaders;
+    std::vector<VertexBufferBinding> vertexBindings;
+    vk::PipelineRenderingCreateInfo renderingInfo { };  // TODO: attachment info with blending
+    vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
+    vk::SampleCountFlagBits sampling = vk::SampleCountFlagBits::e1;
 };
 
-class CGraphicsPipeline
-{
+class GraphicsPipeline {
 public:
-
-
-    explicit CGraphicsPipeline(std::nullptr_t) {}
-    explicit CGraphicsPipeline(const vk::raii::Device& device, GraphicsPipelineCreateInfo options = {});
-    CGraphicsPipeline(const CGraphicsPipeline&) = delete;
-    CGraphicsPipeline(CGraphicsPipeline&&) noexcept = default;
-    CGraphicsPipeline& operator=(const CGraphicsPipeline&) = delete;
-    CGraphicsPipeline& operator=(CGraphicsPipeline&&) noexcept = default;
-    ~CGraphicsPipeline() = default;
+    explicit GraphicsPipeline(std::nullptr_t) { }
+    explicit GraphicsPipeline(const vk::raii::Device& device,
+                              const GraphicsPipelineCreateInfo& options = { });
+    GraphicsPipeline(const GraphicsPipeline&) = delete;
+    GraphicsPipeline(GraphicsPipeline&&) noexcept = default;
+    GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
+    GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept = default;
+    ~GraphicsPipeline() = default;
 
     [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }

@@ -31,6 +31,7 @@ set(SKYLABS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set(SKYLABS_VERSION_WORD "Melons")
 
 # CMake options
+include(GenerateExportHeader)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT LTO_AVAILABLE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
@@ -369,6 +370,24 @@ function(skylabs_configure_target target_name)
     if(NOT("${target_type}" MATCHES "STATIC_LIBRARY|MODULE_LIBRARY|SHARED_LIBRARY|OBJECT_LIBRARY|EXECUTABLE"))
         return()
     endif()
+
+    if(NOT("${target_type}" STREQUAL "EXECUTABLE"))
+        string(TOUPPER "${target_name}" uppercase_target_name)
+        string(MAKE_C_IDENTIFIER "${uppercase_target_name}" uppercase_target_name)
+        set(export_header_content
+"
+#define SK_${uppercase_target_name}_PUBLIC_INTERFACE extern \"C\" SK_${uppercase_target_name}_EXPORT
+#define SK_${uppercase_target_name}_PUBLIC_GLOBAL extern SK_${uppercase_target_name}_EXPORT
+#define SK_${uppercase_target_name}_PUBLIC_CLASS SK_${uppercase_target_name}_EXPORT
+"
+        )
+        generate_export_header(${target_name}
+            EXPORT_FILE_NAME "sk_${target_name}_export.h"
+            CUSTOM_CONTENT_FROM_VARIABLE export_header_content
+            PREFIX_NAME "SK_"
+        )
+        unset(uppercase_target_name)
+    endif ()
 
     if(${ARG_WIN32_IN_RELEASE} AND ("${target_type}" STREQUAL "EXECUTABLE"))
         set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)

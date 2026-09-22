@@ -1,48 +1,45 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
+#include <glm/glm.hpp>
 
 enum class VertexFormat : std::uint8_t {
-    Float32,
-    Float32x2,
-    Float32x3,
-    Float32x4,
+    eFloat32,
+    eFloat32x2,
+    eFloat32x3,
+    eFloat32x4,
 };
 
-struct CVertexAttribute
-{
-    VertexFormat m_format;
-    std::uint32_t m_offset;
+struct VertexAttribute {
+    VertexFormat format;
+    std::uint32_t offset;
 };
 
-struct CVertex
-{
-    glm::vec3 m_position;
-    glm::vec2 m_texCoord;
-    glm::vec3 m_normal;
+struct Vertex {
+    glm::vec3 position;
+    glm::vec2 texCoord;
+    glm::vec3 normal;
 
-    static constexpr std::array<CVertexAttribute, 3> GetAttributes() {
+    static constexpr std::array<VertexAttribute, 3> GetAttributes() {
         return {
-            CVertexAttribute { .m_format = VertexFormat::Float32x3, .m_offset = offsetof(CVertex, m_position) },
-            CVertexAttribute { .m_format = VertexFormat::Float32x2, .m_offset = offsetof(CVertex, m_texCoord) },
-            CVertexAttribute { .m_format = VertexFormat::Float32x3, .m_offset = offsetof(CVertex, m_normal) },
+            VertexAttribute { .format = VertexFormat::eFloat32x3, .offset = offsetof(Vertex, position) },
+            VertexAttribute { .format = VertexFormat::eFloat32x2, .offset = offsetof(Vertex, texCoord) },
+            VertexAttribute { .format = VertexFormat::eFloat32x3, .offset = offsetof(Vertex, normal) },
         };
     }
 
-    friend constexpr bool operator==(const CVertex& lhs, const CVertex& rhs) {
-        return lhs.m_position == rhs.m_position && lhs.m_texCoord == rhs.m_texCoord && lhs.m_normal == rhs.m_normal;
+    friend constexpr bool operator==(const Vertex& lhs, const Vertex& rhs) {
+        return lhs.position == rhs.position && lhs.texCoord == rhs.texCoord && lhs.normal == rhs.normal;
     }
 };
 
-struct CParticle
-{
-    glm::vec2 m_pos;
-    glm::vec2 m_vel;
-    glm::vec4 m_col;
+struct Particle {
+    glm::vec2 pos;
+    glm::vec2 vel;
+    glm::vec4 col;
 
-    static constexpr std::array<CVertexAttribute, 2> GetAttributes() {
+    static constexpr std::array<VertexAttribute, 2> GetAttributes() {
         return {
-            CVertexAttribute { .m_format = VertexFormat::Float32x2, .m_offset = offsetof(CParticle, m_pos) },
-            CVertexAttribute { .m_format = VertexFormat::Float32x4, .m_offset = offsetof(CParticle, m_col) },
+            VertexAttribute { .format = VertexFormat::eFloat32x2, .offset = offsetof(Particle, pos) },
+            VertexAttribute { .format = VertexFormat::eFloat32x4, .offset = offsetof(Particle, col) },
         };
     }
 };

@@ -1,12 +1,18 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
+#include <deque>
 
-namespace Vulkan {
-class CDescriptorWriter {
+#include <vulkan/vulkan_raii.hpp>
+
+namespace sk::render::vulkan {
+class DescriptorWriter {
 public:
-    explicit CDescriptorWriter(const vk::raii::Device& device);
-    CDescriptorWriter& WriteBuffer(std::uint32_t binding, vk::Buffer buffer, std::size_t size, std::size_t offset, vk::DescriptorType type, std::uint32_t arrayElement = 0);
-    CDescriptorWriter& WriteImage(std::uint32_t binding, vk::ImageView view, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayElement = 0);
+    explicit DescriptorWriter(const vk::raii::Device& device);
+    DescriptorWriter& WriteBuffer(std::uint32_t binding, vk::Buffer buffer, std::size_t size,
+                                  std::size_t offset, vk::DescriptorType type,
+                                  std::uint32_t arrayElement = 0);
+    DescriptorWriter& WriteImage(std::uint32_t binding, vk::ImageView view, vk::Sampler sampler,
+                                 vk::ImageLayout layout, vk::DescriptorType type,
+                                 std::uint32_t arrayElement = 0);
     void UpdateSet(vk::DescriptorSet set);
     void Clear();
 

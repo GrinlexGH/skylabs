@@ -1,16 +1,18 @@
 #pragma once
-#include <skylabs/core/render/vulkan/context/device.hpp>
+#include <vk_mem_alloc_raii.hpp>
 
-namespace Vulkan {
-class CAllocator {
+#include "skylabs/core/render/vulkan/context/device.hpp"
+
+namespace sk::render::vulkan {
+class Allocator {
 public:
-    explicit CAllocator(std::nullptr_t) { }
-    explicit CAllocator(const vk::raii::Instance& instance, const CDevice& device);
-    CAllocator(const CAllocator&) = delete;
-    CAllocator(CAllocator&& other) noexcept = default;
-    CAllocator& operator=(const CAllocator&) = delete;
-    CAllocator& operator=(CAllocator&& rhs) noexcept = default;
-    ~CAllocator() = default;
+    explicit Allocator(std::nullptr_t) { }
+    explicit Allocator(const vk::raii::Instance& instance, const Device& device);
+    Allocator(const Allocator&) = delete;
+    Allocator(Allocator&& other) noexcept = default;
+    Allocator& operator=(const Allocator&) = delete;
+    Allocator& operator=(Allocator&& rhs) noexcept = default;
+    ~Allocator() = default;
 
     [[nodiscard]] const vma::raii::Allocator& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vma::raii::Allocator* operator->() const noexcept { return &m_handle; }

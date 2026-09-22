@@ -1,4 +1,4 @@
-#include <skylabs/core/render/vulkan/resources/image.hpp>
+#include "skylabs/core/render/vulkan/resources/image.hpp"
 
 namespace {
 vk::ImageViewType DetermineViewType(vk::Extent3D extent, std::uint32_t layers) {
@@ -37,16 +37,16 @@ vk::ImageAspectFlags DetermineAspect(vk::Format format) {
 }
 }
 
-namespace Vulkan {
-CImage::CImage(
-    const vk::raii::Device& device,
-    const vma::raii::Allocator& allocator,
-    const ImageCreateInfo& options
-) : m_format(options.m_format), m_extent(options.m_extent),
-    m_mipLevels(options.m_mipLevels), m_arrayLevels(options.m_arrayLevels), m_sampleCount(options.m_sampleCount),
-    m_aspectFlags(DetermineAspect(m_format))
-{
-    vk::ImageCreateInfo imageInfo {};
+namespace sk::render::vulkan {
+Image::Image(const vk::raii::Device& device, const vma::raii::Allocator& allocator,
+             const ImageCreateInfo& options)
+    : m_format(options.format),
+      m_extent(options.extent),
+      m_mipLevels(options.mipLevels),
+      m_arrayLevels(options.arrayLevels),
+      m_sampleCount(options.sampleCount),
+      m_aspectFlags(DetermineAspect(m_format)) {
+    vk::ImageCreateInfo imageInfo { };
     imageInfo.format = m_format;
     imageInfo.extent = m_extent;
 
@@ -56,12 +56,12 @@ CImage::CImage(
     imageInfo.arrayLayers = m_arrayLevels;
     imageInfo.samples = m_sampleCount;
     imageInfo.tiling = vk::ImageTiling::eOptimal;
-    imageInfo.usage = options.m_usageFlags;
+    imageInfo.usage = options.usageFlags;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
     imageInfo.queueFamilyIndexCount = 0;
     imageInfo.initialLayout = vk::ImageLayout::eUndefined;
 
-    vma::AllocationCreateInfo allocInfo {};
+    vma::AllocationCreateInfo allocInfo { };
     allocInfo.usage = vma::MemoryUsage::eAuto;
     allocInfo.requiredFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
@@ -71,22 +71,20 @@ CImage::CImage(
     CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
 }
 
-CImage::CImage(
-    const vk::raii::Device& device,
-    vk::Image imported,
-    vk::Extent3D extent, vk::Format format,
-    std::uint32_t mipLevels, std::uint32_t arrayLevels,
-    vk::SampleCountFlagBits sampleCount
-) : m_rawHandle(imported),
-    m_format(format), m_extent(extent),
-    m_mipLevels(mipLevels), m_arrayLevels(arrayLevels), m_sampleCount(sampleCount),
-    m_aspectFlags(DetermineAspect(m_format))
-{
+Image::Image(const vk::raii::Device& device, vk::Image imported, vk::Extent3D extent, vk::Format format,
+             std::uint32_t mipLevels, std::uint32_t arrayLevels, vk::SampleCountFlagBits sampleCount)
+    : m_rawHandle(imported),
+      m_format(format),
+      m_extent(extent),
+      m_mipLevels(mipLevels),
+      m_arrayLevels(arrayLevels),
+      m_sampleCount(sampleCount),
+      m_aspectFlags(DetermineAspect(m_format)) {
     CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
 }
 
-void CImage::CreateView(const vk::raii::Device& device, vk::ImageViewType viewType) {
-    vk::ImageViewCreateInfo viewInfo {};
+void Image::CreateView(const vk::raii::Device& device, vk::ImageViewType viewType) {
+    vk::ImageViewCreateInfo viewInfo { };
     viewInfo.image = m_rawHandle;
     viewInfo.viewType = viewType;
     viewInfo.format = m_format;

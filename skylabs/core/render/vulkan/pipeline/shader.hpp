@@ -1,17 +1,17 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
-namespace Vulkan {
-class CShader
-{
+namespace sk::render::vulkan {
+class Shader {
 public:
-    explicit CShader(std::nullptr_t) {}
-    explicit CShader(const vk::raii::Device& device, vk::ShaderStageFlagBits stage, const std::vector<std::uint32_t>& bytecode);
-    CShader(const CShader&) = delete;
-    CShader(CShader&&) noexcept = default;
-    CShader& operator=(const CShader&) = delete;
-    CShader& operator=(CShader&&) noexcept = default;
-    ~CShader() = default;
+    explicit Shader(std::nullptr_t) { }
+    explicit Shader(const vk::raii::Device& device, vk::ShaderStageFlagBits stage,
+                    const std::vector<std::uint32_t>& bytecode);
+    Shader(const Shader&) = delete;
+    Shader(Shader&&) noexcept = default;
+    Shader& operator=(const Shader&) = delete;
+    Shader& operator=(Shader&&) noexcept = default;
+    ~Shader() = default;
 
     [[nodiscard]] const vk::raii::ShaderModule& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::ShaderModule* operator->() const noexcept { return &m_handle; }

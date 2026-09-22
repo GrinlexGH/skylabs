@@ -1,11 +1,11 @@
-#include <skylabs/core/render/vulkan/command_recording/command_buffer.hpp>
+#include "skylabs/core/render/vulkan/command_recording/command_buffer.hpp"
 
-namespace Vulkan {
-CCommandBuffer::CCommandBuffer(const vk::raii::Device& device, vk::raii::CommandBuffer&& commandBuffer) :
-    m_device(&device), m_handle(std::move(commandBuffer))
-{}
+namespace sk::render::vulkan {
+CommandBuffer::CommandBuffer(const vk::raii::Device& device, vk::raii::CommandBuffer&& commandBuffer)
+    : m_device(&device), m_handle(std::move(commandBuffer)) { }
 
-void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const {
+void CommandBuffer::PipelineBarrier(
+    const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const {
     if (barriers.empty()) return;
 
     std::vector<vk::BufferMemoryBarrier2> bufBarriers;
@@ -15,33 +15,20 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
 
     for (const auto& barrier : barriers) {
         if (std::holds_alternative<ImageBarrier>(barrier)) {
-            const auto& [
-                image,
-                range,
-                oldUsage,
-                newUsage,
-                type,
-                srcQueue,
-                dstQueue
-            ] = std::get<ImageBarrier>(barrier);
+            const auto& [image, range, oldUsage, newUsage, type, srcQueue, dstQueue] =
+                std::get<ImageBarrier>(barrier);
 
-            vk::ImageMemoryBarrier2 imageBarrier {};
+            vk::ImageMemoryBarrier2 imageBarrier { };
             imageBarrier.image = *image;
             imageBarrier.subresourceRange = range;
             imageBarrier.srcQueueFamilyIndex = srcQueue;
             imageBarrier.dstQueueFamilyIndex = dstQueue;
 
-            std::tie(
-                imageBarrier.srcStageMask,
-                imageBarrier.srcAccessMask,
-                imageBarrier.oldLayout
-            ) = MapUsageToVulkan(oldUsage);
+            std::tie(imageBarrier.srcStageMask, imageBarrier.srcAccessMask, imageBarrier.oldLayout) =
+                MapUsageToVulkan(oldUsage);
 
-            std::tie(
-                imageBarrier.dstStageMask,
-                imageBarrier.dstAccessMask,
-                imageBarrier.newLayout
-            ) = MapUsageToVulkan(newUsage);
+            std::tie(imageBarrier.dstStageMask, imageBarrier.dstAccessMask, imageBarrier.newLayout) =
+                MapUsageToVulkan(newUsage);
 
             if (type == BarrierType::eRegular) {
                 imageBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
@@ -56,16 +43,10 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
 
             imgBarriers.push_back(imageBarrier);
         } else if (std::holds_alternative<BufferBarrier>(barrier)) {
-            const auto& [
-                buffer,
-                oldUsage,
-                newUsage,
-                type,
-                srcQueue,
-                dstQueue
-            ] = std::get<BufferBarrier>(barrier);
+            const auto& [buffer, oldUsage, newUsage, type, srcQueue, dstQueue] =
+                std::get<BufferBarrier>(barrier);
 
-            vk::BufferMemoryBarrier2 bufferBarrier {};
+            vk::BufferMemoryBarrier2 bufferBarrier { };
             bufferBarrier.buffer = *buffer;
             bufferBarrier.size = buffer.Size();
             bufferBarrier.offset = 0;
@@ -83,13 +64,15 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
                 bufferBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
             }
 
-            std::tie(bufferBarrier.srcStageMask, bufferBarrier.srcAccessMask, std::ignore) = MapUsageToVulkan(oldUsage);
-            std::tie(bufferBarrier.dstStageMask, bufferBarrier.dstAccessMask, std::ignore) = MapUsageToVulkan(newUsage);
+            std::tie(bufferBarrier.srcStageMask, bufferBarrier.srcAccessMask, std::ignore) =
+                MapUsageToVulkan(oldUsage);
+            std::tie(bufferBarrier.dstStageMask, bufferBarrier.dstAccessMask, std::ignore) =
+                MapUsageToVulkan(newUsage);
             bufBarriers.push_back(bufferBarrier);
         }
     }
 
-    vk::DependencyInfo dependencyInfo {};
+    vk::DependencyInfo dependencyInfo { };
     dependencyInfo.imageMemoryBarrierCount = static_cast<std::uint32_t>(imgBarriers.size());
     dependencyInfo.pImageMemoryBarriers = imgBarriers.data();
     dependencyInfo.bufferMemoryBarrierCount = static_cast<std::uint32_t>(bufBarriers.size());
@@ -98,56 +81,51 @@ void CCommandBuffer::PipelineBarrier(const std::vector<std::variant<ImageBarrier
     m_handle.pipelineBarrier2(dependencyInfo);
 }
 
-void CCommandBuffer::GenerateMipmaps(const CImage& image, const Usage srcUsage, const Usage dstUsage) const {
+void CommandBuffer::GenerateMipmaps(const Image& image, const Usage srcUsage,
+                                    const Usage dstUsage) const {
     std::int32_t mipWidth = static_cast<std::int32_t>(image.Extent().width);
     std::int32_t mipHeight = static_cast<std::int32_t>(image.Extent().height);
 
     for (std::uint32_t i = 1; i < image.MipLevels(); i++) {
         PipelineBarrier({ ImageBarrier {
-            .m_image = image,
-            .m_range = vk::ImageSubresourceRange { image.AspectFlags(), i - 1, 1, 0, image.ArrayLevels() },
-            .m_oldUsage = (i == 1) ? srcUsage : Usage::eTransferWrite,
-            .m_newUsage = Usage::eTransferRead,
-        }});
+            .image = image,
+            .range = vk::ImageSubresourceRange { image.AspectFlags(), i - 1, 1, 0, image.ArrayLevels() },
+            .oldUsage = (i == 1) ? srcUsage : Usage::eTransferWrite,
+            .newUsage = Usage::eTransferRead,
+        } });
 
-        vk::ImageBlit blit {};
+        vk::ImageBlit blit { };
         blit.srcSubresource = { image.AspectFlags(), i - 1, 0, image.ArrayLevels() };
         blit.srcOffsets[1] = vk::Offset3D { mipWidth, mipHeight, 1 };
 
         blit.dstSubresource = { image.AspectFlags(), i, 0, image.ArrayLevels() };
-        blit.dstOffsets[1] = vk::Offset3D {
-            mipWidth > 1 ? mipWidth / 2 : 1,
-            mipHeight > 1 ? mipHeight / 2 : 1,
-            1
-        };
+        blit.dstOffsets[1] =
+            vk::Offset3D { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
 
-        m_handle.blitImage(
-            *image, vk::ImageLayout::eTransferSrcOptimal,
-            *image, vk::ImageLayout::eTransferDstOptimal,
-            { blit },
-            vk::Filter::eLinear
-        );
+        m_handle.blitImage(*image, vk::ImageLayout::eTransferSrcOptimal, *image,
+                           vk::ImageLayout::eTransferDstOptimal, { blit }, vk::Filter::eLinear);
 
         PipelineBarrier({ ImageBarrier {
-            .m_image = image,
-            .m_range = vk::ImageSubresourceRange { image.AspectFlags(), i - 1, 1, 0, image.ArrayLevels() },
-            .m_oldUsage = Usage::eTransferRead,
-            .m_newUsage = dstUsage,
-        }});
+            .image = image,
+            .range = vk::ImageSubresourceRange { image.AspectFlags(), i - 1, 1, 0, image.ArrayLevels() },
+            .oldUsage = Usage::eTransferRead,
+            .newUsage = dstUsage,
+        } });
 
         if (mipWidth > 1) mipWidth /= 2;
         if (mipHeight > 1) mipHeight /= 2;
     }
 
     PipelineBarrier({ ImageBarrier {
-        .m_image = image,
-        .m_range = vk::ImageSubresourceRange { image.AspectFlags(), image.MipLevels() - 1, 1, 0, image.ArrayLevels() },
-        .m_oldUsage = Usage::eTransferWrite,
-        .m_newUsage = dstUsage,
-    }});
+        .image = image,
+        .range = vk::ImageSubresourceRange { image.AspectFlags(), image.MipLevels() - 1, 1, 0,
+                                             image.ArrayLevels() },
+        .oldUsage = Usage::eTransferWrite,
+        .newUsage = dstUsage,
+    } });
 }
 
-void CCommandBuffer::Copy(const CBuffer& src, const CImage& dst) const {
+void CommandBuffer::Copy(const Buffer& src, const Image& dst) const {
     vk::BufferImageCopy region;
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -162,10 +140,11 @@ void CCommandBuffer::Copy(const CBuffer& src, const CImage& dst) const {
     m_handle.copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
 }
 
-void CCommandBuffer::Copy(const CBuffer& src, const CBuffer& dst, const vk::DeviceSize size, const BufferCopyOffsets& offsets) const {
-    vk::BufferCopy copyRegion {};
-    copyRegion.srcOffset = offsets.m_srcOffset;
-    copyRegion.dstOffset = offsets.m_dstOffset;
+void CommandBuffer::Copy(const Buffer& src, const Buffer& dst, const vk::DeviceSize size,
+                         const BufferCopyOffsets& offsets) const {
+    vk::BufferCopy copyRegion { };
+    copyRegion.srcOffset = offsets.srcOffset;
+    copyRegion.dstOffset = offsets.dstOffset;
     copyRegion.size = size;
 
     m_handle.copyBuffer(*src, *dst, copyRegion);

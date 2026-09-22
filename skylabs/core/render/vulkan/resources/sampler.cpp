@@ -1,52 +1,49 @@
-#include <skylabs/core/render/vulkan/resources/sampler.hpp>
+#include "skylabs/core/render/vulkan/resources/sampler.hpp"
 
-namespace Vulkan {
-CSampler::CSampler(
-    const CDevice& device,
-    const SamplerCreateInfo& options
-) {
-    vk::SamplerCreateInfo createInfo {};
+namespace sk::render::vulkan {
+Sampler::Sampler(const Device& device, const SamplerCreateInfo& options) {
+    vk::SamplerCreateInfo createInfo { };
 
-    if (std::holds_alternative<vk::Filter>(options.m_filtering)) {
-        auto filtering = std::get<vk::Filter>(options.m_filtering);
+    if (std::holds_alternative<vk::Filter>(options.filtering)) {
+        auto filtering = std::get<vk::Filter>(options.filtering);
         createInfo.magFilter = filtering;
         createInfo.minFilter = filtering;
     } else {
-        auto filtering = std::get<SamplerCreateInfo::MinMagFilter>(options.m_filtering);
-        createInfo.magFilter = filtering.m_mag;
-        createInfo.minFilter = filtering.m_min;
+        auto filtering = std::get<SamplerCreateInfo::MinMagFilter>(options.filtering);
+        createInfo.magFilter = filtering.mag;
+        createInfo.minFilter = filtering.min;
     }
 
-    if (options.m_anisotropy.has_value()) {
+    if (options.anisotropy.has_value()) {
         assert(device.Caps().samplerAnisotropy);
         createInfo.anisotropyEnable = vk::True;
-        createInfo.maxAnisotropy = static_cast<float>(*options.m_anisotropy);
+        createInfo.maxAnisotropy = static_cast<float>(*options.anisotropy);
     }
 
-    if (std::holds_alternative<vk::SamplerAddressMode>(options.m_addressMode)) {
-        auto addressMode = std::get<vk::SamplerAddressMode>(options.m_addressMode);
+    if (std::holds_alternative<vk::SamplerAddressMode>(options.addressMode)) {
+        auto addressMode = std::get<vk::SamplerAddressMode>(options.addressMode);
         createInfo.addressModeU = addressMode;
         createInfo.addressModeV = addressMode;
         createInfo.addressModeW = addressMode;
     } else {
-        auto addressMode = std::get<SamplerCreateInfo::AddressMode>(options.m_addressMode);
-        createInfo.addressModeU = addressMode.m_u;
-        createInfo.addressModeV = addressMode.m_v;
-        createInfo.addressModeW = addressMode.m_w;
+        auto addressMode = std::get<SamplerCreateInfo::AddressMode>(options.addressMode);
+        createInfo.addressModeU = addressMode.u;
+        createInfo.addressModeV = addressMode.v;
+        createInfo.addressModeW = addressMode.w;
     }
 
     createInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
     createInfo.unnormalizedCoordinates = vk::False;
 
-    if (options.m_compareOp.has_value()) {
+    if (options.compareOp.has_value()) {
         createInfo.compareEnable = vk::True;
-        createInfo.compareOp = *options.m_compareOp;
+        createInfo.compareOp = *options.compareOp;
     }
 
-    createInfo.mipmapMode = options.m_mipmapFiltering;
-    createInfo.mipLodBias = options.m_mipMapLevels.m_bias;
-    createInfo.minLod = options.m_mipMapLevels.m_min;
-    createInfo.maxLod = options.m_mipMapLevels.m_max;
+    createInfo.mipmapMode = options.mipmapFiltering;
+    createInfo.mipLodBias = options.mipMapLevels.bias;
+    createInfo.minLod = options.mipMapLevels.min;
+    createInfo.maxLod = options.mipMapLevels.max;
 
     m_handle = vk::raii::Sampler { *device, createInfo };
 }

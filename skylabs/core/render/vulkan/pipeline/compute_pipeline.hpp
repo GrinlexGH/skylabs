@@ -1,23 +1,22 @@
 #pragma once
-#include <skylabs/core/render/vulkan/pipeline/shader.hpp>
+#include "skylabs/core/render/vulkan/pipeline/shader.hpp"
 
-namespace Vulkan {
-struct ComputePipelineCreateInfo
-{
-    vk::PipelineLayout m_layout = {};
-    const CShader* m_shader = nullptr;
+namespace sk::render::vulkan {
+struct ComputePipelineCreateInfo {
+    vk::PipelineLayout layout = { };
+    const Shader* shader = nullptr;
 };
 
-class CComputePipeline
-{
+class ComputePipeline {
 public:
-    explicit CComputePipeline(std::nullptr_t) {}
-    explicit CComputePipeline(const vk::raii::Device& device, const ComputePipelineCreateInfo& options = {});
-    CComputePipeline(const CComputePipeline&) = delete;
-    CComputePipeline(CComputePipeline&&) noexcept = default;
-    CComputePipeline& operator=(const CComputePipeline&) = delete;
-    CComputePipeline& operator=(CComputePipeline&&) noexcept = default;
-    ~CComputePipeline() = default;
+    explicit ComputePipeline(std::nullptr_t) { }
+    explicit ComputePipeline(const vk::raii::Device& device,
+                             const ComputePipelineCreateInfo& options = { });
+    ComputePipeline(const ComputePipeline&) = delete;
+    ComputePipeline(ComputePipeline&&) noexcept = default;
+    ComputePipeline& operator=(const ComputePipeline&) = delete;
+    ComputePipeline& operator=(ComputePipeline&&) noexcept = default;
+    ~ComputePipeline() = default;
 
     [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }

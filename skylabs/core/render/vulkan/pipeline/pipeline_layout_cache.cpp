@@ -1,16 +1,16 @@
-#include <skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp>
+#include "skylabs/core/render/vulkan/pipeline/pipeline_layout_cache.hpp"
 
-namespace Vulkan {
+namespace sk::render::vulkan {
 bool PipelineLayoutInfo::operator==(const PipelineLayoutInfo& rhs) const {
-    return m_descriptorSetLayouts == rhs.m_descriptorSetLayouts && m_pushConstants == rhs.m_pushConstants;
+    return descriptorSetLayouts == rhs.descriptorSetLayouts && pushConstants == rhs.pushConstants;
 }
 
 std::size_t PipelineLayoutHash::operator()(const PipelineLayoutInfo& info) const {
     std::size_t seed = 0;
-    for (const auto& layout : info.m_descriptorSetLayouts) {
+    for (const auto& layout : info.descriptorSetLayouts) {
         boost::hash_combine(seed, static_cast<VkDescriptorSetLayout>(layout));
     }
-    for (const auto& pc : info.m_pushConstants) {
+    for (const auto& pc : info.pushConstants) {
         boost::hash_combine(seed, static_cast<std::uint32_t>(pc.stageFlags));
         boost::hash_combine(seed, pc.offset);
         boost::hash_combine(seed, pc.size);
@@ -18,10 +18,10 @@ std::size_t PipelineLayoutHash::operator()(const PipelineLayoutInfo& info) const
     return seed;
 }
 
-CPipelineLayoutCache::CPipelineLayoutCache(const vk::raii::Device& device) : m_device(&device) {}
+PipelineLayoutCache::PipelineLayoutCache(const vk::raii::Device& device) : m_device(&device) { }
 
-const vk::raii::PipelineLayout& CPipelineLayoutCache::GetLayout(PipelineLayoutInfo info) {
-    std::ranges::sort(info.m_pushConstants, [](const auto& a, const auto& b) {
+const vk::raii::PipelineLayout& PipelineLayoutCache::GetLayout(PipelineLayoutInfo info) {
+    std::ranges::sort(info.pushConstants, [](const auto& a, const auto& b) {
         if (a.offset != b.offset) return a.offset < b.offset;
         return a.stageFlags < b.stageFlags;
     });
@@ -31,7 +31,7 @@ const vk::raii::PipelineLayout& CPipelineLayoutCache::GetLayout(PipelineLayoutIn
         return it->second;
     }
 
-    vk::PipelineLayoutCreateInfo createInfo { {}, info.m_descriptorSetLayouts, info.m_pushConstants };
+    vk::PipelineLayoutCreateInfo createInfo { { }, info.descriptorSetLayouts, info.pushConstants };
 
     vk::raii::PipelineLayout layout { *m_device, createInfo };
     auto [insertedIt, success] = m_cache.try_emplace(std::move(info), std::move(layout));

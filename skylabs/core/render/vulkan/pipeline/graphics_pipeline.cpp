@@ -1,29 +1,34 @@
-#include <skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp>
+#include <ranges>
+
+#include <frozen/map.h>
+
+#include "skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp"
 
 namespace {
-constexpr frozen::map<VertexFormat, vk::Format, 4> g_vertexFormat = {
-    { VertexFormat::Float32, vk::Format::eR32Sfloat },
-    { VertexFormat::Float32x2, vk::Format::eR32G32Sfloat },
-    { VertexFormat::Float32x3, vk::Format::eR32G32B32Sfloat },
-    { VertexFormat::Float32x4, vk::Format::eR32G32B32A32Sfloat },
+constexpr frozen::map<VertexFormat, vk::Format, 4> kVertexFormat = {
+    { VertexFormat::eFloat32, vk::Format::eR32Sfloat },
+    { VertexFormat::eFloat32x2, vk::Format::eR32G32Sfloat },
+    { VertexFormat::eFloat32x3, vk::Format::eR32G32B32Sfloat },
+    { VertexFormat::eFloat32x4, vk::Format::eR32G32B32A32Sfloat },
 };
 
 constexpr vk::Format ToVkFormat(const VertexFormat format) {
-    if (!g_vertexFormat.contains(format)) {
+    if (!kVertexFormat.contains(format)) {
         assert(false && "Unsupported vertex format");
         return vk::Format::eR8G8B8A8Snorm;
     }
 
-    return g_vertexFormat.at(format);
+    return kVertexFormat.at(format);
 }
 
-std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(std::span<const Vulkan::VertexBufferBinding> bindings) {
+std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(
+    std::span<const sk::render::vulkan::VertexBufferBinding> bindings) {
     std::vector<vk::VertexInputAttributeDescription> descriptions;
     descriptions.reserve(bindings.size());
 
     for (const auto& [description, attributes] : bindings) {
         for (std::uint32_t i = 0; const auto& [format, offset] : attributes) {
-            vk::VertexInputAttributeDescription attributeDescription {};
+            vk::VertexInputAttributeDescription attributeDescription { };
             attributeDescription.binding = description.binding;
             attributeDescription.location = i;
             attributeDescription.format = ToVkFormat(format);
@@ -37,28 +42,31 @@ std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(s
 }
 }
 
-namespace Vulkan {
-CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPipelineCreateInfo options) {
-    const std::vector vertexAttributeDescriptions = GenerateAttributeDescriptions(options.m_vertexBindings);
+namespace sk::render::vulkan {
+GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
+                                   const GraphicsPipelineCreateInfo& options) {
+    const std::vector vertexAttributeDescriptions =
+        GenerateAttributeDescriptions(options.vertexBindings);
     const std::vector vertexBindingDescriptions =
-        std::views::transform(options.m_vertexBindings, [](const VertexBufferBinding& binding) { return binding.m_description; })
-        | std::ranges::to<std::vector>();
+        std::views::transform(options.vertexBindings,
+                              [](const VertexBufferBinding& binding) { return binding.description; }) |
+        std::ranges::to<std::vector>();
 
-    vk::PipelineVertexInputStateCreateInfo vertexInputInfo {};
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo { };
     vertexInputInfo.setVertexBindingDescriptions(vertexBindingDescriptions);
     vertexInputInfo.setVertexAttributeDescriptions(vertexAttributeDescriptions);
 
-    vk::PipelineInputAssemblyStateCreateInfo inputAssembly {};
-    inputAssembly.topology = options.m_primitiveTopology;
+    vk::PipelineInputAssemblyStateCreateInfo inputAssembly { };
+    inputAssembly.topology = options.primitiveTopology;
     inputAssembly.primitiveRestartEnable = vk::False;
 
-    vk::PipelineViewportStateCreateInfo viewportState {};
+    vk::PipelineViewportStateCreateInfo viewportState { };
     viewportState.viewportCount = 1;
     viewportState.pViewports = nullptr;
     viewportState.scissorCount = 1;
     viewportState.pScissors = nullptr;
 
-    vk::PipelineRasterizationStateCreateInfo rasterizer {};
+    vk::PipelineRasterizationStateCreateInfo rasterizer { };
     rasterizer.depthClampEnable = vk::False;
     rasterizer.rasterizerDiscardEnable = vk::False;
     rasterizer.polygonMode = vk::PolygonMode::eFill;
@@ -70,8 +78,8 @@ CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPip
     rasterizer.depthBiasSlopeFactor = 0.0f;
     rasterizer.lineWidth = 1.0f;
 
-    vk::PipelineMultisampleStateCreateInfo multisampling {};
-    multisampling.rasterizationSamples = options.m_sampling;
+    vk::PipelineMultisampleStateCreateInfo multisampling { };
+    multisampling.rasterizationSamples = options.sampling;
     multisampling.sampleShadingEnable = vk::False;
     multisampling.minSampleShading = 0.0f;
     multisampling.pSampleMask = nullptr;
@@ -79,7 +87,7 @@ CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPip
     multisampling.alphaToOneEnable = vk::False;
 
     // TODO: blending settings
-    vk::PipelineColorBlendAttachmentState colorBlendAttachment {};
+    vk::PipelineColorBlendAttachmentState colorBlendAttachment { };
     colorBlendAttachment.blendEnable = vk::True;
     colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
     colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
@@ -88,12 +96,10 @@ CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPip
     colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
     colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
     colorBlendAttachment.colorWriteMask =
-        vk::ColorComponentFlagBits::eR
-        | vk::ColorComponentFlagBits::eG
-        | vk::ColorComponentFlagBits::eB
-        | vk::ColorComponentFlagBits::eA;
+        vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+        vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
 
-    vk::PipelineColorBlendStateCreateInfo colorBlending {};
+    vk::PipelineColorBlendStateCreateInfo colorBlending { };
     colorBlending.logicOpEnable = vk::False;
     colorBlending.logicOp = vk::LogicOp::eCopy;
     colorBlending.attachmentCount = 1;
@@ -107,10 +113,10 @@ CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPip
         vk::DynamicState::eViewport,
         vk::DynamicState::eScissor,
     };
-    vk::PipelineDynamicStateCreateInfo dynamicState {};
+    vk::PipelineDynamicStateCreateInfo dynamicState { };
     dynamicState.setDynamicStates(dynamicStates);
 
-    vk::PipelineDepthStencilStateCreateInfo depthStencil {};
+    vk::PipelineDepthStencilStateCreateInfo depthStencil { };
     depthStencil.depthTestEnable = vk::True;
     depthStencil.depthWriteEnable = vk::True;
     depthStencil.depthCompareOp = vk::CompareOp::eGreater;
@@ -121,17 +127,17 @@ CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPip
     depthStencil.minDepthBounds = 0.0f;
     depthStencil.maxDepthBounds = 0.0f;
 
-    std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo {};
-    shaderCreateInfo.reserve(options.m_shaders.size());
-    for (auto & m_shader : options.m_shaders) {
-        vk::PipelineShaderStageCreateInfo ci {};
-        ci.stage = m_shader->Stage();
-        ci.module = **m_shader;
+    std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo { };
+    shaderCreateInfo.reserve(options.shaders.size());
+    for (auto& shader : options.shaders) {
+        vk::PipelineShaderStageCreateInfo ci { };
+        ci.stage = shader->Stage();
+        ci.module = **shader;
         ci.pName = "main";
         shaderCreateInfo.push_back(ci);
     }
 
-    vk::GraphicsPipelineCreateInfo pipelineInfo {};
+    vk::GraphicsPipelineCreateInfo pipelineInfo { };
     pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderCreateInfo.size());
     pipelineInfo.pStages = shaderCreateInfo.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -142,11 +148,11 @@ CGraphicsPipeline::CGraphicsPipeline(const vk::raii::Device& device, GraphicsPip
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = m_layout = options.m_layout;
+    pipelineInfo.layout = m_layout = options.layout;
     pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = nullptr;
-    pipelineInfo.pNext = &options.m_renderingInfo;
+    pipelineInfo.pNext = &options.renderingInfo;
 
     m_handle = vk::raii::Pipeline { device, nullptr, pipelineInfo };
 }

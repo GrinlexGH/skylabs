@@ -1,8 +1,8 @@
-#include <skylabs/core/launcher.hpp>
-#include <skylabs/public/dll_export.hpp>
+#include "sk_core_export.h"
+#include "skylabs/core/launcher.hpp"
 
-extern "C" DLL_EXPORT int SkMain(int /*argc*/, char* /*argv*/[]) {
-    CLauncher launcher;
+SK_CORE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
+    sk::Launcher launcher;
     launcher.Run();
 
     return 0;

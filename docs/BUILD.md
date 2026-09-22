@@ -95,7 +95,7 @@ Rule of thumb for picking one:
 
 - **Windows, want the "correct" ABI:** `msvc-18` or `clang-llvm` - both link the MSVC STL, so third-party binaries and debug info behave consistently.
 - **Windows, just experimenting:** `clang-clang64` or `gcc-ucrt64`. Expect friction - see [MinGW](#mingw) below.
-- **Linux:** I find Clang more appealing, though it might not work correctly with the Steamworks SDK due to libc++. However, you can always switch back to libstdc++ by changing the configuration file or adding `-s compiler.libcxx=libstdc++11`.
+- **Linux:** I find Clang more appealing.
 
 ## Building Per Toolchain
 
@@ -156,7 +156,7 @@ conan install . -pr gcc-linux -r skylabs -r conancenter -s build_type=Debug --bu
 ```
 
 Make sure every dependency in the graph linked with `libstdc++` only or `libc++` only.
-If you want `libstdc++` with `clang-linux` profile, just type `-s compiler.libcxx=libstdc++11` at the end of the command line.
+If you want `libstdc++` with `clang-linux` profile, just type `-s compiler.libcxx=libstdc++11` at the end of the `conan install` command.
 
 After any of the above, finish the build the same way regardless of toolchain:
 

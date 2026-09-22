@@ -1,79 +1,74 @@
 #pragma once
-#include <skylabs/core/render/vulkan/command_recording/sync_state.hpp>
-#include <skylabs/core/render/vulkan/resources/image.hpp>
-#include <skylabs/core/render/vulkan/resources/buffer.hpp>
+#include <variant>
 
-namespace Vulkan {
-enum class BarrierType : std::uint8_t
-{
-    eRegular,
-    eRelease,
-    eAcquire
-};
+#include "skylabs/core/render/vulkan/command_recording/sync_state.hpp"
+#include "skylabs/core/render/vulkan/resources/buffer.hpp"
+#include "skylabs/core/render/vulkan/resources/image.hpp"
 
-struct ImageBarrier
-{
-    const CImage& m_image;
-    vk::ImageSubresourceRange m_range {};
-    Usage m_oldUsage = Usage::eNone;
-    Usage m_newUsage = Usage::eNone;
-    BarrierType m_type = BarrierType::eRegular;
+namespace sk::render::vulkan {
+enum class BarrierType : std::uint8_t { eRegular, eRelease, eAcquire };
+
+struct ImageBarrier {
+    const Image& image;
+    vk::ImageSubresourceRange range { };
+    Usage oldUsage = Usage::eNone;
+    Usage newUsage = Usage::eNone;
+    BarrierType type = BarrierType::eRegular;
     std::uint32_t srcQueue = vk::QueueFamilyIgnored;
     std::uint32_t dstQueue = vk::QueueFamilyIgnored;
 };
 
-struct BufferBarrier
-{
-    const CBuffer& m_buffer;
-    Usage m_oldUsage = Usage::eNone;
-    Usage m_newUsage = Usage::eNone;
-    BarrierType m_type = BarrierType::eRegular;
+struct BufferBarrier {
+    const Buffer& buffer;
+    Usage oldUsage = Usage::eNone;
+    Usage newUsage = Usage::eNone;
+    BarrierType type = BarrierType::eRegular;
     std::uint32_t srcQueue = vk::QueueFamilyIgnored;
     std::uint32_t dstQueue = vk::QueueFamilyIgnored;
 };
 
-struct BufferCopyOffsets
-{
-    vk::DeviceSize m_srcOffset = 0;
-    vk::DeviceSize m_dstOffset = 0;
+struct BufferCopyOffsets {
+    vk::DeviceSize srcOffset = 0;
+    vk::DeviceSize dstOffset = 0;
 };
 
-class CCommandBuffer
-{
+class CommandBuffer {
 public:
-    explicit CCommandBuffer(std::nullptr_t) {}
-    explicit CCommandBuffer(const vk::raii::Device& device, vk::raii::CommandBuffer&& commandBuffer);
+    explicit CommandBuffer(std::nullptr_t) { }
+    explicit CommandBuffer(const vk::raii::Device& device, vk::raii::CommandBuffer&& commandBuffer);
 
     [[nodiscard]] const vk::raii::CommandBuffer& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::CommandBuffer* operator->() const noexcept { return &m_handle; }
 
     template <typename F>
-    requires requires(const F& f, const CCommandBuffer& cmd) { { f(cmd) } -> std::same_as<void>; }
+        requires requires(const F& f, const CommandBuffer& cmd) {
+            { f(cmd) } -> std::same_as<void>;
+        }
     void ImmediateSubmit(const vk::raii::Queue& queue, const F& func) const {
         m_handle.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
         func(*this);
         m_handle.end();
 
-        vk::SubmitInfo submitInfo {};
+        vk::SubmitInfo submitInfo { };
         submitInfo.setCommandBuffers(*m_handle);
 
-        const vk::raii::Fence fence { *m_device, vk::FenceCreateInfo {} };
+        const vk::raii::Fence fence { *m_device, vk::FenceCreateInfo { } };
         queue.submit(submitInfo, *fence);
 
-        if (m_device->waitForFences(
-                { *fence }, true, std::numeric_limits<std::uint64_t>::max()
-            ) != vk::Result::eSuccess
-        ) {
+        if (m_device->waitForFences({ *fence }, true, std::numeric_limits<std::uint64_t>::max()) !=
+            vk::Result::eSuccess) {
             throw std::runtime_error("Failed to wait for single-time command fence");
         }
     }
 
     void PipelineBarrier(const std::vector<std::variant<ImageBarrier, BufferBarrier>>& barriers) const;
 
-    void Copy(const CBuffer& src, const CImage& dst) const;
-    void Copy(const CBuffer& src, const CBuffer& dst, vk::DeviceSize size, const BufferCopyOffsets& offsets = {}) const;
+    void Copy(const Buffer& src, const Image& dst) const;
+    void Copy(const Buffer& src, const Buffer& dst, vk::DeviceSize size,
+              const BufferCopyOffsets& offsets = { }) const;
 
-    void GenerateMipmaps(const CImage& image, Usage srcUsage = Usage::eTransferWrite, Usage dstUsage = Usage::eSampledFragment) const;
+    void GenerateMipmaps(const Image& image, Usage srcUsage = Usage::eTransferWrite,
+                         Usage dstUsage = Usage::eSampledFragment) const;
 
 private:
     const vk::raii::Device* m_device = nullptr;

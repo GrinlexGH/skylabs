@@ -1,10 +1,11 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
+#include <glm/glm.hpp>
 
-class IRenderer
-{
+namespace sk::render {
+class IRenderer {
 public:
     virtual ~IRenderer() = default;
 
     virtual void Draw(glm::mat4 view, float fov, float deltaTime) = 0;
 };
+}

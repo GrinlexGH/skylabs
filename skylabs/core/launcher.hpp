@@ -1,17 +1,21 @@
 #pragma once
-#include <skylabs/core/camera.hpp>
-#include <skylabs/core/render/renderer.hpp>
-#include <skylabs/core/render/vertex.hpp>
-#include <skylabs/core/render/vulkan/render_object.hpp>
-#include <skylabs/core/render/vulkan/renderer.hpp>
-#include <skylabs/public/application.hpp>
-#include <skylabs/public/sdl/context.hpp>
-#include <skylabs/public/sdl/event_pump.hpp>
-#include <skylabs/public/sdl/filesystem.hpp>
-#include <skylabs/public/sdl/sdl.hpp>
-#include <skylabs/public/sdl/vulkan/os_connector.hpp>
-#include <skylabs/public/sdl/window.hpp>
+#include <chrono>
 
+#include <SDL3/SDL.h>
+#include <entt/entt.hpp>
+
+#include "skylabs/base/application.hpp"
+#include "skylabs/base/filesystem.hpp"
+#include "skylabs/base/sdl/context.hpp"
+#include "skylabs/base/sdl/event_pump.hpp"
+#include "skylabs/base/sdl/vulkan/os_connector.hpp"
+#include "skylabs/base/sdl/window.hpp"
+#include "skylabs/core/camera.hpp"
+#include "skylabs/core/render/vertex.hpp"
+#include "skylabs/core/render/vulkan/render_object.hpp"
+#include "skylabs/core/render/vulkan/renderer.hpp"
+
+namespace sk {
 struct Joystick {
     bool active = false;
     SDL_FingerID fingerId = 0;
@@ -19,31 +23,31 @@ struct Joystick {
     float centerY = 0.0f;
     float dirX = 0.0f;
     float dirY = 0.0f;
-    static constexpr float radius = 0.15f;
+    static constexpr float kRadius = 0.15f;
 };
 
 struct UIButton {
     float x, y, w, h;
 
-    bool IsInside(float touchX, float touchY) {
+    bool IsInside(float touchX, float touchY) const {
         return (touchX >= x && touchX <= x + w && touchY >= y && touchY <= y + h);
     }
 };
 
-struct SDisk {
+struct Disk {
     int size;
     bool isselected;
-    Vulkan::CRenderObject renderObject;
+    render::vulkan::RenderObject renderObject;
 };
 
-struct STower {
+struct Tower {
     glm::vec3 basePosition;
-    Vulkan::CRenderObject stemRenderObject;
-    std::vector<SDisk> disks;
+    render::vulkan::RenderObject stemRenderObject;
+    std::vector<Disk> disks;
     std::uint16_t baseColorId;
 };
 
-class CLauncher final : public CBaseApplication {
+class Launcher final : public BaseApplication {
 public:
     void PreCreate() override;
     void Create() override;
@@ -58,31 +62,35 @@ private:
     void UpdateVisuals(float deltaTime);
     void Click();
 
-    void HandleKeyDownEvent(Keys key);
-    void HandleKeyUpEvent(Keys key);
+    void HandleKeyDownEvent(input::Keys key);
+    void HandleKeyUpEvent(input::Keys key);
     void HandleTextInput(const SDL_TextInputEvent& textEvent);
 
-    void OnQuit(QuitEvent) { m_quit = true; }
-    void OnKeyEvent(KeyEvent e) {
+    void OnQuit(input::QuitEvent) { m_quit = true; }
+    void OnKeyEvent(input::KeyEvent e) {
         if (e.down)
             HandleKeyDownEvent(e.key);
         else
             HandleKeyUpEvent(e.key);
     }
-    void OnDeviceResetEvent(DeviceResetEvent) { m_renderer->OnDeviceLost(); }
-    void OnMouseMotionEvent(MouseMotionEvent e) { m_camera.ProcessMouseMovement(e.dx, -e.dy); }
-    void OnMouseWheelEvent(MouseWheelEvent e) { m_camera.ProcessMouseScroll(e.y); }
-    void OnMouseButtonEvent(MouseButtonEvent e) {
+
+    void OnDeviceResetEvent(input::DeviceResetEvent) { m_renderer->OnDeviceLost(); }
+    void OnMouseMotionEvent(input::MouseMotionEvent e) {
+        m_camera.ProcessMouseMovement(e.dx, -e.dy);
+    }
+    void OnMouseWheelEvent(input::MouseWheelEvent e) { m_camera.ProcessMouseScroll(e.y); }
+    void OnMouseButtonEvent(input::MouseButtonEvent e) {
         if (e.down) Click();
     }
-    void OnFingerTouchEvent(const FingerTouchEvent e);
-    void OnFingerMotionEvent(const FingerMotionEvent& e);
+
+    void OnFingerTouchEvent(const input::FingerTouchEvent e);
+    void OnFingerMotionEvent(const input::FingerMotionEvent& e);
 
     static bool Watcher(void* userdata, SDL_Event* event);
 
     void InitFilesystem();
 
-    std::tuple<std::vector<CVertex>, std::vector<std::uint16_t>> GenerateDisk();
+    std::tuple<std::vector<Vertex>, std::vector<std::uint16_t>> GenerateDisk();
 
     constexpr static int kTargetFps = 60;
     constexpr static int kFrameDelay = 1000 / kTargetFps;
@@ -100,17 +108,18 @@ private:
 
     Joystick m_leftJoystick;
     UIButton m_chatButton = { 0.8f, 0.05f, 0.15f, 0.1f };
-    CCamera m_camera { glm::vec3(0.0f, 0.0f, 0.0f) };
+    Camera m_camera { glm::vec3(0.0f, 0.0f, 0.0f) };
 
-    CFilesystem m_filesystem { nullptr };
+    filesystem::Filesystem m_filesystem { nullptr };
 
-    SDL::CContext m_sdlContext { nullptr };
-    SDL::CWindow m_window { nullptr };
-    SDL::CEventPump m_eventPump;
-    SDL::Vulkan::COSConnector m_osConnector { nullptr };
-    std::optional<Vulkan::CRenderer> m_renderer;
+    sdl::Context m_sdlContext { nullptr };
+    sdl::Window m_window { nullptr };
+    sdl::EventPump m_eventPump;
+    sdl::vulkan::OSConnector m_osConnector { nullptr };
+    std::optional<render::vulkan::Renderer> m_renderer;
 
-    std::vector<STower> m_towers;
+    std::vector<Tower> m_towers;
     int m_hoveredTowerIdx = -1;
     std::tuple<int, int> m_selectedTowerAndDisk { -1, -1 };
 };
+}

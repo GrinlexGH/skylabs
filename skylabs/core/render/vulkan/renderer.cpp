@@ -1,16 +1,16 @@
-#include <skylabs/core/render/vulkan/renderer.hpp>
-#include <skylabs/public/logging.hpp>
+#include "skylabs/core/render/vulkan/renderer.hpp"
+#include "skylabs/base/logging.hpp"
 
 template <>
-struct std::hash<CVertex> {
-    std::size_t operator()(const CVertex& vertex) const noexcept {
+struct std::hash<Vertex> {
+    std::size_t operator()(const Vertex& vertex) const noexcept {
         std::size_t seed = 0;
-        boost::hash_combine(seed, vertex.m_position.x);
-        boost::hash_combine(seed, vertex.m_position.y);
-        boost::hash_combine(seed, vertex.m_position.z);
+        boost::hash_combine(seed, vertex.position.x);
+        boost::hash_combine(seed, vertex.position.y);
+        boost::hash_combine(seed, vertex.position.z);
 
-        boost::hash_combine(seed, vertex.m_texCoord.x);
-        boost::hash_combine(seed, vertex.m_texCoord.y);
+        boost::hash_combine(seed, vertex.texCoord.x);
+        boost::hash_combine(seed, vertex.texCoord.y);
         return seed;
     }
 };
@@ -29,79 +29,81 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 }
 }
 
-namespace Vulkan {
-CRenderer::CRenderer(const IWindow* const window, const IOSConnector* const osConnector,
-                     const CFilesystem& filesystem)
+namespace sk::render::vulkan {
+Renderer::Renderer(const IWindow* const window,
+                   const sk::vulkan::IOSConnector* const osConnector,
+                   const filesystem::Filesystem& filesystem)
     : m_filesystem(&filesystem) {
-    m_context = CContext { window, osConnector };
-    const auto& device = m_context.Device();
+    m_context = Context { window, osConnector };
+    const auto& device = m_context.GetDevice();
 
-    m_swapchain =
-        CSwapchain { device, m_context.Window(), *m_context.Surface(), 2, vk::PresentModeKHR::eMailbox };
-    m_inFlightContext = CInFlightContext { m_swapchain.Images().size() };
+    m_swapchain = Swapchain { device, m_context.Window(), *m_context.GetSurface(), 2,
+                              vk::PresentModeKHR::eMailbox };
+    m_inFlightContext = InFlightContext { m_swapchain.Images().size() };
 
-    m_pipelineLayoutCache = CPipelineLayoutCache { *device };
-    m_descriptorLayoutCache = CDescriptorLayoutCache { *device };
-    m_descriptorAllocator = CDescriptorAllocator { *device };
+    m_pipelineLayoutCache = PipelineLayoutCache { *device };
+    m_descriptorLayoutCache = DescriptorLayoutCache { *device };
+    m_descriptorAllocator = DescriptorAllocator { *device };
 
     m_commandBufferAllocator =
-        CCommandBufferAllocator { *device, m_context.Device().GraphicsQueue().FamilyIndex() };
+        CommandBufferAllocator { *device, m_context.GetDevice().GraphicsQueue().FamilyIndex() };
     m_graphicsCmd =
         InFlight { m_inFlightContext, m_commandBufferAllocator.Allocate(
                                           vk::CommandBufferLevel::ePrimary,
                                           static_cast<std::uint32_t>(m_inFlightContext.FrameCount())) };
 
     m_firstUse = InFlight<bool> { m_inFlightContext, true };
-    m_fence = InFlight<vk::raii::Fence> { m_inFlightContext, *m_context.Device(),
+    m_fence = InFlight<vk::raii::Fence> { m_inFlightContext, *m_context.GetDevice(),
                                           vk::FenceCreateInfo { vk::FenceCreateFlagBits::eSignaled } };
-    m_imageAvailableSemaphore = InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.Device(),
-                                                                vk::SemaphoreCreateInfo { } };
+    m_imageAvailableSemaphore =
+        InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.GetDevice(),
+                                        vk::SemaphoreCreateInfo { } };
 
     const std::size_t imageCount = m_swapchain.Images().size();
     m_renderFinishedSemaphores.reserve(imageCount);
     for (auto i = 0u; i < imageCount; ++i) {
-        m_renderFinishedSemaphores.emplace_back(*m_context.Device(), vk::SemaphoreCreateInfo { });
+        m_renderFinishedSemaphores.emplace_back(*m_context.GetDevice(), vk::SemaphoreCreateInfo { });
     }
 
-    m_mainPass = CMainPass { m_context.Device(),
-                             m_inFlightContext,
-                             m_context.Allocator(),
-                             m_pipelineLayoutCache,
-                             m_descriptorLayoutCache,
-                             m_descriptorAllocator,
-                             filesystem,
-                             { m_swapchain.Extent().width, m_swapchain.Extent().height } };
+    m_mainPass = MainPass { m_context.GetDevice(),
+                            m_inFlightContext,
+                            m_context.GetAllocator(),
+                            m_pipelineLayoutCache,
+                            m_descriptorLayoutCache,
+                            m_descriptorAllocator,
+                            filesystem,
+                            { m_swapchain.Extent().width, m_swapchain.Extent().height } };
     m_postProcessPass =
-        CPostProcessPass { m_context.Device(),          m_inFlightContext,
-                           m_pipelineLayoutCache,       m_descriptorLayoutCache,
-                           m_descriptorAllocator,       filesystem,
-                           m_mainPass.MainAttachment(), m_swapchain.SurfaceFormat().format };
+        PostProcessPass { m_context.GetDevice(),       m_inFlightContext,
+                          m_pipelineLayoutCache,       m_descriptorLayoutCache,
+                          m_descriptorAllocator,       filesystem,
+                          m_mainPass.MainAttachment(), m_swapchain.SurfaceFormat().format };
 
     m_vertexBuffer =
-        CBuffer { *m_context.Allocator(), GEOMETRY_POOL_SIZE,
-                  vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-                  MemoryLocation::eDeviceOnly };
+        Buffer { *m_context.GetAllocator(), kGeometryPoolSize,
+                 vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+                 MemoryLocation::eDeviceOnly };
 
     m_indexBuffer =
-        CBuffer { *m_context.Allocator(), GEOMETRY_POOL_SIZE,
-                  vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                  MemoryLocation::eDeviceOnly };
+        Buffer { *m_context.GetAllocator(), kGeometryPoolSize,
+                 vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                 MemoryLocation::eDeviceOnly };
 
     m_mainPass.WriteDescriptors(m_meshTextures);
 }
 
-CRenderer::~CRenderer() {
-    if (**m_context.Device()) {
+Renderer::~Renderer() {
+    if (**m_context.GetDevice()) {
         try {
-            m_context.Device()->waitIdle();
+            m_context.GetDevice()->waitIdle();
         } catch (const vk::SystemError& e) {
-            Log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
+            log::Error("Failed to wait device idle in renderer destructor: {}", e.what());
         }
     }
 }
 
-void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
-    const auto& device = m_context.Device();
+void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
+    const auto& device = m_context.GetDevice();
     const auto& cmd = m_graphicsCmd.Get();
 
     UpdateMVP(view, fov);
@@ -113,7 +115,7 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     // Acquire next image from the swapchain
     auto [acquireResult, imageIndex] = m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
     if (acquireResult != vk::Result::eSuccess) {
-        Log::Debug("Acquire result: {}", vk::to_string(acquireResult));
+        log::Debug("Acquire result: {}", vk::to_string(acquireResult));
         if (acquireResult == vk::Result::eErrorOutOfDateKHR) {
             RecreateSwapchain();
             std::tie(acquireResult, imageIndex) =
@@ -121,10 +123,10 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
         }
 
 #ifdef PLATFORM_WINDOWS
-        if (acquireResult == vk::Result::eSuboptimalKHR && !m_context.Window()->Minimized()) {
+        if (acquireResult == vk::Result::eSuboptimalKHR && !m_context.Window()->IsMinimized()) {
             RecreateSwapchain();
             m_imageAvailableSemaphore.Get() =
-                vk::raii::Semaphore { *m_context.Device(), vk::SemaphoreCreateInfo { } };
+                vk::raii::Semaphore { *m_context.GetDevice(), vk::SemaphoreCreateInfo { } };
             std::tie(acquireResult, imageIndex) =
                 m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
         }
@@ -184,13 +186,13 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     finalSubmit.setWaitDstStageMask({ waitStage });
     finalSubmit.setCommandBuffers({ **cmd });
     finalSubmit.setSignalSemaphores({ *m_renderFinishedSemaphores[imageIndex] });
-    m_context.Device().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
+    m_context.GetDevice().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
     // Present
     vk::Result presentResult =
         m_swapchain.PresentImage(imageIndex, { *m_renderFinishedSemaphores[imageIndex] });
     if (presentResult != vk::Result::eSuccess) {
-        Log::Debug("Present result: {}", vk::to_string(presentResult));
+        log::Debug("Present result: {}", vk::to_string(presentResult));
 #ifdef PLATFORM_ANDROID
         if (presentResult == vk::Result::eSuboptimalKHR) {
             RecreateSwapchain();
@@ -201,22 +203,22 @@ void CRenderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/)
     m_inFlightContext.NextFrame();
 }
 
-void CRenderer::OnDeviceLost() {
-    m_context.Device()->waitIdle();
+void Renderer::OnDeviceLost() {
+    m_context.GetDevice()->waitIdle();
     m_swapchain.Clear();
     m_context.RepairSurface();
     RecreateSwapchain();
 }
 
-void CRenderer::OnPossiblyWindowSizeChange() {
+void Renderer::OnPossiblyWindowSizeChange() {
     if (const auto [width, height] = m_context.Window()->DrawableSize();
         vk::Extent2D { width, height } != m_swapchain.Extent()) {
         RecreateSwapchain();
     }
 }
 
-void CRenderer::RecreateSwapchain() {
-    m_context.Device()->waitIdle();
+void Renderer::RecreateSwapchain() {
+    m_context.GetDevice()->waitIdle();
     const auto [oldWidth, oldHeight] = m_swapchain.Extent();
     m_swapchain.Recreate({ });
 
@@ -226,7 +228,7 @@ void CRenderer::RecreateSwapchain() {
     }
 }
 
-void CRenderer::ResizeTextures() {
+void Renderer::ResizeTextures() {
     // Reset sync state
     for (auto&& i : m_firstUse) {
         i = true;
@@ -236,7 +238,7 @@ void CRenderer::ResizeTextures() {
     m_postProcessPass.Resize(m_mainPass.MainAttachment());
 }
 
-void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
+void Renderer::UpdateMVP(const glm::mat4& view, float fov) {
     auto [width, height] = m_swapchain.Extent();
 
     // Rotate render if we need
@@ -251,17 +253,17 @@ void CRenderer::UpdateMVP(const glm::mat4& view, float fov) {
         rot = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
     }
 
-    const CMVP ubo {
+    const MVP ubo {
         .view = view,
         .proj = rot * ReverseZPerspective(width, height, fov),
     };
 
-    std::memcpy(m_mainPass.MVP().Get().Data(), &ubo, sizeof(ubo));
+    std::memcpy(m_mainPass.GetMVP().Get().Data(), &ubo, sizeof(ubo));
 }
 
-std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices,
-                                    const std::vector<std::uint16_t>& indices) {
-    auto UploadToPool = [&] {
+std::uint32_t Renderer::UploadMesh(const std::vector<Vertex>& vertices,
+                                   const std::vector<std::uint16_t>& indices) {
+    auto uploadToPool = [&] {
         SubMesh mesh { };
 
         vk::DeviceSize vSize = vertices.size() * sizeof(vertices[0]);
@@ -277,15 +279,15 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices,
         vk::DeviceSize totalSize = vSize + iSize;
         if (m_stagingBuffer.Size() < totalSize) {
             m_stagingBuffer =
-                CBuffer { *m_context.Allocator(), totalSize, vk::BufferUsageFlagBits::eTransferSrc,
-                          MemoryLocation::eHostVisible };
+                Buffer { *m_context.GetAllocator(), totalSize, vk::BufferUsageFlagBits::eTransferSrc,
+                         MemoryLocation::eHostVisible };
         }
 
         std::memcpy(m_stagingBuffer.Data(), vertices.data(), vSize);
         std::memcpy(static_cast<std::uint8_t*>(m_stagingBuffer.Data()) + vSize, indices.data(), iSize);
 
         m_graphicsCmd.Get().ImmediateSubmit(
-            *m_context.Device().GraphicsQueue(), [&](const CCommandBuffer& cmd) {
+            *m_context.GetDevice().GraphicsQueue(), [&](const CommandBuffer& cmd) {
                 cmd.Copy(m_stagingBuffer, m_vertexBuffer, vSize, { 0, mesh.VtxOffset() });
                 cmd.Copy(m_stagingBuffer, m_indexBuffer, iSize, { vSize, mesh.IdxOffset() });
             });
@@ -293,24 +295,24 @@ std::uint32_t CRenderer::UploadMesh(const std::vector<CVertex>& vertices,
         return mesh;
     };
 
-    m_meshes.emplace_back(UploadToPool());
+    m_meshes.emplace_back(uploadToPool());
     return static_cast<std::uint32_t>(m_meshes.size() - 1);
 }
 
-::CRenderObject& CRenderer::GetObjectData(const std::uint32_t id) {
+sk::RenderObject& Renderer::GetObjectData(const std::uint32_t id) {
     assert(id < m_objects.size());
     return m_objects[id];
 }
 
-const ::CRenderObject& CRenderer::GetObjectData(const std::uint32_t id) const {
+const sk::RenderObject& Renderer::GetObjectData(const std::uint32_t id) const {
     assert(id < m_objects.size());
     return m_objects[id];
 }
 
-CRenderObject CRenderer::UploadGameObject(const std::uint32_t meshId, const glm::mat4& matrix,
-                                          std::uint16_t colorId) {
+RenderObject Renderer::UploadGameObject(const std::uint32_t meshId, const glm::mat4& matrix,
+                                        std::uint16_t colorId) {
     m_objects.emplace_back(meshId, colorId, matrix);
-    return CRenderObject { this, static_cast<std::uint32_t>(m_objects.size() - 1) };
+    return RenderObject { this, static_cast<std::uint32_t>(m_objects.size() - 1) };
 }
 
 // void CRenderer::LoadTextures() {

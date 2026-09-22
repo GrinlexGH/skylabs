@@ -1,7 +1,7 @@
-#include <skylabs/core/render/vulkan/context/allocator.hpp>
+#include "skylabs/core/render/vulkan/context/allocator.hpp"
 
-namespace Vulkan {
-CAllocator::CAllocator(const vk::raii::Instance& instance, const CDevice& device) {
+namespace sk::render::vulkan {
+Allocator::Allocator(const vk::raii::Instance& instance, const Device& device) {
     vma::AllocatorCreateFlags flags = vma::AllocatorCreateFlagBits::eKhrMaintenance4;
 
     if (device.Caps().maintenance5) {
@@ -10,8 +10,8 @@ CAllocator::CAllocator(const vk::raii::Instance& instance, const CDevice& device
 
     vma::AllocatorCreateInfo allocatorCreateInfo;
     allocatorCreateInfo.flags = flags;
-    allocatorCreateInfo.vulkanApiVersion = device.PhysicalDevice().ApiVersion();
-    allocatorCreateInfo.physicalDevice = *device.PhysicalDevice();
+    allocatorCreateInfo.vulkanApiVersion = device.GetPhysicalDevice().ApiVersion();
+    allocatorCreateInfo.physicalDevice = *device.GetPhysicalDevice();
 
     m_handle = vma::raii::Allocator { instance, *device, allocatorCreateInfo };
 }

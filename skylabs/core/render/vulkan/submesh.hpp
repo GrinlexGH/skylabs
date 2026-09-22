@@ -1,7 +1,7 @@
 #pragma once
-#include <skylabs/core/pch.hpp>
+#include <vk_mem_alloc_raii.hpp>
 
-namespace Vulkan {
+namespace sk::render::vulkan {
 struct SubMesh {
     std::uint32_t indexCount = 0;
     vma::raii::VirtualAllocation vtxAlloc = nullptr;
