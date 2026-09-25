@@ -1,4 +1,4 @@
-#include "skylabs/core/render/vulkan/resources/buffer.hpp"
+#include "skylabs/engine/render/vulkan/buffer.hpp"
 
 namespace sk::render::vulkan {
 Buffer::Buffer(const vma::raii::Allocator& allocator, const vk::DeviceSize size,

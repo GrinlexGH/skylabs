@@ -25,6 +25,12 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/renderer.cpp
         render/vulkan/swapchain.cpp
         render/vulkan/image.cpp
+        render/vulkan/buffer.cpp
+        render/vulkan/graphics_pipeline.cpp
+        render/vulkan/shader.cpp
+        render/vulkan/sync_state.cpp
+        render/vulkan/command_buffer.cpp
+        render/vulkan/command_buffer_allocator.cpp
         render/vulkan/context/context.cpp
         render/vulkan/context/allocator.cpp
     FILE_SET HEADERS FILES
@@ -43,11 +49,18 @@ target_sources(${CURRENT_TARGET_NAME}
         sdl/vulkan_adapter.hpp
         sdl/vulkan.hpp
         render/renderer.hpp
+        render/vertex.hpp
         render/vulkan/in_flight.hpp
         render/vulkan/os_adapter.hpp
         render/vulkan/renderer.hpp
         render/vulkan/image.hpp
+        render/vulkan/buffer.hpp
         render/vulkan/swapchain.hpp
+        render/vulkan/graphics_pipeline.hpp
+        render/vulkan/shader.hpp
+        render/vulkan/sync_state.hpp
+        render/vulkan/command_buffer_allocator.hpp
+        render/vulkan/command_buffer.hpp
         render/vulkan/context/instance.hpp
         render/vulkan/context/surface.hpp
         render/vulkan/context/physical_device.hpp

@@ -9,12 +9,12 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "../../../engine/filesystem.hpp"
+#include "../../../engine/render/vulkan/command_buffer_allocator.hpp"
 #include "../../../engine/render/vulkan/swapchain.hpp"
 #include "skylabs/base/window.hpp"
 #include "skylabs/core/render/render_object.hpp"
 #include "skylabs/core/render/renderer.hpp"
 #include "skylabs/core/render/vertex.hpp"
-#include "skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp"
 #include "skylabs/core/render/vulkan/context/context.hpp"
 #include "skylabs/core/render/vulkan/in_flight.hpp"
 #include "skylabs/core/render/vulkan/main_pass.hpp"

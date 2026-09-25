@@ -2,7 +2,7 @@
 
 #include <frozen/map.h>
 
-#include "skylabs/core/render/vulkan/pipeline/graphics_pipeline.hpp"
+#include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 
 namespace {
 constexpr frozen::map<VertexFormat, vk::Format, 4> kVertexFormat = {

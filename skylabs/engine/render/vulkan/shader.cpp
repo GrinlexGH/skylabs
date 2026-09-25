@@ -1,4 +1,4 @@
-#include "skylabs/core/render/vulkan/pipeline/shader.hpp"
+#include "skylabs/engine/render/vulkan/shader.hpp"
 
 namespace sk::render::vulkan {
 Shader::Shader(const vk::raii::Device& device, const vk::ShaderStageFlagBits stage,

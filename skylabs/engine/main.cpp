@@ -40,6 +40,7 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
             if (std::holds_alternative<sk::input::WindowExposeEvent>(event)) {
                 const auto self = static_cast<sk::render::IRenderer*>(userData);
                 self->OnPossibleSwapchainResize();
+                self->Draw(glm::mat4(1), 0, 0)
                 return false;
             }
             return true;

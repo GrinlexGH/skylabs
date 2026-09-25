@@ -1,6 +1,6 @@
 #pragma once
-#include "skylabs/core/render/vertex.hpp"
-#include "skylabs/core/render/vulkan/pipeline/shader.hpp"
+#include "skylabs/engine/render/vertex.hpp"
+#include "skylabs/engine/render/vulkan/shader.hpp"
 
 namespace sk::render::vulkan {
 struct VertexBufferBinding {

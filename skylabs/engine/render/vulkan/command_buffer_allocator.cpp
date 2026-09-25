@@ -1,4 +1,4 @@
-#include "skylabs/core/render/vulkan/command_recording/command_buffer_allocator.hpp"
+#include "skylabs/engine/render/vulkan/command_buffer_allocator.hpp"
 
 namespace sk::render::vulkan {
 CommandBufferAllocator::CommandBufferAllocator(const vk::raii::Device& device, std::uint32_t familyIndex)

@@ -1,6 +1,6 @@
 #include <frozen/map.h>
 
-#include "skylabs/core/render/vulkan/command_recording/sync_state.hpp"
+#include "skylabs/engine/render/vulkan/sync_state.hpp"
 
 namespace {
 constexpr frozen::map<sk::render::vulkan::Usage,
