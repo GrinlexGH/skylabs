@@ -3,12 +3,10 @@ set(CURRENT_TARGET_NAME base)
 
 add_library(${CURRENT_TARGET_NAME} SHARED)
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in project_info.hpp @ONLY)
-
 target_sources(
-        ${CURRENT_TARGET_NAME}
-        PRIVATE
-        FILE_SET SOURCES FILES
+    ${CURRENT_TARGET_NAME}
+    PRIVATE
+    FILE_SET SOURCES FILES
         sdl/mixer/audio.cpp
         sdl/mixer/context.cpp
         sdl/mixer/mixer.cpp
@@ -26,8 +24,8 @@ target_sources(
         sdl/vulkan/os_connector.cpp
         sdl/event_pump.cpp
         sdl/log_sink.cpp
-        PUBLIC
-        FILE_SET HEADERS FILES
+    PUBLIC
+    FILE_SET HEADERS FILES
         sdl/mixer/audio.hpp
         sdl/mixer/context.hpp
         sdl/mixer/mixer.hpp
@@ -49,12 +47,11 @@ target_sources(
         event_pump.hpp
         sdl/event_pump.hpp
         sdl/log_sink.hpp
-        FILE_SET generated
-        TYPE HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
-        FILES
+    FILE_SET generated
+    TYPE HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
+    FILES
         ${CMAKE_CURRENT_BINARY_DIR}/sk_${CURRENT_TARGET_NAME}_export.h
-        ${CMAKE_CURRENT_BINARY_DIR}/project_info.hpp
 )
 
 target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)

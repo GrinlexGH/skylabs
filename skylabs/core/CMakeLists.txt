@@ -4,10 +4,9 @@ set(CURRENT_TARGET_NAME core)
 add_library(${CURRENT_TARGET_NAME} MODULE)
 set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES PREFIX "" IMPORT_PREFIX "")
 
-target_sources(
-        ${CURRENT_TARGET_NAME}
-        PRIVATE
-        FILE_SET HEADERS FILES
+target_sources( ${CURRENT_TARGET_NAME}
+    PRIVATE
+    FILE_SET HEADERS FILES
         camera.hpp
         render/vulkan/command_recording/command_buffer_allocator.hpp
         render/vulkan/command_recording/command_buffer.hpp
@@ -40,7 +39,7 @@ target_sources(
         render/vertex.hpp
         camera.hpp
         launcher.hpp
-        FILE_SET SOURCES FILES
+    FILE_SET SOURCES FILES
         render/vulkan/command_recording/command_buffer_allocator.cpp
         render/vulkan/command_recording/command_buffer.cpp
         render/vulkan/command_recording/sync_state.cpp
@@ -64,10 +63,9 @@ target_sources(
         header_factory.cpp
         launcher.cpp
         main.cpp
-        FILE_SET generated
-        TYPE HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
-        FILES
+    FILE_SET generated TYPE HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
+    FILES
         ${CMAKE_CURRENT_BINARY_DIR}/sk_${CURRENT_TARGET_NAME}_export.h
 )
 
@@ -76,14 +74,14 @@ target_precompile_headers(${CURRENT_TARGET_NAME} PRIVATE pch.hpp)
 add_dependencies(${CURRENT_TARGET_NAME} shaders)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
-        base
-        Boost::container
-        EnTT::EnTT
-        glm::glm
-        SDL3_image::SDL3_image
-        tinyobjloader::tinyobjloader
-        vk-bootstrap::vk-bootstrap
-        VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
+    base
+    Boost::container
+    EnTT::EnTT
+    glm::glm
+    SDL3_image::SDL3_image
+    tinyobjloader::tinyobjloader
+    vk-bootstrap::vk-bootstrap
+    VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp
 )
 
 skylabs_configure_target(${CURRENT_TARGET_NAME} LIBRARY_DESTINATION $<IF:$<PLATFORM_ID:Windows>,bin,lib>)

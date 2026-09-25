@@ -3,6 +3,7 @@
 typedef int (*main_t)(int argc, char* argv[]);
 
 #if defined(PLATFORM_WINDOWS)
+#include <conio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,7 +103,7 @@ static void* SkCalloc(const size_t num, const size_t size) {
 }
 
 #define LOAD_DIR L"\\bin\\"
-#define LOAD_FILE L"core.dll"
+#define LOAD_FILE L"engine.dll"
 
 static wchar_t* SkGetProgramPath(void) {
     wchar_t* result = NULL;
@@ -320,7 +321,7 @@ static void* SkMalloc(const size_t size) {
 }
 
 #define LOAD_DIR "/lib/"
-#define LOAD_FILE "core.so"
+#define LOAD_FILE "engine.so"
 
 int main(const int argc, char* argv[]) {
     int ret = 1;
@@ -378,7 +379,7 @@ cleanup:
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_main.h>
 
-#define LOAD_PATH "core.so"
+#define LOAD_PATH "engine.so"
 
 int main(int argc, char* argv[]) {
     int ret = 1;

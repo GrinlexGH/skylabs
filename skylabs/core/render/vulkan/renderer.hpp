@@ -8,7 +8,8 @@
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_raii.hpp>
 
-#include "skylabs/base/filesystem.hpp"
+#include "../../../engine/filesystem.hpp"
+#include "../../../engine/render/vulkan/swapchain.hpp"
 #include "skylabs/base/window.hpp"
 #include "skylabs/core/render/render_object.hpp"
 #include "skylabs/core/render/renderer.hpp"
@@ -23,7 +24,6 @@
 #include "skylabs/core/render/vulkan/post_process_pass.hpp"
 #include "skylabs/core/render/vulkan/render_object.hpp"
 #include "skylabs/core/render/vulkan/resources/image.hpp"
-#include "skylabs/core/render/vulkan/swapchain.hpp"
 #include "vulkan/os_connector.hpp"
 
 namespace sk::render::vulkan {

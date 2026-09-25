@@ -1,9 +1,9 @@
 #pragma once
 #include <variant>
 
+#include "../../../../engine/render/vulkan/image.hpp"
 #include "skylabs/core/render/vulkan/command_recording/sync_state.hpp"
 #include "skylabs/core/render/vulkan/resources/buffer.hpp"
-#include "skylabs/core/render/vulkan/resources/image.hpp"
 
 namespace sk::render::vulkan {
 enum class BarrierType : std::uint8_t { eRegular, eRelease, eAcquire };

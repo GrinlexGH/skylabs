@@ -39,7 +39,8 @@ constexpr frozen::map<sk::render::vulkan::Usage,
 }
 
 namespace sk::render::vulkan {
-std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2, vk::ImageLayout> MapUsageToVulkan(Usage usage) {
+std::tuple<vk::PipelineStageFlags2, vk::AccessFlags2, vk::ImageLayout> MapUsageToVulkan(
+    const Usage usage) {
     if (!kUsageState.contains(usage)) {
         assert(false && "Unsupported layout transition");
         return { vk::PipelineStageFlagBits2::eAllCommands,
