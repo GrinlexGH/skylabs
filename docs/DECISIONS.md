@@ -178,7 +178,7 @@ I manually copy them via `add_custom_command`:
        foreach(plugin_target IN LISTS ARG_RUNTIME_PLUGINS)
           list(APPEND runtime_artifacts "$<TARGET_FILE:${plugin_target}>")
        endforeach()
-    
+
        add_custom_command(TARGET ${target_name} POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 -t $<TARGET_FILE_DIR:${target_name}> ${runtime_artifacts}
@@ -219,6 +219,7 @@ CMake 3.21 provides a very convenient feature that allows you to copy all depend
                 "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
           POST_INCLUDE_REGEXES
                 "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
+                "[Cc][Oo][Nn][Cc][Rr][Tt].*" "[Uu][Cc][Rr][Tt][Bb][Aa][Ss][Ee].*"
        )
     endif()
 

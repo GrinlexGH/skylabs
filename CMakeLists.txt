@@ -236,6 +236,7 @@ function(skylabs_target_setup_install target_name)
                 "C:[\\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\\/].*"
             POST_INCLUDE_REGEXES
                 "[Vv][Cc][Rr][Uu][Nn][Tt][Ii][Mm][Ee].*" "[Mm][Ss][Vv][Cc][Pp].*"
+                "[Cc][Oo][Nn][Cc][Rr][Tt].*" "[Uu][Cc][Rr][Tt][Bb][Aa][Ss][Ee].*"
         )
     endif()
 
