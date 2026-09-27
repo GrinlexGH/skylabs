@@ -72,7 +72,7 @@ Image::Image(const vk::raii::Device& device, const vma::raii::Allocator& allocat
 
 Image::Image(const vk::raii::Device& device, vk::Image imported, const vk::Extent3D extent,
              const vk::Format format, const std::uint32_t mipLevels, const std::uint32_t arrayLevels,
-             const vk::SampleCountFlagBits sampleCount)
+             const vk::SampleCountFlagBits sampleCount, std::optional<vk::ImageViewType> viewType)
     : m_handle(imported),
       m_format(format),
       m_extent(extent),
@@ -80,7 +80,7 @@ Image::Image(const vk::raii::Device& device, vk::Image imported, const vk::Exten
       m_arrayLevels(arrayLevels),
       m_sampleCount(sampleCount),
       m_aspectFlags(DetermineAspect(m_format)) {
-    CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
+    CreateView(device, viewType.value_or(DetermineViewType(m_extent, m_arrayLevels)));
 }
 
 void Image::CreateView(const vk::raii::Device& device, const vk::ImageViewType viewType) {

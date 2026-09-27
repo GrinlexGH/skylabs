@@ -11,5 +11,6 @@ public:
     virtual void EndFrame() = 0;
 
     virtual void OnPossibleSwapchainResize() = 0;
+    virtual void OnDeviceReset() = 0;
 };
 }

@@ -35,12 +35,13 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
     sk::sdl::vulkan::OSAdapter vulkanAdapter { *window };
     sk::render::vulkan::Renderer renderer { &window, &vulkanAdapter, filesystem };
 
+    // Unfortunately we are locked at 64 FPS. Alternativly we can do a separate render thread
     eventPump.SetEventFilter(
         [](const sk::input::Event& event, void* userData) {
+            const auto self = static_cast<sk::render::IRenderer*>(userData);
             if (std::holds_alternative<sk::input::WindowExposeEvent>(event)) {
-                const auto self = static_cast<sk::render::IRenderer*>(userData);
                 self->OnPossibleSwapchainResize();
-                self->Draw(glm::mat4(1), 0, 0)
+                self->Draw(glm::mat4(1), 0, 0);
                 return false;
             }
             return true;
@@ -50,9 +51,13 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
     while (!quit) {
         while (auto event = eventPump.PollEvent()) {
             std::visit(
-                sk::utils::Overloaded { [&](sk::input::QuitEvent) { quit = true; }, [](auto&&) { } },
+                sk::utils::Overloaded { [&](sk::input::QuitEvent) { quit = true; },
+                                        [&](sk::input::DeviceResetEvent) { renderer.OnDeviceReset(); },
+                                        [](auto&&) { } },
                 *event);
         }
+
+        renderer.Draw(glm::mat4(1), 0, 0);
     }
 
     return 0;

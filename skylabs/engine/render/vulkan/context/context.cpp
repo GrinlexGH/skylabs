@@ -307,5 +307,5 @@ Context::Context(const IWindow* window, const IOSAdapter* osAdapter)
     m_allocator = Allocator { *m_instance, m_device };
 }
 
-void Context::TryRepairSurface() { m_surface = Surface { m_instance, m_osAdapter }; }
+void Context::RecreateSurface() { m_surface = Surface { m_instance, m_osAdapter }; }
 }

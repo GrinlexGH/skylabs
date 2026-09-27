@@ -30,8 +30,7 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 }
 
 namespace sk::render::vulkan {
-Renderer::Renderer(const IWindow* const window,
-                   const sk::vulkan::IOSConnector* const osConnector,
+Renderer::Renderer(const IWindow* const window, const sk::vulkan::IOSConnector* const osConnector,
                    const filesystem::Filesystem& filesystem)
     : m_filesystem(&filesystem) {
     m_context = Context { window, osConnector };
@@ -203,7 +202,7 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     m_inFlightContext.NextFrame();
 }
 
-void Renderer::OnDeviceLost() {
+void Renderer::OnDeviceReset() {
     m_context.GetDevice()->waitIdle();
     m_swapchain.Clear();
     m_context.RepairSurface();

@@ -1,10 +1,12 @@
-#include "skylabs/engine/render/vulkan/renderer.hpp"
+#include <thread>
+
 #include "skylabs/engine/logging.hpp"
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
+#include "skylabs/engine/render/vulkan/renderer.hpp"
 
 namespace sk::render::vulkan {
 Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapter,
-                   const filesystem::Filesystem& filesystem) {
+                   const filesystem::Filesystem& /*filesystem*/) {
     m_context = Context { window, osAdapter };
 
     m_swapchain = Swapchain { m_context.GetDevice(), window, *m_context.GetSurface(),
@@ -24,13 +26,6 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.GetDevice(),
                                         vk::SemaphoreCreateInfo { } };
 
-    const std::size_t imageCount = m_swapchain.Images().size();
-    m_imageRenderFinishedSemaphores.reserve(imageCount);
-    for (auto i = 0u; i < imageCount; ++i) {
-        m_imageRenderFinishedSemaphores.emplace_back(*m_context.GetDevice(),
-                                                     vk::SemaphoreCreateInfo { });
-    }
-
     m_commandBuffers = InFlight { m_inFlightContext,
                                   m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary,
                                                                     m_inFlightContext.FrameCount()) };
@@ -44,7 +39,9 @@ Renderer::~Renderer() {
     }
 }
 
-void Renderer::BeginFrame() {
+void Renderer::BeginFrame() { }
+
+void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*deltatime*/) {
     std::ignore = m_context.GetDevice()->waitForFences({ m_fence.Get() }, vk::True,
                                                        std::numeric_limits<std::uint64_t>::max());
 
@@ -55,23 +52,9 @@ void Renderer::BeginFrame() {
         acquireResult != vk::Result::eSuccess) {
         log::Debug("Acquire result: {}", vk::to_string(acquireResult));
 
-        // TODO: recursion?
         if (acquireResult == vk::Result::eErrorOutOfDateKHR) {
-            RecreateSwapchain();
-            std::tie(acquireResult, m_currentImageIndex) =
-                m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
+            return;
         }
-
-#ifdef PLATFORM_WINDOWS
-        if (acquireResult == vk::Result::eSuboptimalKHR) {
-            RecreateSwapchain();
-            // Suboptimal is a success result, so semaphore will be in use. We need to recreate it
-            m_imageAvailableSemaphore.Get() =
-                vk::raii::Semaphore { *m_context.GetDevice(), vk::SemaphoreCreateInfo { } };
-            std::tie(acquireResult, imageIndex) =
-                m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
-        }
-#endif
 
         if (acquireResult == vk::Result::eErrorSurfaceLostKHR) {
             return;
@@ -80,9 +63,7 @@ void Renderer::BeginFrame() {
 
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
     m_context.GetDevice()->resetFences({ m_fence.Get() });
-}
 
-void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
     const auto& cmd = m_commandBuffers[m_inFlightContext.InFlightIndex()];
     const auto& swapchainImage = m_swapchain.Images()[m_currentImageIndex];
 
@@ -118,11 +99,18 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
                                          .newUsage = Usage::ePresent } });
 
     cmd->end();
-}
 
-void Renderer::EndFrame() {
+    vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+    vk::SubmitInfo finalSubmit { };
+    finalSubmit.setWaitSemaphores({ *m_imageAvailableSemaphore.Get() });
+    finalSubmit.setWaitDstStageMask({ waitStage });
+    finalSubmit.setCommandBuffers({ **m_commandBuffers[m_inFlightContext.InFlightIndex()] });
+    finalSubmit.setSignalSemaphores({ *m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex] });
+    m_context.GetDevice().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
+
     const vk::Result presentResult = m_swapchain.PresentImage(
-        m_currentImageIndex, { *m_imageRenderFinishedSemaphores[m_currentImageIndex] });
+        m_currentImageIndex, { *m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex] });
     if (presentResult != vk::Result::eSuccess) {
         log::Debug("Present result: {}", vk::to_string(presentResult));
 #ifdef PLATFORM_ANDROID
@@ -135,15 +123,22 @@ void Renderer::EndFrame() {
     m_inFlightContext.NextFrame();
 }
 
-void Renderer::OnPossibleSwapchainResize() {
-    if (const auto [width, height] = m_context.Window()->DrawableSize();
-        vk::Extent2D { width, height } != m_swapchain.Extent()) {
-        RecreateSwapchain();
-    }
+void Renderer::EndFrame() { }
+
+void Renderer::OnPossibleSwapchainResize() { RecreateSwapchain(); }
+
+void Renderer::OnDeviceReset() {
+    m_context.GetDevice()->waitIdle();
+    m_swapchain.Clear();
+    m_context.RecreateSurface();
+    RecreateSwapchain();
 }
 
 void Renderer::RecreateSwapchain() {
-    m_context.GetDevice()->waitIdle();
-    m_swapchain.Recreate({ });
+    if (const auto [width, height] = m_context.Window()->DrawableSize();
+        vk::Extent2D { width, height } != m_swapchain.Extent() && width != 0 && height != 0) {
+        m_context.GetDevice()->waitIdle();
+        m_swapchain = Swapchain { m_swapchain, { } };
+    }
 }
 }

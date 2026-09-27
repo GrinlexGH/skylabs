@@ -13,7 +13,9 @@ class Swapchain {
 public:
     explicit Swapchain(std::nullptr_t) { }
     explicit Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                       std::uint32_t imageCount, vk::PresentModeKHR presentMode);
+                       std::uint32_t imageCount, vk::PresentModeKHR presentMode,
+                       VkSwapchainKHR oldHandle = VK_NULL_HANDLE);
+    explicit Swapchain(const Swapchain& oldSwapchain, const SwapchainRecreateInfo& recreationInfo);
     Swapchain(const Swapchain&) = delete;
     Swapchain(Swapchain&&) noexcept = default;
     Swapchain& operator=(const Swapchain&) = delete;
@@ -23,7 +25,6 @@ public:
     [[nodiscard]] const vk::raii::SwapchainKHR& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::SwapchainKHR* operator->() const noexcept { return &m_handle; }
 
-    void Recreate(const SwapchainRecreateInfo& recreateInfo);
     void Clear();
 
     [[nodiscard]] std::pair<vk::Result, std::uint32_t> AcquireImage(const vk::Semaphore& semaphore = { },
@@ -37,11 +38,16 @@ public:
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
 
     [[nodiscard]] std::span<Image> Images() { return m_images; }
+    [[nodiscard]] std::span<vk::raii::Semaphore> RenderFinishedSemaphores() {
+        return m_renderFinishedSemaphores;
+    }
 
 private:
-    void CreateSwapchain(const vk::SurfaceKHR& surface, std::uint32_t imageCount,
-                         vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle = nullptr);
-    void CreateImages();
+    explicit Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
+                       vk::raii::SwapchainKHR&& handle, vk::SurfaceFormatKHR surfaceFormat,
+                       vk::SurfaceTransformFlagBitsKHR transform, vk::Extent2D extent,
+                       vk::PresentModeKHR presentMode, std::vector<Image>&& images,
+                       std::vector<vk::raii::Semaphore>&& renderFinishedSemaphores);
 
     const Device* m_device = nullptr;
     const IWindow* m_window = nullptr;
@@ -55,5 +61,6 @@ private:
     vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eFifo;
 
     std::vector<Image> m_images;
+    std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 };
 }

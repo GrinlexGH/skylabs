@@ -1,9 +1,10 @@
 #pragma once
-#include "skylabs/engine/window.hpp"
 #include "skylabs/engine/render/vulkan/context/allocator.hpp"
 #include "skylabs/engine/render/vulkan/context/device.hpp"
 #include "skylabs/engine/render/vulkan/context/instance.hpp"
 #include "skylabs/engine/render/vulkan/context/surface.hpp"
+#include "skylabs/engine/window.hpp"
+
 
 namespace sk::render::vulkan {
 class Context {
@@ -23,7 +24,7 @@ public:
     [[nodiscard]] const Device& GetDevice() const noexcept { return m_device; }
     [[nodiscard]] const Allocator& GetAllocator() const noexcept { return m_allocator; }
 
-    void TryRepairSurface();
+    void RecreateSurface();
 
 private:
     const IWindow* m_window = nullptr;

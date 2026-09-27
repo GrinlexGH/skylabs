@@ -46,7 +46,7 @@ public:
     const sk::RenderObject& GetObjectData(std::uint32_t id) const;
     RenderObject UploadGameObject(std::uint32_t meshId, const glm::mat4& matrix, std::uint16_t colorID);
 
-    void OnDeviceLost();
+    void OnDeviceReset();
     void OnPossiblyWindowSizeChange();
 
 private:
