@@ -31,12 +31,21 @@ void ConsoleSink::Write(const Category category, const Level level, const std::s
     } };
 
     const auto now = std::chrono::system_clock::now();
-    const auto nowSeconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
-    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - nowSeconds).count();
-    const auto t = std::chrono::system_clock::to_time_t(now);
-    const auto tm = std::localtime(&t);
+    const auto ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
 
-    fmt::print(fmt::fg(fmt::color::gray), "[{:%H:%M:%S}.{:03d} {:%z}] ", *tm, ms, *tm);
+    const auto t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm { };
+#ifdef PLATFORM_WINDOWS
+    localtime_s(&tm, &t);
+#else
+    localtime_r(&t, &tm);
+#endif
+
+    char offset[8] { };
+    std::strftime(offset, sizeof(offset), "%z", &tm);
+
+    fmt::print(fmt::fg(fmt::color::gray), "[{:%H:%M:%S}.{:03d} {:.3}:{}] ", tm, ms, offset, offset + 3);
     fmt::print(categoryStyles.at(category), "[{}] ", utils::ToString(category));
     fmt::print(levelStyles.at(level), "[{}]: ", utils::ToString(level));
     fmt::println("{}", message);
