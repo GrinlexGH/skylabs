@@ -14,7 +14,7 @@ FixNamespaceComments: false
 
 # Brace style
 SpaceBeforeCpp11BracedList: true
-Cpp11BracedListStyle: Block
+Cpp11BracedListStyle: false
 SpaceInEmptyBraces: Always
 
 # Include sorting
