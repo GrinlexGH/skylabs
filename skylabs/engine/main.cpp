@@ -45,8 +45,7 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
             const auto rendererPtr = static_cast<sk::render::IRenderer*>(contextPtr[1]);
 
             if (std::holds_alternative<sk::input::WindowExposeEvent>(event)) {
-                if (const auto [width, height] = windowPtr->DrawableSize();
-                    !windowPtr->IsMinimized() && width != 0 && height != 0) {
+                if (windowPtr->IsRenderAvailable()) {
                     rendererPtr->OnPossibleSwapchainResize();
                     rendererPtr->Draw(glm::mat4(1), 0, 0);
                 }
@@ -65,8 +64,7 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
                 *event);
         }
 
-        if (const auto [width, height] = window.DrawableSize();
-            !window.IsMinimized() && width != 0 && height != 0) {
+        if (window.IsRenderAvailable()) {
             renderer.Draw(glm::mat4(1), 0, 0);
         }
     }

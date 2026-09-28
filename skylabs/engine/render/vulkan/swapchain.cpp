@@ -13,14 +13,7 @@ Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii
     const vk::SurfaceCapabilitiesKHR caps =
         device.GetPhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
 
-    m_extent = caps.currentExtent;
-    if (m_extent.height == std::numeric_limits<std::uint32_t>::max() ||
-        m_extent.width == std::numeric_limits<std::uint32_t>::max()) {
-        const auto [width, height] = window->DrawableSize();
-        m_extent = vk::Extent2D { width, height };
-    }
-
-    assert(m_extent.height != 0 && m_extent.width != 0);
+    m_extent = SurfaceExtent();
 
     vkb::SwapchainBuilder builder { **device.GetPhysicalDevice(), **device, *surface,
                                     device.GraphicsQueue().FamilyIndex(),
@@ -92,6 +85,21 @@ void Swapchain::Clear() {
     m_handle.clear();
     m_images.clear();
     m_renderFinishedSemaphores.clear();
+}
+
+vk::Extent2D Swapchain::SurfaceExtent() const {
+    const vk::SurfaceCapabilitiesKHR caps =
+        m_device->GetPhysicalDevice()->getSurfaceCapabilitiesKHR(*m_surface);
+
+    vk::Extent2D surfaceExtent = caps.currentExtent;
+    if (surfaceExtent.width == std::numeric_limits<std::uint32_t>::max()) {
+        const auto [width, height] = m_window->DrawableSize();
+        surfaceExtent = vk::Extent2D { width, height };
+    }
+
+    assert(surfaceExtent.height != 0 && surfaceExtent.width != 0);
+
+    return surfaceExtent;
 }
 
 std::pair<vk::Result, std::uint32_t> Swapchain::AcquireImage(const vk::Semaphore& semaphore,

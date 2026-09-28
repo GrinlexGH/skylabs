@@ -8,5 +8,6 @@ public:
 
     [[nodiscard]] virtual utils::Extent2D DrawableSize() const = 0;
     [[nodiscard]] virtual bool IsMinimized() const = 0;
+    [[nodiscard]] virtual bool IsRenderAvailable() const = 0;
 };
 }

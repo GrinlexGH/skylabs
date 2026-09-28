@@ -19,6 +19,7 @@ public:
 
     [[nodiscard]] utils::Extent2D DrawableSize() const override;
     [[nodiscard]] bool IsMinimized() const override;
+    [[nodiscard]] bool IsRenderAvailable() const override;
 
 private:
     SDL_Window* m_handle = nullptr;

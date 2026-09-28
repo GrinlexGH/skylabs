@@ -39,4 +39,9 @@ Window::~Window() {
 utils::Extent2D Window::DrawableSize() const { return GetWindowSizeInPixels(m_handle); }
 
 bool Window::IsMinimized() const { return SDL_GetWindowFlags(m_handle) & SDL_WINDOW_MINIMIZED; }
+
+bool Window::IsRenderAvailable() const {
+    const auto [width, height] = DrawableSize();
+    return !IsMinimized() && width != 0 && height != 0;
+}
 }

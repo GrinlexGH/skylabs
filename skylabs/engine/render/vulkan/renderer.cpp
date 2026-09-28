@@ -53,7 +53,12 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
         log::Debug("Acquire result: {}", vk::to_string(acquireResult));
 
         if (acquireResult == vk::Result::eErrorOutOfDateKHR) {
-            OnPossibleSwapchainResize();
+            RecreateSwapchain();
+            std::tie(acquireResult, m_currentImageIndex) =
+                m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
+            if (acquireResult != vk::Result::eSuccess && acquireResult != vk::Result::eSuboptimalKHR) {
+                return;
+            }
         }
 
         if (acquireResult == vk::Result::eErrorSurfaceLostKHR) {
@@ -116,15 +121,10 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
     if (presentResult != vk::Result::eSuccess) {
         log::Debug("Present result: {}", vk::to_string(presentResult));
 
-        if (presentResult == vk::Result::eErrorOutOfDateKHR) {
-            OnPossibleSwapchainResize();
-        }
-
-#ifdef PLATFORM_ANDROID
-        if (presentResult == vk::Result::eSuboptimalKHR) {
+        if (presentResult == vk::Result::eErrorOutOfDateKHR ||
+            presentResult == vk::Result::eSuboptimalKHR) {
             RecreateSwapchain();
         }
-#endif
     }
 
     m_inFlightContext.NextFrame();
@@ -142,8 +142,7 @@ void Renderer::OnDeviceReset() {
 }
 
 void Renderer::RecreateSwapchain() {
-    if (const auto [width, height] = m_context.Window()->DrawableSize();
-        vk::Extent2D { width, height } != m_swapchain.Extent() && width != 0 && height != 0) {
+    if (m_swapchain.SurfaceExtent() != m_swapchain.Extent()) {
         m_context.GetDevice()->waitIdle();
         m_swapchain = Swapchain { m_swapchain, { } };
     }
