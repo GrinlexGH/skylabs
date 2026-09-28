@@ -53,7 +53,7 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
         log::Debug("Acquire result: {}", vk::to_string(acquireResult));
 
         if (acquireResult == vk::Result::eErrorOutOfDateKHR) {
-            return;
+            OnPossibleSwapchainResize();
         }
 
         if (acquireResult == vk::Result::eErrorSurfaceLostKHR) {
@@ -82,7 +82,9 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
     attachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     attachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     attachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    attachInfo.clearValue.color = std::array { 0.1f, 0.1f, 0.12f, 1.0f };
+    const float r = std::abs(
+        std::sin(std::chrono::high_resolution_clock::now().time_since_epoch().count() * 0.000000001));
+    attachInfo.clearValue.color = std::array { r, 0.1f, 0.12f, 1.0f };
 
     vk::RenderingInfo renderInfo { };
     renderInfo.renderArea = vk::Rect2D { { 0, 0 }, swapchainImage.Extent2D() };
@@ -113,6 +115,11 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
         m_currentImageIndex, { *m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex] });
     if (presentResult != vk::Result::eSuccess) {
         log::Debug("Present result: {}", vk::to_string(presentResult));
+
+        if (presentResult == vk::Result::eErrorOutOfDateKHR) {
+            OnPossibleSwapchainResize();
+        }
+
 #ifdef PLATFORM_ANDROID
         if (presentResult == vk::Result::eSuboptimalKHR) {
             RecreateSwapchain();

@@ -35,18 +35,26 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
     sk::sdl::vulkan::OSAdapter vulkanAdapter { *window };
     sk::render::vulkan::Renderer renderer { &window, &vulkanAdapter, filesystem };
 
-    // Unfortunately we are locked at 64 FPS. Alternativly we can do a separate render thread
+    void* context[] = { &window, &renderer };
+
+    // Unfortunately we are locked at 64 FPS. Alternatively we can do a separate render thread
     eventPump.SetEventFilter(
         [](const sk::input::Event& event, void* userData) {
-            const auto self = static_cast<sk::render::IRenderer*>(userData);
+            const auto contextPtr = static_cast<void**>(userData);
+            const auto windowPtr = static_cast<sk::IWindow*>(contextPtr[0]);
+            const auto rendererPtr = static_cast<sk::render::IRenderer*>(contextPtr[1]);
+
             if (std::holds_alternative<sk::input::WindowExposeEvent>(event)) {
-                self->OnPossibleSwapchainResize();
-                self->Draw(glm::mat4(1), 0, 0);
+                if (const auto [width, height] = windowPtr->DrawableSize();
+                    !windowPtr->IsMinimized() && width != 0 && height != 0) {
+                    rendererPtr->OnPossibleSwapchainResize();
+                    rendererPtr->Draw(glm::mat4(1), 0, 0);
+                }
                 return false;
             }
             return true;
         },
-        &renderer);
+        &context);
 
     while (!quit) {
         while (auto event = eventPump.PollEvent()) {
@@ -57,7 +65,10 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
                 *event);
         }
 
-        renderer.Draw(glm::mat4(1), 0, 0);
+        if (const auto [width, height] = window.DrawableSize();
+            !window.IsMinimized() && width != 0 && height != 0) {
+            renderer.Draw(glm::mat4(1), 0, 0);
+        }
     }
 
     return 0;
