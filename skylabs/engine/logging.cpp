@@ -1,6 +1,8 @@
+#include <chrono>
 #include <cstdio>
 #include <vector>
 
+#include <fmt/chrono.h>
 #include <fmt/color.h>
 #include <frozen/unordered_map.h>
 
@@ -28,6 +30,13 @@ void ConsoleSink::Write(const Category category, const Level level, const std::s
         { Category::eVulkan, fmt::fg(fmt::color::indian_red) },
     } };
 
+    const auto now = std::chrono::system_clock::now();
+    const auto nowSeconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - nowSeconds).count();
+    const auto t = std::chrono::system_clock::to_time_t(now);
+    const auto tm = std::localtime(&t);
+
+    fmt::print(fmt::fg(fmt::color::gray), "[{:%H:%M:%S}.{:03d} {:%z}] ", *tm, ms, *tm);
     fmt::print(categoryStyles.at(category), "[{}] ", utils::ToString(category));
     fmt::print(levelStyles.at(level), "[{}]: ", utils::ToString(level));
     fmt::println("{}", message);
