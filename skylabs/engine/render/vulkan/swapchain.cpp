@@ -6,13 +6,12 @@
 
 namespace sk::render::vulkan {
 Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                     std::uint32_t imageCount, vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle)
+                     const std::uint32_t imageCount, const vk::PresentModeKHR presentMode,
+                     const VkSwapchainKHR oldHandle)
     : m_device(&device), m_window(window), m_surface(&surface) {
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
-    const vk::SurfaceCapabilitiesKHR caps =
-        device.GetPhysicalDevice()->getSurfaceCapabilitiesKHR(surface);
-
+    const vk::SurfaceCapabilities2KHR caps = SurfaceCapabilities();
     m_extent = SurfaceExtent();
 
     vkb::SwapchainBuilder builder { **device.GetPhysicalDevice(), **device, *surface,
@@ -29,7 +28,8 @@ Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii
                 vk::SurfaceFormatKHR { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear })
             .set_desired_extent(m_extent.width, m_extent.height)
             .set_desired_min_image_count(imageCount)
-            .set_pre_transform_flags(static_cast<VkSurfaceTransformFlagBitsKHR>(caps.currentTransform))
+            .set_pre_transform_flags(
+                static_cast<VkSurfaceTransformFlagBitsKHR>(caps.surfaceCapabilities.currentTransform))
             .build();
 
     if (!swapchainResult) {
@@ -71,11 +71,15 @@ void Swapchain::Clear() {
     m_renderFinishedSemaphores.clear();
 }
 
-vk::Extent2D Swapchain::SurfaceExtent() const {
-    const vk::SurfaceCapabilitiesKHR caps =
-        m_device->GetPhysicalDevice()->getSurfaceCapabilitiesKHR(*m_surface);
+vk::SurfaceCapabilities2KHR Swapchain::SurfaceCapabilities() const {
+    const vk::PhysicalDeviceSurfaceInfo2KHR surfaceInfo { *m_surface };
+    return m_device->GetPhysicalDevice()->getSurfaceCapabilities2KHR(surfaceInfo);
+}
 
-    vk::Extent2D surfaceExtent = caps.currentExtent;
+vk::Extent2D Swapchain::SurfaceExtent() const {
+    const vk::SurfaceCapabilities2KHR caps = SurfaceCapabilities();
+
+    vk::Extent2D surfaceExtent = caps.surfaceCapabilities.currentExtent;
     if (surfaceExtent.width == std::numeric_limits<std::uint32_t>::max()) {
         const auto [width, height] = m_window->DrawableSize();
         surfaceExtent = vk::Extent2D { width, height };
@@ -112,15 +116,15 @@ vk::Result Swapchain::PresentImage(std::uint32_t imageIndex,
 
 Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
                      vk::raii::SwapchainKHR&& handle, const vk::SurfaceFormatKHR surfaceFormat,
-                     vk::SurfaceTransformFlagBitsKHR surfaceTransform, vk::Extent2D extent,
-                     vk::PresentModeKHR presentMode, std::vector<Image>&& images,
+                     const vk::SurfaceTransformFlagBitsKHR transform, const vk::Extent2D extent,
+                     const vk::PresentModeKHR presentMode, std::vector<Image>&& images,
                      std::vector<vk::raii::Semaphore>&& renderFinishedSemaphores)
     : m_device(&device),
       m_window(window),
       m_surface(&surface),
       m_handle(std::move(handle)),
       m_surfaceFormat(surfaceFormat),
-      m_surfaceTransform(surfaceTransform),
+      m_surfaceTransform(transform),
       m_extent(extent),
       m_presentMode(presentMode),
       m_images(std::move(images)),

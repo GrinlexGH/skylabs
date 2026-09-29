@@ -27,6 +27,7 @@ public:
 
     void Clear();
 
+    [[nodiscard]] vk::SurfaceCapabilities2KHR SurfaceCapabilities() const;
     [[nodiscard]] vk::Extent2D SurfaceExtent() const;
 
     [[nodiscard]] std::pair<vk::Result, std::uint32_t> AcquireImage(const vk::Semaphore& semaphore = { },

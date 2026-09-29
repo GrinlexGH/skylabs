@@ -63,7 +63,8 @@ std::vector<std::string> SetupInstanceExtensions(const vk::raii::Context& contex
                                                  const sk::render::vulkan::IOSAdapter* osAdapter,
                                                  [[maybe_unused]] const bool setupDebugUtils) {
     std::unordered_map<std::string_view, bool> requestedExtensions {
-        { vk::EXTSwapchainColorSpaceExtensionName, false }
+        { vk::KHRGetSurfaceCapabilities2ExtensionName, true },
+        { vk::EXTSwapchainColorSpaceExtensionName, false },
     };
 
 #ifdef DEBUG
@@ -170,7 +171,7 @@ InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAd
 vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk::SurfaceKHR& surface) {
     vkb::PhysicalDeviceSelector selector { instance, surface };
 
-    // !!! Required vulkan features
+    // !!! Required Vulkan features
 
     // Minimum version
     selector.set_minimum_version(1, 3);
@@ -179,12 +180,7 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
     selector.add_required_extension(vk::KHRSwapchainExtensionName);
 
     // Required extension features
-    vk::PhysicalDeviceDescriptorIndexingFeatures descIndexing { };
-    descIndexing.setDescriptorBindingPartiallyBound(vk::True);
-    descIndexing.setRuntimeDescriptorArray(vk::True);
-    descIndexing.setDescriptorBindingSampledImageUpdateAfterBind(vk::True);
 
-    selector.add_required_extension_features(descIndexing);
 
     // Vulkan 1.1 features
     vk::PhysicalDeviceVulkan11Features features11 { };
@@ -221,7 +217,7 @@ bool TryEnableFeatures(vkb::PhysicalDevice& physicalDevice, const T& f) {
 
 sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
                                         sk::render::vulkan::PhysicalDevice&& raiiPhysicalDevice) {
-    // !!! Optional vulkan features
+    // !!! Optional Vulkan features
     sk::render::vulkan::DeviceCaps caps;
 
 #define VK_OPT_FEATURE(x, y)                           \
