@@ -5,6 +5,7 @@ from pathlib import Path
 from conan import ConanFile
 from conan.tools.cmake import CMakeConfigDeps, CMakeToolchain, cmake_layout
 
+
 class SkylabsRecipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     package_type = "application"
@@ -17,26 +18,26 @@ class SkylabsRecipe(ConanFile):
     }
 
     def build_requirements(self):
-        self.tool_requires("slang/2026.17.1")
+        self.tool_requires("slang/2026.18.3")
 
     def requirements(self):
         self.requires("boost/1.92.0")
         self.requires("entt/4.0.0")
         self.requires("fmt/12.2.0")
-        self.requires("frozen/cci.20260421")
+        self.requires("frozen/cci.20260923")
         self.requires("glm/1.0.3")
         self.requires("sdl/3.4.16")
         self.requires("sdl_image/3.4.6")
         self.requires("sdl_mixer/3.2.4")
         self.requires("sdl_ttf/3.2.2")
         self.requires("tinyobjloader/2.0.0rc13")
-        self.requires("vk-bootstrap/1.4.362")
-        self.requires("vulkan-headers/1.4.362")
+        self.requires("vk-bootstrap/1.4.364")
+        self.requires("vulkan-headers/1.4.364")
         self.requires("vulkan-memory-allocator/3.4.0")
         self.requires("vulkan-memory-allocator-hpp/3.4.0+2")
 
         if self.settings.os == "Android":
-            self.requires("vulkan-validation-layers-android/1.4.357.0")
+            self.requires("vulkan-validation-layers-android/1.4.363.0")
 
     def generate(self):
         deps = CMakeConfigDeps(self)
@@ -63,7 +64,8 @@ class SkylabsRecipe(ConanFile):
         vvl_pkg = Path(self.dependencies["vulkan-validation-layers-android"].package_path)
 
         src = vvl_pkg / abi / "libVkLayer_khronos_validation.so"
-        dst = Path(self.source_folder) / "android" / "app" / "src" / "main" / "jniLibs" / abi / "libVkLayer_khronos_validation.so"
+        dst = Path(
+            self.source_folder) / "android" / "app" / "src" / "main" / "jniLibs" / abi / "libVkLayer_khronos_validation.so"
 
         self._copy(src, dst)
 

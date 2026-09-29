@@ -11,7 +11,13 @@
 
 SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
     sk::sdl::Context sdlContext { SDL_INIT_VIDEO };
-    sk::sdl::Window window { "Skylabs", 640, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE };
+    sk::sdl::Window window { "Skylabs", 640, 480,
+                             SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+#ifdef PLATFORM_ANDROID
+                                 | SDL_WINDOW_FULLSCREEN
+#endif
+    };
+
     sk::sdl::EventPump eventPump;
     bool quit = false;
 
@@ -19,7 +25,7 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
         sk::filesystem::Filesystem { std::make_unique<sk::sdl::FilesystemBackend>() };
 
 #ifdef PLATFORM_ANDROID
-    log::AddSink(std::make_unique<SDL::CLogSink>());
+    sk::log::AddSink(std::make_unique<sk::sdl::LogSink>());
 
     filesystem.Mount("assets", "");
     filesystem.Mount("assets", "assets:/");
@@ -49,6 +55,9 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
                     rendererPtr->OnPossibleSwapchainResize();
                     rendererPtr->Draw(glm::mat4(1), 0, 0);
                 }
+                return false;
+            } else if (std::holds_alternative<sk::input::DeviceResetEvent>(event)) {
+                rendererPtr->OnDeviceReset();
                 return false;
             }
             return true;

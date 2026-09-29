@@ -7,10 +7,6 @@
 
 namespace sk::sdl {
 Window::Window(const char* title, const int w, const int h, const SDL_WindowFlags flags) {
-#ifdef PLATFORM_ANDROID
-    flags |= SDL_WINDOW_FULLSCREEN;
-#endif
-
     m_handle = SDL_CreateWindow(title, w, h, flags);
 
     if (!m_handle) {

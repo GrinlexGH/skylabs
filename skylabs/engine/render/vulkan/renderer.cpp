@@ -138,11 +138,11 @@ void Renderer::OnDeviceReset() {
     m_context.GetDevice()->waitIdle();
     m_swapchain.Clear();
     m_context.RecreateSurface();
-    RecreateSwapchain();
+    RecreateSwapchain(true);
 }
 
-void Renderer::RecreateSwapchain() {
-    if (m_swapchain.SurfaceExtent() != m_swapchain.Extent()) {
+void Renderer::RecreateSwapchain(const bool force) {
+    if (force || m_swapchain.SurfaceExtent() != m_swapchain.Extent()) {
         m_context.GetDevice()->waitIdle();
         m_swapchain = Swapchain { m_swapchain, { } };
     }

@@ -31,7 +31,7 @@ private:
     static constexpr auto kFramesInFlightCount = 3;
     static constexpr auto kGeometryPoolSize = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
-    void RecreateSwapchain();
+    void RecreateSwapchain(bool force = false);
 
     Context m_context { nullptr };
     Swapchain m_swapchain { nullptr };
