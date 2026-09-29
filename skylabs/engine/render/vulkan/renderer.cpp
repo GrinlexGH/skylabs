@@ -53,7 +53,7 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
         log::Debug("Acquire result: {}", vk::to_string(acquireResult));
 
         if (acquireResult == vk::Result::eErrorOutOfDateKHR) {
-            RecreateSwapchain();
+            OnPossibleSwapchainResize();
             std::tie(acquireResult, m_currentImageIndex) =
                 m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
             if (acquireResult != vk::Result::eSuccess && acquireResult != vk::Result::eSuboptimalKHR) {
@@ -123,7 +123,7 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
 
         if (presentResult == vk::Result::eErrorOutOfDateKHR ||
             presentResult == vk::Result::eSuboptimalKHR) {
-            RecreateSwapchain();
+            OnPossibleSwapchainResize();
         }
     }
 
@@ -132,19 +132,21 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
 
 void Renderer::EndFrame() { }
 
-void Renderer::OnPossibleSwapchainResize() { RecreateSwapchain(); }
+void Renderer::OnPossibleSwapchainResize() {
+    if (m_swapchain.SurfaceExtent() != m_swapchain.Extent()) {
+        m_context.GetDevice()->waitIdle();
+        RecreateSwapchain();
+    }
+}
 
 void Renderer::OnDeviceReset() {
     m_context.GetDevice()->waitIdle();
     m_swapchain.Clear();
     m_context.RecreateSurface();
-    RecreateSwapchain(true);
+    RecreateSwapchain();
 }
 
-void Renderer::RecreateSwapchain(const bool force) {
-    if (force || m_swapchain.SurfaceExtent() != m_swapchain.Extent()) {
-        m_context.GetDevice()->waitIdle();
-        m_swapchain = Swapchain { m_swapchain, { } };
-    }
+void Renderer::RecreateSwapchain() {
+    m_swapchain = Swapchain { m_swapchain, { } };
 }
 }

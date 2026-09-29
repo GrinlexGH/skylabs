@@ -65,22 +65,6 @@ Swapchain::Swapchain(const Swapchain& oldSwapchain, const SwapchainRecreateInfo&
                 recreationInfo.presentMode.value_or(oldSwapchain.PresentMode()),
                 *oldSwapchain.m_handle) { }
 
-Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                     vk::raii::SwapchainKHR&& handle, const vk::SurfaceFormatKHR surfaceFormat,
-                     vk::SurfaceTransformFlagBitsKHR surfaceTransform, vk::Extent2D extent,
-                     vk::PresentModeKHR presentMode, std::vector<Image>&& images,
-                     std::vector<vk::raii::Semaphore>&& renderFinishedSemaphores)
-    : m_device(&device),
-      m_window(window),
-      m_surface(&surface),
-      m_handle(std::move(handle)),
-      m_surfaceFormat(surfaceFormat),
-      m_surfaceTransform(surfaceTransform),
-      m_extent(extent),
-      m_presentMode(presentMode),
-      m_images(std::move(images)),
-      m_renderFinishedSemaphores(std::move(renderFinishedSemaphores)) { }
-
 void Swapchain::Clear() {
     m_handle.clear();
     m_images.clear();
@@ -125,4 +109,20 @@ vk::Result Swapchain::PresentImage(std::uint32_t imageIndex,
 
     return result;
 }
+
+Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
+                     vk::raii::SwapchainKHR&& handle, const vk::SurfaceFormatKHR surfaceFormat,
+                     vk::SurfaceTransformFlagBitsKHR surfaceTransform, vk::Extent2D extent,
+                     vk::PresentModeKHR presentMode, std::vector<Image>&& images,
+                     std::vector<vk::raii::Semaphore>&& renderFinishedSemaphores)
+    : m_device(&device),
+      m_window(window),
+      m_surface(&surface),
+      m_handle(std::move(handle)),
+      m_surfaceFormat(surfaceFormat),
+      m_surfaceTransform(surfaceTransform),
+      m_extent(extent),
+      m_presentMode(presentMode),
+      m_images(std::move(images)),
+      m_renderFinishedSemaphores(std::move(renderFinishedSemaphores)) { }
 }
