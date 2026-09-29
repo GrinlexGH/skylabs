@@ -81,6 +81,31 @@ void CommandBuffer::PipelineBarrier(
     m_handle.pipelineBarrier2(dependencyInfo);
 }
 
+void CommandBuffer::Copy(const Buffer& src, const Image& dst) const {
+    vk::BufferImageCopy region;
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = dst.AspectFlags();
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = dst.ArrayLevels();
+    region.imageOffset = vk::Offset3D { 0, 0, 0 };
+    region.imageExtent = dst.Extent();
+
+    m_handle.copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
+}
+
+void CommandBuffer::Copy(const Buffer& src, const Buffer& dst, const vk::DeviceSize size,
+                         const BufferCopyOffsets& offsets) const {
+    vk::BufferCopy copyRegion;
+    copyRegion.srcOffset = offsets.srcOffset;
+    copyRegion.dstOffset = offsets.dstOffset;
+    copyRegion.size = size;
+
+    m_handle.copyBuffer(*src, *dst, copyRegion);
+}
+
 void CommandBuffer::GenerateMipmaps(const Image& image, const Usage srcUsage,
                                     const Usage dstUsage) const {
     std::int32_t mipWidth = static_cast<std::int32_t>(image.Extent().width);
@@ -123,30 +148,5 @@ void CommandBuffer::GenerateMipmaps(const Image& image, const Usage srcUsage,
         .oldUsage = Usage::eTransferWrite,
         .newUsage = dstUsage,
     } });
-}
-
-void CommandBuffer::Copy(const Buffer& src, const Image& dst) const {
-    vk::BufferImageCopy region;
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = dst.AspectFlags();
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = dst.ArrayLevels();
-    region.imageOffset = vk::Offset3D { 0, 0, 0 };
-    region.imageExtent = dst.Extent();
-
-    m_handle.copyBufferToImage(*src, *dst, vk::ImageLayout::eTransferDstOptimal, region);
-}
-
-void CommandBuffer::Copy(const Buffer& src, const Buffer& dst, const vk::DeviceSize size,
-                         const BufferCopyOffsets& offsets) const {
-    vk::BufferCopy copyRegion { };
-    copyRegion.srcOffset = offsets.srcOffset;
-    copyRegion.dstOffset = offsets.dstOffset;
-    copyRegion.size = size;
-
-    m_handle.copyBuffer(*src, *dst, copyRegion);
 }
 }

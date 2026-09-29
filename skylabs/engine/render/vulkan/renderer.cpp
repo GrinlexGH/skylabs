@@ -6,7 +6,7 @@
 
 namespace sk::render::vulkan {
 Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapter,
-                   const filesystem::Filesystem& /*filesystem*/) {
+                   const filesystem::Filesystem& filesystem) {
     m_context = Context { window, osAdapter };
 
     m_swapchain = Swapchain { m_context.GetDevice(), window, *m_context.GetSurface(),
@@ -29,6 +29,22 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     m_commandBuffers = InFlight { m_inFlightContext,
                                   m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary,
                                                                     m_inFlightContext.FrameCount()) };
+
+    m_pipelineLayoutCache = PipelineLayoutCache { *m_context.GetDevice() };
+
+    const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
+                      filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));
+    const Shader frag(*m_context.GetDevice(), vk::ShaderStageFlagBits::eFragment,
+                      filesystem.LoadAsVector32("res://shaders/triangle.frag.spv"));
+
+    std::array colorFormats { m_swapchain.SurfaceFormat().format };
+    m_pipeline = GraphicsPipeline { *m_context.GetDevice(),
+                                    GraphicsPipelineCreateInfo {
+                                        .layout = m_pipelineLayoutCache.GetLayout(
+                                            { .descriptorSetLayouts = { }, .pushConstants = { } }),
+                                        .shaders = { &vert, &frag },
+                                        .vertexBindings = { },
+                                        .renderingInfo = { { }, colorFormats } } };
 }
 
 Renderer::~Renderer() {
@@ -98,6 +114,13 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
     renderInfo.pColorAttachments = &attachInfo;
 
     cmd->beginRendering(renderInfo);
+
+    cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, *m_pipeline);
+    cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(swapchainImage.Extent().width),
+                            static_cast<float>(swapchainImage.Extent().height), 0.0f, 1.0f } });
+    cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
+    cmd->draw(3, 1, 0, 0);
+
     cmd->endRendering();
 
     cmd.PipelineBarrier({ ImageBarrier { .image = swapchainImage,
@@ -146,7 +169,5 @@ void Renderer::OnDeviceReset() {
     RecreateSwapchain();
 }
 
-void Renderer::RecreateSwapchain() {
-    m_swapchain = Swapchain { m_swapchain, { } };
-}
+void Renderer::RecreateSwapchain() { m_swapchain = Swapchain { m_swapchain, { } }; }
 }

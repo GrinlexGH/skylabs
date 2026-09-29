@@ -4,8 +4,10 @@
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
 #include "skylabs/engine/render/vulkan/command_buffer_allocator.hpp"
 #include "skylabs/engine/render/vulkan/context/context.hpp"
+#include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 #include "skylabs/engine/render/vulkan/in_flight.hpp"
 #include "skylabs/engine/render/vulkan/os_adapter.hpp"
+#include "skylabs/engine/render/vulkan/pipeline_layout_cache.hpp"
 #include "skylabs/engine/render/vulkan/swapchain.hpp"
 #include "skylabs/engine/window.hpp"
 
@@ -45,5 +47,9 @@ private:
     std::uint32_t m_currentImageIndex = std::numeric_limits<std::uint32_t>::max();
 
     InFlight<CommandBuffer> m_commandBuffers { nullptr };
+
+    PipelineLayoutCache m_pipelineLayoutCache { nullptr };
+
+    GraphicsPipeline m_pipeline { nullptr };
 };
 }

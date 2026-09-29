@@ -93,6 +93,17 @@ skylabs_add_slang_shader(shader_outputs shader_sources
     OUT_NAME shaderSwapchain.vert
 )
 
+skylabs_add_slang_shader(shader_outputs shader_sources
+    SOURCE triangle.slang
+    STAGE fragment
+    OUT_NAME triangle.frag
+)
+skylabs_add_slang_shader(shader_outputs shader_sources
+    SOURCE triangle.slang
+    STAGE vertex
+    OUT_NAME triangle.vert
+)
+
 add_custom_target(${CURRENT_TARGET_NAME} ALL
     DEPENDS ${shader_outputs}
     SOURCES ${shader_sources}

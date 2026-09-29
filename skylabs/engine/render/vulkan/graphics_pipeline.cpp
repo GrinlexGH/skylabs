@@ -47,6 +47,7 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
                                    const GraphicsPipelineCreateInfo& options) {
     const std::vector vertexAttributeDescriptions =
         GenerateAttributeDescriptions(options.vertexBindings);
+
     const std::vector vertexBindingDescriptions =
         std::views::transform(options.vertexBindings,
                               [](const VertexBufferBinding& binding) { return binding.description; }) |

@@ -1,5 +1,6 @@
 #pragma once
-#include <boost/unordered/unordered_map.hpp>
+#include <unordered_map>
+
 #include <vulkan/vulkan_raii.hpp>
 
 namespace sk::render::vulkan {
@@ -25,7 +26,6 @@ public:
 private:
     const vk::raii::Device* m_device = nullptr;
 
-    boost::unordered::unordered_map<PipelineLayoutInfo, vk::raii::PipelineLayout, PipelineLayoutHash>
-        m_cache;
+    std::unordered_map<PipelineLayoutInfo, vk::raii::PipelineLayout, PipelineLayoutHash> m_cache;
 };
 }
