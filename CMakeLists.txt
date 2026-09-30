@@ -347,9 +347,9 @@ endfunction()
 # skylabs_configure_target(<target>
 #     [WIN32_IN_RELEASE] [VS_STARTUP]
 #     [RUNTIME_DESTINATION <path>]
+#     [ARCHIVE_DESTINATION <path>]
+#     [LIBRARY_DESTINATION <path>]
 #     [RUNTIME_PLUGINS <targets>...]
-#     [CUSTOM_FILES <files>...]
-#     [CUSTOM_FILES_DESTINATION <path>]
 # )
 # Parameters:
 #   WIN32_IN_RELEASE            Set WIN32_EXECUTABLE target property in release mode
