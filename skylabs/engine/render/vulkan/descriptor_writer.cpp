@@ -1,4 +1,4 @@
-#include "skylabs/core/render/vulkan/pipeline/descriptor_writer.hpp"
+#include "skylabs/engine/render/vulkan/descriptor_writer.hpp"
 
 namespace sk::render::vulkan {
 DescriptorWriter::DescriptorWriter(const vk::raii::Device& device) : m_device(&device) { }

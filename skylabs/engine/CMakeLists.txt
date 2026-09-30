@@ -14,6 +14,7 @@ target_sources(${CURRENT_TARGET_NAME}
         filesystem.cpp
         logging.cpp
         os.cpp
+        camera.hpp
         sdl/context.cpp
         sdl/sdl.cpp
         sdl/window.cpp
@@ -32,6 +33,9 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/command_buffer.cpp
         render/vulkan/command_buffer_allocator.cpp
         render/vulkan/pipeline_layout_cache.cpp
+        render/vulkan/descriptor_layout_cache.cpp
+        render/vulkan/descriptor_allocator.cpp
+        render/vulkan/descriptor_writer.cpp
         render/vulkan/context/context.cpp
         render/vulkan/context/allocator.cpp
     FILE_SET HEADERS FILES
@@ -63,6 +67,9 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/command_buffer_allocator.hpp
         render/vulkan/command_buffer.hpp
         render/vulkan/pipeline_layout_cache.hpp
+        render/vulkan/descriptor_layout_cache.hpp
+        render/vulkan/descriptor_allocator.hpp
+        render/vulkan/descriptor_writer.hpp
         render/vulkan/context/instance.hpp
         render/vulkan/context/surface.hpp
         render/vulkan/context/physical_device.hpp

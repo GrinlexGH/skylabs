@@ -1,4 +1,6 @@
-#include "skylabs/core/render/vulkan/pipeline/descriptor_layout_cache.hpp"
+#include <boost/container_hash/hash.hpp>
+
+#include "skylabs/engine/render/vulkan/descriptor_layout_cache.hpp"
 
 namespace sk::render::vulkan {
 std::size_t DescriptorLayoutHash::operator()(
@@ -19,8 +21,7 @@ const vk::raii::DescriptorSetLayout& DescriptorLayoutCache::GetLayout(
     std::vector<vk::DescriptorSetLayoutBinding> bindings) {
     std::ranges::sort(bindings, [](const auto& a, const auto& b) { return a.binding < b.binding; });
 
-    auto it = m_cache.find(bindings);
-    if (it != m_cache.end()) {
+    if (const auto it = m_cache.find(bindings); it != m_cache.end()) {
         return it->second;
     }
 

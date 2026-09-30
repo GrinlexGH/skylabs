@@ -15,10 +15,17 @@ static const float3 kColors[3] = {
     float3(0.0, 0.0, 1.0)
 };
 
+struct ViewProjection {
+    float4x4 view;
+    float4x4 projection;
+};
+
 [shader("vertex")]
-VOut vertexMain(uint vertexIndex : SV_VertexID) {
+VOut vertexMain(uint vertexIndex : SV_VertexID, ConstantBuffer<ViewProjection> viewProjection) {
     VOut output;
-    output.pos = float4(kPositions[vertexIndex], 0.0, 1.0);
+    output.pos =
+        mul(viewProjection.projection,
+            mul(viewProjection.view, float4(kPositions[vertexIndex], 0.0, 1.0)));
     output.color = kColors[vertexIndex];
     return output;
 }

@@ -1,7 +1,8 @@
 #pragma once
-#include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
 
+namespace sk {
 class Camera {
 public:
     enum class MoveDirection : std::int8_t { eForward, eBackward, eLeft, eRight };
@@ -28,20 +29,20 @@ public:
         if (direction == MoveDirection::eRight) m_position += m_right * velocity;
     }
 
-    void ProcessMouseMovement(float xoffset, float yoffset) {
-        xoffset *= m_mouseSensitivity;
-        yoffset *= m_mouseSensitivity;
+    void ProcessMouseMovement(float xOffset, float yOffset) {
+        xOffset *= m_mouseSensitivity;
+        yOffset *= m_mouseSensitivity;
 
-        m_yaw += xoffset;
-        m_pitch += yoffset;
+        m_yaw += xOffset;
+        m_pitch += yOffset;
 
         m_pitch = glm::clamp(m_pitch, -89.0f, 89.0f);
 
         UpdateCameraVectors();
     }
 
-    void ProcessMouseScroll(const float yoffset) {
-        m_fov -= yoffset;
+    void ProcessMouseScroll(const float yOffset) {
+        m_fov -= yOffset;
         if (m_fov < 1.0f) m_fov = 1.0f;
         if (m_fov > 120.0f) m_fov = 120.0f;
     }
@@ -53,11 +54,11 @@ public:
     void ResetSpeed() { m_movementSpeed = kSpeed; }
 
 private:
-    constexpr static const float kYaw = -90.0f;
-    constexpr static const float kPitch = 0.0f;
-    constexpr static const float kSpeed = 1;
-    constexpr static const float kSensitivity = 0.1f;
-    constexpr static const float kFov = 90.0f;
+    constexpr static float kYaw = -90.0f;
+    constexpr static float kPitch = 0.0f;
+    constexpr static float kSpeed = 1;
+    constexpr static float kSensitivity = 0.1f;
+    constexpr static float kFov = 90.0f;
 
     glm::vec3 m_position;
     glm::vec3 m_front;
@@ -78,8 +79,9 @@ private:
         front.y = sin(glm::radians(m_pitch));
         front.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
 
-        m_front = normalize(front);
-        m_right = normalize(cross(m_front, m_worldUp));
-        m_up = normalize(cross(m_right, m_front));
+        m_front = glm::normalize(front);
+        m_right = glm::normalize(cross(m_front, m_worldUp));
+        m_up = glm::normalize(cross(m_right, m_front));
     }
 };
+}

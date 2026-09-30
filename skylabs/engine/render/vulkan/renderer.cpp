@@ -1,12 +1,36 @@
 #include <thread>
 
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+
 #include "skylabs/engine/logging.hpp"
+#include "skylabs/engine/render/vulkan/descriptor_writer.hpp"
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 #include "skylabs/engine/render/vulkan/renderer.hpp"
+
+namespace {
+struct ViewProjection {
+    glm::mat4 view { 1 };
+    glm::mat4 projection { 1 };
+};
+
+glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int height, const float fov = 90,
+                              const float nearZ = 0.01f) {
+    glm::mat4 proj = glm::mat4(0.0f);
+    const float g = 1.0f / std::tan(0.5f * glm::radians(fov));
+    proj[0][0] = g / (static_cast<float>(width) / static_cast<float>(height));
+    proj[1][1] = -g;
+    proj[2][3] = -1.0f;
+    proj[3][2] = nearZ;
+
+    return proj;
+}
+}
 
 namespace sk::render::vulkan {
 Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapter,
                    const filesystem::Filesystem& filesystem) {
+    // General context
     m_context = Context { window, osAdapter };
 
     m_swapchain = Swapchain { m_context.GetDevice(), window, *m_context.GetSurface(),
@@ -30,7 +54,32 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                   m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary,
                                                                     m_inFlightContext.FrameCount()) };
 
+    // Pipeline creation
     m_pipelineLayoutCache = PipelineLayoutCache { *m_context.GetDevice() };
+    m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
+    m_descriptorAllocator = DescriptorAllocator { *m_context.GetDevice() };
+
+    // Base pipeline
+    m_viewProjection =
+        InFlight<Buffer> { m_inFlightContext, *m_context.GetAllocator(), sizeof(ViewProjection),
+                           vk::BufferUsageFlagBits::eUniformBuffer, MemoryLocation::eHostVisible };
+
+    const vk::raii::DescriptorSetLayout& descriptorSetLayout = m_descriptorLayoutCache.GetLayout({
+        { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
+    });
+
+    m_descriptorSet =
+        InFlight { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(
+                                          m_inFlightContext.FrameCount(), *descriptorSetLayout)) };
+
+    DescriptorWriter descriptorWriter { *m_context.GetDevice() };
+    for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
+        descriptorWriter.Clear();
+        descriptorWriter
+            .WriteBuffer(0, *m_viewProjection[i], m_viewProjection[i].Size(), 0,
+                         vk::DescriptorType::eUniformBuffer)
+            .UpdateSet(*m_descriptorSet[i]);
+    }
 
     const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
                       filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));
@@ -38,13 +87,15 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                       filesystem.LoadAsVector32("res://shaders/triangle.frag.spv"));
 
     std::array colorFormats { m_swapchain.SurfaceFormat().format };
-    m_pipeline = GraphicsPipeline { *m_context.GetDevice(),
-                                    GraphicsPipelineCreateInfo {
-                                        .layout = m_pipelineLayoutCache.GetLayout(
-                                            { .descriptorSetLayouts = { }, .pushConstants = { } }),
-                                        .shaders = { &vert, &frag },
-                                        .vertexBindings = { },
-                                        .renderingInfo = { { }, colorFormats } } };
+    m_pipeline = GraphicsPipeline {
+        *m_context.GetDevice(),
+        GraphicsPipelineCreateInfo {
+            .layout = m_pipelineLayoutCache.GetLayout(
+                { .descriptorSetLayouts = { descriptorSetLayout }, .pushConstants = { } }),
+            .shaders = { &vert, &frag },
+            .vertexBindings = { },
+            .renderingInfo = { { }, colorFormats } }
+    };
 }
 
 Renderer::~Renderer() {
@@ -57,7 +108,7 @@ Renderer::~Renderer() {
 
 void Renderer::BeginFrame() { }
 
-void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*deltatime*/) {
+void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
     std::ignore = m_context.GetDevice()->waitForFences({ m_fence.Get() }, vk::True,
                                                        std::numeric_limits<std::uint64_t>::max());
 
@@ -85,6 +136,29 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
     // Reset fence after resizing to avoid deadlock on next invocation of Draw()
     m_context.GetDevice()->resetFences({ m_fence.Get() });
 
+    // Update model and view
+    auto [width, height] = m_swapchain.Extent();
+
+    // Rotate render if we need
+    const vk::SurfaceTransformFlagBitsKHR surfaceTransform = m_swapchain.SurfaceTransform();
+    glm::mat4 rotation { 1 };
+
+    if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
+        rotation = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
+    } else if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate270) {
+        rotation = glm::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0, 0, 1));
+    } else if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate180) {
+        rotation = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
+    }
+
+    const ViewProjection viewProjection {
+        .view = view,
+        .projection = rotation * ReverseZPerspective(width, height, fov),
+    };
+
+    std::memcpy(m_viewProjection.Get().Data(), &viewProjection, sizeof(viewProjection));
+
+    // Render frame
     const auto& cmd = m_commandBuffers[m_inFlightContext.InFlightIndex()];
     const auto& swapchainImage = m_swapchain.Images()[m_currentImageIndex];
 
@@ -103,9 +177,7 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
     attachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     attachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     attachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    const float r = std::abs(
-        std::sin(std::chrono::high_resolution_clock::now().time_since_epoch().count() * 0.000000001));
-    attachInfo.clearValue.color = std::array { r, 0.1f, 0.12f, 1.0f };
+    attachInfo.clearValue.color = std::array { 0.1f, 0.0f, 0.0f, 1.0f };
 
     vk::RenderingInfo renderInfo { };
     renderInfo.renderArea = vk::Rect2D { { 0, 0 }, swapchainImage.Extent2D() };
@@ -119,6 +191,8 @@ void Renderer::Draw(const glm::mat4 /*view*/, const float /*fov*/, float /*delta
     cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(swapchainImage.Extent().width),
                             static_cast<float>(swapchainImage.Extent().height), 0.0f, 1.0f } });
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
+    cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline.Layout(), 0,
+                            *m_descriptorSet.Get(), { });
     cmd->draw(3, 1, 0, 0);
 
     cmd->endRendering();

@@ -1,9 +1,12 @@
 #pragma once
 #include "skylabs/engine/filesystem.hpp"
 #include "skylabs/engine/render/renderer.hpp"
+#include "skylabs/engine/render/vulkan/buffer.hpp"
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
 #include "skylabs/engine/render/vulkan/command_buffer_allocator.hpp"
 #include "skylabs/engine/render/vulkan/context/context.hpp"
+#include "skylabs/engine/render/vulkan/descriptor_allocator.hpp"
+#include "skylabs/engine/render/vulkan/descriptor_layout_cache.hpp"
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 #include "skylabs/engine/render/vulkan/in_flight.hpp"
 #include "skylabs/engine/render/vulkan/os_adapter.hpp"
@@ -23,7 +26,7 @@ public:
     ~Renderer() override;
 
     void BeginFrame() override;
-    void Draw(glm::mat4 viewMat, float fov, float deltaTime) override;
+    void Draw(glm::mat4 view, float fov, float deltaTime) override;
     void EndFrame() override;
 
     void OnPossibleSwapchainResize() override;
@@ -49,7 +52,11 @@ private:
     InFlight<CommandBuffer> m_commandBuffers { nullptr };
 
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };
+    DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
+    DescriptorAllocator m_descriptorAllocator { nullptr };
 
+    InFlight<Buffer> m_viewProjection { nullptr };
     GraphicsPipeline m_pipeline { nullptr };
+    InFlight<vk::raii::DescriptorSet> m_descriptorSet { nullptr };
 };
 }
