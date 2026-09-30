@@ -1,7 +1,7 @@
 #include <thread>
 
 #include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
+#include <glm/gtx/type_aligned.hpp>
 
 #include "skylabs/engine/logging.hpp"
 #include "skylabs/engine/render/vulkan/descriptor_writer.hpp"
@@ -10,8 +10,8 @@
 
 namespace {
 struct ViewProjection {
-    glm::mat4 view { 1 };
-    glm::mat4 projection { 1 };
+    glm::aligned_mat4 view { 1 };
+    glm::aligned_mat4 projection { 1 };
 };
 
 glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int height, const float fov = 90,

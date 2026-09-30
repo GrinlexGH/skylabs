@@ -49,7 +49,7 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
     float elapsedTime = 0.0f;
     auto lastTick = std::chrono::high_resolution_clock::now();
 
-    void* context[] = { &window, &renderer, &lastTick, &camera };
+    void* context[] = { &window, &renderer, &lastTick, &camera, &frameCount, &elapsedTime };
 
     // Unfortunately we are locked at 64 FPS. Alternatively we can do a separate render thread
     eventPump.SetEventFilter(
@@ -59,6 +59,8 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
             const auto rendererPtr = static_cast<sk::render::IRenderer*>(contextPtr[1]);
             const auto lastTickPtr = static_cast<std::chrono::steady_clock::time_point*>(contextPtr[2]);
             const auto cameraPtr = static_cast<sk::Camera*>(contextPtr[3]);
+            const auto frameCountPtr = static_cast<int*>(contextPtr[4]);
+            const auto elapsedTime = static_cast<float*>(contextPtr[5]);
 
             if (std::holds_alternative<sk::input::WindowExposeEvent>(event)) {
                 const auto frameStart = std::chrono::high_resolution_clock::now();
@@ -69,6 +71,19 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
                 if (windowPtr->IsRenderAvailable()) {
                     rendererPtr->OnPossibleSwapchainResize();
                     rendererPtr->Draw(cameraPtr->ViewMatrix(), cameraPtr->Fov(), deltaTimeMs);
+                }
+
+                frameCount++;
+                elapsedTime += deltaTimeMs;
+                if (elapsedTime >= 1000.0f) {
+                    float avgFps = frameCount * (1000.0f / elapsedTime);
+                    float avgDt = elapsedTime / static_cast<float>(frameCount);
+                    std::string title =
+                        fmt::format("Skylabs | FPS: {:.0f} | DT: {:.2f}ms", avgFps, avgDt);
+                    SDL_SetWindowTitle(*window, title.c_str());
+                    sk::log::Debug("{}", title);
+                    elapsedTime = 0.0f;
+                    frameCount = 0;
                 }
                 return false;
             }

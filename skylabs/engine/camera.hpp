@@ -1,6 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
+#include <glm/ext/matrix_transform.hpp>
 
 namespace sk {
 class Camera {
