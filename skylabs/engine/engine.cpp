@@ -33,6 +33,8 @@ void Engine::Run() {
     m_vulkanAdapter = sdl::vulkan::OSAdapter { *m_window };
     m_renderer.emplace(&m_window, &m_vulkanAdapter, m_filesystem);
 
+    m_lastTick = std::chrono::steady_clock::now();
+
     // Unfortunately we are locked at 64 FPS. Alternatively we can do a separate render thread
     m_eventPump.SetEventFilter(
         [](const input::Event& event, void* userData) {
@@ -40,8 +42,6 @@ void Engine::Run() {
             return engine->OnEvent(event);
         },
         this);
-
-    m_lastTick = std::chrono::steady_clock::now();
 
     while (!m_quit) {
         const float deltaTimeMs = CalculateDeltaTime();
