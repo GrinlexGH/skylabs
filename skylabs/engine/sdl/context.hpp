@@ -10,9 +10,9 @@ public:
     explicit Context(std::nullptr_t) { }
     explicit Context(SDL_InitFlags flags);
     Context(const Context&) = delete;
-    Context(Context&&) = delete;
+    Context(Context&& other) noexcept;
     Context& operator=(const Context&) = delete;
-    Context& operator=(Context&&) = delete;
+    Context& operator=(Context&& rhs) noexcept;
     ~Context();
 
 private:

@@ -18,19 +18,13 @@ Window::Window(Window&& other) noexcept : m_handle(std::exchange(other.m_handle,
 
 Window& Window::operator=(Window&& rhs) noexcept {
     if (this != &rhs) {
-        if (m_handle) {
-            SDL_DestroyWindow(m_handle);
-        }
+        Cleanup();
         m_handle = std::exchange(rhs.m_handle, nullptr);
     }
     return *this;
 }
 
-Window::~Window() {
-    if (m_handle) {
-        SDL_DestroyWindow(m_handle);
-    }
-}
+Window::~Window() { Cleanup(); }
 
 utils::Extent2D Window::DrawableSize() const { return GetWindowSizeInPixels(m_handle); }
 
@@ -39,5 +33,12 @@ bool Window::IsMinimized() const { return SDL_GetWindowFlags(m_handle) & SDL_WIN
 bool Window::IsRenderAvailable() const {
     const auto [width, height] = DrawableSize();
     return !IsMinimized() && width != 0 && height != 0;
+}
+
+void Window::Cleanup() {
+    if (m_handle) {
+        SDL_DestroyWindow(m_handle);
+        m_handle = nullptr;
+    }
 }
 }

@@ -27,6 +27,16 @@ Context::Context(const SDL_InitFlags flags) {
     m_flags = flags;
 }
 
+Context::Context(Context&& other) noexcept : m_flags(std::exchange(other.m_flags, 0)) { }
+
+Context& Context::operator=(Context&& rhs) noexcept {
+    if (this != &rhs) {
+        Cleanup();
+        m_flags = std::exchange(rhs.m_flags, 0);
+    }
+    return *this;
+}
+
 Context::~Context() { Cleanup(); }
 
 void Context::Cleanup() {

@@ -14,7 +14,7 @@ target_sources(${CURRENT_TARGET_NAME}
         filesystem.cpp
         logging.cpp
         os.cpp
-        camera.hpp
+        engine.cpp
         sdl/context.cpp
         sdl/sdl.cpp
         sdl/window.cpp
@@ -45,6 +45,8 @@ target_sources(${CURRENT_TARGET_NAME}
         filesystem.hpp
         logging.hpp
         os.hpp
+        camera.hpp
+        engine.hpp
         sdl/context.hpp
         sdl/sdl.hpp
         sdl/window.hpp

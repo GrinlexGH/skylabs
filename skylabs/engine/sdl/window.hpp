@@ -22,6 +22,8 @@ public:
     [[nodiscard]] bool IsRenderAvailable() const override;
 
 private:
+    void Cleanup();
+
     SDL_Window* m_handle = nullptr;
 };
 }
