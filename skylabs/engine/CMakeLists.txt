@@ -4,7 +4,7 @@ set(CURRENT_TARGET_NAME engine)
 add_library(${CURRENT_TARGET_NAME} MODULE)
 set_target_properties(${CURRENT_TARGET_NAME} PROPERTIES PREFIX "" IMPORT_PREFIX "")
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/project_info.hpp.in project_info.hpp @ONLY)
+configure_file(${SKYLABS_ROOT_DIR}/cmake/project_info.hpp.in project_info.hpp @ONLY)
 
 target_sources(${CURRENT_TARGET_NAME}
     PRIVATE

@@ -33,6 +33,7 @@ set(SKYLABS_VERSION_WORD "Melons")
 # CMake options
 include(GenerateExportHeader)
 include(CheckIPOSupported)
+
 check_ipo_supported(RESULT LTO_AVAILABLE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
@@ -108,11 +109,25 @@ add_compile_definitions(
     "VK_NO_PROTOTYPES=1"
 )
 
-# Functions to setup targets
-# IDE filter setup rules:
-# SOURCES & FILESET SOURCES & FILESET HEADERS -> Sources (with saved tree)
-# FILESET generated -> Generated
-# other -> External
+# skylabs_target_setup_ide(<target>
+#     [VS_STARTUP]
+# )
+#
+# Organizes a target's files into IDE folders (Visual Studio, Xcode, etc.).
+#
+# Collects the target's SOURCES, the default HEADER_SET and the default
+# SOURCE_SET, then groups them as follows:
+#   - Files located under the target's source directory are grouped by their
+#     directory structure under "Sources".
+#   - Files located outside the target's source directory are placed under
+#     "External".
+#   - Files from a file set named "generated" (header or source) and
+#     precompiled-header files (cmake_pch.*) are placed under "Generated".
+#
+# Parameters:
+#   VS_STARTUP                  If the target is an executable and the generator
+#                               is Visual Studio, mark it as the default
+#                               startup project
 function(skylabs_target_setup_ide target_name)
     set(options VS_STARTUP)
     cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
@@ -179,6 +194,35 @@ function(skylabs_target_setup_ide target_name)
     endif()
 endfunction()
 
+# skylabs_target_setup_install(<target>
+#     [RUNTIME_DESTINATION <path>]
+#     [ARCHIVE_DESTINATION <path>]
+#     [LIBRARY_DESTINATION <path>]
+#     [RUNTIME_PLUGINS <targets>...]
+# )
+#
+# Configures build output locations and installation rules for a target.
+#
+# Build step:
+#   - Redirects runtime, archive, library, PDB and compile-PDB outputs into
+#     SKYLABS_BUILD_DIR.
+#   - Post-build, copies the target's runtime DLLs next to the target artifact.
+#   - Post-build, copies RUNTIME_PLUGINS next to the target artifact. On Android
+#     they are also copied into the app's jniLibs directory.
+#
+# Install step:
+#   - Installs the target to the given destinations, prefixed with
+#     SKYLABS_INSTALL_SUBDIR.
+#   - When not cross-compiling, resolves and installs runtime dependencies,
+#     excluding system libraries but keeping the MSVC/UCRT runtime DLLs.
+#   - Installs the target's PDB file when building with MSVC.
+#   - Installs RUNTIME_PLUGINS as imported runtime artifacts.
+#
+# Parameters:
+#   RUNTIME_DESTINATION         Subdirectory of build and install destination for runtime artifacts (default: bin)
+#   ARCHIVE_DESTINATION         Subdirectory of build and install destination for linking artifacts (default: lib)
+#   LIBRARY_DESTINATION         Subdirectory of build and install destination for library artifacts (default: lib)
+#   RUNTIME_PLUGINS             Additional targets for copy and install
 function(skylabs_target_setup_install target_name)
     set(oneValueArgs RUNTIME_DESTINATION ARCHIVE_DESTINATION LIBRARY_DESTINATION)
     set(multiValueArgs RUNTIME_PLUGINS)
@@ -285,10 +329,20 @@ function(skylabs_target_setup_install target_name)
     endif()
 endfunction()
 
-# skylabs_install_directory(<target>
+# skylabs_install_directories(<target>
 #     DIRECTORIES <directories>... DESTINATION <path>
 # )
+#
+# Installs directories alongside a target, and on Android also copies them
+# into the app's assets directory after the target is built.
+#
+# As with install(DIRECTORY), a directory path with a trailing slash installs
+# its contents directly into DESTINATION, while one without installs the
+# directory itself as a subdirectory of DESTINATION. The Android copy follows
+# the same rule.
+#
 # Parameters:
+#   <target>                    Target the Android post-build copy is attached to
 #   DIRECTORIES                 List of directories to install with target
 #   DESTINATION                 Subdirectory of install destination
 function(skylabs_install_directories target_name)
@@ -321,7 +375,12 @@ endfunction()
 # skylabs_install_files(<target>
 #     FILES <files>... DESTINATION <path>
 # )
+#
+# Installs individual files alongside a target, and on Android also copies
+# them into the app's assets directory after the target is built.
+#
 # Parameters:
+#   <target>                    Target the Android post-build copy is attached to
 #   FILES                       List of files to install with target
 #   DESTINATION                 Subdirectory of install destination
 function(skylabs_install_files target_name)
@@ -350,6 +409,27 @@ endfunction()
 #     [LIBRARY_DESTINATION <path>]
 #     [RUNTIME_PLUGINS <targets>...]
 # )
+#
+# One-stop setup for a Skylabs target. Call it once after the target is
+# created and its sources are added.
+#
+# Behavior:
+#   1. Calls skylabs_target_setup_ide() to organize files into IDE folders.
+#   2. Skips steps below if the target is not a static, module, shared or object
+#      library or an executable.
+#   3. For non-executable targets, generates an export header named
+#      sk_<target>_export.h with the SK_ prefix, which also defines:
+#        SK_<TARGET>_PUBLIC_INTERFACE   extern "C" + export attribute
+#        SK_<TARGET>_PUBLIC_GLOBAL      extern + export attribute
+#        SK_<TARGET>_PUBLIC_CLASS       export attribute
+#      (<TARGET> is the uppercased target name converted to a C identifier)
+#   4. For executables with WIN32_IN_RELEASE, sets WIN32_EXECUTABLE in
+#      Release and MinSizeRel configurations only, so Debug builds keep a
+#      console window.
+#   5. On Windows for executables links comctl32 and adds win32.manifest
+#   6. Calls skylabs_target_setup_install() to configure output directories,
+#      post-build copies and install rules.
+#
 # Parameters:
 #   WIN32_IN_RELEASE            Set WIN32_EXECUTABLE target property in release mode
 #   VS_STARTUP                  Set target as Visual Studio default startup project
@@ -395,6 +475,11 @@ function(skylabs_configure_target target_name)
 
     if(${ARG_WIN32_IN_RELEASE} AND ("${target_type}" STREQUAL "EXECUTABLE"))
         set_target_properties(${target_name} PROPERTIES WIN32_EXECUTABLE $<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>)
+    endif()
+
+    if(WIN32 AND ("${target_type}" STREQUAL "EXECUTABLE"))
+        target_sources(${CURRENT_TARGET_NAME} PRIVATE ${SKYLABS_ROOT_DIR}/cmake/win32.manifest)
+        target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE comctl32)
     endif()
 
     set(function_args "")
