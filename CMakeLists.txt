@@ -125,9 +125,7 @@ add_compile_definitions(
 #     precompiled-header files (cmake_pch.*) are placed under "Generated".
 #
 # Parameters:
-#   VS_STARTUP                  If the target is an executable and the generator
-#                               is Visual Studio, mark it as the default
-#                               startup project
+#   VS_STARTUP                  Set target as Visual Studio default startup project
 function(skylabs_target_setup_ide target_name)
     set(options VS_STARTUP)
     cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
@@ -433,10 +431,10 @@ endfunction()
 # Parameters:
 #   WIN32_IN_RELEASE            Set WIN32_EXECUTABLE target property in release mode
 #   VS_STARTUP                  Set target as Visual Studio default startup project
-#   RUNTIME_DESTINATION         Subdirectory of install destination for runtime artifacts
-#   ARCHIVE_DESTINATION         Subdirectory of install destination for linking artifacts
-#   LIBRARY_DESTINATION         Subdirectory of install destination for library artifacts
-#   RUNTIME_PLUGINS             Additional targets for install as IMPORTED_RUNTIME_ARTIFACTS
+#   RUNTIME_DESTINATION         Subdirectory of build and install destination for runtime artifacts
+#   ARCHIVE_DESTINATION         Subdirectory of build and install destination for linking artifacts
+#   LIBRARY_DESTINATION         Subdirectory of build and install destination for library artifacts
+#   RUNTIME_PLUGINS             Additional targets for copy and install
 function(skylabs_configure_target target_name)
     set(options WIN32_IN_RELEASE VS_STARTUP)
     set(oneValueArgs RUNTIME_DESTINATION ARCHIVE_DESTINATION LIBRARY_DESTINATION)
