@@ -1,24 +1,20 @@
 #include <ranges>
 
-#include <frozen/map.h>
-
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 
 namespace {
-constexpr frozen::map<VertexFormat, vk::Format, 4> kVertexFormat = {
-    { VertexFormat::eFloat32, vk::Format::eR32Sfloat },
-    { VertexFormat::eFloat32x2, vk::Format::eR32G32Sfloat },
-    { VertexFormat::eFloat32x3, vk::Format::eR32G32B32Sfloat },
-    { VertexFormat::eFloat32x4, vk::Format::eR32G32B32A32Sfloat },
-};
-
-constexpr vk::Format ToVkFormat(const VertexFormat format) {
-    if (!kVertexFormat.contains(format)) {
-        assert(false && "Unsupported vertex format");
-        return vk::Format::eR8G8B8A8Snorm;
+constexpr vk::Format MapVkFormat(VertexFormat fmt) noexcept {
+    switch (fmt) {
+        case VertexFormat::eFloat32:
+            return vk::Format::eR32Sfloat;
+        case VertexFormat::eFloat32x2:
+            return vk::Format::eR32G32Sfloat;
+        case VertexFormat::eFloat32x3:
+            return vk::Format::eR32G32B32Sfloat;
+        case VertexFormat::eFloat32x4:
+            return vk::Format::eR32G32B32A32Sfloat;
     }
-
-    return kVertexFormat.at(format);
+    return vk::Format::eUndefined;
 }
 
 std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(
@@ -31,7 +27,7 @@ std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(
             vk::VertexInputAttributeDescription attributeDescription { };
             attributeDescription.binding = description.binding;
             attributeDescription.location = i;
-            attributeDescription.format = ToVkFormat(format);
+            attributeDescription.format = MapVkFormat(format);
             attributeDescription.offset = offset;
             descriptions.push_back(attributeDescription);
             ++i;

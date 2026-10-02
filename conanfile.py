@@ -1,30 +1,21 @@
-import os
 import shutil
 from pathlib import Path
 
-from conan import ConanFile
 from conan.tools.cmake import CMakeConfigDeps, CMakeToolchain, cmake_layout
+
+from conan import ConanFile
 
 
 class SkylabsRecipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     package_type = "application"
-    default_options = {
-        "boost/*:with_nowide": True,
-        "boost/*:with_container": True,
-        "boost/*:with_container_hash": True,
-        "boost/*:with_range": True,
-        "boost/*:with_unordered": True,
-    }
 
     def build_requirements(self):
         self.tool_requires("slang/2026.19")
 
     def requirements(self):
-        self.requires("boost/1.92.0")
         self.requires("entt/4.0.0")
         self.requires("fmt/12.2.0")
-        self.requires("frozen/cci.20260923")
         self.requires("glm/1.0.3")
         self.requires("sdl/3.4.16")
         self.requires("sdl_image/3.4.6")
@@ -61,11 +52,21 @@ class SkylabsRecipe(ConanFile):
         if not abi:
             return
 
-        vvl_pkg = Path(self.dependencies["vulkan-validation-layers-android"].package_path)
+        vvl_pkg = Path(
+            self.dependencies["vulkan-validation-layers-android"].package_path
+        )
 
         src = vvl_pkg / abi / "libVkLayer_khronos_validation.so"
-        dst = Path(
-            self.source_folder) / "android" / "app" / "src" / "main" / "jniLibs" / abi / "libVkLayer_khronos_validation.so"
+        dst = (
+            Path(self.source_folder)
+            / "android"
+            / "app"
+            / "src"
+            / "main"
+            / "jniLibs"
+            / abi
+            / "libVkLayer_khronos_validation.so"
+        )
 
         self._copy(src, dst)
 

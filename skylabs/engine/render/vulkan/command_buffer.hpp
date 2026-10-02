@@ -3,10 +3,22 @@
 
 #include "skylabs/engine/render/vulkan/buffer.hpp"
 #include "skylabs/engine/render/vulkan/image.hpp"
-#include "skylabs/engine/render/vulkan/sync_state.hpp"
 
 namespace sk::render::vulkan {
 enum class BarrierType : std::uint8_t { eRegular, eRelease, eAcquire };
+
+enum class Usage : std::uint8_t {
+    eNone,
+    eColorAttachment,
+    eDepthWrite,
+    eDepthRead,
+    eSampledFragment,
+    eVertexRead,
+    eComputeWrite,
+    eTransferRead,
+    eTransferWrite,
+    ePresent
+};
 
 struct ImageBarrier {
     const Image& image;

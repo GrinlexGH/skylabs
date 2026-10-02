@@ -54,4 +54,10 @@ template <typename... Ts, typename... Fs>
 constexpr decltype(auto) operator|(std::variant<Ts...> const& v, Overloaded<Fs...> const& overloaded) {
     return std::visit(overloaded, v);
 }
+
+template <typename T>
+void HashCombine(std::size_t& seed, const T& val) {
+    std::hash<T> hasher;
+    seed ^= hasher(val) + 0x9e3779b9 + (seed << 6u) + (seed >> 2u);
+}
 }

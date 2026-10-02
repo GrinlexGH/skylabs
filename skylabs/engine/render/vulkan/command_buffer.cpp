@@ -1,5 +1,74 @@
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
 
+namespace {
+struct UsageState {
+    vk::PipelineStageFlags2 stage;
+    vk::AccessFlags2 access;
+    vk::ImageLayout layout;
+
+    void ApplyAsSrc(vk::ImageMemoryBarrier2& barrier) const noexcept {
+        barrier.srcStageMask = stage;
+        barrier.srcAccessMask = access;
+        barrier.oldLayout = layout;
+    }
+
+    void ApplyAsSrc(vk::BufferMemoryBarrier2& barrier) const noexcept {
+        barrier.srcStageMask = stage;
+        barrier.srcAccessMask = access;
+    }
+
+    void ApplyAsDst(vk::ImageMemoryBarrier2& barrier) const noexcept {
+        barrier.dstStageMask = stage;
+        barrier.dstAccessMask = access;
+        barrier.newLayout = layout;
+    }
+
+    void ApplyAsDst(vk::BufferMemoryBarrier2& barrier) const noexcept {
+        barrier.dstStageMask = stage;
+        barrier.dstAccessMask = access;
+    }
+};
+
+UsageState GetUsageState(const sk::render::vulkan::Usage usage) {
+    using namespace sk::render::vulkan;
+
+    switch (usage) {
+        case Usage::eNone:
+            return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone,
+                     vk::ImageLayout::eUndefined };
+        case Usage::ePresent:
+            return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone,
+                     vk::ImageLayout::ePresentSrcKHR };
+        case Usage::eColorAttachment:
+            return { vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                     vk::AccessFlagBits2::eColorAttachmentWrite,
+                     vk::ImageLayout::eColorAttachmentOptimal };
+        case Usage::eDepthWrite:
+            return { vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                         vk::PipelineStageFlagBits2::eLateFragmentTests,
+                     vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+                     vk::ImageLayout::eDepthStencilAttachmentOptimal };
+        case Usage::eSampledFragment:
+            return { vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead,
+                     vk::ImageLayout::eShaderReadOnlyOptimal };
+        case Usage::eTransferWrite:
+            return { vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite,
+                     vk::ImageLayout::eTransferDstOptimal };
+        case Usage::eTransferRead:
+            return { vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead,
+                     vk::ImageLayout::eTransferSrcOptimal };
+        case Usage::eComputeWrite:
+            return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite,
+                     vk::ImageLayout::eGeneral };
+        case Usage::eVertexRead:
+            return { vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead,
+                     vk::ImageLayout::eShaderReadOnlyOptimal };
+        default:
+            return { };
+    }
+}
+}
+
 namespace sk::render::vulkan {
 CommandBuffer::CommandBuffer(const vk::raii::Device& device, vk::raii::CommandBuffer&& commandBuffer)
     : m_device(&device), m_handle(std::move(commandBuffer)) { }
@@ -24,11 +93,8 @@ void CommandBuffer::PipelineBarrier(
             imageBarrier.srcQueueFamilyIndex = srcQueue;
             imageBarrier.dstQueueFamilyIndex = dstQueue;
 
-            std::tie(imageBarrier.srcStageMask, imageBarrier.srcAccessMask, imageBarrier.oldLayout) =
-                MapUsageToVulkan(oldUsage);
-
-            std::tie(imageBarrier.dstStageMask, imageBarrier.dstAccessMask, imageBarrier.newLayout) =
-                MapUsageToVulkan(newUsage);
+            GetUsageState(oldUsage).ApplyAsSrc(imageBarrier);
+            GetUsageState(newUsage).ApplyAsDst(imageBarrier);
 
             if (type == BarrierType::eRegular) {
                 imageBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
@@ -64,10 +130,8 @@ void CommandBuffer::PipelineBarrier(
                 bufferBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
             }
 
-            std::tie(bufferBarrier.srcStageMask, bufferBarrier.srcAccessMask, std::ignore) =
-                MapUsageToVulkan(oldUsage);
-            std::tie(bufferBarrier.dstStageMask, bufferBarrier.dstAccessMask, std::ignore) =
-                MapUsageToVulkan(newUsage);
+            GetUsageState(oldUsage).ApplyAsSrc(bufferBarrier);
+            GetUsageState(newUsage).ApplyAsDst(bufferBarrier);
             bufBarriers.push_back(bufferBarrier);
         }
     }

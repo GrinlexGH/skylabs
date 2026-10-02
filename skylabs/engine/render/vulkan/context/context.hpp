@@ -5,7 +5,6 @@
 #include "skylabs/engine/render/vulkan/context/surface.hpp"
 #include "skylabs/engine/window.hpp"
 
-
 namespace sk::render::vulkan {
 class Context {
 public:

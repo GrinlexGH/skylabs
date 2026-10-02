@@ -1,6 +1,5 @@
-#include <boost/container_hash/hash.hpp>
-
 #include "skylabs/engine/render/vulkan/pipeline_layout_cache.hpp"
+#include "skylabs/engine/utils.hpp"
 
 namespace sk::render::vulkan {
 bool PipelineLayoutInfo::operator==(const PipelineLayoutInfo& rhs) const {
@@ -10,13 +9,13 @@ bool PipelineLayoutInfo::operator==(const PipelineLayoutInfo& rhs) const {
 std::size_t PipelineLayoutHash::operator()(const PipelineLayoutInfo& info) const {
     std::size_t seed = 0;
     for (const auto& layout : info.descriptorSetLayouts) {
-        boost::hash_combine(seed, static_cast<VkDescriptorSetLayout>(layout));
+        utils::HashCombine(seed, static_cast<VkDescriptorSetLayout>(layout));
     }
 
     for (const auto& pc : info.pushConstants) {
-        boost::hash_combine(seed, static_cast<std::uint32_t>(pc.stageFlags));
-        boost::hash_combine(seed, pc.offset);
-        boost::hash_combine(seed, pc.size);
+        utils::HashCombine(seed, static_cast<std::uint32_t>(pc.stageFlags));
+        utils::HashCombine(seed, pc.offset);
+        utils::HashCombine(seed, pc.size);
     }
 
     return seed;

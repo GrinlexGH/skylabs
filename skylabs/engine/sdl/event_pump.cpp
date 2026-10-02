@@ -1,13 +1,24 @@
-#include <frozen/unordered_map.h>
-
 #include "skylabs/engine/sdl/event_pump.hpp"
 
 namespace {
-constexpr frozen::unordered_map<SDL_Keycode, sk::input::Keys, 6> kKeyMap {
-    { SDLK_UNKNOWN, sk::input::Keys::eUnknown },  { SDLK_ESCAPE, sk::input::Keys::eEscape },
-    { SDLK_LSHIFT, sk::input::Keys::eLeftShift }, { SDLK_Z, sk::input::Keys::eZ },
-    { SDLK_RETURN, sk::input::Keys::eEnter },     { SDLK_F11, sk::input::Keys::eF11 },
-};
+constexpr sk::input::Keys GetKey(SDL_Keycode code) noexcept {
+    switch (code) {
+        case SDLK_UNKNOWN:
+            return sk::input::Keys::eUnknown;
+        case SDLK_ESCAPE:
+            return sk::input::Keys::eEscape;
+        case SDLK_LSHIFT:
+            return sk::input::Keys::eLeftShift;
+        case SDLK_Z:
+            return sk::input::Keys::eZ;
+        case SDLK_RETURN:
+            return sk::input::Keys::eEnter;
+        case SDLK_F11:
+            return sk::input::Keys::eF11;
+        default:
+            return sk::input::Keys::eUnknown;
+    }
+}
 
 sk::input::Event TranslateEvent(const SDL_Event& event) {
     switch (event.type) {
@@ -22,8 +33,7 @@ sk::input::Event TranslateEvent(const SDL_Event& event) {
             return sk::input::WindowExposeEvent { };
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
-            if (!kKeyMap.contains(event.key.key)) return sk::input::UnknownEvent { };
-            return sk::input::KeyEvent { .key = kKeyMap.at(event.key.key),
+            return sk::input::KeyEvent { .key = GetKey(event.key.key),
                                          .down = event.type == SDL_EVENT_KEY_DOWN };
         case SDL_EVENT_MOUSE_MOTION:
             return sk::input::MouseMotionEvent { .dx = event.motion.xrel, .dy = event.motion.yrel };

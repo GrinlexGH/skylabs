@@ -1,16 +1,15 @@
-#include <boost/container_hash/hash.hpp>
-
 #include "skylabs/engine/render/vulkan/descriptor_layout_cache.hpp"
+#include "skylabs/engine/utils.hpp"
 
 namespace sk::render::vulkan {
 std::size_t DescriptorLayoutHash::operator()(
     const std::vector<vk::DescriptorSetLayoutBinding>& bindings) const {
     std::size_t seed = 0;
     for (const auto& b : bindings) {
-        boost::hash_combine(seed, b.binding);
-        boost::hash_combine(seed, static_cast<std::uint32_t>(b.descriptorType));
-        boost::hash_combine(seed, b.descriptorCount);
-        boost::hash_combine(seed, static_cast<std::uint32_t>(b.stageFlags));
+        utils::HashCombine(seed, b.binding);
+        utils::HashCombine(seed, static_cast<std::uint32_t>(b.descriptorType));
+        utils::HashCombine(seed, b.descriptorCount);
+        utils::HashCombine(seed, static_cast<std::uint32_t>(b.stageFlags));
     }
     return seed;
 }

@@ -29,7 +29,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/buffer.cpp
         render/vulkan/graphics_pipeline.cpp
         render/vulkan/shader.cpp
-        render/vulkan/sync_state.cpp
         render/vulkan/command_buffer.cpp
         render/vulkan/command_buffer_allocator.cpp
         render/vulkan/pipeline_layout_cache.cpp
@@ -65,7 +64,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/swapchain.hpp
         render/vulkan/graphics_pipeline.hpp
         render/vulkan/shader.hpp
-        render/vulkan/sync_state.hpp
         render/vulkan/command_buffer_allocator.hpp
         render/vulkan/command_buffer.hpp
         render/vulkan/pipeline_layout_cache.hpp
@@ -90,9 +88,7 @@ add_dependencies(${CURRENT_TARGET_NAME} shaders)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     SDL3::SDL3
-    Boost::nowide
     fmt::fmt
-    frozen::frozen
     glm::glm
     Vulkan::Headers
     vk-bootstrap::vk-bootstrap
