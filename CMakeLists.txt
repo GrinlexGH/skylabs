@@ -476,8 +476,8 @@ function(skylabs_configure_target target_name)
     endif()
 
     if(WIN32 AND ("${target_type}" STREQUAL "EXECUTABLE"))
-        target_sources(${target_type} PRIVATE ${SKYLABS_ROOT_DIR}/cmake/win32.manifest)
-        target_link_libraries(${target_type} PRIVATE comctl32)
+        target_sources(${target_name} PRIVATE ${SKYLABS_ROOT_DIR}/cmake/win32.manifest)
+        target_link_libraries(${target_name} PRIVATE comctl32)
     endif()
 
     set(function_args "")
