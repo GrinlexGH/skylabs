@@ -14,13 +14,17 @@ enum class Keys : std::uint8_t {
 };
 
 struct UnknownEvent { };
+
 struct QuitEvent { };
+
 struct DeviceResetEvent { };  // Important on Android, when user reopen an app
+
 struct WindowResizeEvent {
     int width, height;
 };
 
 struct WindowExposeEvent { };
+
 struct KeyEvent {
     Keys key;
     bool down;

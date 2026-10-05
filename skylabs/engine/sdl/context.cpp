@@ -1,5 +1,6 @@
 #include <mutex>
 #include <stdexcept>
+#include <utility>
 
 #include "project_info.hpp"
 #include "skylabs/engine/sdl/context.hpp"
