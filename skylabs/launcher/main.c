@@ -47,7 +47,7 @@ static void SkPresentCError(const wchar_t* format, ...) {
 static void SkGetSystemErrorMessage(wchar_t* message, const DWORD size, const DWORD errorCode) {
     DWORD msgLen = FormatMessageW(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL,
-        errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message, size, NULL);
+        errorCode, 0, message, size, NULL);
 
     if (msgLen == 0) {
         _snwprintf_s(message, size, _TRUNCATE, L"Unknown Win32 Error (0x%08X)", errorCode);
@@ -255,26 +255,15 @@ cleanup:
 static void SkEnableVTP(void) {
     const HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (handle == INVALID_HANDLE_VALUE) {
-        wchar_t systemMessage[256];
-        SkGetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
-        printf("Failed to get stdout handle:\n%ls", systemMessage);
         return;
     }
 
     DWORD originalMode = 0;
     if (!GetConsoleMode(handle, &originalMode)) {
-        wchar_t systemMessage[256];
-        SkGetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
-        printf("Failed to get console mode:\n%ls", systemMessage);
         return;
     }
 
-    if (!SetConsoleMode(handle,
-                        originalMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT)) {
-        wchar_t systemMessage[256];
-        SkGetSystemErrorMessage(systemMessage, _countof(systemMessage), GetLastError());
-        printf("Failed to set virtual terminal processing flags:\n%ls", systemMessage);
-    }
+    SetConsoleMode(handle, originalMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT);
 }
 
 /* Dummy main for console in debug */
