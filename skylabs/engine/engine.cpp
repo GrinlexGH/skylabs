@@ -1,3 +1,5 @@
+#include <tracy/Tracy.hpp>
+
 #include "skylabs/engine/engine.hpp"
 #include "skylabs/engine/os.hpp"
 #include "skylabs/engine/sdl/filesystem.hpp"
@@ -35,11 +37,17 @@ void Engine::Run() {
 
     m_lastTick = std::chrono::steady_clock::now();
 
-    // Unfortunately we are locked at 64 FPS. Alternatively we can do a separate render thread
     m_eventPump.SetEventFilter(
         [](const input::Event& event, void* userData) {
-            const auto engine = static_cast<Engine*>(userData);
-            return engine->OnEvent(event);
+            // WindowExposeEvent is guaranteed to be sent on the main thread
+            // Unfortunately we are locked at 64 FPS here on Windows
+            // Alternatively we can do a separate render thread
+            if (std::holds_alternative<input::WindowExposeEvent>(event)) {
+                const auto engine = static_cast<Engine*>(userData);
+                engine->DrawFrame(engine->CalculateDeltaTime());
+                return false;
+            }
+            return true;
         },
         this);
 
@@ -60,51 +68,32 @@ void Engine::Run() {
         if (keyboardState[SDL_SCANCODE_D])
             m_camera.ProcessKeyboard(Camera::MoveDirection::eRight, deltaTimeMs);
 
-        if (m_window.IsRenderAvailable()) {
-            m_renderer->Draw(m_camera.ViewMatrix(), m_camera.Fov(), deltaTimeMs);
-        }
-
-        ReportFPS(deltaTimeMs);
+        DrawFrame(deltaTimeMs);
+        FrameMark;
     }
 }
 
-bool Engine::OnEvent(const input::Event& event) {
-    return event | utils::Overloaded { [&](input::QuitEvent) {
-                                          m_quit = true;
-                                          return false;
-                                      },
-                                       [&](input::DeviceResetEvent) {
-                                           m_renderer->OnDeviceReset();
-                                           return false;
-                                       },
-                                       [&](const input::MouseMotionEvent& e) {
-                                           m_camera.ProcessMouseMovement(e.dx, -e.dy);
-                                           return false;
-                                       },
-                                       [&](const input::KeyEvent e) {
-                                           if (!e.down) return true;
-
-                                           switch (e.key) {
-                                               case input::Keys::eEscape:
-                                                   m_quit = true;
-                                                   break;
-
-                                               case input::Keys::eZ:
-                                                   m_relativeMouseMode = !m_relativeMouseMode;
-                                                   SDL_SetWindowRelativeMouseMode(*m_window,
-                                                                                  m_relativeMouseMode);
-                                                   break;
-
-                                               default:
-                                                   break;
-                                           }
-                                           return false;
-                                       },
-                                       [&](input::WindowExposeEvent) {
-                                           RenderFrame(CalculateDeltaTime());
-                                           return false;
-                                       },
-                                       [](const auto&) { return true; } };
+void Engine::OnEvent(const input::Event& event) {
+    return event | utils::Overloaded {
+        [&](input::QuitEvent) { m_quit = true; },
+        [&](input::DeviceResetEvent) { m_renderer->OnDeviceReset(); },
+        [&](const input::MouseMotionEvent& e) { m_camera.ProcessMouseMovement(e.dx, -e.dy); },
+        [&](const input::KeyEvent e) {
+            if (!e.down) return;
+            switch (e.key) {
+                case input::Keys::eEscape:
+                    m_quit = true;
+                    break;
+                case input::Keys::eZ:
+                    m_relativeMouseMode = !m_relativeMouseMode;
+                    SDL_SetWindowRelativeMouseMode(*m_window, m_relativeMouseMode);
+                    break;
+                default:
+                    break;
+            }
+        },
+        [](const auto&) { }
+    };
 }
 
 bool Engine::FpsCounter::Tick(const float deltaTimeMs, float& outFps, float& outDt) {
@@ -135,10 +124,11 @@ void Engine::ReportFPS(const float deltaTimeMs) {
     }
 }
 
-void Engine::RenderFrame(const float deltaTimeMs) {
+void Engine::DrawFrame(const float deltaTimeMs) {
     if (m_window.IsRenderAvailable()) {
-        m_renderer->OnPossibleSwapchainResize();
+        m_renderer->BeginFrame();
         m_renderer->Draw(m_camera.ViewMatrix(), m_camera.Fov(), deltaTimeMs);
+        m_renderer->EndFrame();
     }
 
     ReportFPS(deltaTimeMs);

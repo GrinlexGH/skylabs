@@ -11,8 +11,9 @@ Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii
     : m_device(&device), m_window(window), m_surface(&surface) {
     assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
 
-    const vk::SurfaceCapabilities2KHR caps = SurfaceCapabilities();
-    m_extent = SurfaceExtent();
+    const vk::SurfaceCapabilitiesKHR caps = SurfaceCapabilities().surfaceCapabilities;
+    m_extent = SurfaceExtent(caps);
+    m_surfaceTransform = caps.currentTransform;
 
     vkb::SwapchainBuilder builder { **device.GetPhysicalDevice(), **device, *surface,
                                     device.GraphicsQueue().FamilyIndex(),
@@ -28,8 +29,7 @@ Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii
                 vk::SurfaceFormatKHR { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear })
             .set_desired_extent(m_extent.width, m_extent.height)
             .set_desired_min_image_count(imageCount)
-            .set_pre_transform_flags(
-                static_cast<VkSurfaceTransformFlagBitsKHR>(caps.surfaceCapabilities.currentTransform))
+            .set_pre_transform_flags(static_cast<VkSurfaceTransformFlagBitsKHR>(m_surfaceTransform))
             .build();
 
     if (!swapchainResult) {
@@ -76,10 +76,8 @@ vk::SurfaceCapabilities2KHR Swapchain::SurfaceCapabilities() const {
     return m_device->GetPhysicalDevice()->getSurfaceCapabilities2KHR(surfaceInfo);
 }
 
-vk::Extent2D Swapchain::SurfaceExtent() const {
-    const vk::SurfaceCapabilities2KHR caps = SurfaceCapabilities();
-
-    vk::Extent2D surfaceExtent = caps.surfaceCapabilities.currentExtent;
+vk::Extent2D Swapchain::SurfaceExtent(const vk::SurfaceCapabilitiesKHR& caps) const {
+    vk::Extent2D surfaceExtent = caps.currentExtent;
     if (surfaceExtent.width == std::numeric_limits<std::uint32_t>::max()) {
         const auto [width, height] = m_window->DrawableSize();
         surfaceExtent = vk::Extent2D { width, height };
@@ -90,28 +88,9 @@ vk::Extent2D Swapchain::SurfaceExtent() const {
     return surfaceExtent;
 }
 
-std::pair<vk::Result, std::uint32_t> Swapchain::AcquireImage(const vk::Semaphore& semaphore,
-                                                             const vk::Fence& fence) const {
-    std::uint32_t imageIndex = 0;
-    const auto result = static_cast<vk::Result>(m_handle.getDispatcher()->vkAcquireNextImageKHR(
-        static_cast<VkDevice>(m_handle.getDevice()), static_cast<VkSwapchainKHR>(*m_handle), UINT64_MAX,
-        static_cast<VkSemaphore>(semaphore), static_cast<VkFence>(fence), &imageIndex));
-
-    return { result, imageIndex };
-}
-
-vk::Result Swapchain::PresentImage(std::uint32_t imageIndex,
-                                   const vk::ArrayProxy<const vk::Semaphore>& semaphores) const {
-    vk::PresentInfoKHR presentInfo { };
-    presentInfo.setWaitSemaphores(semaphores);
-    presentInfo.setSwapchains({ *m_handle });
-    presentInfo.setImageIndices({ imageIndex });
-
-    const vk::raii::Queue& queue = *m_device->PresentQueue();
-    const auto result = static_cast<vk::Result>(queue.getDispatcher()->vkQueuePresentKHR(
-        static_cast<VkQueue>(*queue), &static_cast<const VkPresentInfoKHR&>(presentInfo)));
-
-    return result;
+bool Swapchain::IsOutdated() const {
+    const vk::SurfaceCapabilitiesKHR caps = SurfaceCapabilities().surfaceCapabilities;
+    return SurfaceExtent(caps) != Extent() || caps.currentTransform != SurfaceTransform();
 }
 
 Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,

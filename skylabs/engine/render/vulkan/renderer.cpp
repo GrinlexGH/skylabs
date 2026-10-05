@@ -106,35 +106,55 @@ Renderer::~Renderer() {
     }
 }
 
-void Renderer::BeginFrame() { }
+void Renderer::BeginFrame() {
+    if (m_frameActive || m_surfaceLost) return;
 
-void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
-    std::ignore = m_context.GetDevice()->waitForFences({ m_fence.Get() }, vk::True,
-                                                       std::numeric_limits<std::uint64_t>::max());
+    try {
+        // This part should handle suboptimal
+        // May throw surface lost error
+        if (m_swapchain.IsOutdated()) {
+            m_context.GetDevice()->waitIdle();
+            RecreateSwapchain();
+        }
 
-    // Acquire next image from the swapchain
-    vk::Result acquireResult;
-    if (std::tie(acquireResult, m_currentImageIndex) =
-            m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
-        acquireResult != vk::Result::eSuccess) {
-        log::Debug("Acquire result: {}", vk::to_string(acquireResult));
+        std::ignore = m_context.GetDevice()->waitForFences({ m_fence.Get() }, vk::True,
+                                                           std::numeric_limits<std::uint64_t>::max());
 
-        if (acquireResult == vk::Result::eErrorOutOfDateKHR) {
-            OnPossibleSwapchainResize();
-            std::tie(acquireResult, m_currentImageIndex) =
-                m_swapchain.AcquireImage(*m_imageAvailableSemaphore.Get());
-            if (acquireResult != vk::Result::eSuccess && acquireResult != vk::Result::eSuboptimalKHR) {
+        // Acquire next image from the swapchain
+        vk::Result result;
+        std::tie(result, m_currentImageIndex) = m_swapchain->acquireNextImage(
+            std::numeric_limits<std::uint64_t>::max(), *m_imageAvailableSemaphore.Get());
+
+        if (result == vk::Result::eErrorOutOfDateKHR) {
+            m_context.GetDevice()->waitIdle();
+            RecreateSwapchain();
+
+            std::tie(result, m_currentImageIndex) = m_swapchain->acquireNextImage(
+                std::numeric_limits<std::uint64_t>::max(), *m_imageAvailableSemaphore.Get());
+
+            // If we still can't restore the swapchain, we simply return
+            if (result == vk::Result::eErrorOutOfDateKHR) {
                 return;
             }
         }
-
-        if (acquireResult == vk::Result::eErrorSurfaceLostKHR) {
-            return;
-        }
+    } catch (const vk::SurfaceLostKHRError&) {
+        MarkSurfaceLost();
+        return;
     }
 
-    // Reset fence after resizing to avoid deadlock on next invocation of Draw()
-    m_context.GetDevice()->resetFences({ m_fence.Get() });
+    const auto& cmd = m_commandBuffers.Get();
+    cmd->reset();
+    cmd->begin({ });
+    cmd.PipelineBarrier({ ImageBarrier { .image = m_swapchain.Images()[m_currentImageIndex],
+                                         .range = m_swapchain.Images()[m_currentImageIndex].FullRange(),
+                                         .oldUsage = Usage::eNone,
+                                         .newUsage = Usage::eColorAttachment } });
+
+    m_frameActive = true;
+}
+
+void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) {
+    if (!m_frameActive) return;
 
     // Update model and view
     auto [width, height] = m_swapchain.Extent();
@@ -159,18 +179,8 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     std::memcpy(m_viewProjection.Get().Data(), &viewProjection, sizeof(viewProjection));
 
     // Render frame
-    const auto& cmd = m_commandBuffers[m_inFlightContext.InFlightIndex()];
+    const auto& cmd = m_commandBuffers.Get();
     const auto& swapchainImage = m_swapchain.Images()[m_currentImageIndex];
-
-    cmd->reset();
-    cmd->begin({ });
-
-    cmd.PipelineBarrier({
-        ImageBarrier { .image = swapchainImage,
-                       .range = swapchainImage.FullRange(),
-                       .oldUsage = Usage::eNone,
-                       .newUsage = Usage::eColorAttachment },
-    });
 
     vk::RenderingAttachmentInfo attachInfo { };
     attachInfo.imageView = *swapchainImage.View();
@@ -196,43 +206,45 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     cmd->draw(3, 1, 0, 0);
 
     cmd->endRendering();
+}
 
-    cmd.PipelineBarrier({ ImageBarrier { .image = swapchainImage,
-                                         .range = swapchainImage.FullRange(),
+void Renderer::EndFrame() {
+    if (!m_frameActive) return;
+    m_frameActive = false;
+
+    const auto& cmd = m_commandBuffers.Get();
+    cmd.PipelineBarrier({ ImageBarrier { .image = m_swapchain.Images()[m_currentImageIndex],
+                                         .range = m_swapchain.Images()[m_currentImageIndex].FullRange(),
                                          .oldUsage = Usage::eColorAttachment,
                                          .newUsage = Usage::ePresent } });
 
     cmd->end();
+
+    m_context.GetDevice()->resetFences({ m_fence.Get() });
 
     vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 
     vk::SubmitInfo finalSubmit { };
     finalSubmit.setWaitSemaphores({ *m_imageAvailableSemaphore.Get() });
     finalSubmit.setWaitDstStageMask({ waitStage });
-    finalSubmit.setCommandBuffers({ **m_commandBuffers[m_inFlightContext.InFlightIndex()] });
+    finalSubmit.setCommandBuffers({ **m_commandBuffers.Get() });
     finalSubmit.setSignalSemaphores({ *m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex] });
     m_context.GetDevice().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
 
-    const vk::Result presentResult = m_swapchain.PresentImage(
-        m_currentImageIndex, { *m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex] });
-    if (presentResult != vk::Result::eSuccess) {
-        log::Debug("Present result: {}", vk::to_string(presentResult));
-
-        if (presentResult == vk::Result::eErrorOutOfDateKHR ||
-            presentResult == vk::Result::eSuboptimalKHR) {
-            OnPossibleSwapchainResize();
-        }
-    }
-
     m_inFlightContext.NextFrame();
-}
 
-void Renderer::EndFrame() { }
-
-void Renderer::OnPossibleSwapchainResize() {
-    if (m_swapchain.SurfaceExtent() != m_swapchain.Extent()) {
-        m_context.GetDevice()->waitIdle();
-        RecreateSwapchain();
+    try {
+        vk::PresentInfoKHR presentInfo { };
+        presentInfo.setWaitSemaphores(*m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex]);
+        presentInfo.setSwapchains({ **m_swapchain });
+        presentInfo.setImageIndices({ m_currentImageIndex });
+        if (const vk::Result result = m_context.GetDevice().PresentQueue()->presentKHR(presentInfo);
+            result == vk::Result::eErrorOutOfDateKHR) {
+            m_context.GetDevice()->waitIdle();
+            RecreateSwapchain();
+        }
+    } catch (const vk::SurfaceLostKHRError&) {
+        MarkSurfaceLost();
     }
 }
 
@@ -241,7 +253,10 @@ void Renderer::OnDeviceReset() {
     m_swapchain.Clear();
     m_context.RecreateSurface();
     RecreateSwapchain();
+    m_surfaceLost = false;
 }
 
 void Renderer::RecreateSwapchain() { m_swapchain = Swapchain { m_swapchain, { } }; }
+
+void Renderer::MarkSurfaceLost() { m_surfaceLost = true; }
 }

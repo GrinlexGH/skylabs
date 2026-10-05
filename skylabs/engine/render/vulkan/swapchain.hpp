@@ -28,12 +28,9 @@ public:
     void Clear();
 
     [[nodiscard]] vk::SurfaceCapabilities2KHR SurfaceCapabilities() const;
-    [[nodiscard]] vk::Extent2D SurfaceExtent() const;
+    [[nodiscard]] vk::Extent2D SurfaceExtent(const vk::SurfaceCapabilitiesKHR& caps) const;
 
-    [[nodiscard]] std::pair<vk::Result, std::uint32_t> AcquireImage(const vk::Semaphore& semaphore = { },
-                                                                    const vk::Fence& fence = { }) const;
-    [[nodiscard]] vk::Result PresentImage(
-        std::uint32_t imageIndex, const vk::ArrayProxy<const vk::Semaphore>& semaphores = { }) const;
+    [[nodiscard]] bool IsOutdated() const;
 
     [[nodiscard]] vk::SurfaceFormatKHR SurfaceFormat() const { return m_surfaceFormat; }
     [[nodiscard]] vk::SurfaceTransformFlagBitsKHR SurfaceTransform() const { return m_surfaceTransform; }

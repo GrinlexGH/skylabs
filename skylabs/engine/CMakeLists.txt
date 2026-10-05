@@ -90,6 +90,7 @@ target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     SDL3::SDL3
     fmt::fmt
     glm::glm
+    Tracy::TracyClient
     Vulkan::Headers
     vk-bootstrap::vk-bootstrap
     VulkanMemoryAllocator-Hpp::VulkanMemoryAllocator-Hpp

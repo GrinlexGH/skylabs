@@ -29,7 +29,6 @@ public:
     void Draw(glm::mat4 view, float fov, float deltaTime) override;
     void EndFrame() override;
 
-    void OnPossibleSwapchainResize() override;
     void OnDeviceReset() override;
 
 private:
@@ -37,6 +36,7 @@ private:
     static constexpr auto kGeometryPoolSize = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
     void RecreateSwapchain();
+    void MarkSurfaceLost();
 
     Context m_context { nullptr };
     Swapchain m_swapchain { nullptr };
@@ -44,6 +44,8 @@ private:
     CommandBufferAllocator m_commandBufferAllocator { nullptr };
 
     // Frame synchronization
+    bool m_frameActive = false;
+    bool m_surfaceLost = false;
     InFlight<bool> m_firstUse { nullptr };
     InFlight<vk::raii::Fence> m_fence { nullptr };
     InFlight<vk::raii::Semaphore> m_imageAvailableSemaphore { nullptr };

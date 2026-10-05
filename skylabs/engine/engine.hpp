@@ -19,7 +19,7 @@ public:
 
     void Run();
 
-    bool OnEvent(const input::Event& event);
+    void OnEvent(const input::Event& event);
 
 private:
     struct FpsCounter {
@@ -31,7 +31,7 @@ private:
 
     float CalculateDeltaTime();
     void ReportFPS(float deltaTimeMs);
-    void RenderFrame(float deltaTimeMs);
+    void DrawFrame(float deltaTimeMs);
 
     bool m_quit = false;
     bool m_relativeMouseMode = false;
