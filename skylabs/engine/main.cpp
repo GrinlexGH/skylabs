@@ -1,9 +1,14 @@
+#include <tracy/Tracy.hpp>
+
 #include "sk_engine_export.h"
 #include "engine.hpp"
 
 SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
-    sk::Engine engine;
-    engine.Run();
-
+    tracy::StartupProfiler();
+    {
+        sk::Engine engine;
+        engine.Run();
+    }
+    tracy::ShutdownProfiler();
     return 0;
 }
