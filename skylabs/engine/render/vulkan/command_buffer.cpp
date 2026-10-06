@@ -34,35 +34,47 @@ UsageState GetUsageState(const sk::render::vulkan::Usage usage) {
 
     switch (usage) {
         case Usage::eNone:
-            return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone,
-                     vk::ImageLayout::eUndefined };
+            return { .stage = vk::PipelineStageFlagBits2::eNone,
+                     .access = vk::AccessFlagBits2::eNone,
+                     .layout = vk::ImageLayout::eUndefined };
         case Usage::ePresent:
-            return { vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone,
-                     vk::ImageLayout::ePresentSrcKHR };
+            return { .stage = vk::PipelineStageFlagBits2::eNone,
+                     .access = vk::AccessFlagBits2::eNone,
+                     .layout = vk::ImageLayout::ePresentSrcKHR };
         case Usage::eColorAttachment:
-            return { vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                     vk::AccessFlagBits2::eColorAttachmentWrite,
-                     vk::ImageLayout::eColorAttachmentOptimal };
+            return { .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                     .access = vk::AccessFlagBits2::eColorAttachmentWrite,
+                     .layout = vk::ImageLayout::eColorAttachmentOptimal };
         case Usage::eDepthWrite:
-            return { vk::PipelineStageFlagBits2::eEarlyFragmentTests |
-                         vk::PipelineStageFlagBits2::eLateFragmentTests,
-                     vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
-                     vk::ImageLayout::eDepthStencilAttachmentOptimal };
+            return { .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                              vk::PipelineStageFlagBits2::eLateFragmentTests,
+                     .access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+                     .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal };
+        case Usage::eDepthRead:
+            return { .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                              vk::PipelineStageFlagBits2::eLateFragmentTests,
+                     .access = vk::AccessFlagBits2::eDepthStencilAttachmentRead,
+                     .layout = vk::ImageLayout::eDepthStencilReadOnlyOptimal };
         case Usage::eSampledFragment:
-            return { vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead,
-                     vk::ImageLayout::eShaderReadOnlyOptimal };
+            return { .stage = vk::PipelineStageFlagBits2::eFragmentShader,
+                     .access = vk::AccessFlagBits2::eShaderRead,
+                     .layout = vk::ImageLayout::eShaderReadOnlyOptimal };
         case Usage::eTransferWrite:
-            return { vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite,
-                     vk::ImageLayout::eTransferDstOptimal };
+            return { .stage = vk::PipelineStageFlagBits2::eTransfer,
+                     .access = vk::AccessFlagBits2::eTransferWrite,
+                     .layout = vk::ImageLayout::eTransferDstOptimal };
         case Usage::eTransferRead:
-            return { vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead,
-                     vk::ImageLayout::eTransferSrcOptimal };
+            return { .stage = vk::PipelineStageFlagBits2::eTransfer,
+                     .access = vk::AccessFlagBits2::eTransferRead,
+                     .layout = vk::ImageLayout::eTransferSrcOptimal };
         case Usage::eComputeWrite:
-            return { vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite,
-                     vk::ImageLayout::eGeneral };
+            return { .stage = vk::PipelineStageFlagBits2::eComputeShader,
+                     .access = vk::AccessFlagBits2::eShaderWrite,
+                     .layout = vk::ImageLayout::eGeneral };
         case Usage::eVertexRead:
-            return { vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead,
-                     vk::ImageLayout::eShaderReadOnlyOptimal };
+            return { .stage = vk::PipelineStageFlagBits2::eVertexShader,
+                     .access = vk::AccessFlagBits2::eShaderRead,
+                     .layout = vk::ImageLayout::eShaderReadOnlyOptimal };
         default:
             return { };
     }

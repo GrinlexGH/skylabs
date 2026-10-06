@@ -181,7 +181,6 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
 
     // Required extension features
 
-
     // Vulkan 1.1 features
     vk::PhysicalDeviceVulkan11Features features11 { };
     features11.shaderDrawParameters = vk::True;
