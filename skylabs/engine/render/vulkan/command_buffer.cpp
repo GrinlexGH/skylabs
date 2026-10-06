@@ -119,6 +119,9 @@ void CommandBuffer::PipelineBarrier(
             bufferBarrier.srcQueueFamilyIndex = srcQueue;
             bufferBarrier.dstQueueFamilyIndex = dstQueue;
 
+            GetUsageState(oldUsage).ApplyAsSrc(bufferBarrier);
+            GetUsageState(newUsage).ApplyAsDst(bufferBarrier);
+
             if (type == BarrierType::eRegular) {
                 bufferBarrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
                 bufferBarrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
@@ -130,8 +133,6 @@ void CommandBuffer::PipelineBarrier(
                 bufferBarrier.srcAccessMask = vk::AccessFlagBits2::eNone;
             }
 
-            GetUsageState(oldUsage).ApplyAsSrc(bufferBarrier);
-            GetUsageState(newUsage).ApplyAsDst(bufferBarrier);
             bufBarriers.push_back(bufferBarrier);
         }
     }
