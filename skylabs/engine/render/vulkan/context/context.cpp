@@ -82,14 +82,18 @@ std::vector<std::string> SetupInstanceExtensions(const vk::raii::Context& contex
     }
 
     // Find these extensions
-    std::vector<std::string_view> missingExtensions;
     std::vector<std::string> enabledExtensions;
     enabledExtensions.reserve(requestedExtensions.size());
     for (const auto& extension : GetAvailableExtensions(context)) {
         if (const std::string_view name { extension.extensionName };
             requestedExtensions.contains(name)) {
             enabledExtensions.emplace_back(name);
-        } else if (requestedExtensions[name]) {
+        }
+    }
+
+    std::vector<std::string_view> missingExtensions;
+    for (const auto& [name, required] : requestedExtensions) {
+        if (required && !std::ranges::contains(enabledExtensions, name)) {
             missingExtensions.push_back(name);
         }
     }
