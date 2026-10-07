@@ -177,20 +177,31 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
 
     // !!! Required Vulkan features
 
+    // Feature intersection of my own devices:
+    //  Lenovo IdeaPad pro 5 (14imh9)
+    //  Samsung A54
+    //  RTX 3060 VISION OC
+
+    // Vulkan 1.3
+    // Extensions:
+    //  VK_KHR_swapchain
+    // Features:
+    //  samplerAnisotropy
+    //  synchronization2
+    //  dynamicRendering
+    //  maintenance4
+
     // Minimum version
     selector.set_minimum_version(1, 3);
 
     // Required extensions
     selector.add_required_extension(vk::KHRSwapchainExtensionName);
 
-    // Required extension features
+    // Required features
+    vk::PhysicalDeviceFeatures features10 { };
+    features10.samplerAnisotropy = vk::True;
+    selector.set_required_features(features10);
 
-    // Vulkan 1.1 features
-    vk::PhysicalDeviceVulkan11Features features11 { };
-    features11.shaderDrawParameters = vk::True;
-    selector.set_required_features_11(features11);
-
-    // Vulkan 1.3 features
     vk::PhysicalDeviceVulkan13Features features13 { };
     features13.synchronization2 = vk::True;
     features13.dynamicRendering = vk::True;
@@ -209,10 +220,6 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
     return physicalDeviceResult.value();
 }
 
-bool TryEnableFeatures(vkb::PhysicalDevice& physicalDevice, const vk::PhysicalDeviceFeatures& f) {
-    return physicalDevice.enable_features_if_present(f);
-}
-
 template <typename T>
 bool TryEnableFeatures(vkb::PhysicalDevice& physicalDevice, const T& f) {
     return physicalDevice.enable_extension_features_if_present(f);
@@ -221,6 +228,10 @@ bool TryEnableFeatures(vkb::PhysicalDevice& physicalDevice, const T& f) {
 sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
                                         sk::render::vulkan::PhysicalDevice&& raiiPhysicalDevice) {
     // !!! Optional Vulkan features
+
+    // Features:
+    //  maintenance5
+
     sk::render::vulkan::DeviceCaps caps;
 
 #define VK_OPT_FEATURE(x, y)                           \
@@ -228,9 +239,6 @@ sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
         (x).y = vk::True;                              \
         caps.y = TryEnableFeatures(physicalDevice, x); \
     } while (false)
-
-    vk::PhysicalDeviceFeatures features10 { };
-    VK_OPT_FEATURE(features10, samplerAnisotropy);
 
     vk::PhysicalDeviceVulkan14Features features14 { };
     vk::PhysicalDeviceMaintenance5Features maintenance5 { };

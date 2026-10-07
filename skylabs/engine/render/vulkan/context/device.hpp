@@ -27,7 +27,6 @@ private:
 
 struct DeviceCaps {
     bool maintenance5 = false;
-    bool samplerAnisotropy = false;
 };
 
 class Device {

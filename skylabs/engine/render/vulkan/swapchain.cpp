@@ -9,8 +9,6 @@ Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii
                      const std::uint32_t imageCount, const vk::PresentModeKHR presentMode,
                      const VkSwapchainKHR oldHandle)
     : m_device(&device), m_window(window), m_surface(&surface) {
-    assert(device.IsExtensionEnabled(vk::KHRSwapchainExtensionName));
-
     const vk::SurfaceCapabilitiesKHR caps = SurfaceCapabilities().surfaceCapabilities;
     m_extent = SurfaceExtent(caps);
     m_surfaceTransform = caps.currentTransform;
