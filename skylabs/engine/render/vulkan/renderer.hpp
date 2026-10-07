@@ -43,9 +43,11 @@ private:
     InFlightContext m_inFlightContext;
     CommandBufferAllocator m_commandBufferAllocator { nullptr };
 
-    // Frame synchronization
+    // Frame integrity
     bool m_frameActive = false;
     bool m_surfaceLost = false;
+
+    // Frame synchronization
     InFlight<bool> m_firstUse { nullptr };
     InFlight<vk::raii::Fence> m_fence { nullptr };
     InFlight<vk::raii::Semaphore> m_imageAvailableSemaphore { nullptr };

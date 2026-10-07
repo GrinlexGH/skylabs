@@ -37,6 +37,10 @@ UsageState GetUsageState(const sk::render::vulkan::Usage usage) {
             return { .stage = vk::PipelineStageFlagBits2::eNone,
                      .access = vk::AccessFlagBits2::eNone,
                      .layout = vk::ImageLayout::eUndefined };
+        case Usage::eSwapchainAcquire:
+            return { .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                     .access = vk::AccessFlagBits2::eNone,
+                     .layout = vk::ImageLayout::eUndefined };
         case Usage::ePresent:
             return { .stage = vk::PipelineStageFlagBits2::eNone,
                      .access = vk::AccessFlagBits2::eNone,

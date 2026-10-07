@@ -17,6 +17,7 @@ enum class Usage : std::uint8_t {
     eComputeWrite,
     eTransferRead,
     eTransferWrite,
+    eSwapchainAcquire,
     ePresent
 };
 

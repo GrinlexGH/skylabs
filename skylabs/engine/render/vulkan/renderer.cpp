@@ -147,7 +147,7 @@ void Renderer::BeginFrame() {
     cmd->begin({ });
     cmd.PipelineBarrier({ ImageBarrier { .image = m_swapchain.Images()[m_currentImageIndex],
                                          .range = m_swapchain.Images()[m_currentImageIndex].FullRange(),
-                                         .oldUsage = Usage::eNone,
+                                         .oldUsage = Usage::eSwapchainAcquire,
                                          .newUsage = Usage::eColorAttachment } });
 
     m_frameActive = true;
@@ -187,7 +187,7 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     attachInfo.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
     attachInfo.loadOp = vk::AttachmentLoadOp::eClear;
     attachInfo.storeOp = vk::AttachmentStoreOp::eStore;
-    attachInfo.clearValue.color = std::array { 0.1f, 0.0f, 0.0f, 1.0f };
+    attachInfo.clearValue.color = std::array { 0.0f, 0.0f, 0.0f, 0.0f };
 
     vk::RenderingInfo renderInfo { };
     renderInfo.renderArea = vk::Rect2D { { 0, 0 }, swapchainImage.Extent2D() };
@@ -222,14 +222,22 @@ void Renderer::EndFrame() {
 
     m_context.GetDevice()->resetFences({ m_fence.Get() });
 
-    vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    vk::SemaphoreSubmitInfo waitInfo { };
+    waitInfo.setSemaphore(*m_imageAvailableSemaphore.Get());
+    waitInfo.setStageMask(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
 
-    vk::SubmitInfo finalSubmit { };
-    finalSubmit.setWaitSemaphores({ *m_imageAvailableSemaphore.Get() });
-    finalSubmit.setWaitDstStageMask({ waitStage });
-    finalSubmit.setCommandBuffers({ **m_commandBuffers.Get() });
-    finalSubmit.setSignalSemaphores({ *m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex] });
-    m_context.GetDevice().GraphicsQueue()->submit(finalSubmit, m_fence.Get());
+    vk::SemaphoreSubmitInfo signalInfo { };
+    signalInfo.setSemaphore(*m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex]);
+    signalInfo.setStageMask(vk::PipelineStageFlagBits2::eAllCommands);
+
+    vk::CommandBufferSubmitInfo cmdInfo { };
+    cmdInfo.setCommandBuffer(**m_commandBuffers.Get());
+
+    vk::SubmitInfo2 finalSubmit { };
+    finalSubmit.setWaitSemaphoreInfos(waitInfo);
+    finalSubmit.setCommandBufferInfos(cmdInfo);
+    finalSubmit.setSignalSemaphoreInfos(signalInfo);
+    m_context.GetDevice().GraphicsQueue()->submit2(finalSubmit, m_fence.Get());
 
     m_inFlightContext.NextFrame();
 
