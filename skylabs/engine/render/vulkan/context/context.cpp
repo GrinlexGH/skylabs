@@ -1,4 +1,4 @@
-#include <unordered_map>
+#include <flat_map>
 
 #include <VkBootstrap.h>
 #include <fmt/format.h>
@@ -59,26 +59,24 @@ std::vector<vk::ExtensionProperties> GetAvailableExtensions(const vk::raii::Cont
     return globalExtensions;
 }
 
-std::vector<std::string> SetupInstanceExtensions(const vk::raii::Context& context,
-                                                 const sk::render::vulkan::IOSAdapter* osAdapter,
-                                                 [[maybe_unused]] const bool setupDebugUtils) {
-    std::unordered_map<std::string_view, bool> requestedExtensions {
-        { vk::KHRGetSurfaceCapabilities2ExtensionName, true },
-        { vk::EXTSwapchainColorSpaceExtensionName, false },
+enum class ExtensionRequirement : std::uint8_t { eOptional, eRequired };
+
+sk::render::vulkan::ExtensionSet SetupInstanceExtensions(const vk::raii::Context& context,
+                                                         const sk::render::vulkan::IOSAdapter* osAdapter,
+                                                         [[maybe_unused]] const bool setupDebugUtils) {
+    std::flat_map<std::string_view, ExtensionRequirement> requestedExtensions {
+        { vk::KHRGetSurfaceCapabilities2ExtensionName, ExtensionRequirement::eOptional },
+        { vk::EXTSwapchainColorSpaceExtensionName, ExtensionRequirement::eOptional },
     };
 
 #ifdef DEBUG
     if (setupDebugUtils) {
-        requestedExtensions.try_emplace(vk::EXTDebugUtilsExtensionName, false);
+        requestedExtensions[vk::EXTDebugUtilsExtensionName] = ExtensionRequirement::eOptional;
     }
 #endif
 
     for (auto& ext : osAdapter->RequiredInstanceExtensions()) {
-        requestedExtensions.try_emplace(ext, true);
-    }
-
-    if (requestedExtensions.empty()) {
-        return { };
+        requestedExtensions[ext] = ExtensionRequirement::eRequired;
     }
 
     // Find these extensions
@@ -91,9 +89,11 @@ std::vector<std::string> SetupInstanceExtensions(const vk::raii::Context& contex
         }
     }
 
+    sk::render::vulkan::ExtensionSet enabledSet { enabledExtensions };
+
     std::vector<std::string_view> missingExtensions;
     for (const auto& [name, required] : requestedExtensions) {
-        if (required && !std::ranges::contains(enabledExtensions, name)) {
+        if (required == ExtensionRequirement::eRequired && !enabledSet.contains(name)) {
             missingExtensions.push_back(name);
         }
     }
@@ -104,20 +104,20 @@ std::vector<std::string> SetupInstanceExtensions(const vk::raii::Context& contex
             fmt::join(missingExtensions.begin(), missingExtensions.end(), ", ")) };
     }
 
-    return enabledExtensions;
+    return enabledSet;
 }
 
 struct InstanceCreationResult {
     vk::raii::Context context;
     vkb::Instance instance;
-    std::vector<std::string> enabledExtensions;
+    sk::render::vulkan::ExtensionSet enabledExtensions;
 };
 
 InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter,
                                       const bool setupDebugUtils = true) {
     vk::raii::Context context { osAdapter->GetVkGetInstanceProcAddr() };
 
-    std::vector<std::string> enabledExtensions =
+    sk::render::vulkan::ExtensionSet enabledExtensions =
         SetupInstanceExtensions(context, osAdapter, setupDebugUtils);
 
     constexpr std::uint32_t appVersion = vk::makeApiVersion(
@@ -276,10 +276,12 @@ sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
     sk::render::vulkan::Queue computeQueue { nullptr };
     getQueue(computeQueue, vkb::QueueType::compute);
 
-    return sk::render::vulkan::Device {
-        std::move(device),        std::move(raiiPhysicalDevice), physicalDevice.get_extensions(), caps,
-        std::move(graphicsQueue), std::move(presentQueue),       std::move(computeQueue)
-    };
+    sk::render::vulkan::ExtensionSet extensions { physicalDevice.get_extensions() };
+
+    return sk::render::vulkan::Device { std::move(device),        std::move(raiiPhysicalDevice),
+                                        std::move(extensions),    caps,
+                                        std::move(graphicsQueue), std::move(presentQueue),
+                                        std::move(computeQueue) };
 }
 }
 

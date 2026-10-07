@@ -1,4 +1,5 @@
 #pragma once
+#include "skylabs/engine/render/vulkan/context/instance.hpp"
 #include "skylabs/engine/render/vulkan/context/physical_device.hpp"
 
 namespace sk::render::vulkan {
@@ -33,8 +34,8 @@ class Device {
 public:
     explicit Device(std::nullptr_t) { }
     explicit Device(vk::raii::Device&& device, PhysicalDevice&& physicalDevice,
-                    std::vector<std::string>&& enabledExtensions, const DeviceCaps& caps,
-                    Queue&& graphicsQueue, Queue&& presentQueue, Queue&& computeQueue)
+                    ExtensionSet&& enabledExtensions, const DeviceCaps& caps, Queue&& graphicsQueue,
+                    Queue&& presentQueue, Queue&& computeQueue)
         : m_handle(std::move(device)),
           m_physicalDevice(std::move(physicalDevice)),
           m_enabledExtensions(std::move(enabledExtensions)),
@@ -59,14 +60,14 @@ public:
 
     [[nodiscard]] DeviceCaps Caps() const noexcept { return m_caps; }
     [[nodiscard]] bool IsExtensionEnabled(const std::string_view name) const {
-        return std::ranges::contains(m_enabledExtensions, name);
+        return m_enabledExtensions.contains(name);
     }
 
 private:
     vk::raii::Device m_handle { nullptr };
     PhysicalDevice m_physicalDevice { nullptr };
 
-    std::vector<std::string> m_enabledExtensions;
+    ExtensionSet m_enabledExtensions;
     DeviceCaps m_caps;
 
     Queue m_graphicsQueue { nullptr };
