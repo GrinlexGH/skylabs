@@ -64,7 +64,7 @@ void ConsoleSink::Write(const Category category, const Level level, const std::s
     fmt::println(
         "{} {} {}: {}",
         fmt::styled(
-            fmt::format("[{:%H:%M:%S}.{:03d}{}] ", localTime.tm, ms, FormatTzOffset(localTime.tzOffset)),
+            fmt::format("[{:%H:%M:%S}.{:03d}{}]", localTime.tm, ms, FormatTzOffset(localTime.tzOffset)),
             fmt::fg(fmt::color::gray)),
         fmt::styled(fmt::format("[{}]", utils::ToString(category)), GetCategoryStyle(category)),
         fmt::styled(fmt::format("[{}]", utils::ToString(level)), GetLevelStyle(level)), message);
