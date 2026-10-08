@@ -21,7 +21,7 @@ struct ViewProjection {
 };
 
 [shader("vertex")]
-VOut vertexMain(uint vertexIndex : SV_VertexID, ConstantBuffer<ViewProjection> viewProjection) {
+VOut vertexMain(uint vertexIndex : SV_VulkanVertexID, ConstantBuffer<ViewProjection> viewProjection) {
     VOut output;
     output.pos =
         mul(viewProjection.projection,

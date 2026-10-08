@@ -33,7 +33,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/command_buffer_allocator.cpp
         render/vulkan/pipeline_layout_cache.cpp
         render/vulkan/descriptor_layout_cache.cpp
-        render/vulkan/descriptor_allocator.cpp
         render/vulkan/descriptor_writer.cpp
         render/vulkan/context/context.cpp
         render/vulkan/context/allocator.cpp
@@ -68,7 +67,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/command_buffer.hpp
         render/vulkan/pipeline_layout_cache.hpp
         render/vulkan/descriptor_layout_cache.hpp
-        render/vulkan/descriptor_allocator.hpp
         render/vulkan/descriptor_writer.hpp
         render/vulkan/context/instance.hpp
         render/vulkan/context/surface.hpp

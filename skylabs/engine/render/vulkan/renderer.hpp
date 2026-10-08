@@ -57,10 +57,11 @@ private:
 
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };
     DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
-    DescriptorAllocator m_descriptorAllocator { nullptr };
+
+    vk::raii::DescriptorPool m_descriptorPool { nullptr };
 
     InFlight<Buffer> m_viewProjection { nullptr };
     GraphicsPipeline m_pipeline { nullptr };
-    InFlight<vk::raii::DescriptorSet> m_descriptorSet { nullptr };
+    InFlight<vk::DescriptorSet> m_descriptorSet { nullptr };
 };
 }

@@ -57,7 +57,6 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     // Pipeline creation
     m_pipelineLayoutCache = PipelineLayoutCache { *m_context.GetDevice() };
     m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
-    m_descriptorAllocator = DescriptorAllocator { *m_context.GetDevice() };
 
     // Base pipeline
     m_viewProjection =
@@ -68,9 +67,23 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
     });
 
-    m_descriptorSet =
-        InFlight { m_inFlightContext, m_descriptorAllocator.Allocate(std::vector(
-                                          m_inFlightContext.FrameCount(), *descriptorSetLayout)) };
+    // Схуяли я вообще должен заранее знать что и сколько я хочу выделить?!!
+    vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
+    std::array descriptorPoolSizes { vk::DescriptorPoolSize { vk::DescriptorType::eUniformBuffer,
+                                                              kFramesInFlightCount } };
+    descriptorPoolCreateInfo.setPoolSizes(descriptorPoolSizes);
+    descriptorPoolCreateInfo.setMaxSets(kFramesInFlightCount);
+    m_descriptorPool = vk::raii::DescriptorPool { *m_context.GetDevice(), descriptorPoolCreateInfo };
+
+    vk::DescriptorSetAllocateInfo descriptorSetAllocationInfo { };
+    std::vector descriptorSetLayouts { m_inFlightContext.FrameCount(), *descriptorSetLayout };
+    descriptorSetAllocationInfo.setDescriptorPool(m_descriptorPool);
+    descriptorSetAllocationInfo.setSetLayouts(descriptorSetLayouts);
+    std::vector<vk::DescriptorSet> descriptorSets =
+        m_context.GetDevice()->allocateDescriptorSets(descriptorSetAllocationInfo) |
+        std::views::transform([](vk::raii::DescriptorSet& set) { return set.release(); }) |
+        std::ranges::to<std::vector<vk::DescriptorSet>>();
+    m_descriptorSet = InFlight { m_inFlightContext, std::move(descriptorSets) };
 
     DescriptorWriter descriptorWriter { *m_context.GetDevice() };
     for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
@@ -78,7 +91,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         descriptorWriter
             .WriteBuffer(0, *m_viewProjection[i], m_viewProjection[i].Size(), 0,
                          vk::DescriptorType::eUniformBuffer)
-            .UpdateSet(*m_descriptorSet[i]);
+            .UpdateSet(m_descriptorSet[i]);
     }
 
     const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
@@ -144,7 +157,7 @@ void Renderer::BeginFrame() {
 
     const auto& cmd = m_commandBuffers.Get();
     cmd->reset();
-    cmd->begin({ });
+    cmd->begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
     cmd.PipelineBarrier({ ImageBarrier { .image = m_swapchain.Images()[m_currentImageIndex],
                                          .range = m_swapchain.Images()[m_currentImageIndex].FullRange(),
                                          .oldUsage = Usage::eSwapchainAcquire,
@@ -202,7 +215,7 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
                             static_cast<float>(swapchainImage.Extent().height), 0.0f, 1.0f } });
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
     cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline.Layout(), 0,
-                            *m_descriptorSet.Get(), { });
+                            m_descriptorSet.Get(), { });
     cmd->draw(3, 1, 0, 0);
 
     cmd->endRendering();
