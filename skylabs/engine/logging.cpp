@@ -58,16 +58,16 @@ void ConsoleSink::Write(const Category category, const Level level, const std::s
     const auto now = std::chrono::system_clock::now();
     const auto ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
+    const auto [tm, tzOffset] = os::GetLocalTime(now);
 
-    const os::LocalTime localTime = sk::os::GetLocalTime(now);
+    fmt::println("{} {} {}: {}",
+                 fmt::styled(fmt::format("[{:%H:%M:%S}.{:03d}{}]", tm, ms, FormatTzOffset(tzOffset)),
+                             fmt::fg(fmt::color::gray)),
+                 fmt::styled(fmt::format("[{}]", utils::ToString(category)), GetCategoryStyle(category)),
+                 fmt::styled(fmt::format("[{}]", utils::ToString(level)), GetLevelStyle(level)),
+                 message);
 
-    fmt::println(
-        "{} {} {}: {}",
-        fmt::styled(
-            fmt::format("[{:%H:%M:%S}.{:03d}{}]", localTime.tm, ms, FormatTzOffset(localTime.tzOffset)),
-            fmt::fg(fmt::color::gray)),
-        fmt::styled(fmt::format("[{}]", utils::ToString(category)), GetCategoryStyle(category)),
-        fmt::styled(fmt::format("[{}]", utils::ToString(level)), GetLevelStyle(level)), message);
+    std::fflush(stdout);
 }
 
 void AddSink(std::unique_ptr<ISink> sink) { g_sinks.push_back(std::move(sink)); }
