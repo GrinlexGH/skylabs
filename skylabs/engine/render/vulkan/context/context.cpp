@@ -251,6 +251,18 @@ sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
         }
     }
 
+    if (physicalDevice.enable_extension_if_present(vk::EXTMemoryPriorityExtensionName)) {
+        vk::PhysicalDeviceMemoryPriorityFeaturesEXT memoryPriority;
+        VK_OPT_FEATURE(memoryPriority, memoryPriority);
+
+        if (physicalDevice.enable_extension_if_present(vk::EXTPageableDeviceLocalMemoryExtensionName)) {
+            vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageableDeviceLocalMemory {
+                vk::True
+            };
+            TryEnableFeatures(physicalDevice, pageableDeviceLocalMemory);
+        }
+    }
+
     vkb::DeviceBuilder builder { physicalDevice };
     auto deviceResult = builder.build();
     if (!deviceResult) {

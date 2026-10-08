@@ -8,6 +8,10 @@ Allocator::Allocator(const vk::raii::Instance& instance, const Device& device) {
         flags |= vma::AllocatorCreateFlagBits::eKhrMaintenance5;
     }
 
+    if (device.Caps().memoryPriority) {
+        flags |= vma::AllocatorCreateFlagBits::eExtMemoryPriority;
+    }
+
     vma::AllocatorCreateInfo allocatorCreateInfo;
     allocatorCreateInfo.flags = flags;
     allocatorCreateInfo.vulkanApiVersion = device.GetPhysicalDevice().ApiVersion();

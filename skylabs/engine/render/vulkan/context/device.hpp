@@ -27,6 +27,7 @@ private:
 
 struct DeviceCaps {
     bool maintenance5 = false;
+    bool memoryPriority = false;
 };
 
 class Device {
