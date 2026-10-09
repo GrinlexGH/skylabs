@@ -182,20 +182,23 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
     //  Samsung A54
     //  RTX 3060 VISION OC
 
-    // Vulkan 1.3
+    // ! Vulkan 1.4
     // Extensions:
     //  VK_KHR_swapchain
+    //  ! VK_EXT_descriptor_heap
     // Features:
     //  samplerAnisotropy
     //  synchronization2
     //  dynamicRendering
     //  maintenance4
+    //  ! descriptorHeap
 
     // Minimum version
-    selector.set_minimum_version(1, 3);
+    selector.set_minimum_version(1, 4);
 
     // Required extensions
     selector.add_required_extension(vk::KHRSwapchainExtensionName);
+    selector.add_required_extension(vk::EXTDescriptorHeapExtensionName);
 
     // Required features
     vk::PhysicalDeviceFeatures features10 { };
@@ -207,6 +210,9 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
     features13.dynamicRendering = vk::True;
     features13.maintenance4 = vk::True;
     selector.set_required_features_13(features13);
+
+    vk::PhysicalDeviceDescriptorHeapFeaturesEXT descriptorHeap { };
+    descriptorHeap.descriptorHeap = vk::True;
 
     auto physicalDeviceResult = selector.select();
     if (!physicalDeviceResult) {
