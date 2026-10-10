@@ -12,6 +12,7 @@ struct GraphicsPipelineCreateInfo {
     vk::PipelineLayout layout { };
     std::vector<const Shader*> shaders;
     std::vector<VertexBufferBinding> vertexBindings;
+    std::vector<vk::DescriptorSetAndBindingMappingEXT> heapMappings;
     vk::PipelineRenderingCreateInfo renderingInfo { };  // TODO: attachment info with blending
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     vk::SampleCountFlagBits sampling = vk::SampleCountFlagBits::e1;

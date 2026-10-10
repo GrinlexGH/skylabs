@@ -124,6 +124,12 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
     depthStencil.minDepthBounds = 0.0f;
     depthStencil.maxDepthBounds = 0.0f;
 
+    // Descriptor heap
+    const bool useHeap = !options.heapMappings.empty();
+
+    vk::ShaderDescriptorSetAndBindingMappingInfoEXT mappingInfo { };
+    mappingInfo.setMappings(options.heapMappings);
+
     std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo { };
     shaderCreateInfo.reserve(options.shaders.size());
     for (auto& shader : options.shaders) {
@@ -131,8 +137,13 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
         ci.stage = shader->Stage();
         ci.module = **shader;
         ci.pName = "main";
+        if (useHeap) ci.pNext = &mappingInfo;
         shaderCreateInfo.push_back(ci);
     }
+
+    vk::PipelineCreateFlags2CreateInfo flags2 { vk::PipelineCreateFlagBits2::eDescriptorHeapEXT };
+    vk::PipelineRenderingCreateInfo rendering = options.renderingInfo;
+    rendering.pNext = useHeap ? &flags2 : nullptr;
 
     vk::GraphicsPipelineCreateInfo pipelineInfo { };
     pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderCreateInfo.size());
@@ -149,7 +160,7 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
     pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = nullptr;
-    pipelineInfo.pNext = &options.renderingInfo;
+    pipelineInfo.pNext = &rendering;
 
     m_handle = vk::raii::Pipeline { device, nullptr, pipelineInfo };
 }

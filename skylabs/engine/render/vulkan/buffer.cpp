@@ -41,9 +41,19 @@ Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, cons
         m_data = nullptr;
     }
 
-    m_address = device->getBufferAddress({ m_handle });
+    if (usage & vk::BufferUsageFlagBits2::eShaderDeviceAddress) {
+        m_address = device->getBufferAddress({ m_handle });
+    }
 
     const vma::VirtualBlockCreateInfo virtualBlockInfo { size };
     m_memoryBlock = vma::raii::VirtualBlock { virtualBlockInfo };
+}
+
+vk::DeviceAddress Buffer::Address() const {
+    if (m_usage & vk::BufferUsageFlagBits2::eShaderDeviceAddress) {
+        return m_address;
+    }
+
+    throw std::runtime_error("Buffer was created without eShaderDeviceAddress");
 }
 }

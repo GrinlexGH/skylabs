@@ -57,7 +57,10 @@ private:
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };
     DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
 
-    InFlight<Buffer> m_resourceDescriptorHeap { nullptr };
+    Buffer m_resourceDescriptorHeap { nullptr };
+    vk::DeviceSize m_heapReservedOff = 0;
+    vk::DeviceSize m_heapReservedSize = 0;
+    vk::DeviceSize m_heapStride = 0;
 
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
 

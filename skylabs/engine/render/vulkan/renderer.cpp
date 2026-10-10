@@ -63,28 +63,28 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                           *m_context.GetAllocator(),
                                           m_context.GetDevice(),
                                           sizeof(ViewProjection),
-                                          vk::BufferUsageFlagBits2::eUniformBuffer,
+                                          vk::BufferUsageFlagBits2::eUniformBuffer |
+                                              vk::BufferUsageFlagBits2::eShaderDeviceAddress,
                                           MemoryLocation::eHostVisible };
 
     // Descriptor heap
     const auto heapProps = m_context.GetDevice()
-                         .GetPhysicalDevice()
-                         ->getProperties2<vk::PhysicalDeviceProperties2,
-                                          vk::PhysicalDeviceDescriptorHeapPropertiesEXT>()
-                         .get<vk::PhysicalDeviceDescriptorHeapPropertiesEXT>();
+                               .GetPhysicalDevice()
+                               ->getProperties2<vk::PhysicalDeviceProperties2,
+                                                vk::PhysicalDeviceDescriptorHeapPropertiesEXT>()
+                               .get<vk::PhysicalDeviceDescriptorHeapPropertiesEXT>();
 
     constexpr uint32_t kMaxResourceDescriptors = 64;
     const auto heapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
-    const auto heapReservedOff = utils::AlignUp(heapUserSize, heapProps.resourceHeapAlignment);
-    const size_t heapSize = heapReservedOff + heapProps.minResourceHeapReservedRange;
+    m_heapReservedOff = utils::AlignUp(heapUserSize, heapProps.resourceHeapAlignment);
+    m_heapReservedSize = heapProps.minResourceHeapReservedRange;
+    m_heapStride = utils::AlignUp(heapProps.bufferDescriptorSize, heapProps.bufferDescriptorAlignment);
+    const size_t heapSize = m_heapReservedOff + m_heapReservedSize;
 
-    m_resourceDescriptorHeap = InFlight<Buffer> { m_inFlightContext,
-                                                  *m_context.GetAllocator(),
-                                                  m_context.GetDevice(),
-                                                  heapSize,
-                                                  vk::BufferUsageFlagBits2::eDescriptorHeapEXT |
-                                                      vk::BufferUsageFlagBits2::eShaderDeviceAddress,
-                                                  MemoryLocation::eHostVisible };
+    m_resourceDescriptorHeap = Buffer { *m_context.GetAllocator(), m_context.GetDevice(), heapSize,
+                                        vk::BufferUsageFlagBits2::eDescriptorHeapEXT |
+                                            vk::BufferUsageFlagBits2::eShaderDeviceAddress,
+                                        MemoryLocation::eHostVisible };
 
     for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
         vk::DeviceAddressRangeEXT range { m_viewProjection[i].Address(), sizeof(ViewProjection) };
@@ -93,7 +93,9 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         info.type = vk::DescriptorType::eUniformBuffer;
         info.data.pAddressRange = &range;
 
-        vk::HostAddressRangeEXT dst { m_resourceDescriptorHeap[i].Data(), heapProps.bufferDescriptorSize };
+        vk::HostAddressRangeEXT dst { static_cast<std::byte*>(m_resourceDescriptorHeap.Data()) +
+                                          i * heapProps.bufferDescriptorSize,
+                                      heapProps.bufferDescriptorSize };
 
         m_context.GetDevice()->writeResourceDescriptorsEXT(info, dst);
     }
@@ -103,14 +105,24 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     const Shader frag(*m_context.GetDevice(), vk::ShaderStageFlagBits::eFragment,
                       filesystem.LoadAsVector32("res://shaders/triangle.frag.spv"));
 
+    vk::DescriptorSetAndBindingMappingEXT mapping { };
+    mapping.descriptorSet = 0;
+    mapping.firstBinding = 0;
+    mapping.bindingCount = 1;
+    mapping.resourceMask = vk::SpirvResourceTypeFlagBitsEXT::eUniformBuffer;
+    mapping.source = vk::DescriptorMappingSourceEXT::eHeapWithPushIndex;
+    vk::DescriptorMappingSourcePushIndexEXT pushIndex { };
+    pushIndex.heapIndexStride = m_heapStride;
+    mapping.sourceData.pushIndex = pushIndex;
+
     std::array colorFormats { m_swapchain.SurfaceFormat().format };
-    m_pipeline = GraphicsPipeline { *m_context.GetDevice(),
-                                    GraphicsPipelineCreateInfo {
-                                        .layout = m_pipelineLayoutCache.GetLayout(
-                                            { .descriptorSetLayouts = { }, .pushConstants = { } }),
-                                        .shaders = { &vert, &frag },
-                                        .vertexBindings = { },
-                                        .renderingInfo = { { }, colorFormats } } };
+    m_pipeline =
+        GraphicsPipeline { *m_context.GetDevice(),
+                           GraphicsPipelineCreateInfo { .layout = nullptr,
+                                                        .shaders = { &vert, &frag },
+                                                        .vertexBindings = { },
+                                                        .heapMappings = { mapping },
+                                                        .renderingInfo = { { }, colorFormats } } };
 }
 
 Renderer::~Renderer() {
@@ -165,6 +177,13 @@ void Renderer::BeginFrame() {
                                          .oldUsage = Usage::eSwapchainAcquire,
                                          .newUsage = Usage::eColorAttachment } });
 
+    vk::BindHeapInfoEXT bind { };
+    bind.heapRange = vk::DeviceAddressRangeEXT { m_resourceDescriptorHeap.Address(),
+                                                 m_resourceDescriptorHeap.Size() };
+    bind.reservedRangeOffset = m_heapReservedOff;
+    bind.reservedRangeSize = m_heapReservedSize;
+    cmd->bindResourceHeapEXT(bind);
+
     m_frameActive = true;
 }
 
@@ -216,8 +235,13 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     cmd->setViewport(0, { { 0.0f, 0.0f, static_cast<float>(swapchainImage.Extent().width),
                             static_cast<float>(swapchainImage.Extent().height), 0.0f, 1.0f } });
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
-    cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline.Layout(), 0,
-                            m_descriptorSet.Get(), { });
+
+    const std::uint32_t descriptorIndex = m_inFlightContext.InFlightIndex();
+    vk::PushDataInfoEXT push { };
+    push.offset = 0;
+    push.data = vk::HostAddressRangeConstEXT { &descriptorIndex, sizeof(descriptorIndex) };
+    cmd->pushDataEXT(push);
+
     cmd->draw(3, 1, 0, 0);
 
     cmd->endRendering();
