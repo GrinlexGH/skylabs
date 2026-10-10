@@ -96,7 +96,8 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         info.data.pAddressRange = &range;
 
         vma::VirtualAllocationCreateInfo ci;
-        ci.size = heapProps.bufferDescriptorSize;
+        ci.size = m_heapStride;
+        ci.alignment = heapProps.bufferDescriptorAlignment;
         descriptors.emplace_back(m_resourceDescriptorHeap.VirtualBlock().allocate(ci));
         vk::HostAddressRangeEXT dst { static_cast<std::byte*>(m_resourceDescriptorHeap.Data()) +
                                           descriptors.back().getInfo().offset,
