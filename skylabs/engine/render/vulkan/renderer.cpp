@@ -59,39 +59,43 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
 
     // Base pipeline
-    m_viewProjection =
-        InFlight<Buffer> { m_inFlightContext, *m_context.GetAllocator(), sizeof(ViewProjection),
-                           vk::BufferUsageFlagBits::eUniformBuffer, MemoryLocation::eHostVisible };
+    m_viewProjection = InFlight<Buffer> { m_inFlightContext,
+                                          *m_context.GetAllocator(),
+                                          m_context.GetDevice(),
+                                          sizeof(ViewProjection),
+                                          vk::BufferUsageFlagBits2::eUniformBuffer,
+                                          MemoryLocation::eHostVisible };
 
-    const vk::raii::DescriptorSetLayout& descriptorSetLayout = m_descriptorLayoutCache.GetLayout({
-        { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
-    });
+    // Descriptor heap
+    const auto heapProps = m_context.GetDevice()
+                         .GetPhysicalDevice()
+                         ->getProperties2<vk::PhysicalDeviceProperties2,
+                                          vk::PhysicalDeviceDescriptorHeapPropertiesEXT>()
+                         .get<vk::PhysicalDeviceDescriptorHeapPropertiesEXT>();
 
-    // Схуяли я вообще должен заранее знать что и сколько я хочу выделить?!!
-    vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
-    std::array descriptorPoolSizes { vk::DescriptorPoolSize { vk::DescriptorType::eUniformBuffer,
-                                                              kFramesInFlightCount } };
-    descriptorPoolCreateInfo.setPoolSizes(descriptorPoolSizes);
-    descriptorPoolCreateInfo.setMaxSets(kFramesInFlightCount);
-    m_descriptorPool = vk::raii::DescriptorPool { *m_context.GetDevice(), descriptorPoolCreateInfo };
+    constexpr uint32_t kMaxResourceDescriptors = 64;
+    const auto heapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
+    const auto heapReservedOff = utils::AlignUp(heapUserSize, heapProps.resourceHeapAlignment);
+    const size_t heapSize = heapReservedOff + heapProps.minResourceHeapReservedRange;
 
-    vk::DescriptorSetAllocateInfo descriptorSetAllocationInfo { };
-    std::vector descriptorSetLayouts { m_inFlightContext.FrameCount(), *descriptorSetLayout };
-    descriptorSetAllocationInfo.setDescriptorPool(m_descriptorPool);
-    descriptorSetAllocationInfo.setSetLayouts(descriptorSetLayouts);
-    std::vector<vk::DescriptorSet> descriptorSets =
-        m_context.GetDevice()->allocateDescriptorSets(descriptorSetAllocationInfo) |
-        std::views::transform([](vk::raii::DescriptorSet& set) { return set.release(); }) |
-        std::ranges::to<std::vector<vk::DescriptorSet>>();
-    m_descriptorSet = InFlight { m_inFlightContext, std::move(descriptorSets) };
+    m_resourceDescriptorHeap = InFlight<Buffer> { m_inFlightContext,
+                                                  *m_context.GetAllocator(),
+                                                  m_context.GetDevice(),
+                                                  heapSize,
+                                                  vk::BufferUsageFlagBits2::eDescriptorHeapEXT |
+                                                      vk::BufferUsageFlagBits2::eShaderDeviceAddress,
+                                                  MemoryLocation::eHostVisible };
 
-    DescriptorWriter descriptorWriter { *m_context.GetDevice() };
     for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
-        descriptorWriter.Clear();
-        descriptorWriter
-            .WriteBuffer(0, *m_viewProjection[i], m_viewProjection[i].Size(), 0,
-                         vk::DescriptorType::eUniformBuffer)
-            .UpdateSet(m_descriptorSet[i]);
+        vk::DeviceAddressRangeEXT range { m_viewProjection[i].Address(), sizeof(ViewProjection) };
+
+        vk::ResourceDescriptorInfoEXT info { };
+        info.type = vk::DescriptorType::eUniformBuffer;
+        info.data.pAddressRange = &range;
+
+        vk::HostAddressRangeEXT dst { m_resourceDescriptorHeap[i].Data(), heapProps.bufferDescriptorSize };
+
+        m_context.GetDevice()->writeResourceDescriptorsEXT(info, dst);
     }
 
     const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
@@ -100,15 +104,13 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                       filesystem.LoadAsVector32("res://shaders/triangle.frag.spv"));
 
     std::array colorFormats { m_swapchain.SurfaceFormat().format };
-    m_pipeline = GraphicsPipeline {
-        *m_context.GetDevice(),
-        GraphicsPipelineCreateInfo {
-            .layout = m_pipelineLayoutCache.GetLayout(
-                { .descriptorSetLayouts = { descriptorSetLayout }, .pushConstants = { } }),
-            .shaders = { &vert, &frag },
-            .vertexBindings = { },
-            .renderingInfo = { { }, colorFormats } }
-    };
+    m_pipeline = GraphicsPipeline { *m_context.GetDevice(),
+                                    GraphicsPipelineCreateInfo {
+                                        .layout = m_pipelineLayoutCache.GetLayout(
+                                            { .descriptorSetLayouts = { }, .pushConstants = { } }),
+                                        .shaders = { &vert, &frag },
+                                        .vertexBindings = { },
+                                        .renderingInfo = { { }, colorFormats } } };
 }
 
 Renderer::~Renderer() {

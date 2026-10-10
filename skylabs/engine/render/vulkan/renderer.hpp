@@ -57,6 +57,8 @@ private:
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };
     DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
 
+    InFlight<Buffer> m_resourceDescriptorHeap { nullptr };
+
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
 
     InFlight<Buffer> m_viewProjection { nullptr };

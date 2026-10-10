@@ -60,4 +60,8 @@ void HashCombine(std::size_t& seed, const T& val) {
     std::hash<T> hasher;
     seed ^= hasher(val) + 0x9e3779b9 + (seed << 6u) + (seed >> 2u);
 }
+
+constexpr std::size_t AlignUp(const std::size_t value, const std::size_t alignment) noexcept {
+    return (value + alignment - 1) / alignment * alignment;
+}
 }
