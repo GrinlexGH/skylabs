@@ -86,6 +86,8 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                             vk::BufferUsageFlagBits2::eShaderDeviceAddress,
                                         MemoryLocation::eHostVisible };
 
+    std::vector<vma::raii::VirtualAllocation> descriptors;
+    descriptors.reserve(m_inFlightContext.FrameCount());
     for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
         vk::DeviceAddressRangeEXT range { m_viewProjection[i].Address(), sizeof(ViewProjection) };
 
@@ -93,12 +95,16 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         info.type = vk::DescriptorType::eUniformBuffer;
         info.data.pAddressRange = &range;
 
+        vma::VirtualAllocationCreateInfo ci;
+        ci.size = heapProps.bufferDescriptorSize;
+        descriptors.emplace_back(m_resourceDescriptorHeap.VirtualBlock().allocate(ci));
         vk::HostAddressRangeEXT dst { static_cast<std::byte*>(m_resourceDescriptorHeap.Data()) +
-                                          i * heapProps.bufferDescriptorSize,
-                                      heapProps.bufferDescriptorSize };
+                                          descriptors.back().getInfo().offset,
+                                      descriptors.back().getInfo().size };
 
         m_context.GetDevice()->writeResourceDescriptorsEXT(info, dst);
     }
+    m_descriptors = InFlight { m_inFlightContext, std::move(descriptors) };
 
     const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
                       filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));

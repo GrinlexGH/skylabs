@@ -62,6 +62,8 @@ private:
     vk::DeviceSize m_heapReservedSize = 0;
     vk::DeviceSize m_heapStride = 0;
 
+    InFlight<vma::raii::VirtualAllocation> m_descriptors { nullptr };
+
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
 
     InFlight<Buffer> m_viewProjection { nullptr };
