@@ -8,6 +8,11 @@
 #include "skylabs/engine/logging.hpp"
 #include "skylabs/engine/render/vulkan/context/context.hpp"
 
+// Contract:
+//  1. You choose target required Vulkan API version and write WHOLE code only for it
+//  2. You choose real target device(s) to require features
+//  3. Every feature that does not support your target device(s) is optional
+
 namespace {
 #ifdef DEBUG
 VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
@@ -34,46 +39,25 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 }
 #endif
 
-std::vector<vk::ExtensionProperties> GetAvailableExtensions(const vk::raii::Context& context) {
-    std::vector<vk::ExtensionProperties> globalExtensions =
-        context.enumerateInstanceExtensionProperties();
-
-#if defined(DEBUG) && !defined(ARCH_32)
-    for (auto& layer : context.enumerateInstanceLayerProperties()) {
-        if (std::strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") != 0) {
-            continue;
-        }
-
-        const std::vector<vk::ExtensionProperties> layerExtensions =
-            context.enumerateInstanceExtensionProperties({ layer.layerName.data() });
-
-        globalExtensions.reserve(globalExtensions.size() + layerExtensions.size());
-        for (auto& ext : layerExtensions) {
-            globalExtensions.emplace_back(ext.extensionName);
-        }
-
-        break;
-    }
-#endif
-
-    return globalExtensions;
-}
-
 enum class ExtensionRequirement : std::uint8_t { eOptional, eRequired };
 
-sk::render::vulkan::ExtensionSet SetupInstanceExtensions(const vk::raii::Context& context,
+sk::render::vulkan::ExtensionSet SetupInstanceExtensions(vkb::InstanceBuilder& instanceBuilder,
+                                                         const vk::raii::Context& context,
                                                          const sk::render::vulkan::IOSAdapter* osAdapter,
                                                          [[maybe_unused]] const bool setupDebugUtils) {
+    auto systemInfoResult =
+        vkb::SystemInfo::get_system_info(context.getDispatcher()->vkGetInstanceProcAddr);
+    if (!systemInfoResult) {
+        throw std::runtime_error { fmt::format("Failed to query vulkan system info: {}",
+                                               systemInfoResult.error().message()) };
+    }
+    const vkb::SystemInfo& systemInfo = systemInfoResult.value();
+
+    // Request extensions
     std::flat_map<std::string_view, ExtensionRequirement> requestedExtensions {
         { vk::KHRGetSurfaceCapabilities2ExtensionName, ExtensionRequirement::eOptional },
         { vk::EXTSwapchainColorSpaceExtensionName, ExtensionRequirement::eOptional },
     };
-
-#ifdef DEBUG
-    if (setupDebugUtils) {
-        requestedExtensions[vk::EXTDebugUtilsExtensionName] = ExtensionRequirement::eOptional;
-    }
-#endif
 
     for (auto& ext : osAdapter->RequiredInstanceExtensions()) {
         requestedExtensions[ext] = ExtensionRequirement::eRequired;
@@ -81,20 +65,14 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(const vk::raii::Context
 
     // Find these extensions
     std::vector<std::string> enabledExtensions;
-    enabledExtensions.reserve(requestedExtensions.size());
-    for (const auto& extension : GetAvailableExtensions(context)) {
-        if (const std::string_view name { extension.extensionName };
-            requestedExtensions.contains(name)) {
-            enabledExtensions.emplace_back(name);
-        }
-    }
-
-    sk::render::vulkan::ExtensionSet enabledSet { enabledExtensions };
-
     std::vector<std::string_view> missingExtensions;
-    for (const auto& [name, required] : requestedExtensions) {
-        if (required == ExtensionRequirement::eRequired && !enabledSet.contains(name)) {
-            missingExtensions.push_back(name);
+    enabledExtensions.reserve(requestedExtensions.size());
+
+    for (const auto& [nameView, requirement] : requestedExtensions) {
+        if (std::string name { nameView }; systemInfo.is_extension_available(name.c_str())) {
+            enabledExtensions.emplace_back(std::move(name));
+        } else if (requirement == ExtensionRequirement::eRequired) {
+            missingExtensions.push_back(nameView);
         }
     }
 
@@ -104,7 +82,37 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(const vk::raii::Context
             fmt::join(missingExtensions.begin(), missingExtensions.end(), ", ")) };
     }
 
-    return enabledSet;
+    instanceBuilder.enable_extensions(enabledExtensions);
+
+    // Debug utils
+#ifdef DEBUG
+    if (setupDebugUtils) {
+        constexpr auto debugSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+        constexpr auto debugTypes = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                                    vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                                    vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+
+        if (systemInfo.debug_utils_available) {
+            instanceBuilder.enable_extension(vk::EXTDebugUtilsExtensionName)
+                .set_debug_callback(reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(
+                    reinterpret_cast<std::uintptr_t>(DebugCallback)))
+                .set_debug_messenger_severity(
+                    static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(debugSeverity))
+                .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(debugTypes));
+
+#ifndef ARCH_32
+            if (systemInfo.validation_layers_available) {
+                instanceBuilder.enable_validation_layers();
+            }
+#endif
+        }
+    }
+#endif
+
+    return sk::render::vulkan::ExtensionSet { enabledExtensions };
 }
 
 struct InstanceCreationResult {
@@ -113,51 +121,27 @@ struct InstanceCreationResult {
     sk::render::vulkan::ExtensionSet enabledExtensions;
 };
 
+// See comment on top of this file, ChoosePhysicalDevice() and CreateDevice()
+//
+// !!! DO NOT FORGET TO UPDATE EXTENSION FEATURES TO CORE FEATURES WHEN UPDATING API VERSION
+constexpr std::uint32_t kApiVersion = vk::ApiVersion13;
+
 InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter,
                                       const bool setupDebugUtils = true) {
     vk::raii::Context context { osAdapter->GetVkGetInstanceProcAddr() };
 
-    sk::render::vulkan::ExtensionSet enabledExtensions =
-        SetupInstanceExtensions(context, osAdapter, setupDebugUtils);
-
     constexpr std::uint32_t appVersion = vk::makeApiVersion(
         0, project_info::kVersionMajor, project_info::kVersionMinor, project_info::kVersionPatch);
-
-    std::vector<const char*> rawEnabledExtensions { };
-    rawEnabledExtensions.reserve(enabledExtensions.size());
-    for (const auto& ext : enabledExtensions) {
-        rawEnabledExtensions.push_back(ext.c_str());
-    }
 
     vkb::InstanceBuilder instanceBuilder;
     instanceBuilder.set_app_name(project_info::kGameName)
         .set_app_version(appVersion)
         .set_engine_name(project_info::kName)
         .set_engine_version(appVersion)
-        .set_minimum_instance_version(vk::ApiVersion13)
-        .enable_extensions(rawEnabledExtensions);
+        .require_api_version(kApiVersion);
 
-#ifdef DEBUG
-    constexpr auto debugSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    constexpr auto debugTypes = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-
-    if (setupDebugUtils && std::ranges::contains(enabledExtensions, vk::EXTDebugUtilsExtensionName)) {
-        instanceBuilder
-#ifndef ARCH_32
-            .request_validation_layers()
-#endif
-            .set_debug_callback(reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(
-                reinterpret_cast<std::uintptr_t>(DebugCallback)))
-            .set_debug_messenger_severity(
-                static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(debugSeverity))
-            .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(debugTypes));
-    }
-#endif
+    sk::render::vulkan::ExtensionSet enabledExtensions =
+        SetupInstanceExtensions(instanceBuilder, context, osAdapter, setupDebugUtils);
 
     auto instanceResult = instanceBuilder.build();
     if (!instanceResult) {
@@ -175,44 +159,42 @@ InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAd
 vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk::SurfaceKHR& surface) {
     vkb::PhysicalDeviceSelector selector { instance, surface };
 
-    // !!! Required Vulkan features
-
+    // !!! Required Vulkan features.
+    //
     // Feature intersection of my own devices:
-    //  Lenovo IdeaPad pro 5 (14imh9)
     //  Samsung A54
+    //  Lenovo IdeaPad pro 5 (14imh9)
     //  RTX 3060 VISION OC
-
-    // ! Vulkan 1.4
+    //
+    // Vulkan 1.3
     // Extensions:
     //  VK_KHR_swapchain
-    //  ! VK_EXT_descriptor_heap
     // Features:
     //  samplerAnisotropy
     //  synchronization2
     //  dynamicRendering
     //  maintenance4
-    //  ! descriptorHeap
-
-    // Minimum version
-    selector.set_minimum_version(1, 4);
+    //  bufferDeviceAddress
+    //
+    // !!! DO NOT FORGET TO UPDATE EXTENSION FEATURES TO CORE FEATURES WHEN UPDATING API VERSION
 
     // Required extensions
     selector.add_required_extension(vk::KHRSwapchainExtensionName);
-    selector.add_required_extension(vk::EXTDescriptorHeapExtensionName);
 
     // Required features
     vk::PhysicalDeviceFeatures features10 { };
     features10.samplerAnisotropy = vk::True;
     selector.set_required_features(features10);
 
+    vk::PhysicalDeviceVulkan12Features features12 { };
+    features12.bufferDeviceAddress = vk::True;
+    selector.set_required_features_12(features12);
+
     vk::PhysicalDeviceVulkan13Features features13 { };
     features13.synchronization2 = vk::True;
     features13.dynamicRendering = vk::True;
     features13.maintenance4 = vk::True;
     selector.set_required_features_13(features13);
-
-    vk::PhysicalDeviceDescriptorHeapFeaturesEXT descriptorHeap { };
-    descriptorHeap.descriptorHeap = vk::True;
 
     auto physicalDeviceResult = selector.select();
     if (!physicalDeviceResult) {
@@ -226,6 +208,39 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
     return physicalDeviceResult.value();
 }
 
+enum class ExtensionAvailability : std::uint8_t { eAvailable, eUnavailable };
+
+// Needs to control extension dependencies
+class DeviceExtensions {
+public:
+    explicit DeviceExtensions(vkb::PhysicalDevice& pd) : m_pd(pd) { }
+
+    bool Enable(const char* name) {
+        auto [it, inserted] = m_state.try_emplace(name, ExtensionAvailability::eUnavailable);
+        if (inserted)
+            it->second = m_pd.enable_extension_if_present(name) ? ExtensionAvailability::eAvailable
+                                                                : ExtensionAvailability::eUnavailable;
+        return it->second == ExtensionAvailability::eAvailable;
+    }
+
+    bool Any(const std::initializer_list<const char*> names) {
+        for (const char* n : names)
+            if (Enable(n)) return true;
+        return false;
+    }
+
+    bool All(const std::initializer_list<const char*> names) {
+        for (const char* n : names)
+            if (!m_pd.is_extension_present(n)) return false;
+        for (const char* n : names) Enable(n);
+        return true;
+    }
+
+private:
+    vkb::PhysicalDevice& m_pd;
+    std::flat_map<std::string, ExtensionAvailability> m_state;
+};
+
 template <typename T>
 bool TryEnableFeatures(vkb::PhysicalDevice& physicalDevice, const T& f) {
     return physicalDevice.enable_extension_features_if_present(f);
@@ -233,12 +248,17 @@ bool TryEnableFeatures(vkb::PhysicalDevice& physicalDevice, const T& f) {
 
 sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
                                         sk::render::vulkan::PhysicalDevice&& raiiPhysicalDevice) {
-    // !!! Optional Vulkan features
-
+    // !!! Optional Vulkan features.
+    //
     // Features:
     //  maintenance5
+    //  extendedFlags
+    //  descriptorHeap
+    //
+    // !!! DO NOT FORGET TO UPDATE EXTENSION FEATURES TO CORE FEATURES WHEN UPDATING API VERSION
 
     sk::render::vulkan::DeviceCaps caps;
+    caps.apiVersion = kApiVersion;
 
 #define VK_OPT_FEATURE(x, y)                           \
     do {                                               \
@@ -246,26 +266,32 @@ sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
         caps.y = TryEnableFeatures(physicalDevice, x); \
     } while (false)
 
-    vk::PhysicalDeviceVulkan14Features features14 { };
-    vk::PhysicalDeviceMaintenance5Features maintenance5 { };
+    DeviceExtensions exts { physicalDevice };
 
-    if (physicalDevice.properties.apiVersion >= vk::ApiVersion14) {
-        VK_OPT_FEATURE(features14, maintenance5);
-    } else {
-        if (physicalDevice.enable_extension_if_present(vk::KHRMaintenance5ExtensionName)) {
-            VK_OPT_FEATURE(maintenance5, maintenance5);
-        }
+    if (exts.Enable(vk::KHRMaintenance5ExtensionName)) {
+        vk::PhysicalDeviceMaintenance5Features maintenance5 { };
+        VK_OPT_FEATURE(maintenance5, maintenance5);
     }
 
-    if (physicalDevice.enable_extension_if_present(vk::EXTMemoryPriorityExtensionName)) {
-        vk::PhysicalDeviceMemoryPriorityFeaturesEXT memoryPriority;
+    if (exts.Enable(vk::KHRExtendedFlagsExtensionName)) {
+        vk::PhysicalDeviceExtendedFlagsFeaturesKHR extendedFlags { };
+        VK_OPT_FEATURE(extendedFlags, extendedFlags);
+    }
+
+    if (exts.Any({ vk::KHRMaintenance5ExtensionName, vk::KHRExtendedFlagsExtensionName }) &&
+        exts.Enable(vk::EXTDescriptorHeapExtensionName)) {
+        vk::PhysicalDeviceDescriptorHeapFeaturesEXT heap { };
+        VK_OPT_FEATURE(heap, descriptorHeap);
+    }
+
+    if (exts.Enable(vk::EXTMemoryPriorityExtensionName)) {
+        vk::PhysicalDeviceMemoryPriorityFeaturesEXT memoryPriority { };
         VK_OPT_FEATURE(memoryPriority, memoryPriority);
 
-        if (physicalDevice.enable_extension_if_present(vk::EXTPageableDeviceLocalMemoryExtensionName)) {
-            vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageableDeviceLocalMemory {
-                vk::True
-            };
-            TryEnableFeatures(physicalDevice, pageableDeviceLocalMemory);
+        // Don't care, just try to enable
+        if (exts.Enable(vk::EXTPageableDeviceLocalMemoryExtensionName)) {
+            vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageable { vk::True };
+            TryEnableFeatures(physicalDevice, pageable);
         }
     }
 
@@ -327,8 +353,7 @@ Context::Context(const IWindow* window, const IOSAdapter* osAdapter)
 
     // Build device
     m_device = CreateDevice(physicalDevice, PhysicalDevice { *m_instance, physicalDevice.physical_device,
-                                                             physicalDevice.properties.deviceName,
-                                                             physicalDevice.properties.apiVersion });
+                                                             physicalDevice.properties.deviceName });
 
     // Build allocator
     m_allocator = Allocator { *m_instance, m_device };
