@@ -3,7 +3,7 @@
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 
 namespace {
-constexpr vk::Format MapVkFormat(VertexFormat fmt) noexcept {
+constexpr vk::Format MapVkFormat(const VertexFormat fmt) noexcept {
     switch (fmt) {
         case VertexFormat::eFloat32:
             return vk::Format::eR32Sfloat;
@@ -146,8 +146,7 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
     rendering.pNext = useHeap ? &flags2 : nullptr;
 
     vk::GraphicsPipelineCreateInfo pipelineInfo { };
-    pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderCreateInfo.size());
-    pipelineInfo.pStages = shaderCreateInfo.data();
+    pipelineInfo.setStages(shaderCreateInfo);
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
