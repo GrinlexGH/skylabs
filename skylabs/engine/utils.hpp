@@ -64,4 +64,12 @@ void HashCombine(std::size_t& seed, const T& val) {
 constexpr std::size_t AlignUp(const std::size_t value, const std::size_t alignment) noexcept {
     return (value + alignment - 1) / alignment * alignment;
 }
+
+namespace vulkan {
+template <typename Head, typename Ext>
+void PrependPNext(Head& head, Ext& ext) {
+    ext.pNext = head.pNext;
+    head.pNext = &ext;
+}
+}
 }
