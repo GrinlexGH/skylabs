@@ -63,8 +63,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                           *m_context.GetAllocator(),
                                           m_context.GetDevice(),
                                           sizeof(ViewProjection),
-                                          vk::BufferUsageFlagBits2::eUniformBuffer |
-                                              vk::BufferUsageFlagBits2::eShaderDeviceAddress,
+                                          vk::BufferUsageFlagBits2::eUniformBuffer,
                                           MemoryLocation::eHostVisible };
 
     // Descriptor heap

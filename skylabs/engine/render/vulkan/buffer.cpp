@@ -3,7 +3,7 @@
 namespace sk::render::vulkan {
 Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, const vk::DeviceSize size,
                const vk::BufferUsageFlags2& usage, const MemoryLocation location)
-    : m_size(size), m_usage(usage) {
+    : m_size(size) {
     vk::StructureChain<vk::BufferCreateInfo, vk::BufferUsageFlags2CreateInfo> chain;
 
     auto& bufferInfo = chain.get<vk::BufferCreateInfo>();
@@ -18,6 +18,8 @@ Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, cons
         assert(raw >> 32u == 0 && "Usage requires VK_KHR_maintenance5");
         bufferInfo.usage = vk::BufferUsageFlags(static_cast<VkBufferUsageFlags>(raw));
     }
+
+    m_usage = usage | vk::BufferUsageFlagBits2::eShaderDeviceAddress;
 
     vma::AllocationCreateInfo allocCreateInfo { };
     switch (location) {
@@ -41,19 +43,9 @@ Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, cons
         m_data = nullptr;
     }
 
-    if (usage & vk::BufferUsageFlagBits2::eShaderDeviceAddress) {
-        m_address = device->getBufferAddress({ m_handle });
-    }
+    m_address = device->getBufferAddress({ m_handle });
 
     const vma::VirtualBlockCreateInfo virtualBlockInfo { size };
     m_memoryBlock = vma::raii::VirtualBlock { virtualBlockInfo };
-}
-
-vk::DeviceAddress Buffer::Address() const {
-    if (m_usage & vk::BufferUsageFlagBits2::eShaderDeviceAddress) {
-        return m_address;
-    }
-
-    throw std::runtime_error("Buffer was created without eShaderDeviceAddress");
 }
 }

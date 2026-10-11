@@ -33,7 +33,7 @@ public:
     [[nodiscard]] const vma::raii::VirtualBlock& VirtualBlock() const noexcept { return m_memoryBlock; }
 
     [[nodiscard]] vk::BufferUsageFlags2 Usage() const noexcept { return m_usage; }
-    [[nodiscard]] vk::DeviceAddress Address() const;
+    [[nodiscard]] vk::DeviceAddress Address() const noexcept { return m_address; }
 
 private:
     vma::raii::Buffer m_handle { nullptr };
