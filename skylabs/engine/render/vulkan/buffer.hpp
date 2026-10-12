@@ -13,7 +13,8 @@ class Buffer {
 public:
     explicit Buffer(std::nullptr_t) { }
     Buffer(const vma::raii::Allocator& allocator, const Device& device, vk::DeviceSize size,
-           const vk::BufferUsageFlags2& usage, MemoryLocation location);
+           MemoryLocation location, const vk::BufferUsageFlags2& usage,
+           std::optional<vk::DeviceSize> virtualAllocationSize = std::nullopt);
     Buffer(const Buffer&) = delete;
     Buffer(Buffer&&) noexcept = default;
     Buffer& operator=(const Buffer&) = delete;

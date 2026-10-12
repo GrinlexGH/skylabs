@@ -2,7 +2,8 @@
 
 namespace sk::render::vulkan {
 Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, const vk::DeviceSize size,
-               const vk::BufferUsageFlags2& usage, const MemoryLocation location)
+               const MemoryLocation location, const vk::BufferUsageFlags2& usage,
+               std::optional<vk::DeviceSize> virtualAllocationSize)
     : m_size(size) {
     vk::StructureChain<vk::BufferCreateInfo, vk::BufferUsageFlags2CreateInfo> chain;
 
@@ -45,7 +46,7 @@ Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, cons
 
     m_address = device->getBufferAddress({ m_handle });
 
-    const vma::VirtualBlockCreateInfo virtualBlockInfo { size };
+    const vma::VirtualBlockCreateInfo virtualBlockInfo { virtualAllocationSize.value_or(size) };
     m_memoryBlock = vma::raii::VirtualBlock { virtualBlockInfo };
 }
 }

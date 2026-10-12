@@ -59,12 +59,10 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
 
     // Base pipeline
-    m_viewProjection = InFlight<Buffer> { m_inFlightContext,
-                                          *m_context.GetAllocator(),
-                                          m_context.GetDevice(),
-                                          sizeof(ViewProjection),
-                                          vk::BufferUsageFlagBits2::eUniformBuffer,
-                                          MemoryLocation::eHostVisible };
+    m_viewProjection = InFlight<Buffer> {
+        m_inFlightContext,      *m_context.GetAllocator(),    m_context.GetDevice(),
+        sizeof(ViewProjection), MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer
+    };
 
     // Descriptor heap
     const auto heapProps = m_context.GetDevice()
@@ -80,10 +78,13 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     m_heapStride = utils::AlignUp(heapProps.bufferDescriptorSize, heapProps.bufferDescriptorAlignment);
     const size_t heapSize = m_heapReservedOff + m_heapReservedSize;
 
-    m_resourceDescriptorHeap = Buffer { *m_context.GetAllocator(), m_context.GetDevice(), heapSize,
+    m_resourceDescriptorHeap = Buffer { *m_context.GetAllocator(),
+                                        m_context.GetDevice(),
+                                        heapSize,
+                                        MemoryLocation::eHostVisible,
                                         vk::BufferUsageFlagBits2::eDescriptorHeapEXT |
                                             vk::BufferUsageFlagBits2::eShaderDeviceAddress,
-                                        MemoryLocation::eHostVisible };
+                                        m_heapReservedOff };
 
     std::vector<vma::raii::VirtualAllocation> descriptors;
     descriptors.reserve(m_inFlightContext.FrameCount());
