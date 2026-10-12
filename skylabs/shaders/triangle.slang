@@ -1,6 +1,6 @@
-struct VOut {
+struct VSOutput {
     float4 pos : SV_Position;
-    [[vk::location(0)]] float3 color : COLOR0;
+    float3 color;
 };
 
 static const float2 kPositions[3] = {
@@ -15,22 +15,23 @@ static const float3 kColors[3] = {
     float3(0.0, 0.0, 1.0)
 };
 
-struct ViewProjection {
+struct UBO {
     float4x4 view;
     float4x4 projection;
 };
 
+[[vk::binding(0,0)]]
+ConstantBuffer<UBO> ubo;
+
 [shader("vertex")]
-VOut vertexMain(uint vertexIndex : SV_VulkanVertexID, ConstantBuffer<ViewProjection> viewProjection) {
-    VOut output;
-    output.pos =
-        mul(viewProjection.projection,
-            mul(viewProjection.view, float4(kPositions[vertexIndex], 0.0, 1.0)));
-    output.color = kColors[vertexIndex];
+VSOutput vertexMain(uint index : SV_VulkanVertexID) {
+    VSOutput output;
+    output.pos = mul(ubo.projection, mul(ubo.view, float4(kPositions[index], 0.0, 1.0)));
+    output.color = kColors[index];
     return output;
 }
 
 [shader("fragment")]
-float4 fragmentMain(VOut input) : SV_Target {
+float4 fragmentMain(VSOutput input) : SV_Target {
     return float4(input.color, 1.0);
 }
