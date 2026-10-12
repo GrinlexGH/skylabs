@@ -114,7 +114,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     vk::DescriptorSetAndBindingMappingEXT mapping { };
     mapping.descriptorSet = 0;
     mapping.firstBinding = 0;
-    mapping.bindingCount = 1;
+    mapping.bindingCount = 1;  // array
     mapping.resourceMask = vk::SpirvResourceTypeFlagBitsEXT::eUniformBuffer;
     mapping.source = vk::DescriptorMappingSourceEXT::eHeapWithPushIndex;
     vk::DescriptorMappingSourcePushIndexEXT pushIndex { };
@@ -242,7 +242,8 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
                             static_cast<float>(swapchainImage.Extent().height), 0.0f, 1.0f } });
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
 
-    const std::uint32_t descriptorIndex = m_inFlightContext.InFlightIndex();
+    const auto offset = m_descriptors.Get().getInfo().offset;
+    const std::uint32_t descriptorIndex = static_cast<std::uint32_t>(offset / m_heapStride);
     vk::PushDataInfoEXT push { };
     push.offset = 0;
     push.data = vk::HostAddressRangeConstEXT { &descriptorIndex, sizeof(descriptorIndex) };
