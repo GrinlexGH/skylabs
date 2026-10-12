@@ -10,16 +10,16 @@ Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, cons
     bufferInfo.size = size;
     bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
+    m_usage = usage | vk::BufferUsageFlagBits2::eShaderDeviceAddress;
+
     if (device.Caps().maintenance5 || device.Caps().extendedFlags) {
-        chain.get<vk::BufferUsageFlags2CreateInfo>().usage = usage;
+        chain.get<vk::BufferUsageFlags2CreateInfo>().usage = m_usage;
     } else {
         chain.unlink<vk::BufferUsageFlags2CreateInfo>();
-        const auto raw = static_cast<VkBufferUsageFlags2>(usage);
+        const auto raw = static_cast<VkBufferUsageFlags2>(m_usage);
         assert(raw >> 32u == 0 && "Usage requires VK_KHR_maintenance5");
         bufferInfo.usage = vk::BufferUsageFlags(static_cast<VkBufferUsageFlags>(raw));
     }
-
-    m_usage = usage | vk::BufferUsageFlagBits2::eShaderDeviceAddress;
 
     vma::AllocationCreateInfo allocCreateInfo { };
     switch (location) {
