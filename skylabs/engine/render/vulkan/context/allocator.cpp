@@ -14,9 +14,9 @@ Allocator::Allocator(const vk::raii::Instance& instance, const Device& device) {
     }
 
     vma::AllocatorCreateInfo allocatorCreateInfo;
-    allocatorCreateInfo.flags = flags;
-    allocatorCreateInfo.vulkanApiVersion = device.Caps().apiVersion;
-    allocatorCreateInfo.physicalDevice = *device.GetPhysicalDevice();
+    allocatorCreateInfo.setFlags(flags)
+        .setVulkanApiVersion(device.Caps().apiVersion)
+        .setPhysicalDevice(*device.GetPhysicalDevice());
 
     m_handle = vma::raii::Allocator { instance, *device, allocatorCreateInfo };
 }

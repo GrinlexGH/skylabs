@@ -54,13 +54,9 @@ private:
 
     InFlight<CommandBuffer> m_commandBuffers { nullptr };
 
-    PipelineLayoutCache m_pipelineLayoutCache { nullptr };
-    DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
-
     Buffer m_resourceDescriptorHeap { nullptr };
     vk::DeviceSize m_heapReservedOff = 0;
     vk::DeviceSize m_heapReservedSize = 0;
-    vk::DeviceSize m_heapStride = 0;
 
     InFlight<vma::raii::VirtualAllocation> m_descriptors { nullptr };
 

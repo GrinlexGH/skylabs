@@ -54,10 +54,6 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                   m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary,
                                                                     m_inFlightContext.FrameCount()) };
 
-    // Pipeline creation
-    m_pipelineLayoutCache = PipelineLayoutCache { *m_context.GetDevice() };
-    m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
-
     // Base pipeline
     m_viewProjection = InFlight<Buffer> {
         m_inFlightContext,      *m_context.GetAllocator(),    m_context.GetDevice(),
@@ -75,15 +71,12 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     const auto heapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
     m_heapReservedOff = utils::AlignUp(heapUserSize, heapProps.resourceHeapAlignment);
     m_heapReservedSize = heapProps.minResourceHeapReservedRange;
-    m_heapStride = utils::AlignUp(heapProps.bufferDescriptorSize, heapProps.bufferDescriptorAlignment);
-    const size_t heapSize = m_heapReservedOff + m_heapReservedSize;
 
     m_resourceDescriptorHeap = Buffer { *m_context.GetAllocator(),
                                         m_context.GetDevice(),
-                                        heapSize,
+                                        m_heapReservedOff + m_heapReservedSize,
                                         MemoryLocation::eHostVisible,
-                                        vk::BufferUsageFlagBits2::eDescriptorHeapEXT |
-                                            vk::BufferUsageFlagBits2::eShaderDeviceAddress,
+                                        vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
                                         m_heapReservedOff };
 
     std::vector<vma::raii::VirtualAllocation> descriptors;
@@ -96,7 +89,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         info.data.pAddressRange = &range;
 
         vma::VirtualAllocationCreateInfo ci;
-        ci.size = m_heapStride;
+        ci.size = heapProps.bufferDescriptorSize;
         ci.alignment = heapProps.bufferDescriptorAlignment;
         descriptors.emplace_back(m_resourceDescriptorHeap.VirtualBlock().allocate(ci));
         vk::HostAddressRangeEXT dst { static_cast<std::byte*>(m_resourceDescriptorHeap.Data()) +
@@ -119,7 +112,8 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     mapping.resourceMask = vk::SpirvResourceTypeFlagBitsEXT::eUniformBuffer;
     mapping.source = vk::DescriptorMappingSourceEXT::eHeapWithPushIndex;
     vk::DescriptorMappingSourcePushIndexEXT pushIndex { };
-    pushIndex.heapIndexStride = m_heapStride;
+    pushIndex.heapIndexStride = 1;
+    pushIndex.heapArrayStride = std::max(heapProps.bufferDescriptorSize, heapProps.imageDescriptorSize);
     mapping.sourceData.pushIndex = pushIndex;
 
     std::array colorFormats { m_swapchain.SurfaceFormat().format };
@@ -243,11 +237,10 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
                             static_cast<float>(swapchainImage.Extent().height), 0.0f, 1.0f } });
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
 
-    const auto offset = m_descriptors.Get().getInfo().offset;
-    const std::uint32_t descriptorIndex = static_cast<std::uint32_t>(offset / m_heapStride);
+    const std::uint32_t offset = m_descriptors.Get().getInfo().offset;
     vk::PushDataInfoEXT push { };
     push.offset = 0;
-    push.data = vk::HostAddressRangeConstEXT { &descriptorIndex, sizeof(descriptorIndex) };
+    push.data = vk::HostAddressRangeConstEXT { &offset, sizeof(offset) };
     cmd->pushDataEXT(push);
 
     cmd->draw(3, 1, 0, 0);

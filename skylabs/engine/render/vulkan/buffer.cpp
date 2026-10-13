@@ -3,7 +3,7 @@
 namespace sk::render::vulkan {
 Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, const vk::DeviceSize size,
                const MemoryLocation location, const vk::BufferUsageFlags2& usage,
-               std::optional<vk::DeviceSize> virtualAllocationSize)
+               const std::optional<vk::DeviceSize> virtualAllocationSize)
     : m_size(size) {
     vk::StructureChain<vk::BufferCreateInfo, vk::BufferUsageFlags2CreateInfo> chain;
 
