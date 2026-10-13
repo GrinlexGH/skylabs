@@ -88,6 +88,10 @@ void Engine::OnEvent(const input::Event& event) {
                     m_relativeMouseMode = !m_relativeMouseMode;
                     SDL_SetWindowRelativeMouseMode(*m_window, m_relativeMouseMode);
                     break;
+                case input::Keys::eF11:
+                    m_windowFullscreenMode = !m_windowFullscreenMode;
+                    SDL_SetWindowFullscreen(*m_window, m_windowFullscreenMode);
+                    break;
                 default:
                     break;
             }
