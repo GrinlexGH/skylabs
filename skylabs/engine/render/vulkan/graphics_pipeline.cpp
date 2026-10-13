@@ -1,6 +1,7 @@
 #include <ranges>
 
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
+#include "skylabs/engine/utils.hpp"
 
 namespace {
 constexpr vk::Format MapVkFormat(const VertexFormat fmt) noexcept {
@@ -39,8 +40,7 @@ std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(
 }
 
 namespace sk::render::vulkan {
-GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
-                                   const GraphicsPipelineCreateInfo& options) {
+GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineCreateInfo& options) {
     const std::vector vertexAttributeDescriptions =
         GenerateAttributeDescriptions(options.vertexBindings);
 
@@ -141,10 +141,6 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
         shaderCreateInfo.push_back(ci);
     }
 
-    vk::PipelineCreateFlags2CreateInfo flags2 { vk::PipelineCreateFlagBits2::eDescriptorHeapEXT };
-    vk::PipelineRenderingCreateInfo rendering = options.renderingInfo;
-    rendering.pNext = useHeap ? &flags2 : nullptr;
-
     vk::GraphicsPipelineCreateInfo pipelineInfo { };
     pipelineInfo.setStages(shaderCreateInfo);
     pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -159,8 +155,16 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
     pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = nullptr;
-    pipelineInfo.pNext = &rendering;
 
-    m_handle = vk::raii::Pipeline { device, nullptr, pipelineInfo };
+    vk::PipelineCreateFlags2CreateInfo flags2 { };
+    if (device.Caps().extendedFlags || device.Caps().maintenance5) {
+        flags2.setFlags(vk::PipelineCreateFlagBits2::eDescriptorHeapEXT);
+        utils::vulkan::PrependPNext(pipelineInfo, flags2);
+    }
+
+    vk::PipelineRenderingCreateInfo rendering = options.renderingInfo;
+    utils::vulkan::PrependPNext(pipelineInfo, rendering);
+
+    m_handle = vk::raii::Pipeline { *device, nullptr, pipelineInfo };
 }
 }

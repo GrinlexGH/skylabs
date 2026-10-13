@@ -118,7 +118,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
 
     std::array colorFormats { m_swapchain.SurfaceFormat().format };
     m_pipeline =
-        GraphicsPipeline { *m_context.GetDevice(),
+        GraphicsPipeline { m_context.GetDevice(),
                            GraphicsPipelineCreateInfo { .layout = nullptr,
                                                         .shaders = { &vert, &frag },
                                                         .vertexBindings = { },
