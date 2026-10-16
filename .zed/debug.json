@@ -1,0 +1,13 @@
+[
+  {
+    "label": "Debug native binary",
+    "build": {
+      "command": "cmake",
+      "args": ["--build", "build/Debug", "--parallel"],
+      "cwd": "$ZED_WORKTREE_ROOT"
+    },
+    "program": "$ZED_WORKTREE_ROOT/build/Debug/built/launcher",
+    "request": "launch",
+    "adapter": "CodeLLDB"
+  }
+]
