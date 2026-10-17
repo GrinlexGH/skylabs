@@ -1,12 +1,23 @@
 [
   {
-    "label": "Debug native binary",
+    "label": "Build & debug (Windows)",
     "build": {
       "command": "cmake",
       "args": ["--build", "build/Debug", "--parallel"],
       "cwd": "$ZED_WORKTREE_ROOT"
     },
     "program": "$ZED_WORKTREE_ROOT/build/Debug/built/launcher",
+    "request": "launch",
+    "adapter": "CodeLLDB"
+  },
+  {
+    "label": "Build & debug (Linux)",
+    "build": {
+      "command": "cmake",
+      "args": ["--build", "build/Debug", "--parallel"],
+      "cwd": "$ZED_WORKTREE_ROOT"
+    },
+    "program": "$ZED_WORKTREE_ROOT/build/Debug/built/bin/launcher",
     "request": "launch",
     "adapter": "CodeLLDB"
   }
