@@ -1,9 +1,10 @@
 #include <ranges>
 
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
+#include "skylabs/engine/utils.hpp"
 
 namespace {
-constexpr vk::Format MapVkFormat(VertexFormat fmt) noexcept {
+constexpr vk::Format MapVkFormat(const VertexFormat fmt) noexcept {
     switch (fmt) {
         case VertexFormat::eFloat32:
             return vk::Format::eR32Sfloat;
@@ -39,8 +40,7 @@ std::vector<vk::VertexInputAttributeDescription> GenerateAttributeDescriptions(
 }
 
 namespace sk::render::vulkan {
-GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
-                                   const GraphicsPipelineCreateInfo& options) {
+GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineCreateInfo& options) {
     const std::vector vertexAttributeDescriptions =
         GenerateAttributeDescriptions(options.vertexBindings);
 
@@ -124,6 +124,12 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
     depthStencil.minDepthBounds = 0.0f;
     depthStencil.maxDepthBounds = 0.0f;
 
+    // Descriptor heap
+    const bool useHeap = !options.heapMappings.empty();
+
+    vk::ShaderDescriptorSetAndBindingMappingInfoEXT mappingInfo { };
+    mappingInfo.setMappings(options.heapMappings);
+
     std::vector<vk::PipelineShaderStageCreateInfo> shaderCreateInfo { };
     shaderCreateInfo.reserve(options.shaders.size());
     for (auto& shader : options.shaders) {
@@ -131,12 +137,12 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
         ci.stage = shader->Stage();
         ci.module = **shader;
         ci.pName = "main";
+        if (useHeap) ci.pNext = &mappingInfo;
         shaderCreateInfo.push_back(ci);
     }
 
     vk::GraphicsPipelineCreateInfo pipelineInfo { };
-    pipelineInfo.stageCount = static_cast<std::uint32_t>(shaderCreateInfo.size());
-    pipelineInfo.pStages = shaderCreateInfo.data();
+    pipelineInfo.setStages(shaderCreateInfo);
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -149,8 +155,16 @@ GraphicsPipeline::GraphicsPipeline(const vk::raii::Device& device,
     pipelineInfo.renderPass = nullptr;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = nullptr;
-    pipelineInfo.pNext = &options.renderingInfo;
 
-    m_handle = vk::raii::Pipeline { device, nullptr, pipelineInfo };
+    vk::PipelineCreateFlags2CreateInfo flags2 { };
+    if (useHeap) {
+        flags2.setFlags(vk::PipelineCreateFlagBits2::eDescriptorHeapEXT);
+        utils::vulkan::PrependPNext(pipelineInfo, flags2);
+    }
+
+    vk::PipelineRenderingCreateInfo rendering = options.renderingInfo;
+    utils::vulkan::PrependPNext(pipelineInfo, rendering);
+
+    m_handle = vk::raii::Pipeline { *device, nullptr, pipelineInfo };
 }
 }

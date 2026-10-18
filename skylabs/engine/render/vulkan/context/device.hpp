@@ -26,8 +26,11 @@ private:
 };
 
 struct DeviceCaps {
+    std::uint32_t apiVersion = vk::ApiVersion10;
     bool maintenance5 = false;
+    bool extendedFlags = false;
     bool memoryPriority = false;
+    bool descriptorHeap = false;
 };
 
 class Device {

@@ -266,7 +266,9 @@ static void SkEnableVTP(void) {
     SetConsoleMode(handle, originalMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT);
 }
 
-/* Dummy main for console in debug */
+/**
+ * Dummy main for console in debug
+ */
 int main(void) {
     // Setup windows console
     SkEnableVTP();

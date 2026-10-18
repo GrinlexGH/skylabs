@@ -35,6 +35,7 @@ private:
 
     bool m_quit = false;
     bool m_relativeMouseMode = false;
+    bool m_windowFullscreenMode = false;
     sdl::Context m_sdlContext { nullptr };
     sdl::Window m_window { nullptr };
     sdl::EventPump m_eventPump;

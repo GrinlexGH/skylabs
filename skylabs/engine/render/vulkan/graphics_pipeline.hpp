@@ -1,5 +1,6 @@
 #pragma once
 #include "skylabs/engine/render/vertex.hpp"
+#include "skylabs/engine/render/vulkan/context/device.hpp"
 #include "skylabs/engine/render/vulkan/shader.hpp"
 
 namespace sk::render::vulkan {
@@ -12,6 +13,7 @@ struct GraphicsPipelineCreateInfo {
     vk::PipelineLayout layout { };
     std::vector<const Shader*> shaders;
     std::vector<VertexBufferBinding> vertexBindings;
+    std::vector<vk::DescriptorSetAndBindingMappingEXT> heapMappings;
     vk::PipelineRenderingCreateInfo renderingInfo { };  // TODO: attachment info with blending
     vk::PrimitiveTopology primitiveTopology = vk::PrimitiveTopology::eTriangleList;
     vk::SampleCountFlagBits sampling = vk::SampleCountFlagBits::e1;
@@ -20,8 +22,7 @@ struct GraphicsPipelineCreateInfo {
 class GraphicsPipeline {
 public:
     explicit GraphicsPipeline(std::nullptr_t) { }
-    explicit GraphicsPipeline(const vk::raii::Device& device,
-                              const GraphicsPipelineCreateInfo& options = { });
+    explicit GraphicsPipeline(const Device& device, const GraphicsPipelineCreateInfo& options = { });
     GraphicsPipeline(const GraphicsPipeline&) = delete;
     GraphicsPipeline(GraphicsPipeline&&) noexcept = default;
     GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
