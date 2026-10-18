@@ -31,7 +31,7 @@ public:
     void OnDeviceReset() override;
 
 private:
-    static constexpr auto kFramesInFlightCount = 3;
+    static constexpr auto kFramesInFlightCount = 1;
     static constexpr auto kGeometryPoolSize = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
     void RecreateSwapchain();
@@ -54,16 +54,19 @@ private:
 
     InFlight<CommandBuffer> m_commandBuffers { nullptr };
 
+    // Heap
     Buffer m_resourceDescriptorHeap { nullptr };
     vk::DeviceSize m_heapReservedOff = 0;
     vk::DeviceSize m_heapReservedSize = 0;
-
     InFlight<vma::raii::VirtualAllocation> m_descriptors { nullptr };
 
+    // Pool
+    PipelineLayoutCache m_pipelineLayoutCache { nullptr };
+    DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
+    InFlight<vk::DescriptorSet> m_descriptorSet { nullptr };
 
     InFlight<Buffer> m_viewProjection { nullptr };
     GraphicsPipeline m_pipeline { nullptr };
-    InFlight<vk::DescriptorSet> m_descriptorSet { nullptr };
 };
 }

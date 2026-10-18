@@ -157,7 +157,7 @@ GraphicsPipeline::GraphicsPipeline(const Device& device, const GraphicsPipelineC
     pipelineInfo.basePipelineHandle = nullptr;
 
     vk::PipelineCreateFlags2CreateInfo flags2 { };
-    if (device.Caps().extendedFlags || device.Caps().maintenance5) {
+    if (useHeap) {
         flags2.setFlags(vk::PipelineCreateFlagBits2::eDescriptorHeapEXT);
         utils::vulkan::PrependPNext(pipelineInfo, flags2);
     }
