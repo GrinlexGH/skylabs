@@ -60,18 +60,22 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         sizeof(ViewProjection), MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer
     };
 
-    // Descriptor heap
+    const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
+                      filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));
+    const Shader frag(*m_context.GetDevice(), vk::ShaderStageFlagBits::eFragment,
+                      filesystem.LoadAsVector32("res://shaders/triangle.frag.spv"));
+
+    // Descriptor heap creation
     const auto heapProps = m_context.GetDevice()
                                .GetPhysicalDevice()
                                ->getProperties2<vk::PhysicalDeviceProperties2,
                                                 vk::PhysicalDeviceDescriptorHeapPropertiesEXT>()
                                .get<vk::PhysicalDeviceDescriptorHeapPropertiesEXT>();
 
-    constexpr uint32_t kMaxResourceDescriptors = 64;
+    constexpr std::uint32_t kMaxResourceDescriptors = 64;
     const auto heapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
     m_heapReservedOff = utils::AlignUp(heapUserSize, heapProps.resourceHeapAlignment);
     m_heapReservedSize = heapProps.minResourceHeapReservedRange;
-
     m_resourceDescriptorHeap = Buffer { *m_context.GetAllocator(),
                                         m_context.GetDevice(),
                                         m_heapReservedOff + m_heapReservedSize,
@@ -79,6 +83,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                         vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
                                         m_heapReservedOff };
 
+    // Allocation the descriptors
     std::vector<vma::raii::VirtualAllocation> descriptors;
     descriptors.reserve(m_inFlightContext.FrameCount());
     for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
@@ -100,11 +105,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     }
     m_descriptors = InFlight { m_inFlightContext, std::move(descriptors) };
 
-    const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
-                      filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));
-    const Shader frag(*m_context.GetDevice(), vk::ShaderStageFlagBits::eFragment,
-                      filesystem.LoadAsVector32("res://shaders/triangle.frag.spv"));
-
+    // Pipeline "layout"
     vk::DescriptorSetAndBindingMappingEXT mapping { };
     mapping.descriptorSet = 0;
     mapping.firstBinding = 0;
