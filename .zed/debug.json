@@ -8,7 +8,13 @@
     },
     "program": "$ZED_WORKTREE_ROOT/build/Debug/built/launcher",
     "request": "launch",
-    "adapter": "CodeLLDB"
+    "adapter": "CodeLLDB",
+    "initCommands": [
+      "settings set plugin.symbol-file.pdb.reader native"
+    ],
+    "env": {
+      "_NO_DEBUG_HEAP": "1"
+    }
   },
   {
     "label": "Build & debug (Linux)",
