@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/type_aligned.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "skylabs/engine/logging.hpp"
 #include "skylabs/engine/render/vulkan/descriptor_writer.hpp"
@@ -84,28 +85,6 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                             vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
                                             m_heapReservedOff };
 
-        // Allocation the descriptors
-        std::vector<vma::raii::VirtualAllocation> descriptors;
-        descriptors.reserve(m_inFlightContext.FrameCount());
-        for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
-            vk::DeviceAddressRangeEXT range { m_viewProjection[i].Address(), sizeof(ViewProjection) };
-
-            vk::ResourceDescriptorInfoEXT info { };
-            info.type = vk::DescriptorType::eUniformBuffer;
-            info.data.pAddressRange = &range;
-
-            vma::VirtualAllocationCreateInfo ci;
-            ci.size = heapProps.bufferDescriptorSize;
-            ci.alignment = heapProps.bufferDescriptorAlignment;
-            descriptors.emplace_back(m_resourceDescriptorHeap.VirtualBlock().allocate(ci));
-            vk::HostAddressRangeEXT dst { static_cast<std::byte*>(m_resourceDescriptorHeap.Data()) +
-                                              descriptors.back().getInfo().offset,
-                                          descriptors.back().getInfo().size };
-
-            m_context.GetDevice()->writeResourceDescriptorsEXT(info, dst);
-        }
-        m_descriptors = InFlight { m_inFlightContext, std::move(descriptors) };
-
         // Pipeline "layout"
         vk::DescriptorSetAndBindingMappingEXT mapping { };
         mapping.descriptorSet = 0;
@@ -127,6 +106,28 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                                             .vertexBindings = { },
                                                             .heapMappings = { mapping },
                                                             .renderingInfo = { { }, colorFormats } } };
+
+        // Descriptors allocation and writing
+        std::vector<vma::raii::VirtualAllocation> descriptors;
+        descriptors.reserve(m_inFlightContext.FrameCount());
+        for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
+            vk::DeviceAddressRangeEXT range { m_viewProjection[i].Address(), sizeof(ViewProjection) };
+
+            vk::ResourceDescriptorInfoEXT info { };
+            info.type = vk::DescriptorType::eUniformBuffer;
+            info.data.pAddressRange = &range;
+
+            vma::VirtualAllocationCreateInfo ci;
+            ci.size = heapProps.bufferDescriptorSize;
+            ci.alignment = heapProps.bufferDescriptorAlignment;
+            descriptors.emplace_back(m_resourceDescriptorHeap.VirtualBlock().allocate(ci));
+            vk::HostAddressRangeEXT dst { static_cast<std::byte*>(m_resourceDescriptorHeap.Data()) +
+                                              descriptors.back().getInfo().offset,
+                                          descriptors.back().getInfo().size };
+
+            m_context.GetDevice()->writeResourceDescriptorsEXT(info, dst);
+        }
+        m_descriptors = InFlight { m_inFlightContext, std::move(descriptors) };
     } else {
         m_pipelineLayoutCache = PipelineLayoutCache { *m_context.GetDevice() };
         m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
@@ -145,6 +146,15 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         descriptorPoolCreateInfo.setPoolSizes(descriptorPoolSizes);
         descriptorPoolCreateInfo.setMaxSets(kFramesInFlightCount);
         m_descriptorPool = vk::raii::DescriptorPool { *m_context.GetDevice(), descriptorPoolCreateInfo };
+
+        std::array colorFormats { m_swapchain.SurfaceFormat().format };
+        m_pipeline =
+            GraphicsPipeline { m_context.GetDevice(),
+                               GraphicsPipelineCreateInfo { .layout = pipelineLayout,
+                                                            .shaders = { &vert, &frag },
+                                                            .vertexBindings = { },
+                                                            .heapMappings = { },
+                                                            .renderingInfo = { { }, colorFormats } } };
 
         // Allocate pack of descriptors
         vk::DescriptorSetAllocateInfo descriptorSetAllocationInfo { };
@@ -165,15 +175,6 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                              vk::DescriptorType::eUniformBuffer)
                 .UpdateSet(m_descriptorSet[i]);
         }
-
-        std::array colorFormats { m_swapchain.SurfaceFormat().format };
-        m_pipeline =
-            GraphicsPipeline { m_context.GetDevice(),
-                               GraphicsPipelineCreateInfo { .layout = pipelineLayout,
-                                                            .shaders = { &vert, &frag },
-                                                            .vertexBindings = { },
-                                                            .heapMappings = { },
-                                                            .renderingInfo = { { }, colorFormats } } };
     }
 }
 
@@ -196,8 +197,11 @@ void Renderer::BeginFrame() {
             RecreateSwapchain();
         }
 
-        std::ignore = m_context.GetDevice()->waitForFences({ m_fence.Get() }, vk::True,
-                                                           std::numeric_limits<std::uint64_t>::max());
+        {
+            ZoneNamed(waitFrameInFlight, "Wait frame in flight");
+            std::ignore = m_context.GetDevice()->waitForFences(
+                { m_fence.Get() }, vk::True, std::numeric_limits<std::uint64_t>::max());
+        }
 
         // Acquire next image from the swapchain
         vk::Result result;
@@ -291,7 +295,7 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
 
     if (m_context.GetDevice().Caps().descriptorHeap) {
-        const std::uint32_t offset = m_descriptors.Get().getInfo().offset;
+        const vk::DeviceSize offset = m_descriptors.Get().getInfo().offset;
         vk::PushDataInfoEXT push { };
         push.offset = 0;
         push.data = vk::HostAddressRangeConstEXT { &offset, sizeof(offset) };

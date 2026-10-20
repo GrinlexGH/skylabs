@@ -31,7 +31,7 @@ public:
     void OnDeviceReset() override;
 
 private:
-    static constexpr auto kFramesInFlightCount = 1;
+    static constexpr auto kFramesInFlightCount = 2;
     static constexpr auto kGeometryPoolSize = static_cast<vk::DeviceSize>(128 * 1024 * 1024);
 
     void RecreateSwapchain();

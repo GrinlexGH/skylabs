@@ -76,7 +76,6 @@ std::int64_t FileStream::Seek(const std::int64_t offset, filesystem::Whence when
             case filesystem::Whence::eEnd:
                 return SDL_IO_SEEK_END;
         }
-        std::unreachable();
     }();
 
     return SDL_SeekIO(m_stream, offset, sdlWhence);
