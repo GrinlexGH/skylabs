@@ -87,6 +87,7 @@ vk::Extent2D Swapchain::SurfaceExtent(const vk::SurfaceCapabilitiesKHR& caps) co
 }
 
 bool Swapchain::IsOutdated() const {
+    // Is the check too crude?
     const vk::SurfaceCapabilitiesKHR caps = SurfaceCapabilities().surfaceCapabilities;
     return SurfaceExtent(caps) != Extent() || caps.currentTransform != SurfaceTransform();
 }

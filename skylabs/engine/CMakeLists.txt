@@ -86,6 +86,7 @@ add_dependencies(${CURRENT_TARGET_NAME} shaders)
 
 target_link_libraries(${CURRENT_TARGET_NAME} PRIVATE
     SDL3::SDL3
+    SDL3_image::SDL3_image
     fmt::fmt
     glm::glm
     Tracy::TracyClient

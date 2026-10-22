@@ -72,4 +72,8 @@ std::vector<std::uint8_t> Filesystem::LoadAsVector8(const std::string_view uri) 
 std::vector<std::uint32_t> Filesystem::LoadAsVector32(const std::string_view uri) const {
     return LoadAsGenericVector<std::uint32_t>(*this, uri);
 }
+
+std::unique_ptr<IImage> Filesystem::LoadImage(std::string_view uri, ImageFormat format) const {
+    return m_backend->OpenImage(ResolvePath(uri), format);
+}
 }

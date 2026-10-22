@@ -1,7 +1,7 @@
 #include "skylabs/engine/render/vulkan/buffer.hpp"
 
 namespace sk::render::vulkan {
-Buffer::Buffer(const vma::raii::Allocator& allocator, const Device& device, const vk::DeviceSize size,
+Buffer::Buffer(const Device& device, const vma::raii::Allocator& allocator, const vk::DeviceSize size,
                const MemoryLocation location, const vk::BufferUsageFlags2& usage,
                const std::optional<vk::DeviceSize> virtualAllocationSize)
     : m_size(size) {

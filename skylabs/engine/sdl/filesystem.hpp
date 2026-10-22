@@ -4,6 +4,27 @@
 #include "skylabs/engine/filesystem.hpp"
 
 namespace sk::sdl {
+class Image final : public filesystem::IImage {
+public:
+    explicit Image(SDL_IOStream* stream, filesystem::ImageFormat format);
+    Image(const Image&) = delete;
+    Image(Image&& rhs) noexcept;
+    Image& operator=(const Image&) = delete;
+    Image& operator=(Image&& rhs) noexcept;
+    ~Image() override;
+
+    [[nodiscard]] utils::Extent2D Extent() override {
+        return { static_cast<std::uint32_t>(m_surface->w), static_cast<std::uint32_t>(m_surface->h) };
+    }
+
+    [[nodiscard]] filesystem::ImageFormat Format() override { return m_format; }
+    [[nodiscard]] void* Pixels() override { return m_surface ? m_surface->pixels : nullptr; }
+
+private:
+    filesystem::ImageFormat m_format;
+    SDL_Surface* m_surface;
+};
+
 class FileStream final : public filesystem::IFileStream {
 public:
     explicit FileStream(SDL_IOStream* stream);
@@ -35,5 +56,7 @@ public:
     [[nodiscard]] bool Exists(const std::string& path) const override;
     [[nodiscard]] std::unique_ptr<filesystem::IFileStream> OpenRead(
         const std::string& path) const override;
+    [[nodiscard]] std::unique_ptr<filesystem::IImage> OpenImage(
+        const std::string& path, filesystem::ImageFormat format) const override;
 };
 }

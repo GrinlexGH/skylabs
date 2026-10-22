@@ -1,6 +1,32 @@
+#include <SDL3_image/SDL_image.h>
+
+#include "skylabs/engine/logging.hpp"
 #include "skylabs/engine/sdl/filesystem.hpp"
 
 namespace {
+SDL_PixelFormat ToPixelFormat(const sk::filesystem::ImageFormat format) {
+    namespace sk_fs = sk::filesystem;
+
+    switch (format) {
+        case sk_fs::ImageFormat::eRGBA32:
+            return SDL_PIXELFORMAT_RGBA32;
+        case sk_fs::ImageFormat::eARGB32:
+            return SDL_PIXELFORMAT_ARGB32;
+        case sk_fs::ImageFormat::eBGRA32:
+            return SDL_PIXELFORMAT_BGRA32;
+        case sk_fs::ImageFormat::eABGR32:
+            return SDL_PIXELFORMAT_ABGR32;
+        case sk_fs::ImageFormat::eRGBX32:
+            return SDL_PIXELFORMAT_RGBX32;
+        case sk_fs::ImageFormat::eXRGB32:
+            return SDL_PIXELFORMAT_XRGB32;
+        case sk_fs::ImageFormat::eBGRX32:
+            return SDL_PIXELFORMAT_BGRX32;
+        case sk_fs::ImageFormat::eXBGR32:
+            return SDL_PIXELFORMAT_XBGR32;
+    }
+}
+
 Sint64 SDLCALL StreamSizeBridge(void* userdata) {
     return static_cast<Sint64>(static_cast<sk::filesystem::IFileStream*>(userdata)->Size());
 }
@@ -42,6 +68,25 @@ bool SDLCALL StreamCloseBridge(void* /*userdata*/) { return true; }
 }
 
 namespace sk::sdl {
+Image::Image(SDL_IOStream* stream, const filesystem::ImageFormat format) : m_format(format) {
+    SDL_Surface* imageRaw = IMG_Load_IO(stream, false);
+    if (!imageRaw) {
+        log::Error("Failed to load image, idk which");
+        return;
+    }
+
+    m_surface = SDL_ConvertSurface(imageRaw, ToPixelFormat(format));
+    SDL_DestroySurface(imageRaw);
+
+    if (!m_surface) {
+        log::Error("Failed to convert image at loading, idk which, but here's the reason: {}",
+                   SDL_GetError());
+        return;
+    }
+}
+
+Image::~Image() { SDL_DestroySurface(m_surface); }
+
 FileStream::FileStream(SDL_IOStream* stream) : m_stream(stream) { }
 
 FileStream::FileStream(FileStream&& rhs) noexcept : m_stream(std::exchange(rhs.m_stream, nullptr)) { }
@@ -120,5 +165,12 @@ std::unique_ptr<filesystem::IFileStream> FilesystemBackend::OpenRead(const std::
     auto* handle = SDL_IOFromFile(path.c_str(), "rb");
     if (!handle) return nullptr;
     return std::make_unique<FileStream>(handle);
+}
+
+std::unique_ptr<filesystem::IImage> FilesystemBackend::OpenImage(
+    const std::string& path, const filesystem::ImageFormat format) const {
+    auto* handle = SDL_IOFromFile(path.c_str(), "rb");
+    if (!handle) return nullptr;
+    return std::make_unique<Image>(handle, format);
 }
 }

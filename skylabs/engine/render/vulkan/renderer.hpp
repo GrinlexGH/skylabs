@@ -37,6 +37,10 @@ private:
     void RecreateSwapchain();
     void MarkSurfaceLost();
 
+    Image LoadTexture(const std::string& path, const std::string& debugName);
+
+    const filesystem::Filesystem* m_filesystem;
+
     Context m_context { nullptr };
     Swapchain m_swapchain { nullptr };
     InFlightContext m_inFlightContext;
@@ -68,5 +72,7 @@ private:
 
     InFlight<Buffer> m_viewProjection { nullptr };
     GraphicsPipeline m_pipeline { nullptr };
+    Buffer m_stagingBuffer { nullptr };
+    Image m_texture { nullptr };
 };
 }

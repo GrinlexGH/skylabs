@@ -30,7 +30,8 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 
 namespace sk::render::vulkan {
 Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapter,
-                   const filesystem::Filesystem& filesystem) {
+                   const filesystem::Filesystem& filesystem)
+    : m_filesystem(&filesystem) {
     // General context
     m_context = Context { window, osAdapter };
 
@@ -57,9 +58,11 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
 
     // Base pipeline
     m_viewProjection = InFlight<Buffer> {
-        m_inFlightContext,      *m_context.GetAllocator(),    m_context.GetDevice(),
+        m_inFlightContext,      m_context.GetDevice(),        *m_context.GetAllocator(),
         sizeof(ViewProjection), MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer
     };
+
+    m_texture = LoadTexture("assets://matroskin.png", "matroskin");
 
     const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
                       filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));
@@ -78,8 +81,8 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         const auto heapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
         m_heapReservedOff = utils::AlignUp(heapUserSize, heapProps.resourceHeapAlignment);
         m_heapReservedSize = heapProps.minResourceHeapReservedRange;
-        m_resourceDescriptorHeap = Buffer { *m_context.GetAllocator(),
-                                            m_context.GetDevice(),
+        m_resourceDescriptorHeap = Buffer { m_context.GetDevice(),
+                                            *m_context.GetAllocator(),
                                             m_heapReservedOff + m_heapReservedSize,
                                             MemoryLocation::eHostVisible,
                                             vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
@@ -369,4 +372,48 @@ void Renderer::OnDeviceReset() {
 void Renderer::RecreateSwapchain() { m_swapchain = Swapchain { m_swapchain, { } }; }
 
 void Renderer::MarkSurfaceLost() { m_surfaceLost = true; }
+
+Image Renderer::LoadTexture(const std::string& path, const std::string& debugName) {
+    std::unique_ptr<filesystem::IImage> ramTexture =
+        m_filesystem->LoadImage(path, filesystem::ImageFormat::eRGBA32);
+
+    auto [width, height] = ramTexture->Extent();
+    const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(width) * height * 4;
+
+    if (m_stagingBuffer.Size() < imageSize) {
+        m_stagingBuffer =
+            Buffer { m_context.GetDevice(), *m_context.GetAllocator(), imageSize,
+                     MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eTransferSrc };
+    }
+
+    std::memcpy(m_stagingBuffer.Data(), ramTexture->Pixels(), static_cast<std::size_t>(imageSize));
+
+    const std::uint32_t mipLevels =
+        static_cast<std::uint32_t>(std::floor(std::log2(std::max(width, width)))) + 1;
+
+    Image vramTexture = Image { *m_context.GetDevice(),
+                                *m_context.GetAllocator(),
+                                {
+                                    .extent = vk::Extent3D { width, height, 1 },
+                                    .format = vk::Format::eR8G8B8A8Srgb,
+                                    .mipLevels = mipLevels,
+                                    .usageFlags = vk::ImageUsageFlagBits::eTransferSrc |
+                                                  vk::ImageUsageFlagBits::eTransferDst |
+                                                  vk::ImageUsageFlagBits::eSampled,
+                                } };
+
+    m_commandBuffers.Get().ImmediateSubmit(
+        *m_context.GetDevice().GraphicsQueue(), [&](const CommandBuffer& cmd) {
+            cmd.PipelineBarrier({ ImageBarrier { vramTexture, vramTexture.FullRange(), Usage::eNone,
+                                                 Usage::eTransferWrite } });
+            cmd.Copy(m_stagingBuffer, vramTexture);
+            cmd.GenerateMipmaps(vramTexture);
+        });
+
+    if (m_context.GetInstance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
+        m_context.GetDevice()->setDebugUtilsObjectNameEXT(*ramTexture, debugName);
+    }
+
+    return vramTexture;
+}
 }

@@ -5,7 +5,30 @@
 #include <unordered_map>
 #include <vector>
 
+#include "skylabs/engine/utils.hpp"
+
 namespace sk::filesystem {
+enum class ImageFormat : std::uint8_t {
+    eRGBA32,
+    eARGB32,
+    eBGRA32,
+    eABGR32,
+
+    // Alpha is ignored, but byte is reserved
+    eRGBX32,
+    eXRGB32,
+    eBGRX32,
+    eXBGR32,
+};
+
+class IImage {
+public:
+    virtual ~IImage() = default;
+    [[nodiscard]] virtual utils::Extent2D Extent() = 0;
+    [[nodiscard]] virtual ImageFormat Format() = 0;
+    [[nodiscard]] virtual void* Pixels() = 0;
+};
+
 enum class Whence : std::uint8_t {
     eBegin,
     eCursor,
@@ -28,6 +51,8 @@ public:
     virtual ~IFilesystemBackend() = default;
     [[nodiscard]] virtual bool Exists(const std::string& path) const = 0;
     [[nodiscard]] virtual std::unique_ptr<IFileStream> OpenRead(const std::string& path) const = 0;
+    [[nodiscard]] virtual std::unique_ptr<IImage> OpenImage(const std::string& path,
+                                                            ImageFormat format) const = 0;
 };
 
 class Filesystem {
@@ -43,6 +68,7 @@ public:
     [[nodiscard]] std::vector<std::byte> LoadAsVectorByte(std::string_view uri) const;
     [[nodiscard]] std::vector<std::uint8_t> LoadAsVector8(std::string_view uri) const;
     [[nodiscard]] std::vector<std::uint32_t> LoadAsVector32(std::string_view uri) const;
+    [[nodiscard]] std::unique_ptr<IImage> LoadImage(std::string_view uri, ImageFormat format) const;
 
 private:
     std::unique_ptr<IFilesystemBackend> m_backend;

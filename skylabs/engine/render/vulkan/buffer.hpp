@@ -12,7 +12,7 @@ enum class MemoryLocation : std::uint8_t {
 class Buffer {
 public:
     explicit Buffer(std::nullptr_t) { }
-    Buffer(const vma::raii::Allocator& allocator, const Device& device, vk::DeviceSize size,
+    Buffer(const Device& device, const vma::raii::Allocator& allocator, vk::DeviceSize size,
            MemoryLocation location, const vk::BufferUsageFlags2& usage,
            std::optional<vk::DeviceSize> virtualAllocationSize = std::nullopt);
     Buffer(const Buffer&) = delete;
