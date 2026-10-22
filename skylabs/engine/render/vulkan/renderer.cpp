@@ -489,6 +489,10 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
     std::unique_ptr<filesystem::IImage> ramTexture =
         m_filesystem->LoadImage(path, filesystem::ImageFormat::eRGBA32);
 
+    if (!ramTexture) {
+        throw std::runtime_error(fmt::format("Failed to load texture: {}", path));
+    }
+
     auto [width, height] = ramTexture->Extent();
     const vk::DeviceSize imageSize = static_cast<vk::DeviceSize>(width) * height * 4;
 

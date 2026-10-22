@@ -22,7 +22,7 @@ public:
 
 private:
     filesystem::ImageFormat m_format;
-    SDL_Surface* m_surface;
+    SDL_Surface* m_surface = nullptr;
 };
 
 class FileStream final : public filesystem::IFileStream {

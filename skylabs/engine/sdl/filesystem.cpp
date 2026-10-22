@@ -69,7 +69,7 @@ bool SDLCALL StreamCloseBridge(void* /*userdata*/) { return true; }
 
 namespace sk::sdl {
 Image::Image(SDL_IOStream* stream, const filesystem::ImageFormat format) : m_format(format) {
-    SDL_Surface* imageRaw = IMG_Load_IO(stream, false);
+    SDL_Surface* imageRaw = IMG_Load_IO(stream, true);
     if (!imageRaw) {
         log::Error("Failed to load image, idk which");
         return;
@@ -83,6 +83,18 @@ Image::Image(SDL_IOStream* stream, const filesystem::ImageFormat format) : m_for
                    SDL_GetError());
         return;
     }
+}
+
+Image::Image(Image&& rhs) noexcept
+    : m_format(rhs.m_format), m_surface(std::exchange(rhs.m_surface, nullptr)) { }
+
+Image& Image::operator=(Image&& rhs) noexcept {
+    if (this != &rhs) {
+        SDL_DestroySurface(m_surface);
+        m_format = rhs.m_format;
+        m_surface = std::exchange(rhs.m_surface, nullptr);
+    }
+    return *this;
 }
 
 Image::~Image() { SDL_DestroySurface(m_surface); }
