@@ -43,12 +43,6 @@ public:
     }
 
 private:
-    explicit Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                       vk::raii::SwapchainKHR&& handle, vk::SurfaceFormatKHR surfaceFormat,
-                       vk::SurfaceTransformFlagBitsKHR transform, vk::Extent2D extent,
-                       vk::PresentModeKHR presentMode, std::vector<Image>&& images,
-                       std::vector<vk::raii::Semaphore>&& renderFinishedSemaphores);
-
     const Device* m_device = nullptr;
     const IWindow* m_window = nullptr;
     const vk::raii::SurfaceKHR* m_surface = nullptr;

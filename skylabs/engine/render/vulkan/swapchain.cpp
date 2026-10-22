@@ -90,20 +90,4 @@ bool Swapchain::IsOutdated() const {
     const vk::SurfaceCapabilitiesKHR caps = SurfaceCapabilities().surfaceCapabilities;
     return SurfaceExtent(caps) != Extent() || caps.currentTransform != SurfaceTransform();
 }
-
-Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                     vk::raii::SwapchainKHR&& handle, const vk::SurfaceFormatKHR surfaceFormat,
-                     const vk::SurfaceTransformFlagBitsKHR transform, const vk::Extent2D extent,
-                     const vk::PresentModeKHR presentMode, std::vector<Image>&& images,
-                     std::vector<vk::raii::Semaphore>&& renderFinishedSemaphores)
-    : m_device(&device),
-      m_window(window),
-      m_surface(&surface),
-      m_handle(std::move(handle)),
-      m_surfaceFormat(surfaceFormat),
-      m_surfaceTransform(transform),
-      m_extent(extent),
-      m_presentMode(presentMode),
-      m_images(std::move(images)),
-      m_renderFinishedSemaphores(std::move(renderFinishedSemaphores)) { }
 }
