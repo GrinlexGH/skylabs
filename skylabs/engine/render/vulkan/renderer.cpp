@@ -15,6 +15,12 @@ struct ViewProjection {
     glm::aligned_mat4 projection { 1 };
 };
 
+struct PushData {
+    std::uint32_t uboOffset;
+    std::uint32_t imageOffset;
+    std::uint32_t samplerOffset;
+};
+
 glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int height, const float fov = 90,
                               const float nearZ = 0.01f) {
     glm::mat4 proj = glm::mat4(0.0f);
@@ -35,8 +41,8 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
     // General context
     m_context = Context { window, osAdapter };
 
-    m_swapchain = Swapchain { m_context.GetDevice(), window, *m_context.GetSurface(),
-                              kFramesInFlightCount, vk::PresentModeKHR::eMailbox };
+    m_swapchain = Swapchain { m_context.GetDevice(), window, *m_context.GetSurface(), 3,
+                              vk::PresentModeKHR::eMailbox };
 
     m_inFlightContext = InFlightContext { kFramesInFlightCount };
 
@@ -62,7 +68,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         sizeof(ViewProjection), MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer
     };
 
-    m_texture = LoadTexture("assets://matroskin.png", "matroskin");
+    m_texture = LoadTexture("assets://texture.jpg", "texture");
 
     const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
                       filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));
@@ -78,28 +84,60 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                    .get<vk::PhysicalDeviceDescriptorHeapPropertiesEXT>();
 
         constexpr std::uint32_t kMaxResourceDescriptors = 64;
-        const auto heapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
-        m_heapReservedOff = utils::AlignUp(heapUserSize, heapProps.resourceHeapAlignment);
-        m_heapReservedSize = heapProps.minResourceHeapReservedRange;
+        const auto resourceHeapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
+        m_resourceHeapReservedOff =
+            utils::AlignUp(resourceHeapUserSize, heapProps.resourceHeapAlignment);
+        m_resourceHeapReservedSize = heapProps.minResourceHeapReservedRange;
         m_resourceDescriptorHeap = Buffer { m_context.GetDevice(),
                                             *m_context.GetAllocator(),
-                                            m_heapReservedOff + m_heapReservedSize,
+                                            m_resourceHeapReservedOff + m_resourceHeapReservedSize,
                                             MemoryLocation::eHostVisible,
                                             vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
-                                            m_heapReservedOff };
+                                            m_resourceHeapReservedOff };
+
+        constexpr std::uint32_t kMaxSamplerDescriptors = 64;
+        const auto sampleHeapUserSize = kMaxSamplerDescriptors * heapProps.samplerDescriptorSize;
+        m_samplerHeapReservedOff = utils::AlignUp(sampleHeapUserSize, heapProps.samplerHeapAlignment);
+        m_samplerHeapReservedSize = heapProps.minSamplerHeapReservedRange;
+        m_samplerDescriptorHeap = Buffer { m_context.GetDevice(),
+                                           *m_context.GetAllocator(),
+                                           m_samplerHeapReservedOff + m_samplerHeapReservedSize,
+                                           MemoryLocation::eHostVisible,
+                                           vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
+                                           m_samplerHeapReservedOff };
 
         // Pipeline "layout"
-        vk::DescriptorSetAndBindingMappingEXT mapping { };
-        mapping.descriptorSet = 0;
-        mapping.firstBinding = 0;
-        mapping.bindingCount = 1;  // array
-        mapping.resourceMask = vk::SpirvResourceTypeFlagBitsEXT::eUniformBuffer;
-        mapping.source = vk::DescriptorMappingSourceEXT::eHeapWithPushIndex;
-        vk::DescriptorMappingSourcePushIndexEXT pushIndex { };
-        pushIndex.heapIndexStride = 1;
-        pushIndex.heapArrayStride =
-            std::max(heapProps.bufferDescriptorSize, heapProps.imageDescriptorSize);
-        mapping.sourceData.pushIndex = pushIndex;
+        vk::DescriptorSetAndBindingMappingEXT uboMapping { };
+        uboMapping.descriptorSet = 0;
+        uboMapping.firstBinding = 0;
+        uboMapping.bindingCount = 1;
+        uboMapping.resourceMask = vk::SpirvResourceTypeFlagBitsEXT::eUniformBuffer;
+        uboMapping.source = vk::DescriptorMappingSourceEXT::eHeapWithPushIndex;
+        {
+            vk::DescriptorMappingSourcePushIndexEXT p { };
+            p.pushOffset = offsetof(PushData, uboOffset);
+            p.heapIndexStride = 1;
+            p.heapArrayStride = heapProps.bufferDescriptorSize;
+            uboMapping.sourceData.pushIndex = p;
+        }
+
+        vk::DescriptorSetAndBindingMappingEXT texMapping { };
+        texMapping.descriptorSet = 0;
+        texMapping.firstBinding = 1;
+        texMapping.bindingCount = 1;
+        texMapping.resourceMask = vk::SpirvResourceTypeFlagBitsEXT::eCombinedSampledImage;
+        texMapping.source = vk::DescriptorMappingSourceEXT::eHeapWithPushIndex;
+        {
+            vk::DescriptorMappingSourcePushIndexEXT p { };
+            p.pushOffset = offsetof(PushData, imageOffset);
+            p.heapIndexStride = 1;
+            p.heapArrayStride = heapProps.imageDescriptorSize;
+
+            p.samplerPushOffset = offsetof(PushData, samplerOffset);
+            p.samplerHeapIndexStride = 1;
+            p.samplerHeapArrayStride = heapProps.samplerDescriptorSize;
+            texMapping.sourceData.pushIndex = p;
+        }
 
         std::array colorFormats { m_swapchain.SurfaceFormat().format };
         m_pipeline =
@@ -107,36 +145,86 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                GraphicsPipelineCreateInfo { .layout = nullptr,
                                                             .shaders = { &vert, &frag },
                                                             .vertexBindings = { },
-                                                            .heapMappings = { mapping },
+                                                            .heapMappings = { uboMapping, texMapping },
                                                             .renderingInfo = { { }, colorFormats } } };
 
         // Descriptors allocation and writing
-        std::vector<vma::raii::VirtualAllocation> descriptors;
-        descriptors.reserve(m_inFlightContext.FrameCount());
-        for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
-            vk::DeviceAddressRangeEXT range { m_viewProjection[i].Address(), sizeof(ViewProjection) };
+        auto allocate = [](Buffer& heap, const vk::DeviceSize size, const vk::DeviceSize alignment) {
+            vma::VirtualAllocationCreateInfo ci;
+            ci.size = size;
+            ci.alignment = alignment;
+            return heap.VirtualBlock().allocate(ci);
+        };
+        auto hostRange = [](Buffer& heap, const vma::raii::VirtualAllocation& a) {
+            const auto info = a.getInfo();
+            return vk::HostAddressRangeEXT { static_cast<std::byte*>(heap.Data()) + info.offset,
+                                             info.size };
+        };
+
+        const auto frameCount = m_inFlightContext.FrameCount();
+
+        std::vector<vk::DeviceAddressRangeEXT> uboRanges;
+        std::vector<vk::ResourceDescriptorInfoEXT> resourceInfos;
+        std::vector<vk::HostAddressRangeEXT> resourceDsts;
+        uboRanges.reserve(frameCount);
+        resourceInfos.reserve(frameCount + 1);
+        resourceDsts.reserve(frameCount + 1);
+
+        std::vector<vma::raii::VirtualAllocation> uboDescriptors;
+        uboDescriptors.reserve(frameCount);
+
+        for (const auto i : utils::Range(frameCount)) {
+            uboRanges.emplace_back(m_viewProjection[i].Address(), sizeof(ViewProjection));
 
             vk::ResourceDescriptorInfoEXT info { };
             info.type = vk::DescriptorType::eUniformBuffer;
-            info.data.pAddressRange = &range;
+            info.data.pAddressRange = &uboRanges.back();
+            resourceInfos.push_back(info);
 
-            vma::VirtualAllocationCreateInfo ci;
-            ci.size = heapProps.bufferDescriptorSize;
-            ci.alignment = heapProps.bufferDescriptorAlignment;
-            descriptors.emplace_back(m_resourceDescriptorHeap.VirtualBlock().allocate(ci));
-            vk::HostAddressRangeEXT dst { static_cast<std::byte*>(m_resourceDescriptorHeap.Data()) +
-                                              descriptors.back().getInfo().offset,
-                                          descriptors.back().getInfo().size };
-
-            m_context.GetDevice()->writeResourceDescriptorsEXT(info, dst);
+            uboDescriptors.push_back(allocate(m_resourceDescriptorHeap, heapProps.bufferDescriptorSize,
+                                              heapProps.bufferDescriptorAlignment));
+            resourceDsts.push_back(hostRange(m_resourceDescriptorHeap, uboDescriptors.back()));
         }
-        m_descriptors = InFlight { m_inFlightContext, std::move(descriptors) };
+
+        const vk::ImageViewCreateInfo viewCI {
+            { }, *m_texture, vk::ImageViewType::e2D, m_texture.Format(), { }, m_texture.FullRange()
+        };
+        const vk::ImageDescriptorInfoEXT image { &viewCI, vk::ImageLayout::eShaderReadOnlyOptimal };
+
+        vk::ResourceDescriptorInfoEXT imageInfo { };
+        imageInfo.type = vk::DescriptorType::eSampledImage;
+        imageInfo.data.pImage = &image;
+        resourceInfos.push_back(imageInfo);
+
+        m_imageDescriptor = allocate(m_resourceDescriptorHeap, heapProps.imageDescriptorSize,
+                                     heapProps.imageDescriptorAlignment);
+        resourceDsts.push_back(hostRange(m_resourceDescriptorHeap, m_imageDescriptor));
+
+        m_context.GetDevice()->writeResourceDescriptorsEXT(resourceInfos, resourceDsts);
+
+        // --- sampler: один вызов ---
+        vk::SamplerCreateInfo samplerCreateInfo { };
+        samplerCreateInfo.maxLod = vk::LodClampNone;
+        samplerCreateInfo.magFilter = vk::Filter::eLinear;
+        samplerCreateInfo.minFilter = vk::Filter::eLinear;
+        samplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+        samplerCreateInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+        samplerCreateInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+        samplerCreateInfo.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+
+        m_samplerDescriptor = allocate(m_samplerDescriptorHeap, heapProps.samplerDescriptorSize,
+                                       heapProps.samplerDescriptorAlignment);
+        const auto samplerDst = hostRange(m_samplerDescriptorHeap, m_samplerDescriptor);
+        m_context.GetDevice()->writeSamplerDescriptorsEXT(samplerCreateInfo, samplerDst);
+
+        m_uboDescriptor = InFlight { m_inFlightContext, std::move(uboDescriptors) };
     } else {
         m_pipelineLayoutCache = PipelineLayoutCache { *m_context.GetDevice() };
         m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
 
         const vk::raii::DescriptorSetLayout& descriptorSetLayout = m_descriptorLayoutCache.GetLayout({
             { 0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex },
+            { 1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment },
         });
 
         const auto& pipelineLayout = m_pipelineLayoutCache.GetLayout(
@@ -144,8 +232,10 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
 
         // Схуяли я вообще должен заранее знать что и сколько я хочу выделить?!!
         vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
-        std::array descriptorPoolSizes { vk::DescriptorPoolSize { vk::DescriptorType::eUniformBuffer,
-                                                                  kFramesInFlightCount } };
+        std::array descriptorPoolSizes {
+            vk::DescriptorPoolSize { vk::DescriptorType::eUniformBuffer, kFramesInFlightCount },
+            vk::DescriptorPoolSize { vk::DescriptorType::eCombinedImageSampler, kFramesInFlightCount }
+        };
         descriptorPoolCreateInfo.setPoolSizes(descriptorPoolSizes);
         descriptorPoolCreateInfo.setMaxSets(kFramesInFlightCount);
         m_descriptorPool = vk::raii::DescriptorPool { *m_context.GetDevice(), descriptorPoolCreateInfo };
@@ -170,12 +260,24 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
             std::ranges::to<std::vector<vk::DescriptorSet>>();
         m_descriptorSet = InFlight { m_inFlightContext, std::move(descriptorSets) };
 
+        vk::SamplerCreateInfo samplerCreateInfo { };
+        samplerCreateInfo.maxLod = vk::LodClampNone;
+        samplerCreateInfo.magFilter = vk::Filter::eLinear;
+        samplerCreateInfo.minFilter = vk::Filter::eLinear;
+        samplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+        samplerCreateInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+        samplerCreateInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+        samplerCreateInfo.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+        m_sampler = vk::raii::Sampler { *m_context.GetDevice(), samplerCreateInfo };
+
         DescriptorWriter descriptorWriter { *m_context.GetDevice() };
         for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
             descriptorWriter.Clear();
             descriptorWriter
                 .WriteBuffer(0, *m_viewProjection[i], m_viewProjection[i].Size(), 0,
                              vk::DescriptorType::eUniformBuffer)
+                .WriteImage(1, m_texture.View(), m_sampler, vk::ImageLayout::eShaderReadOnlyOptimal,
+                            vk::DescriptorType::eCombinedImageSampler)
                 .UpdateSet(m_descriptorSet[i]);
         }
     }
@@ -240,9 +342,15 @@ void Renderer::BeginFrame() {
         vk::BindHeapInfoEXT bind { };
         bind.heapRange = vk::DeviceAddressRangeEXT { m_resourceDescriptorHeap.Address(),
                                                      m_resourceDescriptorHeap.Size() };
-        bind.reservedRangeOffset = m_heapReservedOff;
-        bind.reservedRangeSize = m_heapReservedSize;
+        bind.reservedRangeOffset = m_resourceHeapReservedOff;
+        bind.reservedRangeSize = m_resourceHeapReservedSize;
         cmd->bindResourceHeapEXT(bind);
+
+        bind.heapRange = vk::DeviceAddressRangeEXT { m_samplerDescriptorHeap.Address(),
+                                                     m_samplerDescriptorHeap.Size() };
+        bind.reservedRangeOffset = m_samplerHeapReservedOff;
+        bind.reservedRangeSize = m_samplerHeapReservedSize;
+        cmd->bindSamplerHeapEXT(bind);
     }
 
     m_frameActive = true;
@@ -298,10 +406,14 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
 
     if (m_context.GetDevice().Caps().descriptorHeap) {
-        const vk::DeviceSize offset = m_descriptors.Get().getInfo().offset;
+        PushData pd {
+            .uboOffset = static_cast<std::uint32_t>(m_uboDescriptor.Get().getInfo().offset),
+            .imageOffset = static_cast<std::uint32_t>(m_imageDescriptor.getInfo().offset),
+            .samplerOffset = static_cast<std::uint32_t>(m_samplerDescriptor.getInfo().offset),
+        };
         vk::PushDataInfoEXT push { };
         push.offset = 0;
-        push.data = vk::HostAddressRangeConstEXT { &offset, sizeof(offset) };
+        push.data = vk::HostAddressRangeConstEXT { &pd, sizeof(pd) };
         cmd->pushDataEXT(push);
     } else {
         cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline.Layout(), 0,
@@ -389,7 +501,7 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
     std::memcpy(m_stagingBuffer.Data(), ramTexture->Pixels(), static_cast<std::size_t>(imageSize));
 
     const std::uint32_t mipLevels =
-        static_cast<std::uint32_t>(std::floor(std::log2(std::max(width, width)))) + 1;
+        static_cast<std::uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
     Image vramTexture = Image { *m_context.GetDevice(),
                                 *m_context.GetAllocator(),
@@ -411,7 +523,7 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
         });
 
     if (m_context.GetInstance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
-        m_context.GetDevice()->setDebugUtilsObjectNameEXT(*ramTexture, debugName);
+        m_context.GetDevice()->setDebugUtilsObjectNameEXT(*vramTexture, debugName);
     }
 
     return vramTexture;

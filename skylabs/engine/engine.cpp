@@ -29,6 +29,7 @@ void Engine::Run() {
 
     m_filesystem.Mount("assets", os::JoinPath(os::GetAppRoot(), "assets"));
     m_filesystem.Mount("assets", os::GetAppRoot());
+    m_filesystem.Mount("assets", os::JoinPath(".", "assets"));
     m_filesystem.Mount("res", os::GetAppRoot());
 #endif
 

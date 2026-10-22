@@ -60,15 +60,22 @@ private:
 
     // Heap
     Buffer m_resourceDescriptorHeap { nullptr };
-    vk::DeviceSize m_heapReservedOff = 0;
-    vk::DeviceSize m_heapReservedSize = 0;
-    InFlight<vma::raii::VirtualAllocation> m_descriptors { nullptr };
+    vk::DeviceSize m_resourceHeapReservedOff = 0;
+    vk::DeviceSize m_resourceHeapReservedSize = 0;
+    InFlight<vma::raii::VirtualAllocation> m_uboDescriptor { nullptr };
+    vma::raii::VirtualAllocation m_imageDescriptor { nullptr };
+
+    Buffer m_samplerDescriptorHeap { nullptr };
+    vk::DeviceSize m_samplerHeapReservedOff = 0;
+    vk::DeviceSize m_samplerHeapReservedSize = 0;
+    vma::raii::VirtualAllocation m_samplerDescriptor { nullptr };
 
     // Pool
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };
     DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
     InFlight<vk::DescriptorSet> m_descriptorSet { nullptr };
+    vk::raii::Sampler m_sampler { nullptr };
 
     InFlight<Buffer> m_viewProjection { nullptr };
     GraphicsPipeline m_pipeline { nullptr };

@@ -62,11 +62,14 @@ public:
         func(*this);
         m_handle.end();
 
-        vk::SubmitInfo submitInfo { };
-        submitInfo.setCommandBuffers(*m_handle);
-
         const vk::raii::Fence fence { *m_device, vk::FenceCreateInfo { } };
-        queue.submit(submitInfo, *fence);
+
+        vk::CommandBufferSubmitInfo cmdInfo { };
+        cmdInfo.setCommandBuffer(*m_handle);
+
+        vk::SubmitInfo2 submit { };
+        submit.setCommandBufferInfos(cmdInfo);
+        queue.submit2(submit, *fence);
 
         if (m_device->waitForFences({ *fence }, true, std::numeric_limits<std::uint64_t>::max()) !=
             vk::Result::eSuccess) {
