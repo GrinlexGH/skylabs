@@ -53,8 +53,7 @@ std::string FormatTzOffset(const std::array<char, 6>& tz) {
 }
 
 namespace sk::log {
-void ConsoleSink::Write(const Category category, const Level level, const std::source_location& /*loc*/,
-                        const std::string& message) {
+void ConsoleSink::Write(const Category category, const Level level, const std::string& message) {
     const auto now = std::chrono::system_clock::now();
     const auto ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
@@ -72,15 +71,9 @@ void ConsoleSink::Write(const Category category, const Level level, const std::s
 
 void AddSink(std::unique_ptr<ISink> sink) { g_sinks.push_back(std::move(sink)); }
 
-void SubmitLog(const Category category, const Level level, const std::source_location& loc,
-               const std::string& message) {
+void SubmitLog(const Category category, const Level level, const std::string& message) {
     for (const auto& sink : g_sinks) {
-        sink->Write(category, level, loc, message);
-    }
-
-    if (level == Level::eFatal) {
-        std::fflush(stdout);
-        std::fflush(stderr);
+        sink->Write(category, level, message);
     }
 }
 }

@@ -3,8 +3,7 @@
 #include "skylabs/engine/sdl/log_sink.hpp"
 
 namespace sk::sdl {
-void LogSink::Write(const log::Category category, const log::Level level,
-                    const std::source_location& /*loc*/, const std::string& message) {
+void LogSink::Write(const log::Category category, const log::Level level, const std::string& message) {
     const char* msg = message.c_str();
     const std::string_view categoryTag = utils::ToString(category);
     switch (level) {
