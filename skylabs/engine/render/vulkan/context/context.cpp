@@ -20,18 +20,16 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
     vk::DebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
     const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* /*pUserData*/
 ) {
-    namespace sk_log = sk::log;
-
     switch (messageSeverity) {
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
-            sk_log::Info(sk_log::Category::eVulkan, "{}", pCallbackData->pMessage);
+            sk::log::Info(sk::log::Category::eVulkan, "{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
-            sk_log::Warning(sk_log::Category::eVulkan, "{}", pCallbackData->pMessage);
+            sk::log::Warning(sk::log::Category::eVulkan, "{}", pCallbackData->pMessage);
             break;
         case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
-            sk_log::Error(sk_log::Category::eVulkan, "{}\n", pCallbackData->pMessage);
+            sk::log::Error(sk::log::Category::eVulkan, "{}\n", pCallbackData->pMessage);
             break;
     }
 
@@ -41,10 +39,9 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 
 enum class ExtensionRequirement : std::uint8_t { eOptional, eRequired };
 
-sk::render::vulkan::ExtensionSet SetupInstanceExtensions(vkb::InstanceBuilder& instanceBuilder,
-                                                         const vk::raii::Context& context,
-                                                         const sk::render::vulkan::IOSAdapter* osAdapter,
-                                                         [[maybe_unused]] const bool setupDebugUtils) {
+sk::render::vulkan::ExtensionSet SetupInstanceExtensions(
+    vkb::InstanceBuilder& instanceBuilder, const vk::raii::Context& context,
+    const sk::render::vulkan::IOSAdapter* osAdapter) {
     auto systemInfoResult =
         vkb::SystemInfo::get_system_info(context.getDispatcher()->vkGetInstanceProcAddr);
     if (!systemInfoResult) {
@@ -86,29 +83,27 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(vkb::InstanceBuilder& i
 
     // Debug utils
 #ifdef DEBUG
-    if (setupDebugUtils) {
-        constexpr auto debugSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                       vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-        constexpr auto debugTypes = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                    vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                    vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+    constexpr auto debugSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+    constexpr auto debugTypes = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
-        if (systemInfo.debug_utils_available) {
-            instanceBuilder.enable_extension(vk::EXTDebugUtilsExtensionName)
-                .set_debug_callback(reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(
-                    reinterpret_cast<std::uintptr_t>(DebugCallback)))
-                .set_debug_messenger_severity(
-                    static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(debugSeverity))
-                .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(debugTypes));
+    if (systemInfo.debug_utils_available) {
+        instanceBuilder.enable_extension(vk::EXTDebugUtilsExtensionName)
+            .set_debug_callback(reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(
+                reinterpret_cast<std::uintptr_t>(DebugCallback)))
+            .set_debug_messenger_severity(
+                static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(debugSeverity))
+            .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(debugTypes));
 
 #ifndef ARCH_32
-            if (systemInfo.validation_layers_available) {
-                instanceBuilder.enable_validation_layers();
-            }
-#endif
+        if (systemInfo.validation_layers_available) {
+            instanceBuilder.enable_validation_layers();
         }
+#endif
     }
 #endif
 
@@ -126,8 +121,7 @@ struct InstanceCreationResult {
 // !!! DO NOT FORGET TO UPDATE EXTENSION FEATURES TO CORE FEATURES WHEN UPDATING API VERSION
 constexpr std::uint32_t kApiVersion = vk::ApiVersion13;
 
-InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter,
-                                      const bool setupDebugUtils = true) {
+InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter) {
     vk::raii::Context context { osAdapter->GetVkGetInstanceProcAddr() };
 
     constexpr std::uint32_t appVersion = vk::makeApiVersion(
@@ -141,7 +135,7 @@ InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAd
         .require_api_version(kApiVersion);
 
     sk::render::vulkan::ExtensionSet enabledExtensions =
-        SetupInstanceExtensions(instanceBuilder, context, osAdapter, setupDebugUtils);
+        SetupInstanceExtensions(instanceBuilder, context, osAdapter);
 
     auto instanceResult = instanceBuilder.build();
     if (!instanceResult) {
