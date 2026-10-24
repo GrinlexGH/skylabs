@@ -70,6 +70,8 @@ private:
     vk::DeviceSize m_samplerHeapReservedSize = 0;
     vma::raii::VirtualAllocation m_samplerDescriptor { nullptr };
 
+    Buffer m_descriptorAddresses { nullptr };
+
     // Pool
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };
     DescriptorLayoutCache m_descriptorLayoutCache { nullptr };
