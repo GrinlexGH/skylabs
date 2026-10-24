@@ -40,10 +40,8 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
 enum class ExtensionRequirement : std::uint8_t { eOptional, eRequired };
 
 sk::render::vulkan::ExtensionSet SetupInstanceExtensions(
-    vkb::InstanceBuilder& instanceBuilder, const vk::raii::Context& context,
-    const sk::render::vulkan::IOSAdapter* osAdapter) {
-    auto systemInfoResult =
-        vkb::SystemInfo::get_system_info(context.getDispatcher()->vkGetInstanceProcAddr);
+    vkb::InstanceBuilder& instanceBuilder, const sk::render::vulkan::IOSAdapter* osAdapter) {
+    auto systemInfoResult = vkb::SystemInfo::get_system_info(osAdapter->GetVkGetInstanceProcAddr());
     if (!systemInfoResult) {
         throw std::runtime_error { fmt::format("Failed to query vulkan system info: {}",
                                                systemInfoResult.error().message()) };
@@ -52,6 +50,9 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(
 
     // Request extensions
     std::flat_map<std::string_view, ExtensionRequirement> requestedExtensions {
+#ifdef DEBUG
+        { vk::EXTDebugUtilsExtensionName, ExtensionRequirement::eOptional },
+#endif
         { vk::KHRGetSurfaceCapabilities2ExtensionName, ExtensionRequirement::eOptional },
         { vk::EXTSwapchainColorSpaceExtensionName, ExtensionRequirement::eOptional },
     };
@@ -62,48 +63,36 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(
 
     // Find these extensions
     std::vector<std::string> enabledExtensions;
-    std::vector<std::string_view> missingExtensions;
-    enabledExtensions.reserve(requestedExtensions.size());
 
     for (const auto& [nameView, requirement] : requestedExtensions) {
-        if (std::string name { nameView }; systemInfo.is_extension_available(name.c_str())) {
+        // Intentionally unconditionally enable required extensions
+        if (std::string name { nameView }; requirement == ExtensionRequirement::eRequired ||
+                                           systemInfo.is_extension_available(name.c_str())) {
             enabledExtensions.emplace_back(std::move(name));
-        } else if (requirement == ExtensionRequirement::eRequired) {
-            missingExtensions.push_back(nameView);
         }
-    }
-
-    if (!missingExtensions.empty()) {
-        throw std::runtime_error { fmt::format(
-            "Missing required vulkan instance extensions: {}",
-            fmt::join(missingExtensions.begin(), missingExtensions.end(), ", ")) };
     }
 
     instanceBuilder.enable_extensions(enabledExtensions);
 
     // Debug utils
 #ifdef DEBUG
-    constexpr auto debugSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                   vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    constexpr auto debugTypes = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-                                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-
     if (systemInfo.debug_utils_available) {
-        instanceBuilder.enable_extension(vk::EXTDebugUtilsExtensionName)
+        instanceBuilder
+#ifndef ARCH_32
+            .request_validation_layers()
+#endif
+            .enable_extension(vk::EXTDebugUtilsExtensionName)
             .set_debug_callback(reinterpret_cast<PFN_vkDebugUtilsMessengerCallbackEXT>(
                 reinterpret_cast<std::uintptr_t>(DebugCallback)))
-            .set_debug_messenger_severity(
-                static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(debugSeverity))
-            .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(debugTypes));
-
-#ifndef ARCH_32
-        if (systemInfo.validation_layers_available) {
-            instanceBuilder.enable_validation_layers();
-        }
-#endif
+            .set_debug_messenger_severity(static_cast<VkDebugUtilsMessageSeverityFlagsEXT>(
+                vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+                vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+                vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                vk::DebugUtilsMessageSeverityFlagBitsEXT::eError))
+            .set_debug_messenger_type(static_cast<VkDebugUtilsMessageTypeFlagsEXT>(
+                vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance));
     }
 #endif
 
@@ -111,7 +100,6 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(
 }
 
 struct InstanceCreationResult {
-    vk::raii::Context context;
     vkb::Instance instance;
     sk::render::vulkan::ExtensionSet enabledExtensions;
 };
@@ -122,8 +110,6 @@ struct InstanceCreationResult {
 constexpr std::uint32_t kApiVersion = vk::ApiVersion13;
 
 InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter) {
-    vk::raii::Context context { osAdapter->GetVkGetInstanceProcAddr() };
-
     constexpr std::uint32_t appVersion = vk::makeApiVersion(
         0, project_info::kVersionMajor, project_info::kVersionMinor, project_info::kVersionPatch);
 
@@ -135,18 +121,16 @@ InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAd
         .require_api_version(kApiVersion);
 
     sk::render::vulkan::ExtensionSet enabledExtensions =
-        SetupInstanceExtensions(instanceBuilder, context, osAdapter);
+        SetupInstanceExtensions(instanceBuilder, osAdapter);
 
     auto instanceResult = instanceBuilder.build();
     if (!instanceResult) {
-        throw std::runtime_error { fmt::format("Failed to create vulkan instance ({}): {}, {}",
-                                               vk::to_string(vk::Result { instanceResult.vk_result() }),
+        throw std::runtime_error { fmt::format("Failed to create vulkan instance ({}): {}",
                                                instanceResult.error().message(),
                                                instanceResult.detailed_failure_reasons()) };
     }
 
-    return InstanceCreationResult { .context = std::move(context),
-                                    .instance = instanceResult.value(),
+    return InstanceCreationResult { .instance = instanceResult.value(),
                                     .enabledExtensions = std::move(enabledExtensions) };
 }
 
@@ -335,8 +319,10 @@ namespace sk::render::vulkan {
 Context::Context(const IWindow* window, const IOSAdapter* osAdapter)
     : m_window(window), m_osAdapter(osAdapter) {
     // Build instance
-    auto [context, vkbInstance, enabledExtensions] = CreateInstance(osAdapter);
-    m_instance = Instance { context, vkbInstance.instance, vkbInstance.debug_messenger,
+    auto [vkbInstance, enabledExtensions] = CreateInstance(osAdapter);
+    m_instance = Instance { { osAdapter->GetVkGetInstanceProcAddr() },
+                            vkbInstance.instance,
+                            vkbInstance.debug_messenger,
                             std::move(enabledExtensions) };
 
     // Build surface
