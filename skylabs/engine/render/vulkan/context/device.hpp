@@ -9,10 +9,10 @@ public:
     explicit Queue(const vk::raii::Device& device, const vk::Queue& queue,
                    const std::uint32_t familyIndex)
         : m_handle(device, queue), m_familyIndex(familyIndex) { }
-    Queue(Queue&) = delete;
-    Queue(Queue&&) = default;
-    Queue& operator=(Queue&) = delete;
-    Queue& operator=(Queue&&) = default;
+    Queue(const Queue&) = delete;
+    Queue(Queue&&) noexcept = default;
+    Queue& operator=(const Queue&) = delete;
+    Queue& operator=(Queue&&) noexcept = default;
     ~Queue() = default;
 
     [[nodiscard]] const vk::raii::Queue& operator*() const noexcept { return m_handle; }

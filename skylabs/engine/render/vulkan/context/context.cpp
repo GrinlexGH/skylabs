@@ -43,8 +43,9 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(
     vkb::InstanceBuilder& instanceBuilder, const sk::render::vulkan::IOSAdapter* osAdapter) {
     auto systemInfoResult = vkb::SystemInfo::get_system_info(osAdapter->GetVkGetInstanceProcAddr());
     if (!systemInfoResult) {
-        throw std::runtime_error { fmt::format("Failed to query vulkan system info: {}",
-                                               systemInfoResult.error().message()) };
+        const std::string message =
+            fmt::format("Failed to query vulkan system info: {}", systemInfoResult.error().message());
+        throw std::runtime_error { message };
     }
     const vkb::SystemInfo& systemInfo = systemInfoResult.value();
 
@@ -99,7 +100,7 @@ sk::render::vulkan::ExtensionSet SetupInstanceExtensions(
     return sk::render::vulkan::ExtensionSet { enabledExtensions };
 }
 
-struct InstanceCreationResult {
+struct InstanceResult {
     vkb::Instance instance;
     sk::render::vulkan::ExtensionSet enabledExtensions;
 };
@@ -109,7 +110,7 @@ struct InstanceCreationResult {
 // !!! DO NOT FORGET TO UPDATE EXTENSION FEATURES TO CORE FEATURES WHEN UPDATING API VERSION
 constexpr std::uint32_t kApiVersion = vk::ApiVersion13;
 
-InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter) {
+InstanceResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter) {
     constexpr std::uint32_t appVersion = vk::makeApiVersion(
         0, project_info::kVersionMajor, project_info::kVersionMinor, project_info::kVersionPatch);
 
@@ -125,13 +126,14 @@ InstanceCreationResult CreateInstance(const sk::render::vulkan::IOSAdapter* osAd
 
     auto instanceResult = instanceBuilder.build();
     if (!instanceResult) {
-        throw std::runtime_error { fmt::format("Failed to create vulkan instance ({}): {}",
-                                               instanceResult.error().message(),
-                                               instanceResult.detailed_failure_reasons()) };
+        const std::string message =
+            fmt::format("Failed to create vulkan instance ({}):\n{}", instanceResult.error().message(),
+                        fmt::join(instanceResult.detailed_failure_reasons(), "\n"));
+        throw std::runtime_error { message };
     }
 
-    return InstanceCreationResult { .instance = instanceResult.value(),
-                                    .enabledExtensions = std::move(enabledExtensions) };
+    return InstanceResult { .instance = instanceResult.value(),
+                            .enabledExtensions = std::move(enabledExtensions) };
 }
 
 vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk::SurfaceKHR& surface) {
@@ -176,11 +178,10 @@ vkb::PhysicalDevice ChoosePhysicalDevice(const vkb::Instance& instance, const vk
 
     auto physicalDeviceResult = selector.select();
     if (!physicalDeviceResult) {
-        throw std::runtime_error(
-            fmt::format("Failed to select vulkan physical device ({}): {}, {}",
-                        vk::to_string(vk::Result { physicalDeviceResult.vk_result() }),
-                        physicalDeviceResult.error().message(),
-                        fmt::join(physicalDeviceResult.detailed_failure_reasons(), "; ")));
+        const std::string message = fmt::format(
+            "Failed to select vulkan physical device ({}):\n{}", physicalDeviceResult.error().message(),
+            fmt::join(physicalDeviceResult.detailed_failure_reasons(), "\n"));
+        throw std::runtime_error { message };
     }
 
     return physicalDeviceResult.value();
@@ -276,10 +277,10 @@ sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
     vkb::DeviceBuilder builder { physicalDevice };
     auto deviceResult = builder.build();
     if (!deviceResult) {
-        throw std::runtime_error(fmt::format("Failed to create vulkan device ({}): {}, {}",
-                                             vk::to_string(vk::Result { deviceResult.vk_result() }),
-                                             deviceResult.error().message(),
-                                             deviceResult.detailed_failure_reasons()));
+        const std::string message =
+            fmt::format("Failed to create vulkan device ({}):\n{}", deviceResult.error().message(),
+                        fmt::join(deviceResult.detailed_failure_reasons(), "\n"));
+        throw std::runtime_error { message };
     }
 
     vk::raii::Device device { *raiiPhysicalDevice, deviceResult->device };
@@ -287,10 +288,9 @@ sk::render::vulkan::Device CreateDevice(vkb::PhysicalDevice& physicalDevice,
     auto getQueue = [&](sk::render::vulkan::Queue& queue, const vkb::QueueType type) {
         auto result = deviceResult.value().get_queue_and_index(type);
         if (!result) {
-            throw std::runtime_error(fmt::format(fmt::runtime("Failed to get {} queue ({}): {}, {}"),
-                                                 vk::to_string(vk::Result { result.vk_result() }),
-                                                 result.error().message(),
-                                                 result.detailed_failure_reasons()));
+            const std::string message =
+                fmt::format("Failed to get vulkan queue: {}", result.error().message());
+            throw std::runtime_error { message };
         }
 
         auto [vkQueue, index] = *result;

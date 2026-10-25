@@ -15,10 +15,10 @@ public:
           m_debugUtilsMessenger(m_handle, messenger),
           m_enabledExtensions(std::move(enabledExtensions)) { }
 
-    Instance(Instance&) = delete;
-    Instance(Instance&&) = default;
-    Instance& operator=(Instance&) = delete;
-    Instance& operator=(Instance&&) = default;
+    Instance(const Instance&) = delete;
+    Instance(Instance&&) noexcept = default;
+    Instance& operator=(const Instance&) = delete;
+    Instance& operator=(Instance&&) noexcept = default;
     ~Instance() = default;
 
     [[nodiscard]] const vk::raii::Instance& operator*() const noexcept { return m_handle; }
