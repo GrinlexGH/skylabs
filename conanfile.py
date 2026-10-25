@@ -10,6 +10,10 @@ class SkylabsRecipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     package_type = "application"
 
+    default_options = {
+        "tracy/*:enabled": False
+    }
+
     def build_requirements(self):
         self.tool_requires("slang/2026.20")
 
