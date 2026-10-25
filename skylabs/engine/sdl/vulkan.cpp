@@ -1,5 +1,4 @@
 #include <SDL3/SDL_vulkan.h>
-#include <fmt/format.h>
 
 #include "skylabs/engine/sdl/vulkan.hpp"
 

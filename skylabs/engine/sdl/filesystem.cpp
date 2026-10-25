@@ -25,6 +25,8 @@ SDL_PixelFormat ToPixelFormat(const sk::filesystem::ImageFormat format) {
         case sk_fs::ImageFormat::eXBGR32:
             return SDL_PIXELFORMAT_XBGR32;
     }
+
+    std::unreachable();
 }
 
 Sint64 SDLCALL StreamSizeBridge(void* userdata) {
@@ -133,6 +135,8 @@ std::int64_t FileStream::Seek(const std::int64_t offset, filesystem::Whence when
             case filesystem::Whence::eEnd:
                 return SDL_IO_SEEK_END;
         }
+
+        std::unreachable();
     }();
 
     return SDL_SeekIO(m_stream, offset, sdlWhence);

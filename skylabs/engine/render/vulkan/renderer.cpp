@@ -58,9 +58,10 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         InFlight<vk::raii::Semaphore> { m_inFlightContext, *m_context.GetDevice(),
                                         vk::SemaphoreCreateInfo { } };
 
-    m_commandBuffers = InFlight { m_inFlightContext,
-                                  m_commandBufferAllocator.Allocate(vk::CommandBufferLevel::ePrimary,
-                                                                    m_inFlightContext.FrameCount()) };
+    m_commandBuffers =
+        InFlight { m_inFlightContext, m_commandBufferAllocator.Allocate(
+                                          vk::CommandBufferLevel::ePrimary,
+                                          static_cast<std::uint32_t>(m_inFlightContext.FrameCount())) };
 
     // Base pipeline
     m_viewProjection = InFlight<Buffer> {
@@ -228,9 +229,9 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         // [ubo][img][spl][ubo][img][spl]...
         std::vector<std::uint32_t> a;
         for (auto i : utils::Range(m_inFlightContext.FrameCount())) {
-            a.push_back(m_uboDescriptor[i].getInfo().offset);
-            a.push_back(m_imageDescriptor.getInfo().offset);
-            a.push_back(m_samplerDescriptor.getInfo().offset);
+            a.push_back(static_cast<std::uint32_t>(m_uboDescriptor[i].getInfo().offset));
+            a.push_back(static_cast<std::uint32_t>(m_imageDescriptor.getInfo().offset));
+            a.push_back(static_cast<std::uint32_t>(m_samplerDescriptor.getInfo().offset));
         }
         std::memcpy(m_descriptorAddresses.Data(), a.data(), 4 * 3);
     } else {

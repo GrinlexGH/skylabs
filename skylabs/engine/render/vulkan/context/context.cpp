@@ -1,8 +1,6 @@
 #include <flat_map>
 
 #include <VkBootstrap.h>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 
 #include "project_info.hpp"
 #include "skylabs/engine/logging.hpp"

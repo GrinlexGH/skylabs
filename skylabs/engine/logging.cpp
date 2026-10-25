@@ -2,9 +2,6 @@
 #include <cstdio>
 #include <vector>
 
-#include <fmt/chrono.h>
-#include <fmt/color.h>
-
 #include "skylabs/engine/logging.hpp"
 #include "skylabs/engine/os.hpp"
 

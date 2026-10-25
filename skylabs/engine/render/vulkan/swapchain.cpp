@@ -1,5 +1,4 @@
 #include <VkBootstrap.h>
-#include <fmt/ranges.h>
 
 #include "skylabs/engine/logging.hpp"
 #include "skylabs/engine/render/vulkan/swapchain.hpp"

@@ -1,7 +1,5 @@
 #include <stdexcept>
 
-#include <fmt/format.h>
-
 #include "skylabs/engine/sdl/sdl.hpp"
 #include "skylabs/engine/sdl/window.hpp"
 
