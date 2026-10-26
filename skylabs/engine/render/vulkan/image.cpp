@@ -38,8 +38,7 @@ vk::ImageAspectFlags DetermineAspect(const vk::Format format) {
 }
 
 namespace sk::render::vulkan {
-Image::Image(const vk::raii::Device& device, const vma::raii::Allocator& allocator,
-             const ImageCreateInfo& options)
+Image::Image(const vma::raii::Allocator& allocator, const ImageCreateInfo& options)
     : m_format(options.format),
       m_extent(options.extent),
       m_mipLevels(options.mipLevels),
@@ -66,24 +65,34 @@ Image::Image(const vk::raii::Device& device, const vma::raii::Allocator& allocat
     allocInfo.requiredFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
     m_handle = vma::raii::Image { allocator, imageInfo, allocInfo };
-
-    CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
 }
 
-Image::Image(const vk::raii::Device& device, vk::Image imported, const vk::Extent3D extent,
-             const vk::Format format, const std::uint32_t mipLevels, const std::uint32_t arrayLevels,
-             const vk::SampleCountFlagBits sampleCount, std::optional<vk::ImageViewType> viewType)
+Image::Image(vk::Image imported, const vk::Extent3D extent, const vk::Format format,
+             const std::uint32_t mipLevels, const std::uint32_t arrayLevels,
+             const vk::SampleCountFlagBits sampleCount)
     : m_handle(imported),
       m_format(format),
       m_extent(extent),
       m_mipLevels(mipLevels),
       m_arrayLevels(arrayLevels),
       m_sampleCount(sampleCount),
-      m_aspectFlags(DetermineAspect(m_format)) {
+      m_aspectFlags(DetermineAspect(m_format)) { }
+
+Attachment::Attachment(const vk::raii::Device& device, const vma::raii::Allocator& allocator,
+                       const ImageCreateInfo& options)
+    : Image(allocator, options) {
+    CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
+}
+
+Attachment::Attachment(const vk::raii::Device& device, vk::Image imported, const vk::Extent3D extent,
+                       const vk::Format format, const std::uint32_t mipLevels,
+                       const std::uint32_t arrayLevels, const vk::SampleCountFlagBits sampleCount,
+                       std::optional<vk::ImageViewType> viewType)
+    : Image(imported, extent, format, mipLevels, arrayLevels, sampleCount) {
     CreateView(device, viewType.value_or(DetermineViewType(m_extent, m_arrayLevels)));
 }
 
-void Image::CreateView(const vk::raii::Device& device, const vk::ImageViewType viewType) {
+void Attachment::CreateView(const vk::raii::Device& device, const vk::ImageViewType viewType) {
     vk::ImageViewCreateInfo viewInfo { };
     viewInfo.image = Handle();
     viewInfo.viewType = viewType;

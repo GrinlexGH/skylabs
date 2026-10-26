@@ -78,34 +78,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
 
     if (m_context.GetDevice().Caps().descriptorHeap) {
         // Descriptor heap creation
-        const auto heapProps = m_context.GetDevice()
-                                   .GetPhysicalDevice()
-                                   ->getProperties2<vk::PhysicalDeviceProperties2,
-                                                    vk::PhysicalDeviceDescriptorHeapPropertiesEXT>()
-                                   .get<vk::PhysicalDeviceDescriptorHeapPropertiesEXT>();
-
-        constexpr std::uint32_t kMaxResourceDescriptors = 64;
-        const auto resourceHeapUserSize = kMaxResourceDescriptors * heapProps.bufferDescriptorSize;
-        m_resourceHeapReservedOff =
-            utils::AlignUp(resourceHeapUserSize, heapProps.resourceHeapAlignment);
-        m_resourceHeapReservedSize = heapProps.minResourceHeapReservedRange;
-        m_resourceDescriptorHeap = Buffer { m_context.GetDevice(),
-                                            *m_context.GetAllocator(),
-                                            m_resourceHeapReservedOff + m_resourceHeapReservedSize,
-                                            MemoryLocation::eHostVisible,
-                                            vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
-                                            m_resourceHeapReservedOff };
-
-        constexpr std::uint32_t kMaxSamplerDescriptors = 64;
-        const auto sampleHeapUserSize = kMaxSamplerDescriptors * heapProps.samplerDescriptorSize;
-        m_samplerHeapReservedOff = utils::AlignUp(sampleHeapUserSize, heapProps.samplerHeapAlignment);
-        m_samplerHeapReservedSize = heapProps.minSamplerHeapReservedRange;
-        m_samplerDescriptorHeap = Buffer { m_context.GetDevice(),
-                                           *m_context.GetAllocator(),
-                                           m_samplerHeapReservedOff + m_samplerHeapReservedSize,
-                                           MemoryLocation::eHostVisible,
-                                           vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
-                                           m_samplerHeapReservedOff };
+        m_descriptorHeap = DescriptorHeap { m_context.GetDevice(), *m_context.GetAllocator() };
 
         // Pipeline "layout"
         vk::DescriptorSetAndBindingMappingEXT uboMapping { };
@@ -150,90 +123,8 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                                             .heapMappings = { uboMapping, texMapping },
                                                             .renderingInfo = { { }, colorFormats } } };
 
-        // Descriptors allocation and writing
-        auto allocate = [](Buffer& heap, const vk::DeviceSize size, const vk::DeviceSize alignment) {
-            vma::VirtualAllocationCreateInfo ci;
-            ci.size = size;
-            ci.alignment = alignment;
-            return heap.VirtualBlock().allocate(ci);
-        };
-        auto hostRange = [](Buffer& heap, const vma::raii::VirtualAllocation& a) {
-            const auto info = a.getInfo();
-            return vk::HostAddressRangeEXT { static_cast<std::byte*>(heap.Data()) + info.offset,
-                                             info.size };
-        };
-
-        const auto frameCount = m_inFlightContext.FrameCount();
-
-        std::vector<vk::DeviceAddressRangeEXT> uboRanges;
-        std::vector<vk::ResourceDescriptorInfoEXT> resourceInfos;
-        std::vector<vk::HostAddressRangeEXT> resourceDsts;
-        uboRanges.reserve(frameCount);
-        resourceInfos.reserve(frameCount + 1);
-        resourceDsts.reserve(frameCount + 1);
-
-        std::vector<vma::raii::VirtualAllocation> uboDescriptors;
-        uboDescriptors.reserve(frameCount);
-
-        for (const auto i : utils::Range(frameCount)) {
-            uboRanges.emplace_back(m_viewProjection[i].Address(), sizeof(ViewProjection));
-
-            vk::ResourceDescriptorInfoEXT info { };
-            info.type = vk::DescriptorType::eUniformBuffer;
-            info.data.pAddressRange = &uboRanges.back();
-            resourceInfos.push_back(info);
-
-            uboDescriptors.push_back(allocate(m_resourceDescriptorHeap, heapProps.bufferDescriptorSize,
-                                              heapProps.bufferDescriptorAlignment));
-            resourceDsts.push_back(hostRange(m_resourceDescriptorHeap, uboDescriptors.back()));
-        }
-        m_uboDescriptor = InFlight { m_inFlightContext, std::move(uboDescriptors) };
-
-        const vk::ImageViewCreateInfo viewCI {
-            { }, *m_texture, vk::ImageViewType::e2D, m_texture.Format(), { }, m_texture.FullRange()
-        };
-        const vk::ImageDescriptorInfoEXT image { &viewCI, vk::ImageLayout::eShaderReadOnlyOptimal };
-
-        vk::ResourceDescriptorInfoEXT imageInfo { };
-        imageInfo.type = vk::DescriptorType::eSampledImage;
-        imageInfo.data.pImage = &image;
-        resourceInfos.push_back(imageInfo);
-
-        m_imageDescriptor = allocate(m_resourceDescriptorHeap, heapProps.imageDescriptorSize,
-                                     heapProps.imageDescriptorAlignment);
-        resourceDsts.push_back(hostRange(m_resourceDescriptorHeap, m_imageDescriptor));
-
-        m_context.GetDevice()->writeResourceDescriptorsEXT(resourceInfos, resourceDsts);
-
-        vk::SamplerCreateInfo samplerCreateInfo { };
-        samplerCreateInfo.maxLod = vk::LodClampNone;
-        samplerCreateInfo.magFilter = vk::Filter::eLinear;
-        samplerCreateInfo.minFilter = vk::Filter::eLinear;
-        samplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
-        samplerCreateInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge;
-        samplerCreateInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
-        samplerCreateInfo.addressModeW = vk::SamplerAddressMode::eClampToEdge;
-
-        m_samplerDescriptor = allocate(m_samplerDescriptorHeap, heapProps.samplerDescriptorSize,
-                                       heapProps.samplerDescriptorAlignment);
-        const auto samplerDst = hostRange(m_samplerDescriptorHeap, m_samplerDescriptor);
-        m_context.GetDevice()->writeSamplerDescriptorsEXT(samplerCreateInfo, samplerDst);
-
-        // Construct 32-bit addresses (offsets)
-        m_descriptorAddresses =
-            Buffer { m_context.GetDevice(), *m_context.GetAllocator(),
-                     (kMaxSamplerDescriptors + kMaxResourceDescriptors) * 4 *
-                         m_inFlightContext.FrameCount(),
-                     MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer };
-
-        // [ubo][img][spl][ubo][img][spl]...
-        std::vector<std::uint32_t> a;
-        for (auto i : utils::Range(m_inFlightContext.FrameCount())) {
-            a.push_back(static_cast<std::uint32_t>(m_uboDescriptor[i].getInfo().offset));
-            a.push_back(static_cast<std::uint32_t>(m_imageDescriptor.getInfo().offset));
-            a.push_back(static_cast<std::uint32_t>(m_samplerDescriptor.getInfo().offset));
-        }
-        std::memcpy(m_descriptorAddresses.Data(), a.data(), 4 * 3);
+        m_descriptorHeap.AllocateAndWriteDescriptors(m_viewProjection.Raw(), m_texture);
+        m_descriptorHeap.CreateIndexArray();
     } else {
         m_pipelineLayoutCache = PipelineLayoutCache { *m_context.GetDevice() };
         m_descriptorLayoutCache = DescriptorLayoutCache { *m_context.GetDevice() };
@@ -286,13 +177,20 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         samplerCreateInfo.addressModeW = vk::SamplerAddressMode::eClampToEdge;
         m_sampler = vk::raii::Sampler { *m_context.GetDevice(), samplerCreateInfo };
 
+        vk::ImageViewCreateInfo textureViewCreateInfo { };
+        textureViewCreateInfo.image = *m_texture;
+        textureViewCreateInfo.viewType = vk::ImageViewType::e2D;
+        textureViewCreateInfo.format = m_texture.Format();
+        textureViewCreateInfo.subresourceRange = m_texture.FullRange();
+        m_textureView = vk::raii::ImageView { *m_context.GetDevice(), textureViewCreateInfo };
+
         DescriptorWriter descriptorWriter { *m_context.GetDevice() };
         for (const auto i : utils::Range(m_inFlightContext.FrameCount())) {
             descriptorWriter.Clear();
             descriptorWriter
                 .WriteBuffer(0, *m_viewProjection[i], m_viewProjection[i].Size(), 0,
                              vk::DescriptorType::eUniformBuffer)
-                .WriteImage(1, m_texture.View(), m_sampler, vk::ImageLayout::eShaderReadOnlyOptimal,
+                .WriteImage(1, m_textureView, m_sampler, vk::ImageLayout::eShaderReadOnlyOptimal,
                             vk::DescriptorType::eCombinedImageSampler)
                 .UpdateSet(m_descriptorSet[i]);
         }
@@ -355,18 +253,7 @@ void Renderer::BeginFrame() {
                                          .newUsage = Usage::eColorAttachment } });
 
     if (m_context.GetDevice().Caps().descriptorHeap) {
-        vk::BindHeapInfoEXT bind { };
-        bind.heapRange = vk::DeviceAddressRangeEXT { m_resourceDescriptorHeap.Address(),
-                                                     m_resourceDescriptorHeap.Size() };
-        bind.reservedRangeOffset = m_resourceHeapReservedOff;
-        bind.reservedRangeSize = m_resourceHeapReservedSize;
-        cmd->bindResourceHeapEXT(bind);
-
-        bind.heapRange = vk::DeviceAddressRangeEXT { m_samplerDescriptorHeap.Address(),
-                                                     m_samplerDescriptorHeap.Size() };
-        bind.reservedRangeOffset = m_samplerHeapReservedOff;
-        bind.reservedRangeSize = m_samplerHeapReservedSize;
-        cmd->bindSamplerHeapEXT(bind);
+        m_descriptorHeap.BeginFrame(*cmd);
     }
 
     m_frameActive = true;
@@ -422,11 +309,7 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     cmd->setScissor(0, { { { 0, 0 }, swapchainImage.Extent2D() } });
 
     if (m_context.GetDevice().Caps().descriptorHeap) {
-        vk::DeviceAddress a = m_descriptorAddresses.Address();
-        vk::PushDataInfoEXT push { };
-        push.offset = 0;
-        push.data = vk::HostAddressRangeConstEXT { &a, sizeof(a) };
-        cmd->pushDataEXT(push);
+        m_descriptorHeap.Bind(*cmd);
     } else {
         cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline.Layout(), 0,
                                 m_descriptorSet.Get(), { });
@@ -519,8 +402,7 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
     const std::uint32_t mipLevels =
         static_cast<std::uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
-    Image vramTexture = Image { *m_context.GetDevice(),
-                                *m_context.GetAllocator(),
+    Image vramTexture = Image { *m_context.GetAllocator(),
                                 {
                                     .extent = vk::Extent3D { width, height, 1 },
                                     .format = vk::Format::eR8G8B8A8Srgb,

@@ -5,6 +5,7 @@
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
 #include "skylabs/engine/render/vulkan/command_buffer_allocator.hpp"
 #include "skylabs/engine/render/vulkan/context/context.hpp"
+#include "skylabs/engine/render/vulkan/descriptor_heap.hpp"
 #include "skylabs/engine/render/vulkan/descriptor_layout_cache.hpp"
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 #include "skylabs/engine/render/vulkan/in_flight.hpp"
@@ -59,18 +60,7 @@ private:
     InFlight<CommandBuffer> m_commandBuffers { nullptr };
 
     // Heap
-    Buffer m_resourceDescriptorHeap { nullptr };
-    vk::DeviceSize m_resourceHeapReservedOff = 0;
-    vk::DeviceSize m_resourceHeapReservedSize = 0;
-    InFlight<vma::raii::VirtualAllocation> m_uboDescriptor { nullptr };
-    vma::raii::VirtualAllocation m_imageDescriptor { nullptr };
-
-    Buffer m_samplerDescriptorHeap { nullptr };
-    vk::DeviceSize m_samplerHeapReservedOff = 0;
-    vk::DeviceSize m_samplerHeapReservedSize = 0;
-    vma::raii::VirtualAllocation m_samplerDescriptor { nullptr };
-
-    Buffer m_descriptorAddresses { nullptr };
+    DescriptorHeap m_descriptorHeap { nullptr };
 
     // Pool
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };
@@ -78,6 +68,7 @@ private:
     vk::raii::DescriptorPool m_descriptorPool { nullptr };
     InFlight<vk::DescriptorSet> m_descriptorSet { nullptr };
     vk::raii::Sampler m_sampler { nullptr };
+    vk::raii::ImageView m_textureView { nullptr };
 
     InFlight<Buffer> m_viewProjection { nullptr };
     GraphicsPipeline m_pipeline { nullptr };

@@ -84,6 +84,8 @@ CheckOptions:
     value: '_t'
   - key: readability-identifier-naming.PrivateMemberPrefix
     value: 'm_'
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: 'm_'
   - key: readability-identifier-naming.GlobalConstantPrefix
     value: 'k'
   - key: readability-identifier-naming.EnumConstantPrefix

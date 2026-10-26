@@ -56,6 +56,8 @@ public:
     constexpr const T* Data() const { return m_data.data(); }
     constexpr std::size_t Size() const { return m_data.size(); }
 
+    const std::vector<T>& Raw() const { return m_data; }
+
 private:
     const InFlightContext* m_context;
     std::vector<T> m_data;

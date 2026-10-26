@@ -37,7 +37,7 @@ public:
     [[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
 
-    [[nodiscard]] std::span<Image> Images() { return m_images; }
+    [[nodiscard]] std::span<Attachment> Images() { return m_images; }
     [[nodiscard]] std::span<vk::raii::Semaphore> RenderFinishedSemaphores() {
         return m_renderFinishedSemaphores;
     }
@@ -54,7 +54,7 @@ private:
     vk::Extent2D m_extent;
     vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eFifo;
 
-    std::vector<Image> m_images;
+    std::vector<Attachment> m_images;
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;
 };
 }
