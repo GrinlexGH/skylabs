@@ -29,10 +29,10 @@ void DescriptorHeap::BeginFrame(const vk::raii::CommandBuffer& cmd) const {
 }
 
 void DescriptorHeap::Bind(const vk::raii::CommandBuffer& cmd) const {
-    vk::DeviceAddress a = m_indexArray.Address();
+    vk::DeviceAddress address = m_indexArray.Address();
     vk::PushDataInfoEXT push { };
     push.offset = 0;
-    push.data = vk::HostAddressRangeConstEXT { &a, sizeof(a) };
+    push.data = vk::HostAddressRangeConstEXT { &address, sizeof(address) };
     cmd.pushDataEXT(push);
 }
 
