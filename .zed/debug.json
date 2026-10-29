@@ -4,27 +4,25 @@
     "build": {
       "command": "cmake",
       "args": ["--build", "build/Debug", "--parallel"],
-      "cwd": "$ZED_WORKTREE_ROOT"
+      "cwd": "$ZED_WORKTREE_ROOT",
     },
     "program": "$ZED_WORKTREE_ROOT/build/Debug/built/launcher",
     "request": "launch",
     "adapter": "CodeLLDB",
-    "initCommands": [
-      "settings set plugin.symbol-file.pdb.reader native"
-    ],
+    "initCommands": ["settings set plugin.symbol-file.pdb.reader native"],
     "env": {
-      "_NO_DEBUG_HEAP": "1"
-    }
+      "_NO_DEBUG_HEAP": "1",
+    },
   },
   {
     "label": "Build & debug (Linux)",
     "build": {
       "command": "cmake",
       "args": ["--build", "build/Debug", "--parallel"],
-      "cwd": "$ZED_WORKTREE_ROOT"
+      "cwd": "$ZED_WORKTREE_ROOT",
     },
     "program": "$ZED_WORKTREE_ROOT/build/Debug/built/bin/launcher",
     "request": "launch",
-    "adapter": "CodeLLDB"
-  }
+    "adapter": "CodeLLDB",
+  },
 ]
