@@ -30,7 +30,7 @@ Sampler2D texture;
 VSOutput vertexMain(uint index : SV_VulkanVertexID) {
     VSOutput output;
     output.pos = mul(ubo.projection, mul(ubo.view, float4(kPositions[index], 0.0, 1.0)));
-    output.uv = kUVs[index];
+    output.uv = (kUVs[index] - float2(0.5, 0.5)) * 4 + float2(0.5, 0.5);
     return output;
 }
 

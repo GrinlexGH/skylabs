@@ -5,7 +5,6 @@
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
 #include "skylabs/engine/render/vulkan/command_buffer_allocator.hpp"
 #include "skylabs/engine/render/vulkan/context/context.hpp"
-#include "skylabs/engine/render/vulkan/descriptor_heap.hpp"
 #include "skylabs/engine/render/vulkan/descriptor_layout_cache.hpp"
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 #include "skylabs/engine/render/vulkan/in_flight.hpp"
@@ -60,7 +59,20 @@ private:
     InFlight<CommandBuffer> m_commandBuffers { nullptr };
 
     // Heap
-    DescriptorHeap m_descriptorHeap { nullptr };
+    struct DescriptorHeap {
+        Buffer heap { nullptr };
+        vk::DeviceSize reservedOffset = 0;
+        vk::DeviceSize reservedSize = 0;
+    };
+
+    DescriptorHeap m_resourceHeap;
+    InFlight<vma::raii::VirtualAllocation> m_uboDescriptor { nullptr };
+    vma::raii::VirtualAllocation m_textureDescriptor { nullptr };
+
+    DescriptorHeap m_samplerHeap;
+    vma::raii::VirtualAllocation m_samplerDescriptor { nullptr };
+
+    Buffer m_descriptorAddresses { nullptr };
 
     // Pool
     PipelineLayoutCache m_pipelineLayoutCache { nullptr };

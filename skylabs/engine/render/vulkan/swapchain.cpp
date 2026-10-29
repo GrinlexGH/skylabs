@@ -30,21 +30,20 @@ Swapchain::Swapchain(const Device& device, const IWindow* window, const vk::raii
             .build();
 
     if (!swapchainResult) {
-        throw std::runtime_error(fmt::format(
-            "Failed to create vulkan device ({}): {}, {}",
-            vk::to_string(vk::Result { swapchainResult.vk_result() }), swapchainResult.error().message(),
-            fmt::join(swapchainResult.detailed_failure_reasons(), "; ")));
+        const std::string message =
+            fmt::format("Failed to create vulkan device ({}): {}", swapchainResult.error().message(),
+                        fmt::join(swapchainResult.detailed_failure_reasons(), "; "));
+        throw std::runtime_error { message };
     }
 
-    vkb::Swapchain sw = swapchainResult.value();
-    m_handle = vk::raii::SwapchainKHR { *device, sw.swapchain };
-    m_extent = sw.extent;
-    m_presentMode = static_cast<vk::PresentModeKHR>(sw.present_mode);
-    m_surfaceFormat = { .format = sw.image_format, .colorSpace = sw.color_space };
+    vkb::Swapchain swapchain = swapchainResult.value();
+    m_handle = vk::raii::SwapchainKHR { *device, swapchain.swapchain };
+    m_extent = swapchain.extent;
+    m_presentMode = static_cast<vk::PresentModeKHR>(swapchain.present_mode);
+    m_surfaceFormat = { .format = swapchain.image_format, .colorSpace = swapchain.color_space };
 
-    log::Debug(
-        "Swapchain created: {} x {} ({}x{})", vk::to_string(static_cast<vk::Format>(sw.image_format)),
-        vk::to_string(static_cast<vk::ColorSpaceKHR>(sw.color_space)), m_extent.width, m_extent.height);
+    log::Debug("Swapchain created: {} x {} ({}x{})", vk::to_string(m_surfaceFormat.format),
+               vk::to_string(m_surfaceFormat.colorSpace), m_extent.width, m_extent.height);
 
     const std::vector<vk::Image> images = m_handle.getImages();
     m_images.reserve(images.size());

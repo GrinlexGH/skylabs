@@ -1,28 +1,6 @@
 #include "skylabs/engine/render/vulkan/image.hpp"
 
 namespace {
-vk::ImageViewType DetermineViewType(const vk::Extent3D extent, const std::uint32_t layers) {
-    if (extent.height == 1 && extent.depth == 1) {
-        return (layers == 1) ? vk::ImageViewType::e1D : vk::ImageViewType::e1DArray;
-    }
-    if (extent.depth == 1) {
-        return (layers == 1) ? vk::ImageViewType::e2D : vk::ImageViewType::e2DArray;
-    }
-    assert(layers == 1);
-    return vk::ImageViewType::e3D;
-}
-
-vk::ImageType DetermineType(const vk::Extent3D extent, [[maybe_unused]] const std::uint32_t layers) {
-    if (extent.height == 1 && extent.depth == 1) {
-        return vk::ImageType::e1D;
-    }
-    if (extent.depth == 1) {
-        return vk::ImageType::e2D;
-    }
-    assert(layers == 1);
-    return vk::ImageType::e3D;
-}
-
 vk::ImageAspectFlags DetermineAspect(const vk::Format format) {
     switch (format) {
         case vk::Format::eD32Sfloat:
@@ -48,9 +26,7 @@ Image::Image(const vma::raii::Allocator& allocator, const ImageCreateInfo& optio
     vk::ImageCreateInfo imageInfo { };
     imageInfo.format = m_format;
     imageInfo.extent = m_extent;
-
-    imageInfo.imageType = DetermineType(m_extent, m_arrayLevels);
-
+    imageInfo.imageType = options.type;
     imageInfo.mipLevels = m_mipLevels;
     imageInfo.arrayLayers = m_arrayLevels;
     imageInfo.samples = m_sampleCount;
@@ -58,6 +34,7 @@ Image::Image(const vma::raii::Allocator& allocator, const ImageCreateInfo& optio
     imageInfo.usage = options.usageFlags;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
     imageInfo.queueFamilyIndexCount = 0;
+    imageInfo.pQueueFamilyIndices = nullptr;
     imageInfo.initialLayout = vk::ImageLayout::eUndefined;
 
     vma::AllocationCreateInfo allocInfo { };
@@ -79,17 +56,17 @@ Image::Image(vk::Image imported, const vk::Extent3D extent, const vk::Format for
       m_aspectFlags(DetermineAspect(m_format)) { }
 
 Attachment::Attachment(const vk::raii::Device& device, const vma::raii::Allocator& allocator,
-                       const ImageCreateInfo& options)
+                       const ImageCreateInfo& options, const vk::ImageViewType viewType)
     : Image(allocator, options) {
-    CreateView(device, DetermineViewType(m_extent, m_arrayLevels));
+    CreateView(device, viewType);
 }
 
 Attachment::Attachment(const vk::raii::Device& device, vk::Image imported, const vk::Extent3D extent,
                        const vk::Format format, const std::uint32_t mipLevels,
                        const std::uint32_t arrayLevels, const vk::SampleCountFlagBits sampleCount,
-                       std::optional<vk::ImageViewType> viewType)
+                       const vk::ImageViewType viewType)
     : Image(imported, extent, format, mipLevels, arrayLevels, sampleCount) {
-    CreateView(device, viewType.value_or(DetermineViewType(m_extent, m_arrayLevels)));
+    CreateView(device, viewType);
 }
 
 void Attachment::CreateView(const vk::raii::Device& device, const vk::ImageViewType viewType) {

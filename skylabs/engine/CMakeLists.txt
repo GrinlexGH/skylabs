@@ -34,7 +34,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/pipeline_layout_cache.cpp
         render/vulkan/descriptor_layout_cache.cpp
         render/vulkan/descriptor_writer.cpp
-        render/vulkan/descriptor_heap.cpp
         render/vulkan/context/context.cpp
         render/vulkan/context/allocator.cpp
     FILE_SET HEADERS FILES
@@ -69,7 +68,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/pipeline_layout_cache.hpp
         render/vulkan/descriptor_layout_cache.hpp
         render/vulkan/descriptor_writer.hpp
-        render/vulkan/descriptor_heap.hpp
         render/vulkan/context/instance.hpp
         render/vulkan/context/surface.hpp
         render/vulkan/context/physical_device.hpp

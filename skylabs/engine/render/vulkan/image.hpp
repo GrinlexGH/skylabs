@@ -5,7 +5,8 @@
 
 namespace sk::render::vulkan {
 struct ImageCreateInfo {
-    vk::Extent3D extent { };
+    vk::Extent3D extent { 1, 1, 1 };
+    vk::ImageType type = vk::ImageType::e2D;
     vk::Format format = vk::Format::eR8G8B8A8Snorm;
     std::uint32_t mipLevels = 1;
     std::uint32_t arrayLevels = 1;
@@ -62,11 +63,12 @@ class Attachment : public Image {
 public:
     explicit Attachment(std::nullptr_t) : Image(nullptr) { }
     explicit Attachment(const vk::raii::Device& device, const vma::raii::Allocator& allocator,
-                        const ImageCreateInfo& options = { });
+                        const ImageCreateInfo& options = { },
+                        vk::ImageViewType viewType = vk::ImageViewType::e2D);
     explicit Attachment(const vk::raii::Device& device, vk::Image imported, vk::Extent3D extent,
                         vk::Format format, std::uint32_t mipLevels, std::uint32_t arrayLevels,
                         vk::SampleCountFlagBits sampleCount,
-                        std::optional<vk::ImageViewType> viewType = std::nullopt);
+                        vk::ImageViewType viewType = vk::ImageViewType::e2D);
     Attachment(const Attachment&) = delete;
     Attachment(Attachment&&) noexcept = default;
     Attachment& operator=(const Attachment&) = delete;
