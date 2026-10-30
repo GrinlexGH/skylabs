@@ -280,7 +280,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
             vk::DescriptorPoolSize { vk::DescriptorType::eCombinedImageSampler, kFramesInFlightCount }
         };
         descriptorPoolCreateInfo.setPoolSizes(descriptorPoolSizes);
-        descriptorPoolCreateInfo.setMaxSets(kFramesInFlightCount);
+        descriptorPoolCreateInfo.maxSets = kFramesInFlightCount;
         m_descriptorPool = vk::raii::DescriptorPool { *m_context.GetDevice(), descriptorPoolCreateInfo };
 
         std::array colorFormats { m_swapchain.SurfaceFormat().format };
@@ -293,10 +293,12 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                                             .renderingInfo = { { }, colorFormats } } };
 
         // Allocate pack of descriptors
-        vk::DescriptorSetAllocateInfo descriptorSetAllocationInfo { };
         std::vector descriptorSetLayouts { m_inFlightContext.FrameCount(), *descriptorSetLayout };
+
+        vk::DescriptorSetAllocateInfo descriptorSetAllocationInfo { };
         descriptorSetAllocationInfo.descriptorPool = m_descriptorPool;
         descriptorSetAllocationInfo.setSetLayouts(descriptorSetLayouts);
+
         std::vector<vk::DescriptorSet> descriptorSets =
             m_context.GetDevice()->allocateDescriptorSets(descriptorSetAllocationInfo) |
             std::views::transform([](vk::raii::DescriptorSet& set) { return set.release(); }) |

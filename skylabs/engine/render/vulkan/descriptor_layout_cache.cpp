@@ -27,8 +27,8 @@ const vk::raii::DescriptorSetLayout& DescriptorLayoutCache::GetLayout(
     vk::DescriptorSetLayoutCreateInfo createInfo { };
     createInfo.setBindings(bindings);
 
-    auto [insertedIt, success] = m_cache.try_emplace(
-        std::move(bindings), vk::raii::DescriptorSetLayout { *m_device, createInfo });
+    vk::raii::DescriptorSetLayout layout { *m_device, createInfo };
+    auto [insertedIt, _] = m_cache.try_emplace(std::move(bindings), std::move(layout));
 
     return insertedIt->second;
 }

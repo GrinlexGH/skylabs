@@ -33,12 +33,12 @@ const vk::raii::PipelineLayout& PipelineLayoutCache::GetLayout(PipelineLayoutInf
         return it->second;
     }
 
-    const vk::PipelineLayoutCreateInfo createInfo { { },
-                                                    layoutInfo.descriptorSetLayouts,
-                                                    layoutInfo.pushConstants };
+    vk::PipelineLayoutCreateInfo createInfo { };
+    createInfo.setSetLayouts(layoutInfo.descriptorSetLayouts);
+    createInfo.setPushConstantRanges(layoutInfo.pushConstants);
 
     vk::raii::PipelineLayout layout { *m_device, createInfo };
-    auto [insertedIt, success] = m_cache.try_emplace(std::move(layoutInfo), std::move(layout));
+    auto [insertedIt, _] = m_cache.try_emplace(std::move(layoutInfo), std::move(layout));
 
     return insertedIt->second;
 }

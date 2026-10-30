@@ -6,14 +6,18 @@ DescriptorWriter::DescriptorWriter(const vk::raii::Device& device) : m_device(&d
 DescriptorWriter& DescriptorWriter::WriteBuffer(std::uint32_t binding, vk::Buffer buffer,
                                                 std::size_t size, std::size_t offset,
                                                 vk::DescriptorType type, std::uint32_t arrayElement) {
-    vk::DescriptorBufferInfo& info = m_bufferInfos.emplace_back(buffer, offset, size);
+    vk::DescriptorBufferInfo bufferInfo { };
+    bufferInfo.buffer = buffer;
+    bufferInfo.offset = offset;
+    bufferInfo.range = size;
+    m_bufferInfos.push_back(bufferInfo);
 
     vk::WriteDescriptorSet write { };
     write.dstBinding = binding;
     write.dstArrayElement = arrayElement;
     write.descriptorCount = 1;
     write.descriptorType = type;
-    write.pBufferInfo = &info;
+    write.pBufferInfo = &m_bufferInfos.back();
 
     m_writes.push_back(write);
     return *this;
@@ -22,14 +26,18 @@ DescriptorWriter& DescriptorWriter::WriteBuffer(std::uint32_t binding, vk::Buffe
 DescriptorWriter& DescriptorWriter::WriteImage(std::uint32_t binding, vk::ImageView view,
                                                vk::Sampler sampler, vk::ImageLayout layout,
                                                vk::DescriptorType type, std::uint32_t arrayElement) {
-    vk::DescriptorImageInfo& info = m_imageInfos.emplace_back(sampler, view, layout);
+    vk::DescriptorImageInfo imageInfo { };
+    imageInfo.sampler = sampler;
+    imageInfo.imageView = view;
+    imageInfo.imageLayout = layout;
+    m_imageInfos.push_back(imageInfo);
 
     vk::WriteDescriptorSet write { };
     write.dstBinding = binding;
     write.dstArrayElement = arrayElement;
     write.descriptorCount = 1;
     write.descriptorType = type;
-    write.pImageInfo = &info;
+    write.pImageInfo = &m_imageInfos.back();
 
     m_writes.push_back(write);
     return *this;
