@@ -30,7 +30,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/graphics_pipeline.cpp
         render/vulkan/shader.cpp
         render/vulkan/command_buffer.cpp
-        render/vulkan/command_buffer_allocator.cpp
         render/vulkan/pipeline_layout_cache.cpp
         render/vulkan/descriptor_layout_cache.cpp
         render/vulkan/descriptor_writer.cpp
@@ -63,7 +62,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/swapchain.hpp
         render/vulkan/graphics_pipeline.hpp
         render/vulkan/shader.hpp
-        render/vulkan/command_buffer_allocator.hpp
         render/vulkan/command_buffer.hpp
         render/vulkan/pipeline_layout_cache.hpp
         render/vulkan/descriptor_layout_cache.hpp

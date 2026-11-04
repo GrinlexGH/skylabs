@@ -1,3 +1,5 @@
+#include <ranges>
+
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
 
 namespace {
@@ -229,5 +231,32 @@ void CommandBuffer::GenerateMipmaps(const Image& image, const Usage srcUsage,
         .oldUsage = Usage::eTransferWrite,
         .newUsage = dstUsage,
     } });
+}
+
+CommandBufferAllocator::CommandBufferAllocator(const vk::raii::Device& device, std::uint32_t familyIndex)
+    : m_device(&device) {
+    vk::CommandPoolCreateInfo createInfo { };
+    createInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+    createInfo.queueFamilyIndex = familyIndex;
+
+    m_pool = vk::raii::CommandPool { *m_device, createInfo };
+}
+
+std::vector<CommandBuffer> CommandBufferAllocator::Allocate(vk::CommandBufferLevel level,
+                                                            std::uint32_t count) const {
+    vk::CommandBufferAllocateInfo allocateInfo { };
+    allocateInfo.commandPool = m_pool;
+    allocateInfo.level = level;
+    allocateInfo.commandBufferCount = count;
+
+    auto cmds = vk::raii::CommandBuffers { *m_device, allocateInfo };
+
+    std::vector<CommandBuffer> outCmds;
+    outCmds.reserve(cmds.size());
+    for (auto& cmd : cmds) {
+        outCmds.emplace_back(*m_device, std::move(cmd));
+    }
+
+    return outCmds;
 }
 }

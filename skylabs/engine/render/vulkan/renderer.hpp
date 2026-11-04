@@ -3,7 +3,6 @@
 #include "skylabs/engine/render/renderer.hpp"
 #include "skylabs/engine/render/vulkan/buffer.hpp"
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
-#include "skylabs/engine/render/vulkan/command_buffer_allocator.hpp"
 #include "skylabs/engine/render/vulkan/context/context.hpp"
 #include "skylabs/engine/render/vulkan/descriptor_layout_cache.hpp"
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
