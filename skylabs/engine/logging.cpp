@@ -42,7 +42,7 @@ constexpr fmt::text_style GetCategoryStyle(sk::log::Category level) noexcept {
 
 std::string FormatTzOffset(const std::array<char, 6>& tz) {
     if (tz[0] == '\0') {
-        return "";
+        return { };
     }
 
     return fmt::format(" {:.3}:{}", tz.data(), tz.data() + 3);
@@ -93,7 +93,7 @@ std::string_view ToString(const log::Level level) {
         case log::Level::eTrace:
             return "Trace";
         default:
-            return "";
+            return { };
     }
 }
 
@@ -104,7 +104,7 @@ std::string_view ToString(const log::Category category) {
         case log::Category::eVulkan:
             return "Vulkan";
         default:
-            return "";
+            return { };
     }
 }
 }

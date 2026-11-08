@@ -23,7 +23,7 @@ std::string WideToUtf8(std::wstring_view wstr) {
 #endif
 
 namespace sk::os {
-[[nodiscard]] LocalTime GetLocalTime(const std::chrono::system_clock::time_point tp) noexcept {
+LocalTime GetLocalTime(const std::chrono::system_clock::time_point tp) noexcept {
     const std::time_t t = std::chrono::system_clock::to_time_t(tp);
     LocalTime result { };
 
@@ -34,11 +34,8 @@ namespace sk::os {
 #endif
 
     char tempBuf[6] { };
-    const std::size_t written = std::strftime(tempBuf, sizeof(tempBuf), "%z", &result.tm);
-
-    if (written > 0) {
-        std::memcpy(result.tzOffset.data(), tempBuf, written);
-    }
+    std::strftime(tempBuf, sizeof(tempBuf), "%z", &result.tm);
+    std::memcpy(result.tzOffset.data(), tempBuf, 6);
 
     return result;
 }

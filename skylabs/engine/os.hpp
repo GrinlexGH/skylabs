@@ -11,7 +11,7 @@
 namespace sk::os {
 struct LocalTime {
     std::tm tm { };
-    std::array<char, 6> tzOffset { "+0000" };
+    std::array<char, 6> tzOffset { };
 };
 
 [[nodiscard]] LocalTime GetLocalTime(
