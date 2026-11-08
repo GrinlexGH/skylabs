@@ -15,20 +15,20 @@ class SkylabsRecipe(ConanFile):
     }
 
     def build_requirements(self):
-        self.tool_requires("slang/2026.20")
+        self.tool_requires("slang/2026.21")
 
     def requirements(self):
         self.requires("entt/4.0.0")
-        self.requires("fmt/12.2.0")
+        self.requires("fmt/12.2.1")
         self.requires("glm/1.0.3")
         self.requires("sdl/3.4.20")
         self.requires("sdl_image/3.4.8")
         self.requires("sdl_mixer/3.2.4")
         self.requires("sdl_ttf/3.2.2")
         self.requires("tinyobjloader/2.0.0rc13")
-        self.requires("tracy/0.14.1")
+        self.requires("tracy/0.15.0")
         self.requires("vk-bootstrap/1.4.366")
-        self.requires("vulkan-headers/1.4.366")
+        self.requires("vulkan-headers/1.4.367")
         self.requires("vulkan-memory-allocator/3.5.0")
         self.requires("vulkan-memory-allocator-hpp/3.5.0+1")
 
