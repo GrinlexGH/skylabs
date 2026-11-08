@@ -251,11 +251,14 @@ function(skylabs_target_setup_install target_name)
         LIBRARY_OUTPUT_DIRECTORY "${SKYLABS_BUILD_DIR}${library_dest}"
     )
 
-    add_custom_command(TARGET ${target_name} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            -t $<TARGET_FILE_DIR:${target_name}> $<TARGET_RUNTIME_DLLS:${target_name}>
-        COMMAND_EXPAND_LISTS
-    )
+    get_target_property(target_type ${target_name} TYPE)
+    if("${target_type}" MATCHES "MODULE_LIBRARY|SHARED_LIBRARY|EXECUTABLE")
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                -t $<TARGET_FILE_DIR:${target_name}> $<TARGET_RUNTIME_DLLS:${target_name}>
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
 
     set(runtime_dependencies_args "")
     if(NOT CMAKE_CROSSCOMPILING)
