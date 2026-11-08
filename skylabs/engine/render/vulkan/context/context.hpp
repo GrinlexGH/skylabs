@@ -10,11 +10,6 @@ class Context {
 public:
     explicit Context(std::nullptr_t) { }
     explicit Context(const IWindow* window, const IOSAdapter* osAdapter);
-    Context(const Context&) = delete;
-    Context(Context&&) noexcept = default;
-    Context& operator=(const Context&) = delete;
-    Context& operator=(Context&&) noexcept = default;
-    ~Context() = default;
 
     [[nodiscard]] const IWindow* Window() const noexcept { return m_window; }
     [[nodiscard]] const Instance& GetInstance() const noexcept { return m_instance; }

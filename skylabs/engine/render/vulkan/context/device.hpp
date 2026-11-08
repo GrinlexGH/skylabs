@@ -9,11 +9,6 @@ public:
     explicit Queue(const vk::raii::Device& device, const vk::Queue& queue,
                    const std::uint32_t familyIndex)
         : m_handle(device, queue), m_familyIndex(familyIndex) { }
-    Queue(const Queue&) = delete;
-    Queue(Queue&&) noexcept = default;
-    Queue& operator=(const Queue&) = delete;
-    Queue& operator=(Queue&&) noexcept = default;
-    ~Queue() = default;
 
     [[nodiscard]] const vk::raii::Queue& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Queue* operator->() const noexcept { return &m_handle; }
@@ -46,11 +41,6 @@ public:
           m_graphicsQueue(std::move(graphicsQueue)),
           m_presentQueue(std::move(presentQueue)),
           m_computeQueue(std::move(computeQueue)) { }
-    Device(Device&) = delete;
-    Device(Device&&) = default;
-    Device& operator=(Device&) = delete;
-    Device& operator=(Device&&) = default;
-    ~Device() = default;
 
     [[nodiscard]] const vk::raii::Device& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Device* operator->() const noexcept { return &m_handle; }

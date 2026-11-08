@@ -16,11 +16,6 @@ public:
                        std::uint32_t imageCount, vk::PresentModeKHR presentMode,
                        VkSwapchainKHR oldHandle = VK_NULL_HANDLE);
     explicit Swapchain(const Swapchain& oldSwapchain, const SwapchainRecreateInfo& recreationInfo);
-    Swapchain(const Swapchain&) = delete;
-    Swapchain(Swapchain&&) noexcept = default;
-    Swapchain& operator=(const Swapchain&) = delete;
-    Swapchain& operator=(Swapchain&&) noexcept = default;
-    ~Swapchain() = default;
 
     [[nodiscard]] const vk::raii::SwapchainKHR& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::SwapchainKHR* operator->() const noexcept { return &m_handle; }

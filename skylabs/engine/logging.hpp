@@ -5,7 +5,7 @@
 #include <fmt/format.h>
 
 namespace sk::log {
-enum class Level : std::int8_t { eFatal = 0, eError, eWarning, eInfo, eDebug, eVerbose, eTrace };
+enum class Level : std::uint8_t { eFatal = 0, eError, eWarning, eInfo, eDebug, eVerbose, eTrace };
 enum class Category : std::uint8_t { eGeneral = 0, eVulkan };
 
 class ISink {

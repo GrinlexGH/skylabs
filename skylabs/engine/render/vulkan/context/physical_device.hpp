@@ -8,11 +8,6 @@ public:
     explicit PhysicalDevice(const vk::raii::Instance& instance, const vk::PhysicalDevice& physicalDevice,
                             std::string&& name)
         : m_handle(instance, physicalDevice), m_name(std::move(name)) { }
-    PhysicalDevice(const PhysicalDevice&) = delete;
-    PhysicalDevice(PhysicalDevice&&) noexcept = default;
-    PhysicalDevice& operator=(const PhysicalDevice&) = delete;
-    PhysicalDevice& operator=(PhysicalDevice&&) noexcept = default;
-    ~PhysicalDevice() = default;
 
     [[nodiscard]] const vk::raii::PhysicalDevice& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::PhysicalDevice* operator->() const noexcept { return &m_handle; }

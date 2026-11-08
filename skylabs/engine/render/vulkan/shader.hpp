@@ -7,11 +7,6 @@ public:
     explicit Shader(std::nullptr_t) { }
     explicit Shader(const vk::raii::Device& device, vk::ShaderStageFlagBits stage,
                     const std::vector<std::uint32_t>& bytecode);
-    Shader(const Shader&) = delete;
-    Shader(Shader&&) noexcept = default;
-    Shader& operator=(const Shader&) = delete;
-    Shader& operator=(Shader&&) noexcept = default;
-    ~Shader() = default;
 
     [[nodiscard]] const vk::raii::ShaderModule& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::ShaderModule* operator->() const noexcept { return &m_handle; }

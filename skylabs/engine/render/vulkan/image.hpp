@@ -20,11 +20,6 @@ public:
     explicit Image(const vma::raii::Allocator& allocator, const ImageCreateInfo& options = { });
     explicit Image(vk::Image imported, vk::Extent3D extent, vk::Format format, std::uint32_t mipLevels,
                    std::uint32_t arrayLevels, vk::SampleCountFlagBits sampleCount);
-    Image(const Image&) = delete;
-    Image(Image&&) noexcept = default;
-    Image& operator=(const Image&) = delete;
-    Image& operator=(Image&&) noexcept = default;
-    ~Image() = default;
 
     [[nodiscard]] vk::Image operator*() const noexcept { return Handle(); }
 

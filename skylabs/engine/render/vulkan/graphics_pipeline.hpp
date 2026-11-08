@@ -23,11 +23,6 @@ class GraphicsPipeline {
 public:
     explicit GraphicsPipeline(std::nullptr_t) { }
     explicit GraphicsPipeline(const Device& device, const GraphicsPipelineCreateInfo& options = { });
-    GraphicsPipeline(const GraphicsPipeline&) = delete;
-    GraphicsPipeline(GraphicsPipeline&&) noexcept = default;
-    GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
-    GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept = default;
-    ~GraphicsPipeline() = default;
 
     [[nodiscard]] const vk::raii::Pipeline& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vk::raii::Pipeline* operator->() const noexcept { return &m_handle; }

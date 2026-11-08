@@ -15,11 +15,6 @@ public:
     Buffer(const Device& device, const vma::raii::Allocator& allocator, vk::DeviceSize size,
            MemoryLocation location, vk::BufferUsageFlags2 usage = { },
            const std::optional<vk::DeviceSize>& virtualAllocationSize = std::nullopt);
-    Buffer(const Buffer&) = delete;
-    Buffer(Buffer&&) noexcept = default;
-    Buffer& operator=(const Buffer&) = delete;
-    Buffer& operator=(Buffer&&) noexcept = default;
-    ~Buffer() = default;
 
     [[nodiscard]] const vma::raii::Buffer& operator*() const noexcept { return m_handle; }
     [[nodiscard]] const vma::raii::Buffer* operator->() const noexcept { return &m_handle; }
