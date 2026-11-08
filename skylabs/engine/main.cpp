@@ -8,9 +8,12 @@ SK_ENGINE_PUBLIC_INTERFACE int SkMain(int /*argc*/, char* /*argv*/[]) {
     tracy::StartupProfiler();
 #endif
 
-    {
+    try {
         sk::Engine engine;
         engine.Run();
+    } catch (const std::exception& e) {
+        fmt::println("{}", e.what());
+        return 1;
     }
 
 #ifdef TRACY_ENABLE
