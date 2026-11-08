@@ -30,9 +30,7 @@ public:
 
     [[nodiscard]] vk::Format Format() const noexcept { return m_format; }
     [[nodiscard]] vk::Extent3D Extent() const noexcept { return m_extent; }
-    [[nodiscard]] vk::Extent2D Extent2D() const noexcept {
-        return vk::Extent2D { m_extent.width, m_extent.height };
-    }
+    [[nodiscard]] vk::Extent2D Extent2D() const noexcept { return { m_extent.width, m_extent.height }; }
     [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
     [[nodiscard]] std::uint32_t ArrayLevels() const noexcept { return m_arrayLevels; }
     [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
@@ -42,12 +40,7 @@ public:
     }
 
 protected:
-    vk::Image Handle() const {
-        if (auto const* img = std::get_if<vk::Image>(&m_handle)) {
-            return *img;
-        }
-        return *std::get<vma::raii::Image>(m_handle);
-    }
+    vk::Image Handle() const;
 
     std::variant<vk::Image, vma::raii::Image> m_handle;
 

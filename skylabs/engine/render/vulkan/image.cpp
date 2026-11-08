@@ -55,6 +55,13 @@ Image::Image(vk::Image imported, const vk::Extent3D extent, const vk::Format for
       m_sampleCount(sampleCount),
       m_aspectFlags(DetermineAspect(m_format)) { }
 
+vk::Image Image::Handle() const {
+    if (auto const* img = std::get_if<vk::Image>(&m_handle)) {
+        return *img;
+    }
+    return *std::get<vma::raii::Image>(m_handle);
+}
+
 Attachment::Attachment(const vk::raii::Device& device, const vma::raii::Allocator& allocator,
                        const ImageCreateInfo& options, const vk::ImageViewType viewType)
     : Image(allocator, options) {

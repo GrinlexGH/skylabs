@@ -8,7 +8,6 @@
 namespace sk::render::vulkan {
 class Context {
 public:
-    Context() = delete;
     explicit Context(std::nullptr_t) { }
     explicit Context(const IWindow* window, const IOSAdapter* osAdapter);
     Context(const Context&) = delete;
