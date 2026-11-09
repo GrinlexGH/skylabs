@@ -1,6 +1,6 @@
 #pragma once
 #include "skylabs/engine/render/vertex.hpp"
-#include "skylabs/engine/render/vulkan/context/device.hpp"
+#include "skylabs/engine/render/vulkan/context.hpp"
 #include "skylabs/engine/render/vulkan/shader.hpp"
 
 namespace sk::render::vulkan {

@@ -3,7 +3,7 @@
 #include "skylabs/engine/render/renderer.hpp"
 #include "skylabs/engine/render/vulkan/buffer.hpp"
 #include "skylabs/engine/render/vulkan/command_buffer.hpp"
-#include "skylabs/engine/render/vulkan/context/context.hpp"
+#include "skylabs/engine/render/vulkan/context.hpp"
 #include "skylabs/engine/render/vulkan/descriptor_layout_cache.hpp"
 #include "skylabs/engine/render/vulkan/graphics_pipeline.hpp"
 #include "skylabs/engine/render/vulkan/in_flight.hpp"
@@ -40,7 +40,7 @@ private:
 
     const filesystem::Filesystem* m_filesystem;
 
-    Context m_context { nullptr };
+    Context m_context;
     Swapchain m_swapchain { nullptr };
     InFlightContext m_inFlightContext;
     CommandBufferAllocator m_commandBufferAllocator { nullptr };

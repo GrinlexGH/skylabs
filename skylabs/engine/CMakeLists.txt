@@ -23,6 +23,7 @@ target_sources(${CURRENT_TARGET_NAME}
         sdl/log_sink.cpp
         sdl/vulkan_adapter.cpp
         sdl/vulkan.cpp
+        render/vulkan/context.cpp
         render/vulkan/renderer.cpp
         render/vulkan/swapchain.cpp
         render/vulkan/image.cpp
@@ -33,8 +34,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/pipeline_layout_cache.cpp
         render/vulkan/descriptor_layout_cache.cpp
         render/vulkan/descriptor_writer.cpp
-        render/vulkan/context/context.cpp
-        render/vulkan/context/allocator.cpp
     FILE_SET HEADERS FILES
         utils.hpp
         window.hpp
@@ -54,6 +53,7 @@ target_sources(${CURRENT_TARGET_NAME}
         sdl/vulkan.hpp
         render/renderer.hpp
         render/vertex.hpp
+        render/vulkan/context.hpp
         render/vulkan/in_flight.hpp
         render/vulkan/os_adapter.hpp
         render/vulkan/renderer.hpp
@@ -66,11 +66,6 @@ target_sources(${CURRENT_TARGET_NAME}
         render/vulkan/pipeline_layout_cache.hpp
         render/vulkan/descriptor_layout_cache.hpp
         render/vulkan/descriptor_writer.hpp
-        render/vulkan/context/instance.hpp
-        render/vulkan/context/surface.hpp
-        render/vulkan/context/physical_device.hpp
-        render/vulkan/context/device.hpp
-        render/vulkan/context/allocator.hpp
     FILE_SET generated TYPE HEADERS
     BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
     FILES

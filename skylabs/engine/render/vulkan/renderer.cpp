@@ -31,18 +31,16 @@ glm::mat4 ReverseZPerspective(const unsigned int width, const unsigned int heigh
 namespace sk::render::vulkan {
 Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapter,
                    const filesystem::Filesystem& filesystem)
-    : m_filesystem(&filesystem) {
-    // General context
-    m_context = Context { window, osAdapter };
-
-    m_swapchain = Swapchain { m_context.GetDevice(), window, *m_context.GetSurface(), 3,
+    : m_filesystem(&filesystem), m_context(window, osAdapter) {
+    m_swapchain = Swapchain { m_context.PhysicalDevice(),  m_context.GetDevice(),
+                              m_context.GetQueues(),       window,
+                              m_context.Surface(),         3,
                               vk::PresentModeKHR::eMailbox };
 
     m_inFlightContext = InFlightContext { kFramesInFlightCount };
 
     m_commandBufferAllocator =
-        CommandBufferAllocator { *m_context.GetDevice(),
-                                 m_context.GetDevice().GraphicsQueue().FamilyIndex() };
+        CommandBufferAllocator { *m_context.GetDevice(), m_context.GetQueues().graphics.FamilyIndex() };
 
     // Frame synchronization
     m_firstUse = InFlight<bool> { m_inFlightContext, true };
@@ -59,7 +57,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
 
     // Base pipeline
     m_viewProjection = InFlight<Buffer> {
-        m_inFlightContext,      m_context.GetDevice(),        *m_context.GetAllocator(),
+        m_inFlightContext,      m_context.GetDevice(),        m_context.Allocator(),
         sizeof(ViewProjection), MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer
     };
 
@@ -115,10 +113,9 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
                                                             .renderingInfo = { { }, colorFormats } } };
 
         // Descriptor heap creation
-        const auto heapProperties = m_context.GetDevice()
-                                        .GetPhysicalDevice()
-                                        ->getProperties2<vk::PhysicalDeviceProperties2,
-                                                         vk::PhysicalDeviceDescriptorHeapPropertiesEXT>()
+        const auto heapProperties = m_context.PhysicalDevice()
+                                        .getProperties2<vk::PhysicalDeviceProperties2,
+                                                        vk::PhysicalDeviceDescriptorHeapPropertiesEXT>()
                                         .get<vk::PhysicalDeviceDescriptorHeapPropertiesEXT>();
 
         constexpr std::uint32_t kMaxResourceDescriptors = 64;
@@ -127,7 +124,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
             utils::AlignUp(resourceHeapUserSize, heapProperties.resourceHeapAlignment);
         m_resourceHeap.reservedSize = heapProperties.minResourceHeapReservedRange;
         m_resourceHeap.heap = Buffer { m_context.GetDevice(),
-                                       *m_context.GetAllocator(),
+                                       m_context.Allocator(),
                                        m_resourceHeap.reservedOffset + m_resourceHeap.reservedSize,
                                        MemoryLocation::eHostVisible,
                                        vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
@@ -139,7 +136,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
             utils::AlignUp(sampleHeapUserSize, heapProperties.samplerHeapAlignment);
         m_samplerHeap.reservedSize = heapProperties.minSamplerHeapReservedRange;
         m_samplerHeap.heap = Buffer { m_context.GetDevice(),
-                                      *m_context.GetAllocator(),
+                                      m_context.Allocator(),
                                       m_samplerHeap.reservedOffset + m_samplerHeap.reservedSize,
                                       MemoryLocation::eHostVisible,
                                       vk::BufferUsageFlagBits2::eDescriptorHeapEXT,
@@ -247,7 +244,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
 
         // Construct 32-bit addresses (offsets)
         m_descriptorAddresses =
-            Buffer { m_context.GetDevice(), *m_context.GetAllocator(),
+            Buffer { m_context.GetDevice(), m_context.Allocator(),
                      (kMaxSamplerDescriptors + kMaxResourceDescriptors) * 4 *
                          m_inFlightContext.FrameCount(),
                      MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer };
@@ -415,7 +412,7 @@ void Renderer::Draw(const glm::mat4 view, const float fov, float /*deltatime*/) 
     auto [width, height] = m_swapchain.Extent();
 
     // Rotate render if we need
-    const vk::SurfaceTransformFlagBitsKHR surfaceTransform = m_swapchain.SurfaceTransform();
+    const vk::SurfaceTransformFlagsKHR surfaceTransform = m_swapchain.SurfaceTransform();
     glm::mat4 rotation { 1 };
 
     if (surfaceTransform == vk::SurfaceTransformFlagBitsKHR::eRotate90) {
@@ -502,7 +499,7 @@ void Renderer::EndFrame() {
     finalSubmit.setWaitSemaphoreInfos(waitInfo);
     finalSubmit.setCommandBufferInfos(cmdInfo);
     finalSubmit.setSignalSemaphoreInfos(signalInfo);
-    m_context.GetDevice().GraphicsQueue()->submit2(finalSubmit, m_fence.Get());
+    m_context.GetQueues().graphics->submit2(finalSubmit, m_fence.Get());
 
     m_inFlightContext.NextFrame();
 
@@ -511,7 +508,7 @@ void Renderer::EndFrame() {
         presentInfo.setWaitSemaphores(*m_swapchain.RenderFinishedSemaphores()[m_currentImageIndex]);
         presentInfo.setSwapchains({ **m_swapchain });
         presentInfo.setImageIndices({ m_currentImageIndex });
-        if (const vk::Result result = m_context.GetDevice().PresentQueue()->presentKHR(presentInfo);
+        if (const vk::Result result = m_context.GetQueues().present->presentKHR(presentInfo);
             result == vk::Result::eErrorOutOfDateKHR) {
             m_context.GetDevice()->waitIdle();
             RecreateSwapchain();
@@ -546,7 +543,7 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
 
     if (m_stagingBuffer.Size() < imageSize) {
         m_stagingBuffer =
-            Buffer { m_context.GetDevice(), *m_context.GetAllocator(), imageSize,
+            Buffer { m_context.GetDevice(), m_context.Allocator(), imageSize,
                      MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eTransferSrc };
     }
 
@@ -556,7 +553,7 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
     const std::uint32_t mipLevels =
         static_cast<std::uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
-    Image vramTexture = Image { *m_context.GetAllocator(),
+    Image vramTexture = Image { m_context.Allocator(),
                                 {
                                     .extent = vk::Extent3D { width, height, 1 },
                                     .format = vk::Format::eR8G8B8A8Srgb,
@@ -567,14 +564,14 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
                                 } };
 
     m_commandBuffers.Get().ImmediateSubmit(
-        *m_context.GetDevice().GraphicsQueue(), [&](const CommandBuffer& cmd) {
+        *m_context.GetQueues().graphics, [&](const CommandBuffer& cmd) {
             cmd.PipelineBarrier({ ImageBarrier { vramTexture, vramTexture.FullRange(), Usage::eNone,
                                                  Usage::eTransferWrite } });
             cmd.Copy(m_stagingBuffer, vramTexture);
             cmd.GenerateMipmaps(vramTexture);
         });
 
-    if (m_context.GetInstance().IsExtensionEnabled(vk::EXTDebugUtilsExtensionName)) {
+    if (m_context.GetDevice().Caps().debugUtils) {
         m_context.GetDevice()->setDebugUtilsObjectNameEXT(*vramTexture, debugName);
     }
 

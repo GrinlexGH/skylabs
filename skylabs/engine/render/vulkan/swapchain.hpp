@@ -1,5 +1,5 @@
 #pragma once
-#include "skylabs/engine/render/vulkan/context/device.hpp"
+#include "skylabs/engine/render/vulkan/context.hpp"
 #include "skylabs/engine/render/vulkan/image.hpp"
 #include "skylabs/engine/window.hpp"
 
@@ -12,7 +12,8 @@ struct SwapchainRecreateInfo {
 class Swapchain {
 public:
     explicit Swapchain(std::nullptr_t) { }
-    explicit Swapchain(const Device& device, const IWindow* window, const vk::raii::SurfaceKHR& surface,
+    explicit Swapchain(const vk::raii::PhysicalDevice& physicalDevice, const Device& device,
+                       const Queues& queues, const IWindow* window, const vk::raii::SurfaceKHR& surface,
                        std::uint32_t imageCount, vk::PresentModeKHR presentMode,
                        VkSwapchainKHR oldHandle = VK_NULL_HANDLE);
     explicit Swapchain(const Swapchain& oldSwapchain, const SwapchainRecreateInfo& recreationInfo);
@@ -22,13 +23,10 @@ public:
 
     void Clear();
 
-    [[nodiscard]] vk::SurfaceCapabilities2KHR SurfaceCapabilities() const;
-    [[nodiscard]] vk::Extent2D SurfaceExtent(const vk::SurfaceCapabilitiesKHR& caps) const;
-
     [[nodiscard]] bool IsOutdated() const;
 
     [[nodiscard]] vk::SurfaceFormatKHR SurfaceFormat() const { return m_surfaceFormat; }
-    [[nodiscard]] vk::SurfaceTransformFlagBitsKHR SurfaceTransform() const { return m_surfaceTransform; }
+    [[nodiscard]] vk::SurfaceTransformFlagsKHR SurfaceTransform() const { return m_surfaceTransform; }
     [[nodiscard]] vk::Extent2D Extent() const { return m_extent; }
     [[nodiscard]] vk::PresentModeKHR PresentMode() const { return m_presentMode; }
 
@@ -38,16 +36,25 @@ public:
     }
 
 private:
-    const Device* m_device = nullptr;
-    const IWindow* m_window = nullptr;
-    const vk::raii::SurfaceKHR* m_surface = nullptr;
+    struct InitData;
+    static InitData Initialize(const vk::raii::PhysicalDevice& physicalDevice, const Device& device,
+                               const Queues& queues, const IWindow* window,
+                               const vk::raii::SurfaceKHR& surface, std::uint32_t imageCount,
+                               vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle);
+    Swapchain(InitData&& initData);
 
-    vk::raii::SwapchainKHR m_handle = nullptr;
+    const vk::raii::PhysicalDevice* m_physicalDevice;
+    const Device* m_device;
+    const Queues* m_queues;
+    const IWindow* m_window;
+    const vk::raii::SurfaceKHR* m_surface;
+
+    vk::raii::SwapchainKHR m_handle { nullptr };
 
     vk::SurfaceFormatKHR m_surfaceFormat;
-    vk::SurfaceTransformFlagBitsKHR m_surfaceTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
+    vk::SurfaceTransformFlagsKHR m_surfaceTransform;
     vk::Extent2D m_extent;
-    vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eFifo;
+    vk::PresentModeKHR m_presentMode;
 
     std::vector<Attachment> m_images;
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;

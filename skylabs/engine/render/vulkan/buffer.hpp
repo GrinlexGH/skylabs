@@ -1,7 +1,7 @@
 #pragma once
 #include <vk_mem_alloc_raii.hpp>
 
-#include "skylabs/engine/render/vulkan/context/device.hpp"
+#include "skylabs/engine/render/vulkan/context.hpp"
 
 namespace sk::render::vulkan {
 enum class MemoryLocation : std::uint8_t {
