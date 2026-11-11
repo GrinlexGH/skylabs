@@ -61,7 +61,7 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         sizeof(ViewProjection), MemoryLocation::eHostVisible, vk::BufferUsageFlagBits2::eUniformBuffer
     };
 
-    m_texture = LoadTexture("assets://texture.jpg", "texture");
+    m_texture = LoadTexture("assets://texture.jpg", "Watermelons");
 
     const Shader vert(*m_context.GetDevice(), vk::ShaderStageFlagBits::eVertex,
                       filesystem.LoadAsVector32("res://shaders/triangle.vert.spv"));
@@ -553,15 +553,15 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
     const std::uint32_t mipLevels =
         static_cast<std::uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
-    Image vramTexture = Image { m_context.Allocator(),
-                                {
-                                    .extent = vk::Extent3D { width, height, 1 },
-                                    .format = vk::Format::eR8G8B8A8Srgb,
-                                    .mipLevels = mipLevels,
-                                    .usageFlags = vk::ImageUsageFlagBits::eTransferSrc |
-                                                  vk::ImageUsageFlagBits::eTransferDst |
-                                                  vk::ImageUsageFlagBits::eSampled,
-                                } };
+    Image vramTexture =
+        Image { m_context.Allocator(),
+                {
+                    .format = vk::Format::eR8G8B8A8Srgb,
+                    .extent = vk::Extent3D { width, height, 1 },
+                    .mipLevels = mipLevels,
+                    .usage = vk::ImageUsageFlagBits::eTransferSrc |
+                             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+                } };
 
     m_commandBuffers.Get().ImmediateSubmit(
         *m_context.GetQueues().graphics, [&](const CommandBuffer& cmd) {

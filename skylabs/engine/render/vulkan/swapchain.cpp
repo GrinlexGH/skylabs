@@ -103,7 +103,7 @@ Swapchain::InitData Swapchain::Initialize(const vk::raii::PhysicalDevice& physic
     renderFinishedSemaphores.reserve(rawImages.size());
 
     for (auto& image : rawImages) {
-        images.emplace_back(*device, image, vk::Extent3D { extent, 1 }, surfaceFormat.format, 1, 1,
+        images.emplace_back(*device, image, surfaceFormat.format, vk::Extent3D { extent, 1 }, 1, 1,
                             vk::SampleCountFlagBits::e1, vk::ImageViewType::e2D);
         renderFinishedSemaphores.emplace_back(*device, vk::SemaphoreCreateInfo { });
     }

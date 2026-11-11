@@ -5,6 +5,7 @@
 namespace sk::render::vulkan {
 class Queue {
 public:
+    explicit Queue(std::nullptr_t) { }
     explicit Queue(const vk::raii::Device& device, const vk::Queue& queue,
                    const std::uint32_t familyIndex)
         : m_handle(device, queue), m_familyIndex(familyIndex) { }
@@ -15,14 +16,14 @@ public:
     [[nodiscard]] std::uint32_t FamilyIndex() const noexcept { return m_familyIndex; }
 
 private:
-    vk::raii::Queue m_handle;
-    std::uint32_t m_familyIndex;
+    vk::raii::Queue m_handle { nullptr };
+    std::uint32_t m_familyIndex = 0;
 };
 
 struct Queues {
-    Queue compute;
-    Queue graphics;
-    Queue present;
+    Queue compute { nullptr };
+    Queue graphics { nullptr };
+    Queue present { nullptr };
 };
 
 struct DeviceCaps {
@@ -36,6 +37,7 @@ struct DeviceCaps {
 
 class Device {
 public:
+    explicit Device(std::nullptr_t) { }
     explicit Device(vk::raii::Device&& device, const DeviceCaps& caps)
         : m_handle(std::move(device)), m_caps(caps) { }
 
@@ -45,12 +47,13 @@ public:
     [[nodiscard]] DeviceCaps Caps() const noexcept { return m_caps; }
 
 private:
-    vk::raii::Device m_handle;
+    vk::raii::Device m_handle { nullptr };
     DeviceCaps m_caps;
 };
 
 class Context {
 public:
+    explicit Context(std::nullptr_t) { }
     explicit Context(const IWindow* window, const IOSAdapter* osAdapter);
 
     [[nodiscard]] const IWindow* Window() const noexcept { return m_window; }
@@ -71,14 +74,14 @@ private:
     static InitData Initialize(const IWindow* window, const IOSAdapter* osAdapter);
     Context(InitData&& initData);
 
-    const IWindow* m_window;
-    const IOSAdapter* m_osAdapter;
-    vk::raii::Instance m_instance;
-    vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger;
-    vk::raii::SurfaceKHR m_surface;
-    vk::raii::PhysicalDevice m_physicalDevice;
-    Device m_device;
+    const IWindow* m_window = nullptr;
+    const IOSAdapter* m_osAdapter = nullptr;
+    vk::raii::Instance m_instance { nullptr };
+    vk::raii::DebugUtilsMessengerEXT m_debugUtilsMessenger { nullptr };
+    vk::raii::SurfaceKHR m_surface { nullptr };
+    vk::raii::PhysicalDevice m_physicalDevice { nullptr };
+    Device m_device { nullptr };
     Queues m_queues;
-    vma::raii::Allocator m_allocator;
+    vma::raii::Allocator m_allocator { nullptr };
 };
 }

@@ -1,7 +1,7 @@
 #include "skylabs/engine/render/vulkan/image.hpp"
 
 namespace {
-vk::ImageAspectFlags DetermineAspect(const vk::Format format) {
+vk::ImageAspectFlags DetermineAspect(const vk::Format format) noexcept {
     switch (format) {
         case vk::Format::eD32Sfloat:
         case vk::Format::eD16Unorm:
@@ -21,21 +21,19 @@ Image::Image(const vma::raii::Allocator& allocator, const ImageCreateInfo& optio
       m_extent(options.extent),
       m_mipLevels(options.mipLevels),
       m_arrayLevels(options.arrayLevels),
-      m_sampleCount(options.sampleCount),
-      m_aspectFlags(DetermineAspect(m_format)) {
+      m_samples(options.samples) {
     vk::ImageCreateInfo imageInfo { };
     imageInfo.format = m_format;
     imageInfo.extent = m_extent;
     imageInfo.imageType = options.type;
     imageInfo.mipLevels = m_mipLevels;
     imageInfo.arrayLayers = m_arrayLevels;
-    imageInfo.samples = m_sampleCount;
-    imageInfo.tiling = vk::ImageTiling::eOptimal;
-    imageInfo.usage = options.usageFlags;
-    imageInfo.sharingMode = vk::SharingMode::eExclusive;
-    imageInfo.queueFamilyIndexCount = 0;
-    imageInfo.pQueueFamilyIndices = nullptr;
-    imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+    imageInfo.samples = m_samples;
+    imageInfo.tiling = options.tiling;
+    imageInfo.usage = options.usage;
+    imageInfo.sharingMode = options.sharingMode;
+    imageInfo.setQueueFamilyIndices(options.queueFamilies);
+    imageInfo.initialLayout = options.initialLayout;
 
     vma::AllocationCreateInfo allocInfo { };
     allocInfo.usage = vma::MemoryUsage::eAuto;
@@ -44,16 +42,16 @@ Image::Image(const vma::raii::Allocator& allocator, const ImageCreateInfo& optio
     m_handle = vma::raii::Image { allocator, imageInfo, allocInfo };
 }
 
-Image::Image(vk::Image imported, const vk::Extent3D extent, const vk::Format format,
-             const std::uint32_t mipLevels, const std::uint32_t arrayLevels,
-             const vk::SampleCountFlagBits sampleCount)
+Image::Image(vk::Image imported, vk::Format format, vk::Extent3D extent, std::uint32_t mipLevels,
+             std::uint32_t arrayLevels, vk::SampleCountFlagBits sampleCount)
     : m_handle(imported),
       m_format(format),
       m_extent(extent),
       m_mipLevels(mipLevels),
       m_arrayLevels(arrayLevels),
-      m_sampleCount(sampleCount),
-      m_aspectFlags(DetermineAspect(m_format)) { }
+      m_samples(sampleCount) { }
+
+vk::ImageAspectFlags Image::AspectMask() const noexcept { return DetermineAspect(m_format); }
 
 vk::Image Image::Handle() const {
     if (auto const* img = std::get_if<vk::Image>(&m_handle)) {
@@ -68,11 +66,11 @@ Attachment::Attachment(const vk::raii::Device& device, const vma::raii::Allocato
     CreateView(device, viewType);
 }
 
-Attachment::Attachment(const vk::raii::Device& device, vk::Image imported, const vk::Extent3D extent,
-                       const vk::Format format, const std::uint32_t mipLevels,
+Attachment::Attachment(const vk::raii::Device& device, const vk::Image imported, const vk::Format format,
+                       const vk::Extent3D extent, const std::uint32_t mipLevels,
                        const std::uint32_t arrayLevels, const vk::SampleCountFlagBits sampleCount,
                        const vk::ImageViewType viewType)
-    : Image(imported, extent, format, mipLevels, arrayLevels, sampleCount) {
+    : Image(imported, format, extent, mipLevels, arrayLevels, sampleCount) {
     CreateView(device, viewType);
 }
 
@@ -81,7 +79,7 @@ void Attachment::CreateView(const vk::raii::Device& device, const vk::ImageViewT
     viewInfo.image = Handle();
     viewInfo.viewType = viewType;
     viewInfo.format = m_format;
-    viewInfo.subresourceRange = { m_aspectFlags, 0, m_mipLevels, 0, m_arrayLevels };
+    viewInfo.subresourceRange = { AspectMask(), 0, m_mipLevels, 0, m_arrayLevels };
     m_view = vk::raii::ImageView { device, viewInfo };
 }
 }

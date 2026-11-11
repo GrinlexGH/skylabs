@@ -73,7 +73,7 @@ public:
 
         if (m_device->waitForFences({ *fence }, true, std::numeric_limits<std::uint64_t>::max()) !=
             vk::Result::eSuccess) {
-            throw std::runtime_error("Failed to wait for single-time command fence");
+            throw std::runtime_error { "Failed to wait for single-time command fence" };
         }
     }
 

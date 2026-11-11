@@ -169,7 +169,7 @@ void CommandBuffer::Copy(const Buffer& src, const Image& dst) const {
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = dst.AspectFlags();
+    region.imageSubresource.aspectMask = dst.AspectMask();
     region.imageSubresource.mipLevel = 0;
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = dst.ArrayLevels();
@@ -197,16 +197,16 @@ void CommandBuffer::GenerateMipmaps(const Image& image, const Usage srcUsage,
     for (std::uint32_t i = 1; i < image.MipLevels(); i++) {
         PipelineBarrier({ ImageBarrier {
             .image = image,
-            .range = vk::ImageSubresourceRange { image.AspectFlags(), i - 1, 1, 0, image.ArrayLevels() },
+            .range = vk::ImageSubresourceRange { image.AspectMask(), i - 1, 1, 0, image.ArrayLevels() },
             .oldUsage = (i == 1) ? srcUsage : Usage::eTransferWrite,
             .newUsage = Usage::eTransferRead,
         } });
 
         vk::ImageBlit blit { };
-        blit.srcSubresource = { image.AspectFlags(), i - 1, 0, image.ArrayLevels() };
+        blit.srcSubresource = { image.AspectMask(), i - 1, 0, image.ArrayLevels() };
         blit.srcOffsets[1] = vk::Offset3D { mipWidth, mipHeight, 1 };
 
-        blit.dstSubresource = { image.AspectFlags(), i, 0, image.ArrayLevels() };
+        blit.dstSubresource = { image.AspectMask(), i, 0, image.ArrayLevels() };
         blit.dstOffsets[1] =
             vk::Offset3D { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
 
@@ -215,7 +215,7 @@ void CommandBuffer::GenerateMipmaps(const Image& image, const Usage srcUsage,
 
         PipelineBarrier({ ImageBarrier {
             .image = image,
-            .range = vk::ImageSubresourceRange { image.AspectFlags(), i - 1, 1, 0, image.ArrayLevels() },
+            .range = vk::ImageSubresourceRange { image.AspectMask(), i - 1, 1, 0, image.ArrayLevels() },
             .oldUsage = Usage::eTransferRead,
             .newUsage = dstUsage,
         } });
@@ -226,7 +226,7 @@ void CommandBuffer::GenerateMipmaps(const Image& image, const Usage srcUsage,
 
     PipelineBarrier({ ImageBarrier {
         .image = image,
-        .range = vk::ImageSubresourceRange { image.AspectFlags(), image.MipLevels() - 1, 1, 0,
+        .range = vk::ImageSubresourceRange { image.AspectMask(), image.MipLevels() - 1, 1, 0,
                                              image.ArrayLevels() },
         .oldUsage = Usage::eTransferWrite,
         .newUsage = dstUsage,

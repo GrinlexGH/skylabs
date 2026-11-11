@@ -5,20 +5,24 @@
 
 namespace sk::render::vulkan {
 struct ImageCreateInfo {
-    vk::Extent3D extent { 1, 1, 1 };
     vk::ImageType type = vk::ImageType::e2D;
     vk::Format format = vk::Format::eR8G8B8A8Snorm;
+    vk::Extent3D extent { 1, 1, 1 };
     std::uint32_t mipLevels = 1;
     std::uint32_t arrayLevels = 1;
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
-    vk::ImageUsageFlags usageFlags;
+    vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1;
+    vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
+    vk::ImageUsageFlags usage;
+    vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
+    std::span<const uint32_t> queueFamilies;
+    vk::ImageLayout initialLayout = vk::ImageLayout::eUndefined;
 };
 
 class Image {
 public:
     explicit Image(std::nullptr_t) { }
     explicit Image(const vma::raii::Allocator& allocator, const ImageCreateInfo& options = { });
-    explicit Image(vk::Image imported, vk::Extent3D extent, vk::Format format, std::uint32_t mipLevels,
+    explicit Image(vk::Image imported, vk::Format format, vk::Extent3D extent, std::uint32_t mipLevels,
                    std::uint32_t arrayLevels, vk::SampleCountFlagBits sampleCount);
 
     [[nodiscard]] vk::Image operator*() const noexcept { return Handle(); }
@@ -28,10 +32,10 @@ public:
     [[nodiscard]] vk::Extent2D Extent2D() const noexcept { return { m_extent.width, m_extent.height }; }
     [[nodiscard]] std::uint32_t MipLevels() const noexcept { return m_mipLevels; }
     [[nodiscard]] std::uint32_t ArrayLevels() const noexcept { return m_arrayLevels; }
-    [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_sampleCount; }
-    [[nodiscard]] vk::ImageAspectFlags AspectFlags() const noexcept { return m_aspectFlags; }
+    [[nodiscard]] vk::SampleCountFlagBits SampleCount() const noexcept { return m_samples; }
+    [[nodiscard]] vk::ImageAspectFlags AspectMask() const noexcept;
     [[nodiscard]] vk::ImageSubresourceRange FullRange() const noexcept {
-        return { m_aspectFlags, 0, m_mipLevels, 0, m_arrayLevels };
+        return { AspectMask(), 0, m_mipLevels, 0, m_arrayLevels };
     }
 
 protected:
@@ -43,8 +47,7 @@ protected:
     vk::Extent3D m_extent { };
     std::uint32_t m_mipLevels = 1;
     std::uint32_t m_arrayLevels = 1;
-    vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
-    vk::ImageAspectFlags m_aspectFlags = vk::ImageAspectFlagBits::eNone;
+    vk::SampleCountFlagBits m_samples = vk::SampleCountFlagBits::e1;
 };
 
 class Attachment : public Image {
@@ -53,8 +56,8 @@ public:
     explicit Attachment(const vk::raii::Device& device, const vma::raii::Allocator& allocator,
                         const ImageCreateInfo& options = { },
                         vk::ImageViewType viewType = vk::ImageViewType::e2D);
-    explicit Attachment(const vk::raii::Device& device, vk::Image imported, vk::Extent3D extent,
-                        vk::Format format, std::uint32_t mipLevels, std::uint32_t arrayLevels,
+    explicit Attachment(const vk::raii::Device& device, vk::Image imported, vk::Format format,
+                        vk::Extent3D extent, std::uint32_t mipLevels, std::uint32_t arrayLevels,
                         vk::SampleCountFlagBits sampleCount,
                         vk::ImageViewType viewType = vk::ImageViewType::e2D);
     Attachment(const Attachment&) = delete;

@@ -4,7 +4,7 @@
 namespace sk::render::vulkan {
 class InFlightContext {
 public:
-    InFlightContext() = default;
+    explicit InFlightContext(std::nullptr_t) { }
     explicit InFlightContext(const std::size_t count) : m_frameCount(count) { }
 
     [[nodiscard]] unsigned int InFlightIndex() const { return m_inFlightIndex; }
@@ -14,13 +14,13 @@ public:
 
 private:
     unsigned int m_inFlightIndex = 0;
-    std::size_t m_frameCount = 1;
+    std::size_t m_frameCount = 0;
 };
 
 template <typename T>
 class InFlight {
 public:
-    explicit InFlight(std::nullptr_t) : m_context(nullptr) { }
+    explicit InFlight(std::nullptr_t) { }
 
     InFlight(const InFlightContext& context, std::vector<T>&& data)
         : m_context(&context), m_data(std::move(data)) {
@@ -59,7 +59,7 @@ public:
     const std::vector<T>& Raw() const { return m_data; }
 
 private:
-    const InFlightContext* m_context;
+    const InFlightContext* m_context = nullptr;
     std::vector<T> m_data;
 };
 }

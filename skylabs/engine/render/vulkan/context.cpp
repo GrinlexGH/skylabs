@@ -88,7 +88,6 @@ vkb::Instance CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter) {
 #ifdef DEBUG
         { vk::EXTDebugUtilsExtensionName, ExtensionRequirement::eOptional },
 #endif
-        { vk::KHRSwapchainExtensionName, ExtensionRequirement::eRequired },
         { vk::KHRGetSurfaceCapabilities2ExtensionName, ExtensionRequirement::eRequired },
         { vk::EXTSwapchainColorSpaceExtensionName, ExtensionRequirement::eOptional },
     };
