@@ -5,21 +5,20 @@ Buffer::Buffer(const Device& device, const vma::raii::Allocator& allocator, cons
                const MemoryLocation location, vk::BufferUsageFlags2 usage,
                const std::optional<vk::DeviceSize>& virtualAllocationSize)
     : m_size(size) {
-    vk::StructureChain<vk::BufferCreateInfo, vk::BufferUsageFlags2CreateInfo> createInfo;
-
-    vk::BufferCreateInfo& bufferCreateInfo = createInfo.get<vk::BufferCreateInfo>();
-    bufferCreateInfo.size = size;
-    bufferCreateInfo.sharingMode = vk::SharingMode::eExclusive;
+    vk::BufferUsageFlags2CreateInfo usageFlags2 { };
+    vk::BufferCreateInfo createInfo { };
+    createInfo.size = size;
+    createInfo.sharingMode = vk::SharingMode::eExclusive;
 
     usage |= vk::BufferUsageFlagBits2::eShaderDeviceAddress;
 
     if (device.Caps().maintenance5 || device.Caps().extendedFlags) {
-        createInfo.get<vk::BufferUsageFlags2CreateInfo>().usage = usage;
+        usageFlags2.usage = usage;
+        utils::vulkan::PrependPNext(createInfo, usageFlags2);
     } else {
-        createInfo.unlink<vk::BufferUsageFlags2CreateInfo>();
         const VkBufferUsageFlags2 raw = static_cast<VkBufferUsageFlags2>(usage);
         assert(raw >> 32u == 0 && "Usage requires VK_KHR_maintenance5");
-        bufferCreateInfo.usage = vk::BufferUsageFlags { static_cast<VkBufferUsageFlags>(raw) };
+        createInfo.usage = vk::BufferUsageFlags { static_cast<VkBufferUsageFlags>(raw) };
     }
 
     vma::AllocationCreateInfo allocationCreateInfo { };
@@ -32,7 +31,7 @@ Buffer::Buffer(const Device& device, const vma::raii::Allocator& allocator, cons
     }
 
     vma::AllocationInfo allocationInfo;
-    m_handle = vma::raii::Buffer { allocator, bufferCreateInfo, allocationCreateInfo,
+    m_handle = vma::raii::Buffer { allocator, createInfo, allocationCreateInfo,
                                    vk::Optional { allocationInfo } };
 
     m_data = allocationInfo.pMappedData;

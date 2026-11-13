@@ -43,18 +43,18 @@ private:
                                vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle);
     Swapchain(InitData&& initData);
 
-    const vk::raii::PhysicalDevice* m_physicalDevice;
-    const Device* m_device;
-    const Queues* m_queues;
-    const IWindow* m_window;
-    const vk::raii::SurfaceKHR* m_surface;
+    const vk::raii::PhysicalDevice* m_physicalDevice = nullptr;
+    const Device* m_device = nullptr;
+    const Queues* m_queues = nullptr;
+    const IWindow* m_window = nullptr;
+    const vk::raii::SurfaceKHR* m_surface = nullptr;
 
     vk::raii::SwapchainKHR m_handle { nullptr };
 
-    vk::SurfaceFormatKHR m_surfaceFormat;
+    vk::SurfaceFormatKHR m_surfaceFormat { };
     vk::SurfaceTransformFlagsKHR m_surfaceTransform;
-    vk::Extent2D m_extent;
-    vk::PresentModeKHR m_presentMode;
+    vk::Extent2D m_extent { };
+    vk::PresentModeKHR m_presentMode { };
 
     std::vector<Attachment> m_images;
     std::vector<vk::raii::Semaphore> m_renderFinishedSemaphores;

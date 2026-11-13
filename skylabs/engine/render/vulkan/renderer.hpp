@@ -42,7 +42,7 @@ private:
 
     Context m_context;
     Swapchain m_swapchain { nullptr };
-    InFlightContext m_inFlightContext;
+    InFlightContext m_inFlightContext { nullptr };
     CommandBufferAllocator m_commandBufferAllocator { nullptr };
 
     // Frame integrity

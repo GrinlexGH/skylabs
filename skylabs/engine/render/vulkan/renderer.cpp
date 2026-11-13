@@ -104,13 +104,12 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         }
 
         std::array colorFormats { m_swapchain.SurfaceFormat().format };
-        m_pipeline =
-            GraphicsPipeline { m_context.GetDevice(),
-                               GraphicsPipelineCreateInfo { .layout = nullptr,
-                                                            .shaders = { &vert, &frag },
-                                                            .vertexBindings = { },
-                                                            .heapMappings = { uboMapping, texMapping },
-                                                            .renderingInfo = { { }, colorFormats } } };
+        m_pipeline = GraphicsPipeline { m_context.GetDevice(),
+                                        { .layout = nullptr,
+                                          .shaders = { &vert, &frag },
+                                          .vertexBindings = { },
+                                          .heapMappings = { uboMapping, texMapping },
+                                          .renderingInfo = { { }, colorFormats } } };
 
         // Descriptor heap creation
         const auto heapProperties = m_context.PhysicalDevice()
@@ -267,8 +266,16 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
             { 1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment },
         });
 
-        const auto& pipelineLayout = m_pipelineLayoutCache.GetLayout(
+        const vk::raii::PipelineLayout& pipelineLayout = m_pipelineLayoutCache.GetLayout(
             { .descriptorSetLayouts = { descriptorSetLayout }, .pushConstants = { } });
+
+        std::array colorFormats { m_swapchain.SurfaceFormat().format };
+        m_pipeline = GraphicsPipeline { m_context.GetDevice(),
+                                        { .layout = pipelineLayout,
+                                          .shaders = { &vert, &frag },
+                                          .vertexBindings = { },
+                                          .heapMappings = { },
+                                          .renderingInfo = { { }, colorFormats } } };
 
         // Схуяли я вообще должен заранее знать что и сколько я хочу выделить?!!
         vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
@@ -279,15 +286,6 @@ Renderer::Renderer(const IWindow* const window, const IOSAdapter* const osAdapte
         descriptorPoolCreateInfo.setPoolSizes(descriptorPoolSizes);
         descriptorPoolCreateInfo.maxSets = kFramesInFlightCount;
         m_descriptorPool = vk::raii::DescriptorPool { *m_context.GetDevice(), descriptorPoolCreateInfo };
-
-        std::array colorFormats { m_swapchain.SurfaceFormat().format };
-        m_pipeline =
-            GraphicsPipeline { m_context.GetDevice(),
-                               GraphicsPipelineCreateInfo { .layout = pipelineLayout,
-                                                            .shaders = { &vert, &frag },
-                                                            .vertexBindings = { },
-                                                            .heapMappings = { },
-                                                            .renderingInfo = { { }, colorFormats } } };
 
         // Allocate pack of descriptors
         std::vector descriptorSetLayouts { m_inFlightContext.FrameCount(), *descriptorSetLayout };
@@ -553,15 +551,13 @@ Image Renderer::LoadTexture(const std::string& path, const std::string& debugNam
     const std::uint32_t mipLevels =
         static_cast<std::uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
-    Image vramTexture =
-        Image { m_context.Allocator(),
-                {
-                    .format = vk::Format::eR8G8B8A8Srgb,
-                    .extent = vk::Extent3D { width, height, 1 },
-                    .mipLevels = mipLevels,
-                    .usage = vk::ImageUsageFlagBits::eTransferSrc |
-                             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-                } };
+    ImageCreateInfo imageCreateInfo { };
+    imageCreateInfo.format = vk::Format::eR8G8B8A8Srgb;
+    imageCreateInfo.extent = vk::Extent3D { width, height, 1 };
+    imageCreateInfo.mipLevels = mipLevels;
+    imageCreateInfo.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
+                            vk::ImageUsageFlagBits::eSampled;
+    Image vramTexture { m_context.Allocator(), imageCreateInfo };
 
     m_commandBuffers.Get().ImmediateSubmit(
         *m_context.GetQueues().graphics, [&](const CommandBuffer& cmd) {

@@ -219,6 +219,7 @@ DeviceResult CreateDevice(vkb::PhysicalDevice& physicalDevice) {
         }
     }
 
+    caps.descriptorHeap = false;
     vkb::DeviceBuilder builder { physicalDevice };
     return { .device = Unwrap(builder.build(), "Failed to create device"), .caps = caps };
 }

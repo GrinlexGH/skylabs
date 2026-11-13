@@ -43,7 +43,7 @@ protected:
 
     std::variant<vk::Image, vma::raii::Image> m_handle;
 
-    vk::Format m_format = vk::Format::eUndefined;
+    vk::Format m_format { };
     vk::Extent3D m_extent { };
     std::uint32_t m_mipLevels = 1;
     std::uint32_t m_arrayLevels = 1;
