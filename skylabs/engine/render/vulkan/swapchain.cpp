@@ -90,11 +90,12 @@ Swapchain::InitData Swapchain::Initialize(const vk::raii::PhysicalDevice& physic
     vkb::Swapchain vkbSwapchain = swapchainResult.value();
 
     vk::raii::SwapchainKHR swapchain { *device, vkbSwapchain.swapchain };
-    vk::SurfaceFormatKHR surfaceFormat { vk::Format { vkbSwapchain.image_format },
-                                         vk::ColorSpaceKHR { vkbSwapchain.color_space } };
+    vk::SurfaceFormatKHR surfaceFormat { static_cast<vk::Format>(vkbSwapchain.image_format),
+                                         static_cast<vk::ColorSpaceKHR>(vkbSwapchain.color_space) };
+
     vk::SurfaceTransformFlagsKHR surfaceTransform = caps.currentTransform;
     extent = vkbSwapchain.extent;
-    presentMode = vk::PresentModeKHR { vkbSwapchain.present_mode };
+    presentMode = static_cast<vk::PresentModeKHR>(vkbSwapchain.present_mode);
 
     const std::vector<vk::Image> rawImages = swapchain.getImages();
     std::vector<Attachment> images;
