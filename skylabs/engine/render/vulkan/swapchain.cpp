@@ -24,40 +24,10 @@ vk::Extent2D SurfaceExtent(const vk::SurfaceCapabilitiesKHR& caps, const sk::IWi
 }
 
 namespace sk::render::vulkan {
-struct Swapchain::InitData {
-    const vk::raii::PhysicalDevice* physicalDevice;
-    const Device* device;
-    const Queues* queues;
-    const IWindow* window;
-    const vk::raii::SurfaceKHR* surface;
-    vk::raii::SwapchainKHR swapchain;
-    vk::SurfaceFormatKHR surfaceFormat;
-    vk::SurfaceTransformFlagsKHR surfaceTransform;
-    vk::Extent2D extent;
-    vk::PresentModeKHR presentMode;
-    std::vector<Attachment> images;
-    std::vector<vk::raii::Semaphore> renderFinishedSemaphores;
-};
-
-Swapchain::Swapchain(InitData&& initData)
-    : m_physicalDevice(initData.physicalDevice),
-      m_device(initData.device),
-      m_queues(initData.queues),
-      m_window(initData.window),
-      m_surface(initData.surface),
-      m_handle(std::move(initData.swapchain)),
-      m_surfaceFormat(initData.surfaceFormat),
-      m_surfaceTransform(initData.surfaceTransform),
-      m_extent(initData.extent),
-      m_presentMode(initData.presentMode),
-      m_images(std::move(initData.images)),
-      m_renderFinishedSemaphores(std::move(initData.renderFinishedSemaphores)) { }
-
-Swapchain::InitData Swapchain::Initialize(const vk::raii::PhysicalDevice& physicalDevice,
-                                          const Device& device, const Queues& queues,
-                                          const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                                          const std::uint32_t imageCount, vk::PresentModeKHR presentMode,
-                                          VkSwapchainKHR oldHandle) {
+Swapchain::Swapchain(const vk::raii::PhysicalDevice& physicalDevice, const Device& device,
+                     const Queues& queues, const IWindow* window, const vk::raii::SurfaceKHR& surface,
+                     const std::uint32_t imageCount, vk::PresentModeKHR presentMode,
+                     VkSwapchainKHR oldHandle) {
     const vk::SurfaceCapabilitiesKHR caps = SurfaceCapabilities(physicalDevice, surface);
     vk::Extent2D extent = SurfaceExtent(caps, window);
 
@@ -108,27 +78,7 @@ Swapchain::InitData Swapchain::Initialize(const vk::raii::PhysicalDevice& physic
                             vk::SampleCountFlagBits::e1, vk::ImageViewType::e2D);
         renderFinishedSemaphores.emplace_back(*device, vk::SemaphoreCreateInfo { });
     }
-
-    return InitData { .physicalDevice = &physicalDevice,
-                      .device = &device,
-                      .queues = &queues,
-                      .window = window,
-                      .surface = &surface,
-                      .swapchain = std::move(swapchain),
-                      .surfaceFormat = surfaceFormat,
-                      .surfaceTransform = surfaceTransform,
-                      .extent = extent,
-                      .presentMode = presentMode,
-                      .images = std::move(images),
-                      .renderFinishedSemaphores = std::move(renderFinishedSemaphores) };
 }
-
-Swapchain::Swapchain(const vk::raii::PhysicalDevice& physicalDevice, const Device& device,
-                     const Queues& queues, const IWindow* window, const vk::raii::SurfaceKHR& surface,
-                     const std::uint32_t imageCount, const vk::PresentModeKHR presentMode,
-                     const VkSwapchainKHR oldHandle)
-    : Swapchain(Initialize(physicalDevice, device, queues, window, surface, imageCount, presentMode,
-                           oldHandle)) { }
 
 Swapchain::Swapchain(const Swapchain& oldSwapchain, const SwapchainRecreateInfo& recreationInfo)
     : Swapchain(*oldSwapchain.m_physicalDevice, *oldSwapchain.m_device, *oldSwapchain.m_queues,

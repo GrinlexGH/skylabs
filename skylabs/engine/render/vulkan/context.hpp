@@ -70,10 +70,6 @@ public:
     void RecreateSurface();
 
 private:
-    struct InitData;
-    static InitData Initialize(const IWindow* window, const IOSAdapter* osAdapter);
-    Context(InitData&& initData);
-
     const IWindow* m_window = nullptr;
     const IOSAdapter* m_osAdapter = nullptr;
     vk::raii::Instance m_instance { nullptr };

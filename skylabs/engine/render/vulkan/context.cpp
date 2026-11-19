@@ -259,66 +259,29 @@ vma::raii::Allocator CreateAllocator(const vk::raii::Instance& instance,
 }
 
 namespace sk::render::vulkan {
-struct Context::InitData {
-    const IWindow* window;
-    const IOSAdapter* osAdapter;
-    vk::raii::Instance instance;
-    vk::raii::DebugUtilsMessengerEXT debugMessenger;
-    vk::raii::SurfaceKHR surface;
-    vk::raii::PhysicalDevice physicalDevice;
-    Device device;
-    Queues queues;
-    vma::raii::Allocator allocator;
-};
-
-Context::Context(const IWindow* window, const IOSAdapter* osAdapter)
-    : Context { Initialize(window, osAdapter) } { }
-
-Context::InitData Context::Initialize(const IWindow* window, const IOSAdapter* osAdapter) {
+Context::Context(const IWindow* window, const IOSAdapter* osAdapter) : m_window(window) {
     vkb::Instance vkbInstance = CreateInstance(osAdapter);
 
     vk::raii::Context vkContext { osAdapter->GetVkGetInstanceProcAddr() };
-    vk::raii::Instance instance { vkContext, vkbInstance.instance };
+    m_instance = vk::raii::Instance { vkContext, vkbInstance.instance };
 
-    vk::raii::DebugUtilsMessengerEXT messenger { nullptr };
     if (vkbInstance.debug_messenger != VK_NULL_HANDLE) {
-        messenger = vk::raii::DebugUtilsMessengerEXT { instance, vkbInstance.debug_messenger };
+        m_debugUtilsMessenger =
+            vk::raii::DebugUtilsMessengerEXT { m_instance, vkbInstance.debug_messenger };
     }
 
-    vk::raii::SurfaceKHR surface =
-        vk::raii::SurfaceKHR { instance, osAdapter->CreateSurface(*instance) };
+    m_surface = vk::raii::SurfaceKHR { m_instance, osAdapter->CreateSurface(*m_instance) };
 
-    vkb::PhysicalDevice vkbPhysicalDevice = ChoosePhysicalDevice(vkbInstance, *surface);
-    vk::raii::PhysicalDevice physicalDevice { instance, vkbPhysicalDevice.physical_device };
+    vkb::PhysicalDevice vkbPhysicalDevice = ChoosePhysicalDevice(vkbInstance, *m_surface);
+    vk::raii::PhysicalDevice physicalDevice { m_instance, vkbPhysicalDevice.physical_device };
 
     auto [vkbDevice, caps] = CreateDevice(vkbPhysicalDevice);
-    caps.debugUtils = messenger != nullptr;
-    Device device { vk::raii::Device { physicalDevice, vkbDevice.device }, caps };
+    caps.debugUtils = m_debugUtilsMessenger != nullptr;
+    m_device = Device { vk::raii::Device { physicalDevice, vkbDevice.device }, caps };
 
-    Queues queues = QueryQueues(vkbDevice, *device);
-    vma::raii::Allocator allocator = CreateAllocator(instance, device, physicalDevice);
-
-    return InitData { .window = window,
-                      .osAdapter = osAdapter,
-                      .instance = std::move(instance),
-                      .debugMessenger = std::move(messenger),
-                      .surface = std::move(surface),
-                      .physicalDevice = std::move(physicalDevice),
-                      .device = std::move(device),
-                      .queues = std::move(queues),
-                      .allocator = std::move(allocator) };
+    Queues queues = QueryQueues(vkbDevice, *m_device);
+    m_allocator = CreateAllocator(m_instance, m_device, physicalDevice);
 }
-
-Context::Context(InitData&& initData)
-    : m_window(initData.window),
-      m_osAdapter(initData.osAdapter),
-      m_instance(std::move(initData.instance)),
-      m_debugUtilsMessenger(std::move(initData.debugMessenger)),
-      m_surface(std::move(initData.surface)),
-      m_physicalDevice(std::move(initData.physicalDevice)),
-      m_device(std::move(initData.device)),
-      m_queues(std::move(initData.queues)),
-      m_allocator(std::move(initData.allocator)) { }
 
 void Context::RecreateSurface() {
     m_surface = vk::raii::SurfaceKHR { m_instance, m_osAdapter->CreateSurface(*m_instance) };

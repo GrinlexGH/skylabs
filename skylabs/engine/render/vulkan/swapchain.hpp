@@ -36,13 +36,6 @@ public:
     }
 
 private:
-    struct InitData;
-    static InitData Initialize(const vk::raii::PhysicalDevice& physicalDevice, const Device& device,
-                               const Queues& queues, const IWindow* window,
-                               const vk::raii::SurfaceKHR& surface, std::uint32_t imageCount,
-                               vk::PresentModeKHR presentMode, VkSwapchainKHR oldHandle);
-    Swapchain(InitData&& initData);
-
     const vk::raii::PhysicalDevice* m_physicalDevice = nullptr;
     const Device* m_device = nullptr;
     const Queues* m_queues = nullptr;
