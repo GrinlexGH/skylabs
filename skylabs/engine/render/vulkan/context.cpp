@@ -80,7 +80,8 @@ vkb::Instance CreateInstance(const sk::render::vulkan::IOSAdapter* osAdapter) {
         .require_api_version(kApiVersion);
 
     const vkb::SystemInfo systemInfo =
-        Unwrap(vkb::SystemInfo::get_system_info(osAdapter->GetVkGetInstanceProcAddr()),
+        Unwrap(vkb::SystemInfo::get_system_info(osAdapter->GetVkGetInstanceProcAddr(),
+                                                { "VK_LAYER_KHRONOS_validation" }),
                "Failed to query vulkan system info");
 
     // Request extensions
@@ -259,7 +260,8 @@ vma::raii::Allocator CreateAllocator(const vk::raii::Instance& instance,
 }
 
 namespace sk::render::vulkan {
-Context::Context(const IWindow* window, const IOSAdapter* osAdapter) : m_window(window) {
+Context::Context(const IWindow* window, const IOSAdapter* osAdapter)
+    : m_window(window), m_osAdapter(osAdapter) {
     vkb::Instance vkbInstance = CreateInstance(osAdapter);
 
     vk::raii::Context vkContext { osAdapter->GetVkGetInstanceProcAddr() };
@@ -273,14 +275,14 @@ Context::Context(const IWindow* window, const IOSAdapter* osAdapter) : m_window(
     m_surface = vk::raii::SurfaceKHR { m_instance, osAdapter->CreateSurface(*m_instance) };
 
     vkb::PhysicalDevice vkbPhysicalDevice = ChoosePhysicalDevice(vkbInstance, *m_surface);
-    vk::raii::PhysicalDevice physicalDevice { m_instance, vkbPhysicalDevice.physical_device };
+    m_physicalDevice = vk::raii::PhysicalDevice { m_instance, vkbPhysicalDevice.physical_device };
 
     auto [vkbDevice, caps] = CreateDevice(vkbPhysicalDevice);
     caps.debugUtils = m_debugUtilsMessenger != nullptr;
-    m_device = Device { vk::raii::Device { physicalDevice, vkbDevice.device }, caps };
+    m_device = Device { vk::raii::Device { m_physicalDevice, vkbDevice.device }, caps };
 
-    Queues queues = QueryQueues(vkbDevice, *m_device);
-    m_allocator = CreateAllocator(m_instance, m_device, physicalDevice);
+    m_queues = QueryQueues(vkbDevice, *m_device);
+    m_allocator = CreateAllocator(m_instance, m_device, m_physicalDevice);
 }
 
 void Context::RecreateSurface() {

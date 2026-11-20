@@ -27,9 +27,14 @@ namespace sk::render::vulkan {
 Swapchain::Swapchain(const vk::raii::PhysicalDevice& physicalDevice, const Device& device,
                      const Queues& queues, const IWindow* window, const vk::raii::SurfaceKHR& surface,
                      const std::uint32_t imageCount, vk::PresentModeKHR presentMode,
-                     VkSwapchainKHR oldHandle) {
+                     VkSwapchainKHR oldHandle)
+    : m_physicalDevice(&physicalDevice),
+      m_device(&device),
+      m_queues(&queues),
+      m_window(window),
+      m_surface(&surface) {
     const vk::SurfaceCapabilitiesKHR caps = SurfaceCapabilities(physicalDevice, surface);
-    vk::Extent2D extent = SurfaceExtent(caps, window);
+    m_extent = SurfaceExtent(caps, window);
 
     vkb::SwapchainBuilder swapchainBuilder { *physicalDevice, **device, *surface,
                                              queues.graphics.FamilyIndex(),
@@ -45,7 +50,7 @@ Swapchain::Swapchain(const vk::raii::PhysicalDevice& physicalDevice, const Devic
             .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
             .add_fallback_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eFifo))
             .use_default_image_usage_flags()
-            .set_desired_extent(extent.width, extent.height)
+            .set_desired_extent(m_extent.width, m_extent.height)
             .set_desired_min_image_count(imageCount)
             .set_pre_transform_flags(static_cast<VkSurfaceTransformFlagBitsKHR>(caps.currentTransform))
             .build();
@@ -59,24 +64,21 @@ Swapchain::Swapchain(const vk::raii::PhysicalDevice& physicalDevice, const Devic
 
     vkb::Swapchain vkbSwapchain = swapchainResult.value();
 
-    vk::raii::SwapchainKHR swapchain { *device, vkbSwapchain.swapchain };
-    vk::SurfaceFormatKHR surfaceFormat { static_cast<vk::Format>(vkbSwapchain.image_format),
-                                         static_cast<vk::ColorSpaceKHR>(vkbSwapchain.color_space) };
+    m_handle = vk::raii::SwapchainKHR { *device, vkbSwapchain.swapchain };
+    m_surfaceFormat = vk::SurfaceFormatKHR { static_cast<vk::Format>(vkbSwapchain.image_format),
+                                             static_cast<vk::ColorSpaceKHR>(vkbSwapchain.color_space) };
+    m_surfaceTransform = caps.currentTransform;
+    m_extent = vkbSwapchain.extent;
+    m_presentMode = static_cast<vk::PresentModeKHR>(vkbSwapchain.present_mode);
 
-    vk::SurfaceTransformFlagsKHR surfaceTransform = caps.currentTransform;
-    extent = vkbSwapchain.extent;
-    presentMode = static_cast<vk::PresentModeKHR>(vkbSwapchain.present_mode);
-
-    const std::vector<vk::Image> rawImages = swapchain.getImages();
-    std::vector<Attachment> images;
-    images.reserve(rawImages.size());
-    std::vector<vk::raii::Semaphore> renderFinishedSemaphores;
-    renderFinishedSemaphores.reserve(rawImages.size());
+    const std::vector<vk::Image> rawImages = m_handle.getImages();
+    m_images.reserve(rawImages.size());
+    m_renderFinishedSemaphores.reserve(rawImages.size());
 
     for (auto& image : rawImages) {
-        images.emplace_back(*device, image, surfaceFormat.format, vk::Extent3D { extent, 1 }, 1, 1,
-                            vk::SampleCountFlagBits::e1, vk::ImageViewType::e2D);
-        renderFinishedSemaphores.emplace_back(*device, vk::SemaphoreCreateInfo { });
+        m_images.emplace_back(*device, image, m_surfaceFormat.format, vk::Extent3D { m_extent, 1 }, 1, 1,
+                              vk::SampleCountFlagBits::e1, vk::ImageViewType::e2D);
+        m_renderFinishedSemaphores.emplace_back(*device, vk::SemaphoreCreateInfo { });
     }
 }
 
